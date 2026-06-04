@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Area de Membros 2.0</title>
+
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23e50914'/%3E%3C/svg%3E">
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bg:        #0a0a0a;
+    --bg-card:   #161616;
+    --border:    #262626;
+    --text:      #ffffff;
+    --text-dim:  #888888;
+    --accent:    #e50914;
+    --success:   #2ecc71;
+    --warn:      #f39c12;
+    --error:     #e74c3c;
+}
+
+html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 20% 0%, rgba(229,9,20,0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 100%, rgba(229,9,20,0.05) 0%, transparent 50%),
+        var(--bg);
+}
+
+.container {
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+}
+
+.logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    background: var(--accent);
+    border-radius: 16px;
+    margin-bottom: 24px;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    box-shadow: 0 8px 32px rgba(229,9,20,0.3);
+}
+
+h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+
+.subtitle {
+    color: var(--text-dim);
+    font-size: 14px;
+    margin-bottom: 32px;
+}
+
+.phase-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    background: rgba(46,204,113,0.12);
+    color: var(--success);
+    border: 1px solid rgba(46,204,113,0.3);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-bottom: 32px;
+    letter-spacing: 0.5px;
+}
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 12px;
+    text-align: left;
+}
+
+.card-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+}
+
+.card-row + .card-row {
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    margin-top: 8px;
+}
+
+.card-label {
+    font-size: 13px;
+    color: var(--text-dim);
+}
+
+.card-value {
+    font-size: 13px;
+    font-weight: 500;
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+}
+
+.status-dot.ok { background: var(--success); box-shadow: 0 0 8px var(--success); }
+.status-dot.error { background: var(--error); }
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.info-box {
+    margin-top: 24px;
+    padding: 16px;
+    background: rgba(243,156,18,0.08);
+    border: 1px solid rgba(243,156,18,0.2);
+    border-radius: 8px;
+    color: var(--warn);
+    font-size: 12px;
+    line-height: 1.5;
+    text-align: left;
+}
+
+.info-box strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text);
+}
+
+.footer {
+    margin-top: 32px;
+    font-size: 11px;
+    color: var(--text-dim);
+    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+.admin-link {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 10px 20px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.admin-link:hover {
+    color: var(--text);
+    border-color: var(--text-dim);
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="logo">A</div>
+    <h1>Area de Membros 2.0</h1>
+    <p class="subtitle">Sistema de acesso VIP com integração multi-gateway</p>
+    
+    <div class="phase-badge">✓ FASE 0 — FUNDAÇÃO INSTALADA</div>
+    
+    <div class="card">
+        <div class="card-row">
+            <span class="card-label">Servidor</span>
+            <span class="card-value"><span class="status-dot ok"></span>Online</span>
+        </div>
+        <div class="card-row">
+            <span class="card-label">Banco de dados</span>
+            <span class="card-value" id="dbStatus"><span class="status-dot ok"></span>Verificando...</span>
+        </div>
+        <div class="card-row">
+            <span class="card-label">Versão</span>
+            <span class="card-value" id="version">2.0.0</span>
+        </div>
+        <div class="card-row">
+            <span class="card-label">Ambiente</span>
+            <span class="card-value" id="env">-</span>
+        </div>
+        <div class="card-row">
+            <span class="card-label">Uptime</span>
+            <span class="card-value" id="uptime">-</span>
+        </div>
+    </div>
+    
+    <div class="info-box">
+        <strong>📋 Próximas fases</strong>
+        Fase 1 — Webhook Kirvano + PerfectPay<br>
+        Fase 2 — Autenticação completa<br>
+        Fase 3 — App cliente (visual Netflix)<br>
+        Fase 4 — Painel admin completo<br>
+        Fase 5 — Blindagem e go-live
+    </div>
+    
+    <a href="/admin" class="admin-link">Acessar painel admin →</a>
+    
+    <div class="footer">
+        areademembros2-0 · deployed with ❤
+    </div>
+</div>
+
+<script>
+(async function() {
+    try {
+        const res = await fetch('/health');
+        const data = await res.json();
+        
+        const dbEl = document.getElementById('dbStatus');
+        if (data.database?.status === 'connected') {
+            dbEl.innerHTML = `<span class="status-dot ok"></span>Conectado (${data.database.latency_ms}ms)`;
+        } else {
+            dbEl.innerHTML = `<span class="status-dot error"></span>Erro`;
+        }
+        
+        document.getElementById('version').textContent = data.version;
+        document.getElementById('env').textContent = data.environment;
+        
+        const uptimeSecs = data.uptime_seconds || 0;
+        const mins = Math.floor(uptimeSecs / 60);
+        const hours = Math.floor(mins / 60);
+        const days = Math.floor(hours / 24);
+        let uptimeStr = '';
+        if (days > 0) uptimeStr = `${days}d ${hours % 24}h`;
+        else if (hours > 0) uptimeStr = `${hours}h ${mins % 60}m`;
+        else if (mins > 0) uptimeStr = `${mins}m ${uptimeSecs % 60}s`;
+        else uptimeStr = `${uptimeSecs}s`;
+        document.getElementById('uptime').textContent = uptimeStr;
+    } catch (err) {
+        console.error('Erro ao carregar status:', err);
+    }
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Ferramentas locais / artefatos de IA / docs internos
+.claude/
+COPY-CATALOGO.md
+screenshots/
+
+# Comuns
+node_modules/
+.env
+.env.local
+*.log
+
+# Uploads em runtime (imagens enviadas + .secrets.json) — NUNCA versionar.
+# O Dockerfile recria a pasta no build; em produção é um volume persistente.
+uploads/
