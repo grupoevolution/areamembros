@@ -4,7 +4,7 @@
  * =============================================================================
  *
  * Admin cria uma campanha. Sistema gera um código (slug) único. Link é:
- *   https://a.membrosvips.com/?campanha=<code>
+ *   https://m.membrosvips.com/?campanha=<code>
  *
  * Qualquer cliente que abrir o link, salvar o código (frontend → localStorage)
  * e LOGAR com aquele código pendente, recebe automaticamente o brinde do

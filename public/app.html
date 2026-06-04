@@ -9488,7 +9488,7 @@ function confirmPurchase() {
     if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
     // Abre o gateway NA MESMA janela (dentro do PWA standalone fica embarcado).
     // Ao concluir, o gateway redireciona pra success_url configurada (que deve
-    // apontar de volta pra a.membrosvips.com).
+    // apontar de volta pra m.membrosvips.com).
     setTimeout(() => {
         window.location.href = url;
     }, 600);

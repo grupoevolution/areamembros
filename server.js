@@ -150,7 +150,7 @@ app.use(helmet({
     // Default do helmet eh "no-referrer" — mata a integracao com Bunny Stream
     // (Bunny exige referer dos allowed domains pra liberar HLS). Trocando pra
     // "strict-origin-when-cross-origin" o browser manda so o origin (sem path)
-    // em requests cross-origin: o Bunny ve "https://a.membrosvips.com" e
+    // em requests cross-origin: o Bunny ve "https://m.membrosvips.com" e
     // libera. Em mesma origem, manda URL completa (comportamento normal).
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
@@ -296,9 +296,9 @@ app.get('/sw.js', (req, res) => {
 
 // ----------------------------------------------------------------------------
 // HTML principal
-// Cliente → a.membrosvips.com/       (app cinematográfico)
-// Interno → a.membrosvips.com/ops    (tela de status do servidor)
-// Admin   → a.membrosvips.com/admin  (painel administrativo)
+// Cliente → m.membrosvips.com/       (app cinematográfico)
+// Interno → m.membrosvips.com/ops    (tela de status do servidor)
+// Admin   → m.membrosvips.com/admin  (painel administrativo)
 // ----------------------------------------------------------------------------
 
 // App cliente (tela principal — login email-only, catálogo, acervo)
