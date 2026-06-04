@@ -12,3 +12,6 @@ node_modules/
 # Uploads em runtime (imagens enviadas + .secrets.json) — NUNCA versionar.
 # O Dockerfile recria a pasta no build; em produção é um volume persistente.
 uploads/
+
+# Clone vazio criado pelo GitHub Desktop — ignorar
+areamembros/
