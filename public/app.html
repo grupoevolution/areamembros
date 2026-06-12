@@ -1469,6 +1469,51 @@ body.is-slowconn .prod-cta-fixed {
     font-size: 10px; color: #fff; font-weight: 600; letter-spacing: 0.02em;
     text-shadow: 0 1px 4px rgba(0,0,0,0.6);
 }
+.prod-gallery-more {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(13,5,6,0.72);
+    color: #fff; font-size: 17px; font-weight: 700;
+}
+/* Planos inline (sem modal) */
+.prod-plans { margin-top: 28px; }
+.prod-plan-card {
+    position: relative;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: border-color .2s ease, background .2s ease;
+}
+.prod-plan-card.is-selected {
+    border: 2px solid #e50914;
+    background: rgba(229,9,20,0.07);
+    padding: 11px 13px;
+}
+.prod-plan-badge {
+    position: absolute; top: -9px; right: 12px;
+    background: #e50914; color: #fff;
+    font-size: 9px; font-weight: 800; letter-spacing: 0.08em;
+    padding: 2px 9px; border-radius: 999px;
+    text-transform: uppercase;
+}
+.prod-plan-row { display: flex; align-items: center; gap: 10px; }
+.prod-plan-radio {
+    width: 17px; height: 17px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3);
+    flex-shrink: 0; box-sizing: border-box;
+    transition: border .15s ease;
+}
+.prod-plan-card.is-selected .prod-plan-radio { border: 5px solid #e50914; background: #fff; }
+.prod-plan-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 700; color: var(--text); }
+.prod-plan-price { display: flex; align-items: baseline; gap: 7px; flex-shrink: 0; }
+.prod-plan-price strong { font-size: 15px; font-weight: 800; color: var(--text); }
+.prod-plan-price-old { font-size: 11px; color: rgba(255,255,255,0.45); text-decoration: line-through; }
+.prod-plan-bens { margin: 8px 0 0 27px; display: flex; flex-direction: column; gap: 4px; }
+.prod-plan-bens div { font-size: 12px; color: rgba(255,255,255,0.75); display: flex; align-items: center; gap: 6px; }
+.prod-plan-bens svg { flex-shrink: 0; color: #e50914; }
 .prod-actions-top {
     position: absolute; top: 20px; left: 16px; right: 16px;
     display: flex; justify-content: space-between; z-index: 10;
@@ -1531,16 +1576,20 @@ body.is-slowconn .prod-cta-fixed {
 }
 .prod-body { padding: 24px 20px 0; }
 .prod-stats {
-    display: flex; gap: 18px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 8px; text-align: center;
     padding-bottom: 20px; margin-bottom: 20px;
     border-bottom: 1px solid #222;
 }
 .prod-stat-value {
     font-family: 'Bebas Neue', sans-serif;
-    font-size: 30px; color: var(--text);
+    font-size: 28px; color: var(--text);
     letter-spacing: -0.01em; line-height: 1;
-    margin-bottom: 2px;
+    margin-bottom: 4px;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
 }
+.prod-stat-value svg { flex-shrink: 0; }
 .prod-stat-value.red {
     background: linear-gradient(135deg, #ff3840, #e50914);
     -webkit-background-clip: text; -webkit-text-fill-color: transparent;
@@ -7386,6 +7435,19 @@ body.is-slowconn .prod-cta-fixed {
                 </div>
             </div>
             <p class="prod-desc">O grupinho mais exclusivo da plataforma, atualizado diariamente com conteúdo premium selecionado a dedo. Acesso imediato, suporte rápido, satisfação garantida.</p>
+
+            <!-- GALERIA do produto (seção própria — populada por populateProductScreen) -->
+            <div class="prod-gallery" id="prodGallery" style="display:none;">
+                <h3 class="prod-feats-title" id="prodGalleryTitle">Prévia do <em>conteúdo</em></h3>
+                <div class="prod-gallery-grid" id="prodGalleryGrid"></div>
+            </div>
+
+            <!-- PLANOS inline (sem modal — populado por populateProductScreen) -->
+            <div class="prod-plans" id="prodPlans" style="display:none;">
+                <h3 class="prod-feats-title">Escolha seu <em>acesso</em></h3>
+                <div id="prodPlansList"></div>
+            </div>
+
             <h3 class="prod-feats-title">O que você <em>recebe</em></h3>
             <div id="prodFeats">
                 <div class="prod-feat">
@@ -7404,12 +7466,6 @@ body.is-slowconn .prod-cta-fixed {
                     <div class="feat-icon"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></div>
                     <div class="feat-text">Suporte direto via WhatsApp</div>
                 </div>
-            </div>
-
-            <!-- GALERIA do produto (seção própria — populada por populateProductScreen) -->
-            <div class="prod-gallery" id="prodGallery" style="display:none;">
-                <h3 class="prod-feats-title" id="prodGalleryTitle">Prévia do <em>conteúdo</em></h3>
-                <div class="prod-gallery-grid" id="prodGalleryGrid"></div>
             </div>
         </div>
     </div>
@@ -10589,6 +10645,102 @@ function openProdGalleryItem(idx) {
     if (navigator.vibrate) navigator.vibrate(8);
 }
 
+// Renderiza a grade da galeria do produto. Colapsada mostra até 6 células;
+// a 6ª vira "+N" quando há mais itens (expande no toque).
+function renderProdGalleryGrid() {
+    const grid = document.getElementById('prodGalleryGrid');
+    const items = window.__prodGalleryItems || [];
+    if (!grid) return;
+    const MAXC = 6;
+    const expanded = window.__prodGalleryExpanded === true || items.length <= MAXC;
+    const cellHtml = (item, idx, moreCount) => {
+        const thumbSrc = item.thumbnail_url || (item.type === 'image' ? item.url : '') || '';
+        const optThumb = (thumbSrc && window.optimizeImg) ? window.optimizeImg(thumbSrc, 'card') : thumbSrc;
+        const imgTag = thumbSrc
+            ? `<img src="${escapeAttrData(optThumb)}" alt="" decoding="async" loading="lazy" data-fallback="${escapeAttrData(thumbSrc)}" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none';}">`
+            : '';
+        if (moreCount > 0) {
+            return `<div class="prod-gallery-cell${item.is_locked ? ' is-locked' : ''}" onclick="expandProdGallery()">
+                ${imgTag}
+                <div class="prod-gallery-more">+${moreCount}</div>
+            </div>`;
+        }
+        if (item.is_locked) {
+            return `<div class="prod-gallery-cell is-locked" onclick="openPreviewLock()">
+                ${imgTag}
+                <div class="prod-gallery-overlay">
+                    <div class="prod-gallery-badge"><svg width="16" height="16" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></div>
+                    <div class="prod-gallery-lock-label">Desbloquear</div>
+                </div>
+            </div>`;
+        }
+        const playBadge = item.type === 'video'
+            ? `<div class="prod-gallery-overlay"><div class="prod-gallery-badge"><svg width="16" height="16" fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>`
+            : '';
+        return `<div class="prod-gallery-cell" onclick="openProdGalleryItem(${idx})">${imgTag}${playBadge}</div>`;
+    };
+    let html = '';
+    const visible = expanded ? items.length : MAXC;
+    for (let i = 0; i < visible && i < items.length; i++) {
+        const isMoreCell = !expanded && i === MAXC - 1 && items.length > MAXC;
+        html += cellHtml(items[i], i, isMoreCell ? (items.length - (MAXC - 1)) : 0);
+    }
+    grid.innerHTML = html;
+}
+function expandProdGallery() {
+    window.__prodGalleryExpanded = true;
+    renderProdGalleryGrid();
+}
+
+// ── Planos inline: seleção + CTA + "O que você recebe" dinâmico ──
+function getSelectedProdPlan() {
+    const plans = window.__currentProductPlans || [];
+    return plans.find(pl => pl.id === window.__selectedPlanId) || null;
+}
+function selectProdPlan(planId) {
+    window.__selectedPlanId = planId;
+    document.querySelectorAll('#prodPlansList .prod-plan-card').forEach(card => {
+        card.classList.toggle('is-selected', parseInt(card.dataset.planId, 10) === planId);
+    });
+    const plan = getSelectedProdPlan();
+    updateProdCtaForPlan(plan);
+    updateProdReceiveForPlan(plan);
+    if (navigator.vibrate) navigator.vibrate(6);
+}
+// Preço do CTA fixo acompanha o plano selecionado
+function updateProdCtaForPlan(plan) {
+    if (!plan) return;
+    const priceNew = document.querySelector('#product .prod-cta-price-new');
+    const priceOld = document.querySelector('#product .prod-cta-price-old');
+    const priceFrom = document.querySelector('#product .prod-cta-price-from');
+    const priceBy = document.querySelector('#product .prod-cta-price-by');
+    const priceVal = parseFloat(plan.price || 0);
+    const origVal = parseFloat(plan.original_price || 0);
+    const fmt = (v) => 'R$ ' + (Math.round(v) === v ? v.toFixed(0) : v.toFixed(2).replace('.', ','));
+    if (priceNew) priceNew.textContent = fmt(priceVal);
+    const hasAnchor = origVal && origVal > priceVal;
+    if (priceOld) { priceOld.textContent = hasAnchor ? fmt(origVal) : ''; priceOld.style.display = hasAnchor ? '' : 'none'; }
+    if (priceFrom) priceFrom.style.display = hasAnchor ? '' : 'none';
+    if (priceBy) priceBy.style.display = hasAnchor ? '' : 'none';
+}
+// "O que você recebe" troca pros benefícios do plano selecionado.
+// Plano sem benefícios cadastrados → volta pros bullets padrão do produto.
+function updateProdReceiveForPlan(plan) {
+    const featsContainer = document.getElementById('prodFeats');
+    if (!featsContainer) return;
+    const benefits = plan ? String(plan.benefits || '').split(/\n+/).map(s => s.trim()).filter(Boolean) : [];
+    if (benefits.length > 0) {
+        const check = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+        featsContainer.innerHTML = benefits.map(b => `
+            <div class="prod-feat">
+                <div class="feat-icon">${check}</div>
+                <div class="feat-text">${escapeHtmlData(b)}</div>
+            </div>`).join('');
+    } else if (typeof window.__prodDefaultFeatsHtml === 'string') {
+        featsContainer.innerHTML = window.__prodDefaultFeatsHtml;
+    }
+}
+
 // Popula a tela #product com dados reais do produto
 function populateProductScreen(p) {
     if (!p) return;
@@ -10620,72 +10772,73 @@ function populateProductScreen(p) {
             if (g?.url || g?.thumbnail_url) pushItem(g.type || 'image', g.url, g.is_locked === true, g.thumbnail_url);
         }
     }
-    // === HERO (capa estática) ===
-    // O banner do topo é FIXO: usa banner_url do produto; se não houver, cai pra
-    // 1ª imagem liberada da galeria. A galeria NÃO roda mais como carrossel no
-    // banner — ela é renderizada como seção própria (grid) abaixo das features.
+    // === HERO (capas do produto) ===
+    // O topo é a VITRINE: carrossel com as capas de extra_data.covers (admin >
+    // "Capas do produto"). Fallback: banner_url; senão 1ª imagem liberada da
+    // galeria. A galeria de prévia é OUTRA coisa — seção própria mais abaixo.
     const carousel = document.querySelector('#product .prod-carousel');
     if (carousel) {
         carousel.querySelectorAll('.prod-slide').forEach(s => s.remove());
-        const oldDots = carousel.querySelector('.prod-dots');
-        if (oldDots) { oldDots.innerHTML = ''; oldDots.style.display = 'none'; }
+        const dotsEl = carousel.querySelector('.prod-dots');
         window.prodIdx = 0;
-        let heroUrl = p.banner_url || '';
-        let heroBlur = false;
-        if (!heroUrl) {
+        let covers = (Array.isArray(ed.covers) ? ed.covers : [])
+            .map(u => (typeof u === 'string' ? u.trim() : '')).filter(Boolean).slice(0, 5);
+        if (covers.length === 0 && p.banner_url) covers = [p.banner_url];
+        if (covers.length === 0) {
             const firstOpen = galleryItems.find(it => it.type === 'image' && !it.is_locked && it.url);
-            if (firstOpen) {
-                heroUrl = firstOpen.url;
-            } else if (galleryItems[0]) {
-                heroUrl = galleryItems[0].thumbnail_url || galleryItems[0].url || '';
-                heroBlur = galleryItems[0].is_locked === true;
-            }
+            if (firstOpen) covers = [firstOpen.url];
         }
-        const optHero = (heroUrl && window.optimizeImg) ? window.optimizeImg(heroUrl, 'hero') : heroUrl;
-        const heroImg = heroUrl
-            ? `<img class="prod-slide-cover-img" src="${escapeAttrData(optHero)}" alt="" decoding="async" data-fallback="${escapeAttrData(heroUrl)}" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none';}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;${heroBlur ? 'filter:blur(18px);transform:scale(1.12);' : ''}">`
-            : '';
-        const heroHtml = `<div class="prod-slide active" data-pidx="0">
-            <div class="prod-slide-img" style="overflow:hidden;background:linear-gradient(135deg,#2a0d0d,#1a0505);">${heroImg}</div>
-        </div>`;
+        const heroHtml = (covers.length ? covers : ['']).map((url, idx) => {
+            const opt = (url && window.optimizeImg) ? window.optimizeImg(url, 'hero') : url;
+            const img = url
+                ? `<img class="prod-slide-cover-img" src="${escapeAttrData(opt)}" alt="" decoding="async"${idx === 0 ? '' : ' loading="lazy"'} data-fallback="${escapeAttrData(url)}" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none';}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;">`
+                : '';
+            return `<div class="prod-slide ${idx === 0 ? 'active' : ''}" data-pidx="${idx}">
+                <div class="prod-slide-img" style="overflow:hidden;background:linear-gradient(135deg,#2a0d0d,#1a0505);">${img}</div>
+            </div>`;
+        }).join('');
         const actionsTop = carousel.querySelector('.prod-actions-top');
         if (actionsTop) actionsTop.insertAdjacentHTML('beforebegin', heroHtml);
         else carousel.insertAdjacentHTML('afterbegin', heroHtml);
+        if (dotsEl) {
+            dotsEl.innerHTML = covers.length > 1
+                ? covers.map((_, idx) => `<div class="prod-dot ${idx === 0 ? 'active' : ''}" data-pdot="${idx}"></div>`).join('')
+                : '';
+            dotsEl.style.display = covers.length > 1 ? '' : 'none';
+        }
+        // Tap no dot troca a capa (a rotação automática segue no prodTimer global)
+        if (!carousel._dotsWired) {
+            carousel._dotsWired = true;
+            carousel.addEventListener('click', (ev) => {
+                const dotEl = ev.target.closest && ev.target.closest('.prod-dot');
+                if (!dotEl || !carousel.contains(dotEl)) return;
+                const idx = parseInt(dotEl.dataset.pdot, 10) || 0;
+                const all = carousel.querySelectorAll('.prod-slide');
+                if (idx < 0 || idx >= all.length) return;
+                all.forEach(s => s.classList.remove('active'));
+                all[idx].classList.add('active');
+                carousel.querySelectorAll('.prod-dot').forEach(d => d.classList.remove('active'));
+                dotEl.classList.add('active');
+                window.prodIdx = idx;
+            });
+        }
     }
 
-    // === GALERIA (seção própria, abaixo de "O que você recebe") ===
-    // Grid 3 colunas. Bloqueada (prévia) → thumb borrada + cadeado → popup de compra.
-    // Liberada → lightbox (o mesmo da biblioteca). Vídeo → badge de play.
+    // === GALERIA (seção própria, entre a descrição e os planos) ===
+    // Grid 3 colunas, colapsada em 6 células ("+N" expande). Bloqueada (prévia)
+    // → thumb borrada + cadeado → popup de compra. Liberada → lightbox.
     window.__prodGalleryItems = galleryItems;
+    window.__prodGalleryExpanded = false;
     const gallerySec = document.getElementById('prodGallery');
-    const galleryGrid = document.getElementById('prodGalleryGrid');
-    if (gallerySec && galleryGrid) {
+    if (gallerySec) {
         if (galleryItems.length === 0) {
             gallerySec.style.display = 'none';
-            galleryGrid.innerHTML = '';
+            const grid = document.getElementById('prodGalleryGrid');
+            if (grid) grid.innerHTML = '';
         } else {
             const gTitle = document.getElementById('prodGalleryTitle');
             if (gTitle) gTitle.innerHTML = owns ? 'Galeria do <em>conteúdo</em>' : 'Prévia do <em>conteúdo</em>';
-            galleryGrid.innerHTML = galleryItems.map((item, idx) => {
-                const thumbSrc = item.thumbnail_url || (item.type === 'image' ? item.url : '') || '';
-                const optThumb = (thumbSrc && window.optimizeImg) ? window.optimizeImg(thumbSrc, 'card') : thumbSrc;
-                const imgTag = thumbSrc
-                    ? `<img src="${escapeAttrData(optThumb)}" alt="" decoding="async" loading="lazy" data-fallback="${escapeAttrData(thumbSrc)}" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none';}">`
-                    : '';
-                if (item.is_locked) {
-                    return `<div class="prod-gallery-cell is-locked" onclick="openPreviewLock()">
-                        ${imgTag}
-                        <div class="prod-gallery-overlay">
-                            <div class="prod-gallery-badge"><svg width="16" height="16" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></div>
-                            <div class="prod-gallery-lock-label">Desbloquear</div>
-                        </div>
-                    </div>`;
-                }
-                const playBadge = item.type === 'video'
-                    ? `<div class="prod-gallery-overlay"><div class="prod-gallery-badge"><svg width="16" height="16" fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>`
-                    : '';
-                return `<div class="prod-gallery-cell" onclick="openProdGalleryItem(${idx})">${imgTag}${playBadge}</div>`;
-            }).join('');
+            renderProdGalleryGrid();
             gallerySec.style.display = '';
         }
     }
@@ -10700,17 +10853,50 @@ function populateProductScreen(p) {
             : escapeHtmlData(p.name || 'Produto');
     }
 
-    // === Stats (até 3, configuráveis no admin) ===
+    // === Stats (até 3, configuráveis no admin; valor "auto" = nº de mídias da galeria) ===
     const statsContainer = document.querySelector('#product .prod-stats');
     if (statsContainer) {
-        const customStats = Array.isArray(ed.stats) && ed.stats.length > 0
+        const galleryCount = parseInt(p.gallery_count, 10) || galleryItems.length || 0;
+        const statIcon = (label, color) => {
+            const l = (label || '').toLowerCase();
+            if (l.includes('aval') || l.includes('rating') || l.includes('nota')) {
+                return `<svg width="15" height="15" fill="${color}" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+            }
+            if (l.includes('membro') || l.includes('alun') || l.includes('client')) {
+                return `<svg width="15" height="15" fill="none" stroke="${color}" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2m20 0v-2a4 4 0 00-3-3.87M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>`;
+            }
+            if (l.includes('conte') || l.includes('foto') || l.includes('vid') || l.includes('víd') || l.includes('míd') || l.includes('mid')) {
+                return `<svg width="15" height="15" fill="none" stroke="${color}" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>`;
+            }
+            return `<svg width="15" height="15" fill="${color}" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`;
+        };
+        let stats = Array.isArray(ed.stats)
             ? ed.stats.filter(s => (s.value || '').toString().trim() || (s.label || '').toString().trim())
-            : null;
-        if (customStats && customStats.length > 0) {
-            statsContainer.innerHTML = customStats.map((s, idx) => `
+            : [];
+        if (stats.length === 0) {
+            stats = [
+                { value: '4.9', label: 'Avaliação' },
+                { value: 'auto', label: 'Conteúdos' },
+                { value: '5.2K', label: 'Membros' },
+            ];
+        }
+        stats = stats.map(s => {
+            let v = (s.value || '').toString().trim();
+            let label = (s.label || '').toString().trim();
+            if (v.toLowerCase() === 'auto') v = galleryCount > 0 ? String(galleryCount) : '';
+            // Migra o antigo "∞" (a fonte Bebas não tem esse caractere — renderizava
+            // um glifo quebrado): vira a contagem real de conteúdos.
+            if (v === '∞') {
+                v = galleryCount > 0 ? String(galleryCount) : '';
+                if (v) label = 'Conteúdos';
+            }
+            return { value: v, label };
+        }).filter(s => s.value && s.label);
+        if (stats.length > 0) {
+            statsContainer.innerHTML = stats.map((s, idx) => `
                 <div>
-                    <div class="prod-stat-value${idx === 0 ? ' red' : ''}">${escapeHtmlData(s.value || '')}</div>
-                    <div class="prod-stat-label">${escapeHtmlData(s.label || '')}</div>
+                    <div class="prod-stat-value${idx === 0 ? ' red' : ''}">${statIcon(s.label, idx === 0 ? '#ff3840' : 'rgba(255,255,255,0.85)')}${escapeHtmlData(s.value)}</div>
+                    <div class="prod-stat-label">${escapeHtmlData(s.label)}</div>
                 </div>
             `).join('');
             statsContainer.style.display = '';
@@ -10753,14 +10939,48 @@ function populateProductScreen(p) {
     const descEl = document.querySelector('#product .prod-desc');
     if (descEl) descEl.textContent = p.description || '';
 
-    // === Planos múltiplos: NÃO renderiza inline. Armazena pra abrir modal no Comprar.
-    window.__currentProductPlans = Array.isArray(p.plans) ? p.plans : [];
+    // === Planos: renderiza INLINE na página (sem modal). ===
+    // 2+ planos → cards selecionáveis (recomendado pré-selecionado). 1 plano →
+    // sem cards, o CTA já usa o plano. 0 planos → preço único legado.
+    const plansSorted = (Array.isArray(p.plans) ? p.plans.slice() : []).sort((a, b) =>
+        ((a.display_order || 0) - (b.display_order || 0)) || ((a.id || 0) - (b.id || 0)));
+    window.__currentProductPlans = plansSorted;
     window.__currentProductInfo = {
         id: p.id,
         name: p.name,
         banner_url: p.banner_url,
         description: p.description,
     };
+    const recPlan = plansSorted.find(pl => pl.is_recommended) || plansSorted[0] || null;
+    window.__selectedPlanId = recPlan ? recPlan.id : null;
+    const plansSec = document.getElementById('prodPlans');
+    const plansList = document.getElementById('prodPlansList');
+    if (plansSec && plansList) {
+        if (owns || plansSorted.length <= 1) {
+            plansSec.style.display = 'none';
+            plansList.innerHTML = '';
+        } else {
+            const fmtP = (v) => { const f = parseFloat(v) || 0; return 'R$ ' + f.toFixed(2).replace('.', ','); };
+            const benCheck = '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+            plansList.innerHTML = plansSorted.map(pl => {
+                const sel = pl.id === window.__selectedPlanId;
+                const badgeTxt = (pl.badge || '').trim() || (pl.is_recommended ? 'Mais escolhido' : '');
+                const bens = String(pl.benefits || '').split(/\n+/).map(s => s.trim()).filter(Boolean).slice(0, 3);
+                const orig = (pl.original_price && parseFloat(pl.original_price) > parseFloat(pl.price))
+                    ? `<span class="prod-plan-price-old">${fmtP(pl.original_price)}</span>` : '';
+                return `<div class="prod-plan-card${sel ? ' is-selected' : ''}" data-plan-id="${pl.id}" onclick="selectProdPlan(${pl.id})">
+                    ${badgeTxt ? `<span class="prod-plan-badge">${escapeHtmlData(badgeTxt)}</span>` : ''}
+                    <div class="prod-plan-row">
+                        <span class="prod-plan-radio"></span>
+                        <span class="prod-plan-name">${escapeHtmlData(pl.name || 'Plano')}</span>
+                        <span class="prod-plan-price">${orig}<strong>${fmtP(pl.price)}</strong></span>
+                    </div>
+                    ${bens.length ? `<div class="prod-plan-bens">${bens.map(b => `<div>${benCheck}${escapeHtmlData(b)}</div>`).join('')}</div>` : ''}
+                </div>`;
+            }).join('');
+            plansSec.style.display = '';
+        }
+    }
 
     // === Áudio (renderiza só se ativado) — abaixo do NOME do produto ===
     let audioContainer = document.querySelector('#product .product-audio-block');
@@ -10870,6 +11090,9 @@ function populateProductScreen(p) {
                     <div class="feat-text">${escapeHtmlData(f.text)}</div>
                 </div>
             `).join('');
+        // Guarda os bullets padrão do produto: quando um plano selecionado tem
+        // benefícios próprios, a lista troca; sem benefícios, volta pra esse HTML.
+        window.__prodDefaultFeatsHtml = featsContainer.innerHTML;
     }
 
     // === Preço (CTA fixo) ===
@@ -10918,6 +11141,20 @@ function populateProductScreen(p) {
                 ${escapeHtmlData(ctaLabel)}
             `;
             ctaBtn.onclick = () => {
+                // Com planos: vai DIRETO pro checkout do plano selecionado (sem modal).
+                const plan = (typeof getSelectedProdPlan === 'function') ? getSelectedProdPlan() : null;
+                if (plan) {
+                    if (typeof TRACK !== 'undefined') TRACK.event('cta_buy_click', { product_id: p.id, plan_id: plan.id, plan_name: plan.name });
+                    if (plan.checkout_url) {
+                        window.open(plan.checkout_url, '_blank', 'noopener,noreferrer');
+                    } else if (p.checkout?.checkout_url) {
+                        if (typeof populateCheckoutScreen === 'function') populateCheckoutScreen(p);
+                        switchScreen('checkout');
+                    } else {
+                        showToast('product', '⚠️', 'Checkout indisponível. Tente em instantes.');
+                    }
+                    return;
+                }
                 if (typeof TRACK !== 'undefined') TRACK.event('cta_buy_click', { product_id: p.id });
                 if (!p.checkout?.checkout_url) {
                     showToast('product', '⚠️', 'Checkout indisponível. Tente em instantes.');
@@ -10928,6 +11165,12 @@ function populateProductScreen(p) {
                 switchScreen('checkout');
             };
         }
+    }
+
+    // Aplica o plano selecionado no preço do CTA e no "O que você recebe"
+    if (!p.hasAccess && plansSorted.length > 0) {
+        updateProdCtaForPlan(getSelectedProdPlan());
+        updateProdReceiveForPlan(getSelectedProdPlan());
     }
 
     // Reset carousel pro 1º slide

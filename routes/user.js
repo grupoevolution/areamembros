@@ -575,6 +575,10 @@ router.get('/catalog', optionalUser, async (req, res) => {
                 preview_enabled: previewOn,
                 price: parseFloat(p.price || 0),
                 hasAccess: owns,
+                // Contagem TOTAL de mídias (antes do gating) — alimenta a stat
+                // "Conteúdos" no app sem expor as mídias em si.
+                gallery_count: (Array.isArray(extra.gallery) ? extra.gallery.length : 0)
+                    + (Array.isArray(p.gallery) ? p.gallery.length : 0),
                 // SEGURANÇA: vídeo principal é conteúdo pago — só pra quem comprou.
                 main_video_url: owns ? (base.main_video_url ?? p.main_video_url ?? null) : null,
                 video_call: enrichCallPayload(p.video_call),

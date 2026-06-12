@@ -3900,8 +3900,20 @@ a { color: inherit; text-decoration: none; }
                                         <input type="text" class="form-input" id="pBanner" placeholder="Cole URL ou envie a imagem" style="flex:1;min-width:200px;">
                                         <button type="button" class="btn-secondary" onclick="UploadHelper.openPicker('pBanner', 'banner-produto', () => updateProductMockup && updateProductMockup())" style="white-space:nowrap;">📤 Enviar</button>
                                     </div>
-                                    <div class="form-help">Sistema redimensiona automaticamente pra 1080×1350.</div>
+                                    <div class="form-help">Usada no card do catálogo e como capa padrão do topo da tela do produto.</div>
                                 </div>
+                            </div>
+                            <div class="form-row">
+                                <label class="form-label">Capas do produto — carrossel do topo (uma URL por linha, até 5)</label>
+                                <textarea class="form-textarea" id="pCoverUrls" style="min-height:64px;font-family:monospace;font-size:12px;" placeholder="https://i.imgur.com/capa1.jpg&#10;https://i.imgur.com/capa2.jpg"></textarea>
+                                <div style="display:flex;gap:8px;margin-top:8px;">
+                                    <button type="button" class="btn-secondary" onclick="UploadHelper.openPicker('_coverTmpInput', 'banner-produto', (url) => {
+                                        const ta = document.getElementById('pCoverUrls');
+                                        ta.value = (ta.value ? ta.value + '\n' : '') + url;
+                                    })" style="font-size:12px;">📤 Enviar capa</button>
+                                    <input type="hidden" id="_coverTmpInput">
+                                </div>
+                                <div class="form-help">Vitrine no TOPO da tela do produto (carrossel com bolinhas). Vazio = usa a imagem da capa acima. NÃO confundir com a galeria de prévia, que é a seção "Prévia do conteúdo" no app.</div>
                             </div>
                             <div class="form-row">
                                 <label class="form-label">Vídeo de preview (opcional)</label>
@@ -3996,22 +4008,22 @@ a { color: inherit; text-decoration: none; }
                                 </div>
                                 <div>
                                     <label class="form-label" style="font-size:11px;">Métrica 2 — valor</label>
-                                    <input type="text" class="form-input" id="pStat2Value" placeholder="5.2K" maxlength="10">
+                                    <input type="text" class="form-input" id="pStat2Value" placeholder="auto" maxlength="10">
                                 </div>
                                 <div>
                                     <label class="form-label" style="font-size:11px;">Métrica 2 — rótulo</label>
-                                    <input type="text" class="form-input" id="pStat2Label" placeholder="Membros" maxlength="20">
+                                    <input type="text" class="form-input" id="pStat2Label" placeholder="Conteúdos" maxlength="20">
                                 </div>
                                 <div>
                                     <label class="form-label" style="font-size:11px;">Métrica 3 — valor</label>
-                                    <input type="text" class="form-input" id="pStat3Value" placeholder="∞" maxlength="10">
+                                    <input type="text" class="form-input" id="pStat3Value" placeholder="5.2K" maxlength="10">
                                 </div>
                                 <div>
                                     <label class="form-label" style="font-size:11px;">Métrica 3 — rótulo</label>
-                                    <input type="text" class="form-input" id="pStat3Label" placeholder="Vitalício" maxlength="20">
+                                    <input type="text" class="form-input" id="pStat3Label" placeholder="Membros" maxlength="20">
                                 </div>
                             </div>
-                            <div class="form-help" style="margin-top:6px;">Deixe em branco se não quiser mostrar (a métrica some). Use o que faz sentido pro produto.</div>
+                            <div class="form-help" style="margin-top:6px;">Deixe em branco se não quiser mostrar (a métrica some). Valor <strong>auto</strong> = conta sozinho as mídias da galeria (ex.: "87"). Evite o caractere ∞ — a fonte do app não tem ele.</div>
 
                             <!-- Urgência (prova social) -->
                             <div class="form-row" style="margin-top:14px;">
@@ -7140,15 +7152,16 @@ function clearProductForm() {
     set('pBadgeText', '');
     set('pBadgeColor', '');
     set('pGalleryUrls', '');
+    set('pCoverUrls', '');
     _galleryLocks = {};
     const _pvClear = document.getElementById('pPreviewEnabled'); if (_pvClear) _pvClear.checked = false;
     if (typeof renderGalleryLockList === 'function') renderGalleryLockList();
     set('pStat1Value', '4.9');
     set('pStat1Label', 'Avaliação');
-    set('pStat2Value', '5.2K');
-    set('pStat2Label', 'Membros');
-    set('pStat3Value', '∞');
-    set('pStat3Label', 'Vitalício');
+    set('pStat2Value', 'auto');
+    set('pStat2Label', 'Conteúdos');
+    set('pStat3Value', '5.2K');
+    set('pStat3Label', 'Membros');
     set('pUrgencyText', '');
     set('pCtaText', '');
     set('pBonusesText', '');
@@ -7236,6 +7249,7 @@ async function editProduct(id) {
     const galleryItems = Array.isArray(ed.gallery) ? ed.gallery : [];
     const galleryUrls = galleryItems.map(g => typeof g === 'string' ? g : (g.url || '')).filter(Boolean);
     set('pGalleryUrls', galleryUrls.join('\n'));
+    set('pCoverUrls', (Array.isArray(ed.covers) ? ed.covers : []).filter(Boolean).join('\n'));
     // Prévia: reconstrói o estado de bloqueio por URL + o toggle do produto
     _galleryLocks = {};
     galleryItems.forEach(g => { if (g && typeof g === 'object' && g.url) _galleryLocks[g.url] = g.is_locked !== false; });
@@ -7507,8 +7521,12 @@ async function saveProduct() {
     // Multi-categoria: array de IDs (ordenado, 1ª é a primária)
     const selectedCategories = getSelectedCategories();
 
+    // Capas do topo (carrossel da tela do produto) — máx 5
+    const coverUrls = (get('pCoverUrls') || '').split('\n').map(s => s.trim()).filter(Boolean).slice(0, 5);
+
     const extra_data = {
         gallery: galleryUrls.map(url => ({ url, type: /\.(mp4|webm|mov)$/i.test(url) ? 'video' : 'image', is_locked: _galleryLocks[url] !== false })),
+        covers: coverUrls,
         stats,
         urgency_text: get('pUrgencyText') || '',
         cta_text: get('pCtaText') || '',
@@ -13908,7 +13926,7 @@ async function importProductsJSON(ev) {
             + '</div>'
             + '<div class="form-row"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pAudioEnabled" style="width:auto"/> Ativar áudio neste produto</label></div>'
             + '<div class="form-row"><label class="form-label">Título do áudio</label><input type="text" id="pAudioTitle" class="form-input" placeholder="Ex: Mensagem da modelo" maxlength="120"/></div>'
-            + '<div class="form-row"><label class="form-label">Arquivo de áudio</label><div style="display:flex;gap:8px;align-items:center"><input type="file" id="pAudioFile" accept="audio/*" style="flex:1"/><button type="button" class="btn-secondary" id="pAudioUploadBtn">Enviar</button></div></div>'
+            + '<div class="form-row"><label class="form-label">Arquivo de áudio</label><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><input type="file" id="pAudioFile" accept="audio/*" style="display:none"/><button type="button" class="btn-secondary" onclick="document.getElementById(\'pAudioFile\').click()" style="white-space:nowrap;">📁 Escolher arquivo</button><span id="pAudioFileName" style="flex:1;min-width:140px;font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Nenhum arquivo escolhido</span><button type="button" class="btn-secondary" id="pAudioUploadBtn">Enviar</button></div></div>'
             + '<div class="form-row"><label class="form-label">Ou cole uma URL externa</label><input type="url" id="pAudioUrl" class="form-input" placeholder="https://..."/><div class="form-help">MP3 / M4A / WAV — até 25MB</div></div>'
             + '<div class="form-row"><audio id="pAudioPreview" controls preload="metadata" style="width:100%;display:none"></audio></div>';
         form.appendChild(block);
@@ -14199,6 +14217,10 @@ async function importProductsJSON(ev) {
                 sel.innerHTML = '<option value="">— produto comum —</option>'
                     + (data.calls || []).map(c => '<option value="'+c.id+'">'+escHtmlAdmin(c.model_name)+' ('+escHtmlAdmin(c.name)+')</option>').join('');
             }).catch(()=>{});
+        document.getElementById('pAudioFile').addEventListener('change', e => {
+            const nameEl = document.getElementById('pAudioFileName');
+            if (nameEl) nameEl.textContent = (e.target.files[0] && e.target.files[0].name) || 'Nenhum arquivo escolhido';
+        });
         document.getElementById('pAudioUploadBtn').addEventListener('click', async () => {
             const f = document.getElementById('pAudioFile').files[0];
             if (!f) { alert('Escolha um arquivo'); return; }
