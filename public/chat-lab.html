@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Conversas</title>
+<style>
+/* ============================================================
+   CHAT LAB — experiência WhatsApp (página de teste isolada).
+   Visual aprovado no mockup: fundo claro, balões branco/verde,
+   visto azul, áudio comprido, mídia 1x comprida, gate VIP.
+   ============================================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #ECE5DD; color: #111;
+    overscroll-behavior: none;
+}
+.view { display: none; height: 100dvh; flex-direction: column; max-width: 560px; margin: 0 auto; background: #fff; }
+.view.active { display: flex; }
+
+/* ───── LISTA ───── */
+#viewList { background: #fff; }
+.list-header { padding: 16px 16px 10px; background: #f7f5f3; border-bottom: 1px solid #e6e0da; }
+.list-header h1 { font-size: 21px; font-weight: 700; color: #111; }
+.list-scroll { flex: 1; overflow-y: auto; }
+.online-row { padding: 12px 16px 4px; }
+.sec-label { font-size: 10.5px; letter-spacing: 1.5px; color: #8a8480; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
+.online-avatars { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; }
+.online-item { text-align: center; flex-shrink: 0; }
+.online-item .av { width: 54px; height: 54px; border-radius: 50%; background: #ddd6d0 center/cover no-repeat; border: 2.5px solid #25D366; position: relative; }
+.online-item .av.locked { border-color: #d0c8c0; display: flex; align-items: center; justify-content: center; color: #a09890; font-size: 18px; }
+.online-item .dot { position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; border-radius: 50%; background: #25D366; border: 2px solid #fff; }
+.online-item .nm { font-size: 10px; color: #555; margin-top: 4px; max-width: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sec-block { padding: 8px 0 0; }
+.sec-block .sec-label { padding: 6px 16px 0; }
+.chat-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #f0ebe6; cursor: pointer; }
+.chat-row:active { background: #f7f5f3; }
+.chat-row .av { width: 50px; height: 50px; border-radius: 50%; background: #ddd6d0 center/cover no-repeat; flex-shrink: 0; position: relative; }
+.chat-row .av .dot { position: absolute; bottom: 0; right: 0; width: 13px; height: 13px; border-radius: 50%; background: #25D366; border: 2px solid #fff; }
+.chat-row .av.locked { display: flex; align-items: center; justify-content: center; color: #a09890; font-size: 17px; }
+.chat-row .mid { flex: 1; min-width: 0; }
+.chat-row .nm { font-size: 15px; font-weight: 600; color: #111; }
+.chat-row .pv { font-size: 12.5px; color: #8a8480; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+.chat-row .pv.vip { color: #e50914; font-weight: 600; }
+.chat-row .pv.online { color: #1fa855; }
+.chat-row .tm { font-size: 10.5px; color: #8a8480; align-self: flex-start; margin-top: 4px; }
+.list-empty { padding: 60px 24px; text-align: center; color: #8a8480; font-size: 13.5px; line-height: 1.6; }
+
+/* ───── CONVERSA ───── */
+#viewChat { background: #ECE5DD; }
+.chat-header { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: #f7f5f3; border-bottom: 1px solid #e0dad4; }
+.chat-header .back { font-size: 22px; color: #111; cursor: pointer; padding: 4px 6px 4px 0; border: none; background: none; line-height: 1; }
+.chat-header .av { width: 38px; height: 38px; border-radius: 50%; background: #c4a09a center/cover no-repeat; position: relative; flex-shrink: 0; }
+.chat-header .av .dot { position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; border-radius: 50%; background: #25D366; border: 2px solid #f7f5f3; }
+.chat-header .mid { flex: 1; min-width: 0; }
+.chat-header .nm { font-size: 15px; font-weight: 600; color: #111; }
+.chat-header .st { font-size: 11.5px; color: #1fa855; }
+.chat-header .call { width: 38px; height: 38px; border: none; background: none; color: #1fa855; font-size: 21px; cursor: pointer; }
+.chat-body { flex: 1; overflow-y: auto; padding: 12px 10px; display: flex; flex-direction: column; gap: 7px; }
+.day-pill { align-self: center; font-size: 10.5px; color: #777; background: #fdfcfa; padding: 4px 11px; border-radius: 8px; box-shadow: 0 1px 1px rgba(0,0,0,.06); }
+.crypt-pill { align-self: center; font-size: 10px; color: #b08a4a; background: #fdf3d7; padding: 5px 11px; border-radius: 8px; max-width: 88%; text-align: center; }
+.bub { max-width: 82%; border-radius: 0 10px 10px 10px; background: #fff; padding: 7px 9px 5px; box-shadow: 0 1px 1px rgba(0,0,0,.08); align-self: flex-start; }
+.bub.mine { align-self: flex-end; background: #D9FDD3; border-radius: 10px 0 10px 10px; }
+.bub.wide { width: 94%; max-width: 94%; }
+.bub .tx { font-size: 14px; color: #1b1b1b; line-height: 1.42; word-wrap: break-word; white-space: pre-wrap; }
+.bub .tm { font-size: 9.5px; color: #999; text-align: right; margin-top: 2px; }
+.bub .tm .ticks { color: #53BDEB; }
+.bub img.photo { max-width: 100%; border-radius: 8px; display: block; }
+.typing { align-self: flex-start; background: #fff; border-radius: 0 10px 10px 10px; padding: 12px 14px; box-shadow: 0 1px 1px rgba(0,0,0,.08); }
+.typing i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #b5aea8; margin-right: 3px; animation: tp 1.2s infinite; }
+.typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; margin-right: 0; }
+@keyframes tp { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
+
+/* áudio comprido */
+.audio-row { display: flex; align-items: center; gap: 8px; }
+.audio-row .face { width: 42px; height: 42px; border-radius: 50%; background: #c4a09a center/cover no-repeat; flex-shrink: 0; position: relative; }
+.audio-row .face::after { content: '🎤'; position: absolute; bottom: -4px; right: -5px; font-size: 13px; }
+.audio-row .play { width: 30px; border: none; background: none; color: #54656f; font-size: 24px; cursor: pointer; flex-shrink: 0; padding: 0; line-height: 1; }
+.audio-row .wave { display: flex; align-items: center; gap: 2px; height: 22px; flex: 1; min-width: 0; }
+.audio-row .wave i { flex: 1; min-width: 2px; max-width: 4px; background: #c5c1bd; border-radius: 2px; }
+.audio-row .wave i.on { background: #25D366; }
+.audio-meta { display: flex; justify-content: space-between; font-size: 9.5px; color: #999; margin-top: 3px; padding-left: 50px; }
+
+/* visualização única comprida */
+.vonce-row { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.vonce-row .circ { width: 38px; height: 38px; border-radius: 50%; border: 2px solid #25D366; display: flex; align-items: center; justify-content: center; color: #25D366; font-size: 16px; font-weight: 600; flex-shrink: 0; }
+.vonce-row .mid { flex: 1; min-width: 0; }
+.vonce-row .lb { font-size: 14px; color: #1b1b1b; font-weight: 600; }
+.vonce-row .sb { font-size: 11.5px; color: #999; margin-top: 1px; }
+.vonce-row.opened { cursor: default; }
+.vonce-row.opened .circ { border-color: #b5aea8; color: #b5aea8; }
+.vonce-row.opened .lb { color: #999; }
+
+/* CTA do roteiro */
+.cta-btn { background: #e50914; border: none; color: #fff; font-size: 13.5px; font-weight: 700; padding: 11px 18px; border-radius: 999px; cursor: pointer; box-shadow: 0 2px 6px rgba(229,9,20,.35); }
+
+/* botões de escolha */
+.choices { padding: 6px 10px; display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; }
+.choices button { background: #fff; border: 1.5px solid #25D366; color: #128C7E; font-size: 13px; font-weight: 600; padding: 9px 16px; border-radius: 999px; cursor: pointer; }
+.choices button:active { background: #eafff2; }
+
+/* barra de envio */
+.input-bar { display: flex; align-items: center; gap: 7px; padding: 8px 10px calc(12px + env(safe-area-inset-bottom)); background: #f0ece8; }
+.input-pill { flex: 1; display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 999px; padding: 9px 13px; }
+.input-pill input { flex: 1; min-width: 0; border: none; outline: none; font-size: 14.5px; color: #111; background: transparent; }
+.input-pill .ico { font-size: 19px; color: #8a8480; cursor: pointer; line-height: 1; border: none; background: none; padding: 0; }
+.send-btn { width: 44px; height: 44px; border-radius: 50%; background: #25D366; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+.send-btn svg { width: 20px; height: 20px; fill: #fff; }
+
+/* toast VIP */
+.vip-toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%); background: #1b1b1b; color: #fff; border-radius: 14px; padding: 13px 16px; font-size: 13px; text-align: center; z-index: 60; width: min(320px, 88vw); box-shadow: 0 10px 30px rgba(0,0,0,.35); display: none; }
+.vip-toast.show { display: block; }
+.vip-toast button { margin-top: 8px; background: #e50914; border: none; color: #fff; font-size: 12.5px; font-weight: 700; padding: 9px 18px; border-radius: 999px; cursor: pointer; }
+
+/* visualizador 1x em tela cheia */
+.vonce-viewer { position: fixed; inset: 0; background: #000; z-index: 90; display: none; flex-direction: column; }
+.vonce-viewer.show { display: flex; }
+.vonce-viewer .top { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; color: #fff; }
+.vonce-viewer .top .lbl { font-size: 13px; opacity: .8; }
+.vonce-viewer .top button { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; }
+.vonce-viewer .media { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.vonce-viewer img, .vonce-viewer video { max-width: 100%; max-height: 100%; }
+
+/* tela de chat bloqueado */
+.locked-pane { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 30px; text-align: center; }
+.locked-pane .ic { width: 72px; height: 72px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+.locked-pane h2 { font-size: 17px; color: #111; }
+.locked-pane p { font-size: 13px; color: #777; line-height: 1.5; max-width: 280px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════ LISTA DE CONVERSAS ═══════ -->
+<div class="view active" id="viewList">
+    <div class="list-header"><h1>Conversas</h1></div>
+    <div class="list-scroll" id="listScroll">
+        <div class="list-empty" id="listLoading">Carregando conversas...</div>
+    </div>
+</div>
+
+<!-- ═══════ CONVERSA ═══════ -->
+<div class="view" id="viewChat">
+    <div class="chat-header">
+        <button class="back" onclick="backToList()">‹</button>
+        <div class="av" id="chAv"><span class="dot" id="chDot"></span></div>
+        <div class="mid">
+            <div class="nm" id="chName">—</div>
+            <div class="st" id="chStatus">online</div>
+        </div>
+        <button class="call" onclick="onCall()" aria-label="Chamada de vídeo">📹</button>
+    </div>
+    <div class="chat-body" id="chatBody"></div>
+    <div class="locked-pane" id="lockedPane" style="display:none;">
+        <div class="ic">🔒</div>
+        <h2 id="lockedName">Conversa exclusiva</h2>
+        <p>Essa conversa é só pra assinantes VIP. Desbloqueie agora e tenha acesso total 🔥</p>
+        <button class="cta-btn" id="lockedCta" onclick="onUnlock()">💎 Desbloquear VIP →</button>
+    </div>
+    <div class="choices" id="choices" style="display:none;"></div>
+    <div class="input-bar" id="inputBar">
+        <div class="input-pill">
+            <button class="ico" aria-label="Emoji">😊</button>
+            <input type="text" id="msgInput" placeholder="Mensagem" autocomplete="off"/>
+            <button class="ico" onclick="onPhoto()" aria-label="Enviar foto">📷</button>
+            <input type="file" id="photoFile" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="sendPhoto(event)"/>
+        </div>
+        <button class="send-btn" onclick="onSend()" aria-label="Enviar">
+            <svg viewBox="0 0 24 24"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a.993.993 0 00-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z"/></svg>
+        </button>
+    </div>
+</div>
+
+<!-- toast VIP -->
+<div class="vip-toast" id="vipToast">
+    💎 Só assinantes <strong>VIP</strong> podem fazer isso<br>
+    <button onclick="onUnlock()">Desbloquear VIP →</button>
+</div>
+
+<!-- visualizador 1x -->
+<div class="vonce-viewer" id="vonceViewer">
+    <div class="top">
+        <span class="lbl">👁 Visualização única</span>
+        <button onclick="closeVonce()" aria-label="Fechar">×</button>
+    </div>
+    <div class="media" id="vonceMedia"></div>
+</div>
+
+<script>
+// ═══════════════ ESTADO ═══════════════
+function visitorId() {
+    let v = localStorage.getItem('mv_chat_visitor');
+    if (!v) {
+        v = 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+        localStorage.setItem('mv_chat_visitor', v);
+    }
+    return v;
+}
+const VID = visitorId();
+let CUR = null;          // chat aberto: { chat, permissions }
+let SEEN_IDS = new Set();// mensagens já renderizadas
+let RENDERING = false;   // fila de mensagens com "digitando..."
+const QUEUE = [];
+
+function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function hhmm(iso) {
+    try { const d = new Date(iso); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); } catch(_) { return ''; }
+}
+async function api(path, body) {
+    const r = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(Object.assign({ visitor_id: VID }, body || {})),
+    });
+    return { status: r.status, data: await r.json().catch(() => ({})) };
+}
+
+// ═══════════════ LISTA ═══════════════
+async function loadList() {
+    try {
+        const r = await fetch('/api/user/chats?visitor_id=' + VID, { credentials: 'include' });
+        const data = await r.json();
+        const scroll = document.getElementById('listScroll');
+        if (!data.success || !Array.isArray(data.chats) || data.chats.length === 0) {
+            scroll.innerHTML = '<div class="list-empty">Nenhuma conversa disponível ainda.<br>Volte em breve 😏</div>';
+            return;
+        }
+        const chats = data.chats;
+        let html = '';
+        // ONLINE AGORA — avatares no topo
+        const online = chats.filter(c => c.show_online);
+        if (online.length) {
+            html += '<div class="online-row"><div class="sec-label">Online agora</div><div class="online-avatars">'
+                + online.map(c => {
+                    const bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
+                    if (c.locked) return '<div class="online-item" onclick="openChat(' + c.id + ')"><div class="av locked">🔒</div><div class="nm">VIP</div></div>';
+                    return '<div class="online-item" onclick="openChat(' + c.id + ')"><div class="av"' + bg + '><span class="dot"></span></div><div class="nm">' + esc(c.name) + '</div></div>';
+                }).join('')
+                + '</div></div>';
+        }
+        // Seções
+        const sections = {};
+        for (const c of chats) {
+            const sec = c.locked ? 'Só no VIP 🔒' : (c.section || 'Minhas conversas');
+            (sections[sec] = sections[sec] || []).push(c);
+        }
+        for (const sec of Object.keys(sections)) {
+            html += '<div class="sec-block"><div class="sec-label">' + esc(sec) + '</div>';
+            for (const c of sections[sec]) {
+                const bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
+                const av = c.locked
+                    ? '<div class="av locked">🔒</div>'
+                    : '<div class="av"' + bg + '>' + (c.show_online ? '<span class="dot"></span>' : '') + '</div>';
+                const pv = c.locked
+                    ? '<div class="pv vip">Desbloqueie com o VIP →</div>'
+                    : c.last ? '<div class="pv">' + esc(c.last.preview) + '</div>'
+                    : '<div class="pv online">' + esc(c.status_label || 'online') + '</div>';
+                const tm = c.last ? '<div class="tm">' + hhmm(c.last.at) + '</div>' : '';
+                html += '<div class="chat-row" onclick="openChat(' + c.id + ')">' + av
+                    + '<div class="mid"><div class="nm">' + esc(c.name) + '</div>' + pv + '</div>' + tm + '</div>';
+            }
+            html += '</div>';
+        }
+        scroll.innerHTML = html;
+    } catch (e) {
+        document.getElementById('listScroll').innerHTML = '<div class="list-empty">Erro carregando. Puxe pra atualizar.</div>';
+    }
+}
+
+// ═══════════════ CONVERSA ═══════════════
+function backToList() {
+    document.getElementById('viewChat').classList.remove('active');
+    document.getElementById('viewList').classList.add('active');
+    CUR = null; QUEUE.length = 0; RENDERING = false;
+    loadList();
+}
+
+async function openChat(id) {
+    document.getElementById('viewList').classList.remove('active');
+    document.getElementById('viewChat').classList.add('active');
+    const body = document.getElementById('chatBody');
+    body.innerHTML = '<div class="day-pill">HOJE</div><div class="crypt-pill">🔒 Suas mensagens são protegidas</div>';
+    SEEN_IDS = new Set(); QUEUE.length = 0; RENDERING = false;
+    document.getElementById('choices').style.display = 'none';
+    document.getElementById('lockedPane').style.display = 'none';
+    body.style.display = 'flex';
+    document.getElementById('inputBar').style.display = 'flex';
+
+    const { data } = await api('/api/user/chats/' + id + '/open');
+    if (!data.success) { body.innerHTML += '<div class="day-pill">erro ao abrir</div>'; return; }
+    CUR = { id, chat: data.chat, perm: data.permissions };
+
+    // header
+    document.getElementById('chName').textContent = data.chat.name;
+    document.getElementById('chStatus').textContent = data.chat.status_label || 'online';
+    document.getElementById('chDot').style.display = data.chat.show_online ? '' : 'none';
+    const av = document.getElementById('chAv');
+    av.style.backgroundImage = data.chat.avatar_url ? 'url("' + data.chat.avatar_url + '")' : 'none';
+
+    if (data.permissions.locked) {
+        body.style.display = 'none';
+        document.getElementById('inputBar').style.display = 'none';
+        document.getElementById('lockedPane').style.display = 'flex';
+        document.getElementById('lockedName').textContent = 'Conversa exclusiva com ' + data.chat.name;
+        return;
+    }
+    handleAdvance(data); // captura botões pendentes + enfileira com "digitando..."
+}
+
+// Fila: mensagens do bot aparecem com "digitando..." no ritmo do typing_ms
+function enqueueMessages(msgs, awaiting) {
+    for (const m of msgs || []) {
+        if (SEEN_IDS.has(m.id)) continue;
+        SEEN_IDS.add(m.id);
+        QUEUE.push(m);
+    }
+    QUEUE._awaiting = awaiting;
+    if (!RENDERING) drainQueue();
+}
+async function drainQueue() {
+    RENDERING = true;
+    const body = document.getElementById('chatBody');
+    while (QUEUE.length) {
+        const m = QUEUE.shift();
+        const typing = (m.sender === 'bot' && m.meta && m.meta.typing_ms) ? m.meta.typing_ms : 0;
+        if (typing > 0) {
+            const t = document.createElement('div');
+            t.className = 'typing';
+            t.innerHTML = '<i></i><i></i><i></i>';
+            body.appendChild(t);
+            document.getElementById('chStatus').textContent = 'digitando...';
+            body.scrollTop = body.scrollHeight;
+            await new Promise(r => setTimeout(r, Math.min(typing, 6000)));
+            t.remove();
+            document.getElementById('chStatus').textContent = (CUR && CUR.chat.status_label) || 'online';
+        }
+        renderMsg(m);
+        body.scrollTop = body.scrollHeight;
+    }
+    RENDERING = false;
+    renderChoices(QUEUE._awaiting);
+}
+
+function tickHtml(m) {
+    return m.sender === 'user' ? ' <span class="ticks">✓✓</span>' : '';
+}
+
+function renderMsg(m) {
+    const body = document.getElementById('chatBody');
+    const mine = m.sender === 'user';
+    const d = document.createElement('div');
+    const tm = '<div class="tm">' + hhmm(m.created_at) + tickHtml(m) + '</div>';
+
+    if (m.type === 'text' || m.type === 'buttons') {
+        if (!m.content && m.type === 'buttons') return; // botões sem texto: só os chips
+        d.className = 'bub' + (mine ? ' mine' : '');
+        d.innerHTML = '<div class="tx">' + esc(m.content) + '</div>' + tm;
+    } else if (m.type === 'audio') {
+        d.className = 'bub wide';
+        let bars = '';
+        for (let i = 0; i < 34; i++) {
+            const h = Math.max(4, Math.round(5 + Math.abs(Math.sin(i * .9) * 7 + Math.cos(i * 1.7) * 5 + Math.sin(i * .3) * 4)));
+            bars += '<i style="height:' + h + 'px"></i>';
+        }
+        const face = (CUR && CUR.chat.avatar_url) ? ' style="background-image:url(\'' + esc(CUR.chat.avatar_url) + '\')"' : '';
+        d.innerHTML = '<div class="audio-row"><div class="face"' + face + '></div>'
+            + '<button class="play" onclick="playAudio(this, \'' + esc(m.media_url || '') + '\')">▶</button>'
+            + '<span class="wave">' + bars + '</span></div>'
+            + '<div class="audio-meta"><span class="dur">áudio</span><span>' + hhmm(m.created_at) + ' <span class="ticks" style="color:#53BDEB;">' + (mine ? '✓✓' : '') + '</span></span></div>';
+    } else if (m.type === 'image') {
+        d.className = 'bub' + (mine ? ' mine' : '');
+        d.innerHTML = (m.media_url ? '<img class="photo" src="' + esc(m.media_url) + '" alt="" loading="lazy">' : '')
+            + (m.content ? '<div class="tx" style="margin-top:5px;">' + esc(m.content) + '</div>' : '') + tm;
+    } else if (m.type === 'view_once_image' || m.type === 'view_once_video') {
+        const isVid = m.type === 'view_once_video';
+        d.className = 'bub wide';
+        if (m.viewed) {
+            d.innerHTML = vonceOpenedHtml(isVid, m.created_at);
+        } else {
+            d.dataset.msgId = m.id;
+            d.dataset.mediaUrl = m.media_url || '';
+            d.dataset.isVid = isVid ? '1' : '';
+            d.innerHTML = '<div class="vonce-row" onclick="openVonce(this.parentNode)">'
+                + '<span class="circ">' + (isVid ? '▶' : '1') + '</span>'
+                + '<div class="mid"><div class="lb">' + (isVid ? 'Vídeo' : 'Foto') + '</div>'
+                + '<div class="sb">Visualização única · toque pra abrir</div></div>'
+                + '<span style="color:#b5aea8;font-size:17px;">' + (isVid ? '🎬' : '📷') + '</span></div>'
+                + '<div class="tm">' + hhmm(m.created_at) + '</div>';
+        }
+    } else if (m.type === 'cta') {
+        d.style.alignSelf = 'flex-start';
+        d.style.maxWidth = '82%';
+        const link = (m.meta && m.meta.link_url) || '';
+        d.innerHTML = '<button class="cta-btn" onclick="openCta(\'' + esc(link) + '\')">' + esc(m.content || 'Ver oferta') + '</button>';
+    } else {
+        return;
+    }
+    body.appendChild(d);
+}
+
+function vonceOpenedHtml(isVid, at) {
+    return '<div class="vonce-row opened"><span class="circ">👁</span>'
+        + '<div class="mid"><div class="lb">' + (isVid ? 'Aberto' : 'Aberta') + '</div>'
+        + '<div class="sb">Você já viu ' + (isVid ? 'esse vídeo' : 'essa foto') + '</div></div></div>'
+        + '<div class="tm">' + hhmm(at) + '</div>';
+}
+
+// ── Botões de escolha do roteiro ──
+function renderChoices(awaiting) {
+    const box = document.getElementById('choices');
+    box.style.display = 'none';
+    box.innerHTML = '';
+    if (awaiting !== 'buttons') return;
+    // pega a última mensagem buttons não respondida
+    let btns = null;
+    const ids = Array.from(SEEN_IDS);
+    // armazenamos os botões na última msg adicionada do tipo buttons (meta)
+    if (window.__lastButtons) btns = window.__lastButtons;
+    if (!btns || !btns.length) return;
+    box.innerHTML = btns.map((b, i) => '<button onclick="chooseBtn(' + i + ')">' + esc(b.label) + '</button>').join('');
+    box.style.display = 'flex';
+}
+
+async function chooseBtn(i) {
+    if (!CUR) return;
+    document.getElementById('choices').style.display = 'none';
+    window.__lastButtons = null;
+    const { data } = await api('/api/user/chats/' + CUR.id + '/advance', { choice: i });
+    if (data.success) handleAdvance(data);
+}
+
+function handleAdvance(data) {
+    // captura botões da última mensagem buttons (pro renderChoices)
+    for (const m of data.messages || []) {
+        if (m.type === 'buttons' && m.meta && Array.isArray(m.meta.buttons) && !(m.meta.answered)) {
+            window.__lastButtons = m.meta.buttons;
+        }
+    }
+    enqueueMessages(data.messages, data.awaiting);
+}
+
+// ── Enviar texto (gate VIP no enviar) ──
+async function onSend() {
+    if (!CUR) return;
+    const input = document.getElementById('msgInput');
+    const text = input.value.trim();
+    if (!text) { input.focus(); return; }
+    const { status, data } = await api('/api/user/chats/' + CUR.id + '/advance', { text });
+    if (status === 403 || (data && data.error === 'vip_required')) { showVipToast(); return; }
+    if (data.success) {
+        input.value = '';
+        handleAdvance(data);
+    }
+}
+document.getElementById('msgInput').addEventListener('keydown', e => { if (e.key === 'Enter') onSend(); });
+
+// ── Foto (gate VIP) ──
+function onPhoto() {
+    if (!CUR) return;
+    if (!CUR.perm.can_photo) { showVipToast(); return; }
+    document.getElementById('photoFile').click();
+}
+async function sendPhoto(ev) {
+    const f = ev.target.files[0];
+    ev.target.value = '';
+    if (!f || !CUR) return;
+    const fd = new FormData();
+    fd.append('file', f);
+    fd.append('visitor_id', VID);
+    const r = await fetch('/api/user/chats/' + CUR.id + '/photo', { method: 'POST', credentials: 'include', body: fd });
+    const data = await r.json().catch(() => ({}));
+    if (r.status === 403) { showVipToast(); return; }
+    if (data.success && data.message) enqueueMessages([data.message], null);
+}
+
+// ── VIP toast ──
+let vipTimer = null;
+function showVipToast() {
+    const t = document.getElementById('vipToast');
+    t.classList.add('show');
+    clearTimeout(vipTimer);
+    vipTimer = setTimeout(() => t.classList.remove('show'), 6000);
+}
+function onUnlock() {
+    document.getElementById('vipToast').classList.remove('show');
+    const unlock = CUR && CUR.perm && CUR.perm.unlock;
+    const url = (unlock && unlock.checkout_url) || (CUR && CUR.chat && CUR.chat.checkout_url) || null;
+    if (url) window.open(url, '_blank', 'noopener');
+    else alert('Configure o link de desbloqueio (checkout) deste chat no painel.');
+}
+
+// ── Visualização única ──
+let vonceCurrent = null;
+function openVonce(bubble) {
+    const url = bubble.dataset.mediaUrl;
+    const isVid = bubble.dataset.isVid === '1';
+    if (!url) return;
+    vonceCurrent = bubble;
+    const media = document.getElementById('vonceMedia');
+    media.innerHTML = isVid
+        ? '<video src="' + esc(url) + '" controls autoplay playsinline></video>'
+        : '<img src="' + esc(url) + '" alt="">';
+    document.getElementById('vonceViewer').classList.add('show');
+}
+async function closeVonce() {
+    document.getElementById('vonceViewer').classList.remove('show');
+    document.getElementById('vonceMedia').innerHTML = '';
+    if (!vonceCurrent) return;
+    const id = vonceCurrent.dataset.msgId;
+    const isVid = vonceCurrent.dataset.isVid === '1';
+    vonceCurrent.innerHTML = vonceOpenedHtml(isVid, new Date().toISOString());
+    vonceCurrent.dataset.mediaUrl = '';
+    vonceCurrent = null;
+    // consome no servidor — não entrega a mídia nunca mais
+    await api('/api/user/chats/messages/' + id + '/viewed');
+}
+
+// ── Áudio real ──
+let audioEl = null, audioBtn = null, audioWave = null, audioIv = null;
+function playAudio(btn, url) {
+    if (!url) return;
+    if (audioEl && audioBtn === btn) {
+        if (audioEl.paused) { audioEl.play(); btn.textContent = '❚❚'; }
+        else { audioEl.pause(); btn.textContent = '▶'; }
+        return;
+    }
+    stopAudio();
+    audioEl = new Audio(url);
+    audioBtn = btn;
+    audioWave = btn.parentNode.querySelector('.wave');
+    btn.textContent = '❚❚';
+    audioEl.play().catch(() => { btn.textContent = '▶'; });
+    const durEl = btn.parentNode.parentNode.querySelector('.dur');
+    audioEl.addEventListener('loadedmetadata', () => {
+        if (durEl && isFinite(audioEl.duration)) durEl.textContent = fmtDur(audioEl.duration);
+    });
+    audioIv = setInterval(() => {
+        if (!audioEl || !audioWave) return;
+        const pct = audioEl.duration ? audioEl.currentTime / audioEl.duration : 0;
+        const bars = audioWave.querySelectorAll('i');
+        const cut = Math.round(pct * bars.length);
+        bars.forEach((b, i) => b.classList.toggle('on', i < cut));
+        if (durEl && isFinite(audioEl.duration)) durEl.textContent = fmtDur(audioEl.duration - audioEl.currentTime);
+    }, 200);
+    audioEl.addEventListener('ended', () => {
+        btn.textContent = '▶';
+        if (audioWave) audioWave.querySelectorAll('i').forEach(b => b.classList.remove('on'));
+        if (durEl && isFinite(audioEl.duration)) durEl.textContent = fmtDur(audioEl.duration);
+        clearInterval(audioIv);
+    });
+}
+function stopAudio() {
+    if (audioEl) { try { audioEl.pause(); } catch(_) {} }
+    if (audioBtn) audioBtn.textContent = '▶';
+    if (audioWave) audioWave.querySelectorAll('i').forEach(b => b.classList.remove('on'));
+    clearInterval(audioIv);
+    audioEl = null; audioBtn = null; audioWave = null;
+}
+function fmtDur(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+
+// ── Chamada (integra com a chamadinha do app na fase de integração) ──
+function onCall() {
+    alert('📹 Aqui dispara a CHAMADA DE VÍDEO da modelo (integração na fase 2, dentro do app).');
+}
+function openCta(url) {
+    if (url) window.open(url, '_blank', 'noopener');
+}
+
+// boot
+loadList();
+</script>
+</body>
+</html>

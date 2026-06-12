@@ -235,6 +235,8 @@ app.use('/api/admin/gifts', require('./routes/admin-gifts'));
 app.use('/api/admin/gift-campaigns', require('./routes/admin-gift-campaigns'));
 app.use('/api/admin/sales-analytics', require('./routes/admin-sales-analytics'));
 app.use('/api/admin/engagement', require('./routes/admin-engagement'));
+app.use('/api/admin/chats', require('./routes/admin-chats'));
+app.use('/api/user', require('./routes/user-chats'));
 app.use('/api/user', require('./routes/user'));
 
 
@@ -358,6 +360,13 @@ app.get('/ops', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     res.sendFile(path.join(__dirname, 'public/index.html'));
+});
+
+// CHAT LAB — página de teste isolada do chat estilo WhatsApp (Fase 1).
+// Depois dos testes a experiência vira aba dentro do app principal.
+app.get('/chat-lab', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(__dirname, 'public/chat-lab.html'));
 });
 
 // Painel admin (na Fase 4 vai ficar em subdomínio separado,

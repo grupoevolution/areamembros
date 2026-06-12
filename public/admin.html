@@ -3195,6 +3195,10 @@ a { color: inherit; text-decoration: none; }
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
                     Funís de Tráfego
                 </div>
+                <div class="nav-item" data-screen="chats" onclick="switchAdminScreen(this, 'chats', 'Chats (estilo WhatsApp)'); loadAdminChats();">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+                    Chats
+                </div>
             </div>
 
             <div class="nav-section">
@@ -5420,6 +5424,158 @@ a { color: inherit; text-decoration: none; }
                 </div>
                 <div id="funnelsList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:24px;">
                     <div style="color:rgba(255,255,255,.5)">Carregando...</div>
+                </div>
+            </div>
+
+            <!-- ═══════ CHATS (estilo WhatsApp) ═══════ -->
+            <div class="screen-content" id="screen-chats">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Chats</h1>
+                        <p class="page-subtitle">Conversas estilo WhatsApp com roteiro (substitui o Typebot). Teste em <a href="/chat-lab" target="_blank" style="color:#e50914;">/chat-lab</a>.</p>
+                    </div>
+                    <div class="page-actions">
+                        <button class="btn-primary" onclick="openChatModal()">+ Novo Chat</button>
+                    </div>
+                </div>
+                <div id="adminChatsList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:24px;">
+                    <div style="color:rgba(255,255,255,.5)">Carregando...</div>
+                </div>
+            </div>
+
+            <!-- Modal Novo/Editar Chat (persona) -->
+            <div id="chatModalBackdrop" style="position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:200; display:none; align-items:center; justify-content:center; padding:16px;">
+                <div style="background:var(--card,#1a1a1a); border-radius:16px; width:100%; max-width:540px; max-height:90vh; overflow-y:auto;">
+                    <div style="padding:20px 24px; border-bottom:1px solid var(--border,rgba(255,255,255,.1)); display:flex; justify-content:space-between; align-items:center;">
+                        <span id="chatModalTitle" style="font-size:16px; font-weight:700; color:#fff;">Novo Chat</span>
+                        <button onclick="closeChatModal()" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">×</button>
+                    </div>
+                    <form id="chatForm" onsubmit="return saveChatPersona(event)">
+                        <input type="hidden" id="cpId"/>
+                        <div style="padding:20px 24px; display:flex; flex-direction:column; gap:14px;">
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Nome da persona *</label><input class="form-control" id="cpName" required maxlength="80" placeholder="Ex: Gaby 🔥" style="width:100%;"/></div>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Foto de perfil (URL)</label>
+                                <div style="display:flex; gap:8px;">
+                                    <input class="form-control" id="cpAvatar" maxlength="1000" placeholder="https://..." style="flex:1;"/>
+                                    <button type="button" class="btn-secondary" onclick="UploadHelper.openPicker('cpAvatar', 'avatar', () => {})" style="white-space:nowrap; font-size:12px;">📤 Enviar</button>
+                                </div>
+                            </div>
+                            <div class="form-row-grid-2" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Seção na lista</label><input class="form-control" id="cpSection" maxlength="60" placeholder="Minhas conversas" style="width:100%;"/></div>
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Status exibido</label><input class="form-control" id="cpStatus" maxlength="40" placeholder="online" style="width:100%;"/></div>
+                            </div>
+                            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="cpOnline" checked style="width:16px; height:16px;"> Mostrar bolinha verde "online"</label>
+                            <div style="background:rgba(229,9,20,.06); border:1px solid rgba(229,9,20,.25); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;">
+                                <div><label style="display:block; font-size:12px; color:#fff; font-weight:700; margin-bottom:4px;">💎 Acesso</label>
+                                    <select class="form-control" id="cpAccess" style="width:100%;">
+                                        <option value="free">Liberado pra todo mundo (funil de venda)</option>
+                                        <option value="vip">Bloqueado 🔒 — só quem tem o produto vinculado</option>
+                                    </select>
+                                </div>
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Produto vinculado (define quem é VIP)</label>
+                                    <select class="form-control" id="cpProduct" style="width:100%;"><option value="">— nenhum —</option></select>
+                                </div>
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link de desbloqueio (checkout do VIP)</label>
+                                    <input class="form-control" id="cpCheckout" maxlength="1000" placeholder="https://pay..." style="width:100%;"/>
+                                </div>
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Quem pode DIGITAR mensagem livre</label>
+                                    <select class="form-control" id="cpReply" style="width:100%;">
+                                        <option value="vip">Só VIP (quem tem o produto) — recomendado</option>
+                                        <option value="all">Todo mundo</option>
+                                        <option value="none">Ninguém (só botões do roteiro)</option>
+                                    </select>
+                                </div>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="cpPhoto" style="width:16px; height:16px;"> VIP pode mandar FOTO</label>
+                            </div>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Ordem na lista</label><input class="form-control" type="number" id="cpOrder" min="0" max="99" value="0" style="width:100px;"/></div>
+
+                            <!-- Roteiro (só ao editar) -->
+                            <div id="chatStepsSection" style="display:none; border-top:1px solid rgba(255,255,255,.08); padding-top:16px;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                                    <div>
+                                        <div style="font-size:13px; font-weight:700; color:#fff;">💬 Roteiro da conversa</div>
+                                        <div style="font-size:11px; color:rgba(255,255,255,.5);">Blocos em ordem. Botões pulam pra outro bloco pelo rótulo.</div>
+                                    </div>
+                                    <button type="button" class="btn-secondary" onclick="openChatStepModal()" style="font-size:12px; padding:6px 12px;">+ Bloco</button>
+                                </div>
+                                <div id="chatStepsList" style="display:flex; flex-direction:column; gap:8px;"></div>
+                                <button type="button" class="btn-secondary" onclick="openChatSessions()" style="margin-top:12px; font-size:12px;">📥 Ver conversas recebidas</button>
+                            </div>
+                        </div>
+                        <div style="padding:16px 24px; border-top:1px solid var(--border,rgba(255,255,255,.1)); display:flex; gap:10px; justify-content:flex-end;">
+                            <button type="button" class="btn-secondary" onclick="closeChatModal()">Cancelar</button>
+                            <button type="submit" class="btn-primary">Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal Bloco do roteiro -->
+            <div id="chatStepModalBackdrop" style="position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:300; display:none; align-items:center; justify-content:center; padding:16px;">
+                <div style="background:var(--card,#1a1a1a); border-radius:16px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto;">
+                    <div style="padding:20px 24px; border-bottom:1px solid var(--border,rgba(255,255,255,.1)); display:flex; justify-content:space-between; align-items:center;">
+                        <span id="chatStepModalTitle" style="font-size:16px; font-weight:700; color:#fff;">Novo Bloco</span>
+                        <button onclick="closeChatStepModal()" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">×</button>
+                    </div>
+                    <form id="chatStepForm" onsubmit="return saveChatStep(event)">
+                        <input type="hidden" id="csId"/>
+                        <div style="padding:20px 24px; display:flex; flex-direction:column; gap:12px;">
+                            <div style="display:grid; grid-template-columns:2fr 1fr; gap:10px;">
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Tipo</label>
+                                    <select class="form-control" id="csType" style="width:100%;" onchange="updateChatStepFields()">
+                                        <option value="text">💬 Texto</option>
+                                        <option value="audio">🎤 Áudio (waveform)</option>
+                                        <option value="image">📷 Foto normal</option>
+                                        <option value="view_once_image">👁 Foto 1x (visualização única)</option>
+                                        <option value="view_once_video">🎬 Vídeo 1x (visualização única)</option>
+                                        <option value="buttons">🔘 Botões de escolha</option>
+                                        <option value="wait_input">⌨️ Esperar cliente digitar</option>
+                                        <option value="cta">💳 Botão de oferta (link)</option>
+                                    </select>
+                                </div>
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Ordem</label><input class="form-control" type="number" id="csOrder" min="0" max="999" value="0" style="width:100%;"/></div>
+                            </div>
+                            <div id="csContentWrap"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Texto <span style="color:rgba(255,255,255,.4)">(use {nome} pro nome do cliente)</span></label>
+                                <textarea class="form-control" id="csContent" maxlength="2000" placeholder="oii {nome}, que bom que você veio 😏" style="width:100%; min-height:64px;"></textarea>
+                            </div>
+                            <div id="csMediaWrap" style="display:none;"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">URL da mídia</label>
+                                <div style="display:flex; gap:8px;">
+                                    <input class="form-control" id="csMedia" maxlength="1000" placeholder="https://..." style="flex:1;"/>
+                                    <button type="button" class="btn-secondary" onclick="UploadHelper.openPicker('csMedia', 'banner-produto', () => {})" style="white-space:nowrap; font-size:12px;">📤</button>
+                                </div>
+                                <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">Áudio: MP3/M4A. Foto: JPG/PNG/WEBP. Vídeo: MP4.</div>
+                            </div>
+                            <div id="csButtonsWrap" style="display:none;">
+                                <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Botões (até 4) — rótulo + pulo opcional</label>
+                                <div id="csButtonRows" style="display:flex; flex-direction:column; gap:6px;"></div>
+                                <button type="button" class="btn-secondary" onclick="addChatBtnRow()" style="margin-top:6px; font-size:11px;">+ Botão</button>
+                                <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">"Pulo" = rótulo do bloco de destino. Vazio = segue pro próximo.</div>
+                            </div>
+                            <div id="csCtaWrap" style="display:none;"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link do botão (checkout/oferta)</label>
+                                <input class="form-control" id="csLink" maxlength="1000" placeholder="https://pay..." style="width:100%;"/>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Digitando (ms)</label><input class="form-control" type="number" id="csTyping" min="0" max="8000" value="1200" style="width:100%;"/></div>
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Rótulo do bloco</label><input class="form-control" id="csKey" maxlength="40" placeholder="ex: oferta" style="width:100%;"/></div>
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Pular pra</label><input class="form-control" id="csGoto" maxlength="40" placeholder="rótulo" style="width:100%;"/></div>
+                            </div>
+                        </div>
+                        <div style="padding:16px 24px; border-top:1px solid var(--border,rgba(255,255,255,.1)); display:flex; gap:10px; justify-content:flex-end;">
+                            <button type="button" class="btn-secondary" onclick="closeChatStepModal()">Cancelar</button>
+                            <button type="submit" class="btn-primary">Salvar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Modal Conversas recebidas -->
+            <div id="chatSessionsBackdrop" style="position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:300; display:none; align-items:center; justify-content:center; padding:16px;">
+                <div style="background:var(--card,#1a1a1a); border-radius:16px; width:100%; max-width:620px; max-height:92vh; overflow-y:auto;">
+                    <div style="padding:20px 24px; border-bottom:1px solid var(--border,rgba(255,255,255,.1)); display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:16px; font-weight:700; color:#fff;">📥 Conversas recebidas</span>
+                        <button onclick="document.getElementById('chatSessionsBackdrop').style.display='none'" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">×</button>
+                    </div>
+                    <div id="chatSessionsBody" style="padding:18px 24px; color:rgba(255,255,255,.6); font-size:12px;">—</div>
                 </div>
             </div>
 
@@ -13979,6 +14135,296 @@ async function applyFunnelStats() {
     }
 }
 
+
+// ═══════════════ CHATS (estilo WhatsApp) ═══════════════
+let _curChatId = null;
+
+async function loadAdminChats() {
+    const list = document.getElementById('adminChatsList');
+    if (!list) return;
+    try {
+        const r = await fetch('/api/admin/chats', { credentials:'include' });
+        const data = await r.json();
+        if (!data.success) { list.innerHTML = '<div style="color:#f55">'+(data.error||'erro')+'</div>'; return; }
+        if (!data.chats.length) {
+            list.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:rgba(255,255,255,.5)">Nenhum chat criado. Clique em "+ Novo Chat".</div>';
+            return;
+        }
+        list.innerHTML = data.chats.map(c => {
+            const status = c.active ? '<span style="background:rgba(76,217,100,.15);color:#4CD964;padding:3px 8px;border-radius:8px;font-size:11px;font-weight:600">Ativo</span>' : '<span style="background:rgba(255,59,48,.15);color:#FF3B30;padding:3px 8px;border-radius:8px;font-size:11px;font-weight:600">Inativo</span>';
+            const av = c.avatar_url ? 'background-image:url(\''+escHtmlAdmin(c.avatar_url)+'\');background-size:cover;background-position:center;' : '';
+            const lock = c.access === 'vip' ? ' · 🔒 VIP' : ' · aberto';
+            return '<div style="background:var(--card,#1a1a1a);border:1px solid var(--border,rgba(255,255,255,.08));border-radius:14px;padding:14px 16px;">'
+                + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">'
+                +   '<div style="width:46px;height:46px;border-radius:50%;background:#3a2a2c;'+av+'flex-shrink:0;"></div>'
+                +   '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14px;color:#fff;">'+escHtmlAdmin(c.name)+'</div>'
+                +     '<div style="font-size:11px;color:rgba(255,255,255,.5);">'+escHtmlAdmin(c.section||'')+lock+(c.product_name?' · 📦 '+escHtmlAdmin(c.product_name):'')+'</div></div>'
+                +   status
+                + '</div>'
+                + '<div style="display:flex;gap:8px;font-size:11px;color:rgba(255,255,255,.6);margin-bottom:10px;">'
+                +   '<div style="flex:1;background:rgba(0,0,0,.3);padding:8px;border-radius:6px;text-align:center"><div style="font-size:17px;color:#fff;font-weight:700">'+c.steps_count+'</div>Blocos</div>'
+                +   '<div style="flex:1;background:rgba(0,0,0,.3);padding:8px;border-radius:6px;text-align:center"><div style="font-size:17px;color:#4CD964;font-weight:700">'+c.sessions_count+'</div>Conversas</div>'
+                + '</div>'
+                + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+                +   '<button class="btn-secondary" style="flex:1;min-width:70px" onclick=\'editChatPersona('+JSON.stringify(c).replace(/'/g,"&#39;")+')\'>Editar</button>'
+                +   '<button class="btn-secondary" style="flex:1;min-width:70px" onclick="toggleChatPersona('+c.id+', '+(!c.active)+')">'+(c.active?'Desativar':'Ativar')+'</button>'
+                +   '<button class="btn-danger" style="flex:1;min-width:70px" onclick="deleteChatPersona('+c.id+')">Excluir</button>'
+                + '</div></div>';
+        }).join('');
+    } catch(e) { list.innerHTML = '<div style="color:#f55">Erro: '+e.message+'</div>'; }
+}
+
+async function loadChatProductsDropdown(selectedId) {
+    try {
+        const r = await fetch('/api/admin/products', { credentials:'include' });
+        const data = await r.json();
+        const sel = document.getElementById('cpProduct');
+        if (sel) {
+            sel.innerHTML = '<option value="">— nenhum —</option>' + (data.products||[]).map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
+            if (selectedId) sel.value = selectedId;
+        }
+    } catch(_) {}
+}
+
+function openChatModal() {
+    _curChatId = null;
+    document.getElementById('chatModalTitle').textContent = 'Novo Chat';
+    document.getElementById('chatForm').reset();
+    document.getElementById('cpId').value = '';
+    document.getElementById('cpOnline').checked = true;
+    document.getElementById('chatStepsSection').style.display = 'none';
+    loadChatProductsDropdown();
+    document.getElementById('chatModalBackdrop').style.display = 'flex';
+}
+function closeChatModal() { document.getElementById('chatModalBackdrop').style.display = 'none'; }
+
+function editChatPersona(c) {
+    _curChatId = c.id;
+    document.getElementById('chatModalTitle').textContent = 'Editar Chat';
+    document.getElementById('cpId').value = c.id;
+    document.getElementById('cpName').value = c.name || '';
+    document.getElementById('cpAvatar').value = c.avatar_url || '';
+    document.getElementById('cpSection').value = c.section || '';
+    document.getElementById('cpStatus').value = c.status_label || 'online';
+    document.getElementById('cpOnline').checked = c.show_online !== false;
+    document.getElementById('cpAccess').value = c.access || 'free';
+    document.getElementById('cpCheckout').value = c.checkout_url || '';
+    document.getElementById('cpReply').value = c.reply_mode || 'vip';
+    document.getElementById('cpPhoto').checked = c.allow_photo === true;
+    document.getElementById('cpOrder').value = c.display_order || 0;
+    loadChatProductsDropdown(c.product_id || '');
+    document.getElementById('chatStepsSection').style.display = 'block';
+    loadChatSteps(c.id);
+    document.getElementById('chatModalBackdrop').style.display = 'flex';
+}
+
+async function saveChatPersona(e) {
+    e.preventDefault();
+    const id = document.getElementById('cpId').value;
+    const payload = {
+        name: document.getElementById('cpName').value.trim(),
+        avatar_url: document.getElementById('cpAvatar').value.trim() || null,
+        section: document.getElementById('cpSection').value.trim() || 'Minhas conversas',
+        status_label: document.getElementById('cpStatus').value.trim() || 'online',
+        show_online: document.getElementById('cpOnline').checked,
+        access: document.getElementById('cpAccess').value,
+        product_id: document.getElementById('cpProduct').value || null,
+        checkout_url: document.getElementById('cpCheckout').value.trim() || null,
+        reply_mode: document.getElementById('cpReply').value,
+        allow_photo: document.getElementById('cpPhoto').checked,
+        display_order: parseInt(document.getElementById('cpOrder').value, 10) || 0,
+    };
+    try {
+        const url = id ? '/api/admin/chats/'+id : '/api/admin/chats';
+        const r = await fetch(url, { method: id ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payload) });
+        const data = await r.json();
+        if (!data.success) { alert('Erro: '+(data.error||'')); return false; }
+        if (!id && data.chat) {
+            // chat novo: entra direto em modo edição pra montar o roteiro
+            editChatPersona(data.chat);
+            loadAdminChats();
+            return false;
+        }
+        closeChatModal();
+        loadAdminChats();
+    } catch(e) { alert('Erro: '+e.message); }
+    return false;
+}
+async function toggleChatPersona(id, active) {
+    await fetch('/api/admin/chats/'+id, { method:'PUT', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify({ active }) });
+    loadAdminChats();
+}
+async function deleteChatPersona(id) {
+    if (!confirm('Excluir este chat? O roteiro e o histórico de conversas vão junto.')) return;
+    await fetch('/api/admin/chats/'+id, { method:'DELETE', credentials:'include' });
+    loadAdminChats();
+}
+
+// ── Blocos do roteiro ──
+const CHAT_STEP_LABELS = {
+    text: '💬 Texto', audio: '🎤 Áudio', image: '📷 Foto',
+    view_once_image: '👁 Foto 1x', view_once_video: '🎬 Vídeo 1x',
+    buttons: '🔘 Botões', wait_input: '⌨️ Espera digitar', cta: '💳 Oferta',
+};
+
+async function loadChatSteps(chatId) {
+    const list = document.getElementById('chatStepsList');
+    if (!list) return;
+    list.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:12px;">Carregando...</div>';
+    try {
+        const r = await fetch('/api/admin/chats/'+chatId+'/steps', { credentials:'include' });
+        const data = await r.json();
+        if (!data.success) { list.innerHTML = '<div style="color:#f55">Erro</div>'; return; }
+        if (!data.steps.length) {
+            list.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:12px; padding:12px; text-align:center; background:rgba(0,0,0,.2); border-radius:8px;">Nenhum bloco. Clique em "+ Bloco" pra montar o roteiro.</div>';
+            return;
+        }
+        list.innerHTML = data.steps.map(s => {
+            const label = CHAT_STEP_LABELS[s.type] || s.type;
+            const preview = s.type === 'buttons'
+                ? (Array.isArray(s.buttons) ? s.buttons.map(b => b.label).join(' · ') : '')
+                : (s.content || s.media_url || '');
+            const key = s.step_key ? '<span style="background:rgba(229,9,20,.18);color:#ff6b73;font-size:9px;padding:2px 6px;border-radius:999px;margin-left:6px;">'+escHtmlAdmin(s.step_key)+'</span>' : '';
+            return '<div style="display:flex; align-items:center; gap:10px; padding:9px 12px; background:rgba(0,0,0,.3); border-radius:8px; border:1px solid rgba(255,255,255,.05);">'
+                + '<span style="font-size:11px;color:rgba(255,255,255,.4);min-width:22px;">#'+s.step_order+'</span>'
+                + '<div style="flex:1; min-width:0;"><div style="font-size:12.5px; font-weight:700; color:#fff;">'+label+key+'</div>'
+                + '<div style="font-size:11px; color:rgba(255,255,255,.5); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+escHtmlAdmin(String(preview).slice(0, 80))+'</div></div>'
+                + '<button type="button" onclick=\'editChatStep('+JSON.stringify(s).replace(/'/g,"&#39;")+')\' class="btn-secondary" style="font-size:11px; padding:4px 10px;">Editar</button>'
+                + '<button type="button" onclick="deleteChatStep('+s.id+')" class="btn-danger" style="font-size:11px; padding:4px 10px;">×</button>'
+                + '</div>';
+        }).join('');
+    } catch(e) { list.innerHTML = '<div style="color:#f55">Erro: '+e.message+'</div>'; }
+}
+
+window.updateChatStepFields = function() {
+    const t = document.getElementById('csType').value;
+    document.getElementById('csContentWrap').style.display = (t === 'text' || t === 'buttons' || t === 'cta' || t === 'image') ? 'block' : 'none';
+    document.getElementById('csMediaWrap').style.display = (t === 'audio' || t === 'image' || t === 'view_once_image' || t === 'view_once_video') ? 'block' : 'none';
+    document.getElementById('csButtonsWrap').style.display = t === 'buttons' ? 'block' : 'none';
+    document.getElementById('csCtaWrap').style.display = t === 'cta' ? 'block' : 'none';
+};
+
+function addChatBtnRow(label, goto) {
+    const rows = document.getElementById('csButtonRows');
+    if (rows.children.length >= 4) return;
+    const d = document.createElement('div');
+    d.style.cssText = 'display:flex; gap:6px;';
+    d.innerHTML = '<input class="form-control" data-btn-label maxlength="60" placeholder="Rótulo do botão" value="'+escHtmlAdmin(label||'')+'" style="flex:2;"/>'
+        + '<input class="form-control" data-btn-goto maxlength="40" placeholder="Pulo" value="'+escHtmlAdmin(goto||'')+'" style="flex:1;"/>'
+        + '<button type="button" class="btn-danger" style="font-size:11px;padding:4px 10px;" onclick="this.parentNode.remove()">×</button>';
+    rows.appendChild(d);
+}
+function collectChatBtns() {
+    return Array.from(document.querySelectorAll('#csButtonRows [data-btn-label]')).map((el, i) => ({
+        label: el.value.trim(),
+        goto: document.querySelectorAll('#csButtonRows [data-btn-goto]')[i].value.trim() || null,
+    })).filter(b => b.label);
+}
+
+function openChatStepModal() {
+    if (!_curChatId) { alert('Salve o chat primeiro.'); return; }
+    document.getElementById('chatStepModalTitle').textContent = 'Novo Bloco';
+    document.getElementById('chatStepForm').reset();
+    document.getElementById('csId').value = '';
+    document.getElementById('csType').value = 'text';
+    document.getElementById('csTyping').value = 1200;
+    document.getElementById('csButtonRows').innerHTML = '';
+    addChatBtnRow();
+    updateChatStepFields();
+    document.getElementById('chatStepModalBackdrop').style.display = 'flex';
+}
+function closeChatStepModal() { document.getElementById('chatStepModalBackdrop').style.display = 'none'; }
+
+function editChatStep(s) {
+    document.getElementById('chatStepModalTitle').textContent = 'Editar Bloco';
+    document.getElementById('csId').value = s.id;
+    document.getElementById('csType').value = s.type || 'text';
+    document.getElementById('csOrder').value = s.step_order || 0;
+    document.getElementById('csContent').value = s.content || '';
+    document.getElementById('csMedia').value = s.media_url || '';
+    document.getElementById('csLink').value = s.link_url || '';
+    document.getElementById('csTyping').value = s.typing_ms ?? 1200;
+    document.getElementById('csKey').value = s.step_key || '';
+    document.getElementById('csGoto').value = s.goto_key || '';
+    const rows = document.getElementById('csButtonRows');
+    rows.innerHTML = '';
+    (Array.isArray(s.buttons) ? s.buttons : []).forEach(b => addChatBtnRow(b.label, b.goto));
+    if (!rows.children.length) addChatBtnRow();
+    updateChatStepFields();
+    document.getElementById('chatStepModalBackdrop').style.display = 'flex';
+}
+
+async function saveChatStep(e) {
+    e.preventDefault();
+    if (!_curChatId) return false;
+    const id = document.getElementById('csId').value;
+    const type = document.getElementById('csType').value;
+    if (type === 'buttons' && collectChatBtns().length === 0) { alert('Adicione pelo menos 1 botão.'); return false; }
+    const payload = {
+        type,
+        step_order: parseInt(document.getElementById('csOrder').value, 10) || 0,
+        content: document.getElementById('csContent').value.trim() || null,
+        media_url: document.getElementById('csMedia').value.trim() || null,
+        buttons: type === 'buttons' ? collectChatBtns() : null,
+        link_url: document.getElementById('csLink').value.trim() || null,
+        typing_ms: parseInt(document.getElementById('csTyping').value, 10) || 1200,
+        step_key: document.getElementById('csKey').value.trim() || null,
+        goto_key: document.getElementById('csGoto').value.trim() || null,
+    };
+    try {
+        const url = id ? '/api/admin/chats/'+_curChatId+'/steps/'+id : '/api/admin/chats/'+_curChatId+'/steps';
+        const r = await fetch(url, { method: id ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payload) });
+        const data = await r.json();
+        if (!data.success) { alert('Erro: '+(data.error||'')); return false; }
+        closeChatStepModal();
+        loadChatSteps(_curChatId);
+    } catch(e) { alert('Erro: '+e.message); }
+    return false;
+}
+async function deleteChatStep(id) {
+    if (!confirm('Excluir este bloco?')) return;
+    await fetch('/api/admin/chats/'+_curChatId+'/steps/'+id, { method:'DELETE', credentials:'include' });
+    loadChatSteps(_curChatId);
+}
+
+// ── Conversas recebidas ──
+async function openChatSessions() {
+    if (!_curChatId) return;
+    const body = document.getElementById('chatSessionsBody');
+    body.innerHTML = 'Carregando...';
+    document.getElementById('chatSessionsBackdrop').style.display = 'flex';
+    try {
+        const r = await fetch('/api/admin/chats/'+_curChatId+'/sessions', { credentials:'include' });
+        const data = await r.json();
+        if (!data.success || !data.sessions.length) { body.innerHTML = 'Nenhuma conversa ainda.'; return; }
+        body.innerHTML = data.sessions.map(s => {
+            const who = s.customer_email || ('visitante ' + (s.visitor_id || '').slice(0, 10));
+            const last = s.last_user_message ? ' — "' + escHtmlAdmin(String(s.last_user_message).slice(0, 60)) + '"' : '';
+            return '<div onclick="viewChatSession('+s.id+')" style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:rgba(0,0,0,.3); border-radius:8px; margin-bottom:8px; cursor:pointer;">'
+                + '<div style="flex:1; min-width:0;"><div style="font-size:13px; font-weight:700; color:#fff;">'+escHtmlAdmin(who)+'</div>'
+                + '<div style="font-size:11px; color:rgba(255,255,255,.5); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+s.user_messages+' resposta(s)'+last+'</div></div>'
+                + '<span style="font-size:10px; color:rgba(255,255,255,.4);">'+new Date(s.updated_at).toLocaleString('pt-BR').slice(0, 16)+'</span></div>';
+        }).join('');
+    } catch(e) { body.innerHTML = 'Erro: ' + e.message; }
+}
+async function viewChatSession(sid) {
+    const body = document.getElementById('chatSessionsBody');
+    body.innerHTML = 'Carregando conversa...';
+    try {
+        const r = await fetch('/api/admin/chats/sessions/'+sid+'/messages', { credentials:'include' });
+        const data = await r.json();
+        if (!data.success) { body.innerHTML = 'Erro'; return; }
+        body.innerHTML = '<button class="btn-secondary" style="font-size:11px; margin-bottom:12px;" onclick="openChatSessions()">‹ Voltar</button>'
+            + data.messages.map(m => {
+                const mine = m.sender === 'user';
+                const tag = { audio:'🎤 áudio', image:'📷 foto', view_once_image:'👁 foto 1x'+(m.viewed_at?' (vista)':''), view_once_video:'🎬 vídeo 1x'+(m.viewed_at?' (visto)':''), cta:'💳 '+(m.content||'oferta'), buttons:(m.content||'(botões)') }[m.type];
+                const txt = tag || escHtmlAdmin(m.content || '');
+                return '<div style="display:flex; justify-content:'+(mine?'flex-end':'flex-start')+'; margin-bottom:6px;">'
+                    + '<div style="max-width:75%; background:'+(mine?'rgba(76,217,100,.15)':'rgba(255,255,255,.06)')+'; border-radius:10px; padding:7px 10px; font-size:12px; color:#fff;">'
+                    + txt + '<div style="font-size:9px; color:rgba(255,255,255,.4); text-align:right; margin-top:2px;">'+new Date(m.created_at).toLocaleTimeString('pt-BR').slice(0,5)+'</div></div></div>';
+            }).join('');
+    } catch(e) { body.innerHTML = 'Erro: ' + e.message; }
+}
 
 // ═══════════════ TOGGLES DE GAMIFICAÇÃO (roleta, cofre, etc.) ═══════════════
 async function loadGamiToggles() {
