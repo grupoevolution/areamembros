@@ -80,7 +80,8 @@ router.get('/:id', requireAdmin, async (req, res) => {
 // POST — cria
 router.post('/', requireAdmin, async (req, res) => {
     try {
-        const { slug, name, description, featured_product_id, video_call_id, active } = req.body || {};
+        const { slug, name, description, featured_product_id, video_call_id, active,
+                entry_type, entry_product_id, entry_category_id } = req.body || {};
         const cleanSlug = sanitizeSlug(slug || name);
         if (!cleanSlug) return res.status(400).json({ success: false, error: 'Slug inválido' });
         if (!name || name.trim().length < 1) return res.status(400).json({ success: false, error: 'Nome obrigatório' });
@@ -90,10 +91,14 @@ router.post('/', requireAdmin, async (req, res) => {
 
         const fpId = featured_product_id ? parseInt(featured_product_id, 10) : null;
         const vcId = video_call_id ? parseInt(video_call_id, 10) : null;
+        const entryT = ['home', 'product', 'category'].includes(entry_type) ? entry_type : 'home';
+        const entryP = entry_product_id ? parseInt(entry_product_id, 10) : null;
+        const entryC = entry_category_id ? parseInt(entry_category_id, 10) : null;
 
         const { rows } = await db.query(`
-            INSERT INTO funnels (slug, name, description, featured_product_id, video_call_id, active)
-            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *
+            INSERT INTO funnels (slug, name, description, featured_product_id, video_call_id, active,
+                                 entry_type, entry_product_id, entry_category_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *
         `, [
             cleanSlug,
             name.trim().slice(0, 120),
@@ -101,6 +106,9 @@ router.post('/', requireAdmin, async (req, res) => {
             fpId,
             vcId,
             active !== false,
+            entryT,
+            entryP,
+            entryC,
         ]);
 
         return res.json({ success: true, funnel: rows[0] });
@@ -116,10 +124,24 @@ router.put('/:id', requireAdmin, async (req, res) => {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ success: false, error: 'ID inválido' });
     try {
-        const { slug, name, description, featured_product_id, video_call_id, active } = req.body || {};
+        const { slug, name, description, featured_product_id, video_call_id, active,
+                entry_type, entry_product_id, entry_category_id } = req.body || {};
         const updates = [];
         const values = [];
         let p = 1;
+
+        if (entry_type !== undefined) {
+            updates.push(`entry_type = $${p++}`);
+            values.push(['home', 'product', 'category'].includes(entry_type) ? entry_type : 'home');
+        }
+        if (entry_product_id !== undefined) {
+            updates.push(`entry_product_id = $${p++}`);
+            values.push(entry_product_id ? parseInt(entry_product_id, 10) : null);
+        }
+        if (entry_category_id !== undefined) {
+            updates.push(`entry_category_id = $${p++}`);
+            values.push(entry_category_id ? parseInt(entry_category_id, 10) : null);
+        }
 
         if (slug !== undefined) {
             const clean = sanitizeSlug(slug);

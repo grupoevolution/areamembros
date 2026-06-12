@@ -5436,10 +5436,32 @@ a { color: inherit; text-decoration: none; }
                             <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Nome do funíl *</label><input class="form-control" id="funnelName" required maxlength="120" placeholder="Ex: Funíl Gaby Amostra" style="width:100%;"/></div>
                             <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Slug (URL) *</label><input class="form-control" id="funnelSlug" required maxlength="80" placeholder="gaby" style="width:100%;"/><div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">URL gerada: <span id="funnelUrlPreview" style="color:#e50914;">/f/gaby</span></div></div>
                             <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Descrição (opcional)</label><textarea class="form-control" id="funnelDesc" maxlength="1000" placeholder="Notas internas..." style="width:100%; min-height:60px; resize:vertical;"></textarea></div>
-                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Produto destaque (opcional)</label>
+
+                            <!-- DESTINO DE ENTRADA: pra onde o cliente cai ao abrir o link -->
+                            <div style="background:rgba(229,9,20,.06); border:1px solid rgba(229,9,20,.25); border-radius:10px; padding:12px;">
+                                <label style="display:block; font-size:12px; color:#fff; font-weight:700; margin-bottom:4px;">🎯 Pra onde o cliente cai ao abrir o link?</label>
+                                <select class="form-control" id="funnelEntryType" style="width:100%;" onchange="updateFunnelEntryFields()">
+                                    <option value="home">🏠 Home do app (padrão)</option>
+                                    <option value="product">📦 Direto na página de um produto</option>
+                                    <option value="category">🗂 Numa categoria específica</option>
+                                </select>
+                                <div id="funnelEntryProductWrap" style="display:none; margin-top:10px;">
+                                    <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Produto de destino</label>
+                                    <select class="form-control" id="funnelEntryProduct" style="width:100%;"><option value="">— selecione —</option></select>
+                                </div>
+                                <div id="funnelEntryCategoryWrap" style="display:none; margin-top:10px;">
+                                    <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Categoria de destino</label>
+                                    <select class="form-control" id="funnelEntryCategory" style="width:100%; margin-bottom:8px;"><option value="">— selecione —</option></select>
+                                    <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Produto em foco (opcional — aparece em 1º na categoria)</label>
+                                    <select class="form-control" id="funnelEntryFocusProduct" style="width:100%;"><option value="">— nenhum —</option></select>
+                                </div>
+                            </div>
+
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Produto destaque no banner da home (opcional)</label>
                                 <select class="form-control" id="funnelProduct" style="width:100%;">
                                     <option value="">— nenhum —</option>
                                 </select>
+                                <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">Vira o banner principal da home enquanto o cliente navega pelo link do funil.</div>
                             </div>
                             <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Chamada após login (atalho — opcional)</label>
                                 <select class="form-control" id="funnelCall" style="width:100%;">
@@ -13565,7 +13587,9 @@ async function loadFunnels() {
             return '<div style="background:var(--card,#1a1a1a);border:1px solid var(--border,rgba(255,255,255,.08));border-radius:14px;overflow:hidden">'
                 + '<div style="padding:14px 16px;border-bottom:1px solid var(--border,rgba(255,255,255,.08));display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
                 +   '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;color:#fff">'+escHtmlAdmin(f.name)+'</div>'
-                +     '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px">'+(f.featured_product_name ? '📦 '+escHtmlAdmin(f.featured_product_name) : '')+(f.video_call_model_name ? ' · 📞 '+escHtmlAdmin(f.video_call_model_name) : '')+'</div>'
+                +     '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px">'
+                +       (f.entry_type === 'product' ? '🎯 Direto no produto' : f.entry_type === 'category' ? '🎯 Direto na categoria' : '🎯 Home')
+                +       (f.featured_product_name ? ' · 📦 '+escHtmlAdmin(f.featured_product_name) : '')+(f.video_call_model_name ? ' · 📞 '+escHtmlAdmin(f.video_call_model_name) : '')+'</div>'
                 +   '</div>'+status
                 + '</div>'
                 + '<div style="padding:14px 16px">'
@@ -13592,24 +13616,45 @@ async function loadFunnels() {
 
 async function loadFunnelDropdowns() {
     try {
-        const [pr, cr] = await Promise.all([
+        const [pr, cr, cats] = await Promise.all([
             fetch('/api/admin/products', { credentials:'include' }).then(r => r.json()),
             fetch('/api/admin/calls', { credentials:'include' }).then(r => r.json()),
+            fetch('/api/admin/products/meta/categories', { credentials:'include' }).then(r => r.json()).catch(() => ({})),
         ]);
         _funnelProducts = (pr.products || pr.data || []);
         _funnelCalls = (cr.calls || []);
+        const prodOptions = '<option value="">— nenhum —</option>' + _funnelProducts.map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
         const ps = document.getElementById('funnelProduct');
         const cs = document.getElementById('funnelCall');
-        if (ps) ps.innerHTML = '<option value="">— nenhum —</option>' + _funnelProducts.map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
+        if (ps) ps.innerHTML = prodOptions;
         if (cs) cs.innerHTML = '<option value="">— nenhuma —</option>' + _funnelCalls.map(c => '<option value="'+c.id+'">'+escHtmlAdmin(c.model_name)+' ('+escHtmlAdmin(c.name)+')</option>').join('');
+        // Destino de entrada: produto direto / categoria + produto em foco
+        const ep = document.getElementById('funnelEntryProduct');
+        const ef = document.getElementById('funnelEntryFocusProduct');
+        if (ep) ep.innerHTML = '<option value="">— selecione —</option>' + _funnelProducts.map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
+        if (ef) ef.innerHTML = prodOptions;
+        const ec = document.getElementById('funnelEntryCategory');
+        if (ec) {
+            const list = (cats && cats.categories) || [];
+            ec.innerHTML = '<option value="">— selecione —</option>' + list.map(c => '<option value="'+c.id+'">'+escHtmlAdmin(c.name)+'</option>').join('');
+        }
     } catch(e) {}
 }
+
+// Mostra os campos do destino conforme o tipo escolhido
+window.updateFunnelEntryFields = function() {
+    const t = document.getElementById('funnelEntryType').value;
+    document.getElementById('funnelEntryProductWrap').style.display = t === 'product' ? 'block' : 'none';
+    document.getElementById('funnelEntryCategoryWrap').style.display = t === 'category' ? 'block' : 'none';
+};
 
 function openFunnelModal() {
     document.getElementById('funnelModalTitle').textContent = 'Novo Funíl';
     document.getElementById('funnelId').value = '';
     document.getElementById('funnelForm').reset();
     document.getElementById('funnelUrlPreview').textContent = '/f/...';
+    document.getElementById('funnelEntryType').value = 'home';
+    updateFunnelEntryFields();
     loadFunnelDropdowns();
     // Esconde sessão de etapas em funíl novo (só aparece após salvar)
     const stepsSection = document.getElementById('funnelStepsSection');
@@ -13625,9 +13670,16 @@ function editFunnel(f) {
     document.getElementById('funnelSlug').value = f.slug || '';
     document.getElementById('funnelDesc').value = f.description || '';
     document.getElementById('funnelUrlPreview').textContent = '/f/' + (f.slug || '');
+    document.getElementById('funnelEntryType').value = f.entry_type || 'home';
+    updateFunnelEntryFields();
     loadFunnelDropdowns().then(() => {
         if (f.featured_product_id) document.getElementById('funnelProduct').value = f.featured_product_id;
         if (f.video_call_id) document.getElementById('funnelCall').value = f.video_call_id;
+        if (f.entry_type === 'product' && f.entry_product_id) document.getElementById('funnelEntryProduct').value = f.entry_product_id;
+        if (f.entry_type === 'category') {
+            if (f.entry_category_id) document.getElementById('funnelEntryCategory').value = f.entry_category_id;
+            if (f.entry_product_id) document.getElementById('funnelEntryFocusProduct').value = f.entry_product_id;
+        }
     });
     // Carrega etapas
     loadFunnelSteps(f.id);
@@ -13642,12 +13694,27 @@ document.addEventListener('input', e => {
 async function saveFunnel(e) {
     e.preventDefault();
     const id = document.getElementById('funnelId').value;
+    const entryType = document.getElementById('funnelEntryType').value || 'home';
+    if (entryType === 'product' && !document.getElementById('funnelEntryProduct').value) {
+        alert('Escolha o produto de destino.');
+        return false;
+    }
+    if (entryType === 'category' && !document.getElementById('funnelEntryCategory').value) {
+        alert('Escolha a categoria de destino.');
+        return false;
+    }
     const payload = {
         name: document.getElementById('funnelName').value.trim(),
         slug: document.getElementById('funnelSlug').value.trim(),
         description: document.getElementById('funnelDesc').value.trim() || null,
         featured_product_id: document.getElementById('funnelProduct').value || null,
         video_call_id: document.getElementById('funnelCall').value || null,
+        entry_type: entryType,
+        // 'product' → produto de destino; 'category' → produto em foco (opcional)
+        entry_product_id: entryType === 'product' ? document.getElementById('funnelEntryProduct').value
+                        : entryType === 'category' ? (document.getElementById('funnelEntryFocusProduct').value || null)
+                        : null,
+        entry_category_id: entryType === 'category' ? document.getElementById('funnelEntryCategory').value : null,
     };
     try {
         const url = id ? '/api/admin/funnels/'+id : '/api/admin/funnels';

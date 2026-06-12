@@ -10656,7 +10656,10 @@ function renderProdGalleryGrid() {
     const MAXC = 6;
     const expanded = window.__prodGalleryExpanded === true || items.length <= MAXC;
     const cellHtml = (item, idx, moreCount) => {
-        const thumbSrc = item.thumbnail_url || (item.type === 'image' ? item.url : '') || '';
+        // Vídeo sem thumbnail: usa a capa do produto como fundo da célula
+        // (em vez do gradiente escuro). O servidor já tenta a thumb do Bunny antes.
+        const videoFallback = (item.type === 'video') ? (window.__prodGalleryVideoFallback || '') : '';
+        const thumbSrc = item.thumbnail_url || (item.type === 'image' ? item.url : '') || videoFallback || '';
         const optThumb = (thumbSrc && window.optimizeImg) ? window.optimizeImg(thumbSrc, 'card') : thumbSrc;
         const imgTag = thumbSrc
             ? `<img src="${escapeAttrData(optThumb)}" alt="" decoding="async" loading="lazy" data-fallback="${escapeAttrData(thumbSrc)}" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none';}">`
@@ -10831,6 +10834,7 @@ function populateProductScreen(p) {
     // → thumb borrada + cadeado → popup de compra. Liberada → lightbox.
     window.__prodGalleryItems = galleryItems;
     window.__prodGalleryExpanded = false;
+    window.__prodGalleryVideoFallback = (Array.isArray(ed.covers) && ed.covers[0]) || p.banner_url || '';
     const gallerySec = document.getElementById('prodGallery');
     if (gallerySec) {
         if (galleryItems.length === 0) {
@@ -11480,6 +11484,12 @@ function renderExploreGrid() {
         const hay = ((p.name || '') + ' ' + (p.description || '') + ' ' + (p.category_name || '')).toLowerCase();
         return hay.includes(query);
     });
+
+    // Funil: produto "em foco" da categoria vem em PRIMEIRO no grid
+    const focusId = window.MV_FUNNEL_DATA && window.MV_FUNNEL_DATA.entry && window.MV_FUNNEL_DATA.entry.product_id;
+    if (focusId) {
+        filtered.sort((a, b) => ((b.id === focusId) ? 1 : 0) - ((a.id === focusId) ? 1 : 0));
+    }
 
     if (filtered.length === 0) {
         grid.innerHTML = `
@@ -14678,6 +14688,51 @@ function showFunnelNotification(title, message, action) {
             window.MV_FUNNEL_MODE = true;
         }
     } catch(_) {}
+})();
+
+// ═══════════════ DESTINO DE ENTRADA DO FUNIL ═══════════════
+// O admin define pra onde o cliente cai ao abrir /f/slug:
+//   'product'  → direto na página do produto
+//   'category' → Explore filtrado na categoria (produto em foco vem 1º no grid)
+//   'home'     → home normal (com hero do produto destaque, se houver)
+// Aguarda MV_FUNNEL_DATA + catálogo carregado, navega UMA vez.
+(function funnelEntryNav() {
+    let navigated = false;
+    let tries = 0;
+    const t = setInterval(() => {
+        tries++;
+        if (tries > 60) { clearInterval(t); return; }
+        if (!window.MV_FUNNEL_MODE || navigated) { if (navigated) clearInterval(t); return; }
+        const fd = window.MV_FUNNEL_DATA;
+        const ready = fd && typeof openProductPage === 'function'
+            && window.AppState && Array.isArray(AppState.catalog) && AppState.catalog.length > 0;
+        if (!ready) return;
+        navigated = true;
+        clearInterval(t);
+        try {
+            const entry = fd.entry || {};
+            if (entry.type === 'product' && entry.product_id) {
+                openProductPage(entry.product_id);
+            } else if (entry.type === 'category' && (entry.category_slug || entry.category_id)) {
+                const slug = entry.category_slug || ('cat_' + entry.category_id);
+                if (typeof switchScreen === 'function') switchScreen('explore');
+                // Os chips de categoria renderizam DEPOIS do catálogo (vêm do
+                // config). IMPORTANTE: chama applyExploreFilter DIRETO (sem
+                // .click() — o interceptor do modo anônimo bloqueia cliques
+                // sintéticos e abriria o modal de e-mail).
+                let cTries = 0;
+                const ct = setInterval(() => {
+                    cTries++;
+                    const chip = document.querySelector('.chip[data-filter="' + slug + '"]');
+                    if (chip && typeof applyExploreFilter === 'function') {
+                        clearInterval(ct);
+                        applyExploreFilter(chip, slug);
+                    } else if (cTries > 25) clearInterval(ct);
+                }, 300);
+            }
+            // 'home' → não navega (hero já destaca o produto do funil, se configurado)
+        } catch(_) {}
+    }, 400);
 })();
 
 // ═══════════════ AUTO-LOGIN ANÔNIMO EM MODO FUNÍL ═══════════════

@@ -549,10 +549,26 @@ router.get('/catalog', optionalUser, async (req, res) => {
         };
         const gateList = (arr) => (Array.isArray(arr) ? arr.map(gateItem) : []);
 
+        // Vídeo Bunny sem thumbnail na galeria: deriva a thumb padrão da pull
+        // zone (https://HOST/{guid}/thumbnail.jpg) — a célula ganha capa em vez
+        // do fundo escuro. Roda ANTES do gating (locked mantém a thumb borrada).
+        const bunnyHost = process.env.BUNNY_HLS_HOST;
+        const fillVideoThumb = (m) => {
+            if (!m || typeof m !== 'object') return m;
+            const isVideo = m.type === 'video' || m.media_type === 'video';
+            if (!isVideo || m.thumbnail_url || !bunnyHost || !m.url) return m;
+            const match = String(m.url).match(/mediadelivery\.net\/(?:play|embed)\/[^/]+\/([0-9a-f-]{20,})/i);
+            if (!match) return m;
+            return { ...m, thumbnail_url: `https://${bunnyHost}/${match[1]}/thumbnail.jpg` };
+        };
+        const fillThumbs = (arr) => (Array.isArray(arr) ? arr.map(fillVideoThumb) : arr);
+
         const catalogEnriched = await Promise.all(catalog.map(async (p) => {
             const owns = ownedIds.has(p.id);
             const previewOn = p.preview_enabled === true;
             const extra = (p.extra_data && typeof p.extra_data === 'object') ? p.extra_data : {};
+            if (Array.isArray(extra.gallery)) extra.gallery = fillThumbs(extra.gallery);
+            if (Array.isArray(p.gallery)) p.gallery = fillThumbs(p.gallery);
 
             // A galeria real que o app usa fica em extra_data.gallery; product_media
             // é legado. Protegemos as DUAS. Dono vê tudo (+ acervo Bunny). Não-dono
@@ -1955,6 +1971,8 @@ router.get('/funnel/:slug', async (req, res) => {
         const { rows } = await db.query(`
             SELECT f.id, f.slug, f.name, f.description,
                    f.featured_product_id, f.video_call_id,
+                   f.entry_type, f.entry_product_id, f.entry_category_id,
+                   c.slug AS entry_category_slug, c.name AS entry_category_name,
                    p.id AS product_id, p.name AS product_name,
                    p.description AS product_description, p.banner_url AS product_banner,
                    p.price AS product_price,
@@ -1965,6 +1983,7 @@ router.get('/funnel/:slug', async (req, res) => {
                    COALESCE(v.cta_type, 'home') AS call_cta_type, v.cta_target_id AS call_cta_target_id
             FROM funnels f
             LEFT JOIN products p ON p.id = f.featured_product_id AND p.is_active = true
+            LEFT JOIN categories c ON c.id = f.entry_category_id
             LEFT JOIN video_calls v ON v.id = f.video_call_id AND v.active = true
             WHERE f.slug = $1 AND f.active = true
             LIMIT 1
@@ -1973,6 +1992,13 @@ router.get('/funnel/:slug', async (req, res) => {
         const r = rows[0];
         const funnel = {
             id: r.id, slug: r.slug, name: r.name, description: r.description,
+            // Destino de entrada: o app navega pra cá assim que o catálogo carrega
+            entry: {
+                type: r.entry_type || 'home',
+                product_id: r.entry_product_id || null,
+                category_id: r.entry_category_id || null,
+                category_slug: r.entry_category_slug || null,
+            },
             featured_product: r.product_id ? {
                 id: r.product_id, name: r.product_name, description: r.product_description,
                 banner_url: r.product_banner, price: parseFloat(r.product_price || 0),
