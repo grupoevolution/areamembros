@@ -290,6 +290,23 @@ app.get('/sw.js', (req, res) => {
     }
 });
 
+// Versão do build (mtime dos HTMLs). O painel admin consulta isso pra avisar
+// "tem versão nova — recarregue" quando a aba ficou aberta através de um deploy.
+app.get('/build.json', (req, res) => {
+    try {
+        const fs = require('fs');
+        let m = 0;
+        for (const f of ['public/app.html', 'public/admin.html']) {
+            const p = path.join(__dirname, f);
+            if (fs.existsSync(p)) m = Math.max(m, fs.statSync(p).mtimeMs);
+        }
+        res.setHeader('Cache-Control', 'no-store');
+        res.json({ build: Math.floor(m).toString(36) });
+    } catch (e) {
+        res.json({ build: '0' });
+    }
+});
+
 
 // ----------------------------------------------------------------------------
 // HTML principal (Fase 0 — tela de status; Fase 3 — app Netflix)
@@ -311,11 +328,21 @@ app.get('/', (req, res) => {
 // Rota de fun\u00edl \u2014 serve o app.html normal, mas seta cookie de "preview".
 // O frontend detecta o cookie, faz login an\u00f4nimo autom\u00e1tico e mostra o app
 // completo como preview. Qualquer a\u00e7\u00e3o real abre modal de login por cima.
-app.get('/f/:slug', (req, res) => {
+app.get('/f/:slug', async (req, res) => {
     const slug = String(req.params.slug || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 80);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    // Só seta o cookie se o funil EXISTE e está ATIVO — slug aleatório não
+    // liga o modo funil (antes qualquer /f/qualquercoisa ligava).
     if (slug) {
-        res.cookie('mv_funnel', slug, { maxAge: 7*24*60*60*1000, path: '/', httpOnly: false, sameSite: 'lax' });
+        try {
+            const db = require('./db');
+            const { rows } = await db.query(
+                `SELECT 1 FROM funnels WHERE slug = $1 AND active = true LIMIT 1`, [slug]
+            );
+            if (rows.length) {
+                res.cookie('mv_funnel', slug, { maxAge: 7*24*60*60*1000, path: '/', httpOnly: false, sameSite: 'lax' });
+            }
+        } catch (_) { /* banco fora: serve o app sem modo funil */ }
     }
     res.sendFile(path.join(__dirname, 'public/app.html'));
 });
@@ -400,6 +427,14 @@ let server;
         logger.info(`Node.js: ${process.version}`);
         logger.info('============================================');
     });
+
+    // Worker de push agendado do funil (envia mesmo com o app do cliente fechado)
+    try {
+        const { startPushWorker } = require('./lib/push-worker');
+        startPushWorker();
+    } catch (err) {
+        logger.warn('push-worker não iniciou: ' + err.message);
+    }
 
     server.on('error', (err) => {
         logger.error('Falha ao abrir a porta HTTP:', err.message);

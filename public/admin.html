@@ -5512,13 +5512,14 @@ a { color: inherit; text-decoration: none; }
                             <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Tipo</label>
                                 <select class="form-control" id="stepType" style="width:100%;" onchange="updateStepFields()">
                                     <option value="video_call">📞 Disparar chamada de vídeo</option>
-                                    <option value="notification">🔔 Mostrar notificação</option>
+                                    <option value="notification">🔔 Notificação dentro do app</option>
+                                    <option value="push">📲 Push no celular (chega com o app FECHADO)</option>
                                     <option value="open_product">📦 Abrir produto</option>
                                 </select>
                             </div>
-                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Quando disparar (segundos após login)</label>
-                                <input class="form-control" type="number" id="stepDelay" min="0" max="3600" value="5" style="width:100%;"/>
-                                <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">Ex: 5 = 5 segundos · 60 = 1 minuto · 300 = 5 minutos</div>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Quando disparar (segundos após o cliente digitar o e-mail)</label>
+                                <input class="form-control" type="number" id="stepDelay" min="0" max="604800" value="5" style="width:100%;"/>
+                                <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">5 = 5s · 300 = 5min · 3600 = 1h · 86400 = 24h · 259200 = 3 dias (máx 7 dias)</div>
                             </div>
                             <div id="stepCallWrap"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Chamada</label>
                                 <select class="form-control" id="stepCallSelect" style="width:100%;"><option value="">— selecione —</option></select>
@@ -5531,6 +5532,10 @@ a { color: inherit; text-decoration: none; }
                                 <input class="form-control" id="stepNotifTitle" maxlength="120" placeholder="Ex: Tem mais conteúdo!" style="width:100%; margin-bottom:8px;"/>
                                 <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Mensagem</label>
                                 <textarea class="form-control" id="stepNotifMsg" maxlength="500" placeholder="Descrição..." style="width:100%; min-height:60px;"></textarea>
+                                <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin:10px 0 4px;">Pra onde o clique leva? (opcional)</label>
+                                <select class="form-control" id="stepLinkProductSelect" style="width:100%; margin-bottom:8px;"><option value="">— nenhum produto —</option></select>
+                                <input class="form-control" id="stepLinkUrl" maxlength="1000" placeholder="Ou cole um link: https://... ou caminho tipo /" style="width:100%;"/>
+                                <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">Escolha um produto OU um link. Produto tem prioridade. Vazio = clique só abre o app.</div>
                             </div>
                         </div>
                         <div style="padding:16px 24px; border-top:1px solid var(--border,rgba(255,255,255,.1)); display:flex; gap:10px; justify-content:flex-end;">
@@ -5538,6 +5543,39 @@ a { color: inherit; text-decoration: none; }
                             <button type="submit" class="btn-primary">Salvar</button>
                         </div>
                     </form>
+                </div>
+            </div>
+
+            <!-- MODAL: Métricas do funil (período + comparação) -->
+            <div id="funnelStatsBackdrop" style="position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:300; display:none; align-items:center; justify-content:center; padding:16px;">
+                <div style="background:var(--card,#1a1a1a); border-radius:16px; width:100%; max-width:680px; max-height:92vh; overflow-y:auto;">
+                    <div style="padding:20px 24px; border-bottom:1px solid var(--border,rgba(255,255,255,.1)); display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:16px; font-weight:700; color:#fff;">📊 Métricas — <span id="fStatsName"></span></span>
+                        <button onclick="closeFunnelStats()" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">×</button>
+                    </div>
+                    <div style="padding:18px 24px;">
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-bottom:10px;">
+                            <div><label style="display:block; font-size:11px; color:rgba(255,255,255,.6); margin-bottom:3px;">De</label>
+                                <input class="form-control" type="date" id="fStatsFromA" style="width:150px;"/></div>
+                            <div><label style="display:block; font-size:11px; color:rgba(255,255,255,.6); margin-bottom:3px;">Até</label>
+                                <input class="form-control" type="date" id="fStatsToA" style="width:150px;"/></div>
+                            <button type="button" class="btn-secondary" style="font-size:11px;" onclick="fStatsPreset(0)">Hoje</button>
+                            <button type="button" class="btn-secondary" style="font-size:11px;" onclick="fStatsPreset(6)">7 dias</button>
+                            <button type="button" class="btn-secondary" style="font-size:11px;" onclick="fStatsPreset(29)">30 dias</button>
+                        </div>
+                        <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:rgba(255,255,255,.7); cursor:pointer; margin-bottom:10px;">
+                            <input type="checkbox" id="fStatsCompare" onchange="document.getElementById('fStatsPeriodB').style.display = this.checked ? 'flex' : 'none'" style="width:15px;height:15px;">
+                            Comparar com outro período (ex: hoje × melhor dia da semana passada)
+                        </label>
+                        <div id="fStatsPeriodB" style="display:none; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-bottom:10px;">
+                            <div><label style="display:block; font-size:11px; color:rgba(255,255,255,.6); margin-bottom:3px;">Comparar de</label>
+                                <input class="form-control" type="date" id="fStatsFromB" style="width:150px;"/></div>
+                            <div><label style="display:block; font-size:11px; color:rgba(255,255,255,.6); margin-bottom:3px;">até</label>
+                                <input class="form-control" type="date" id="fStatsToB" style="width:150px;"/></div>
+                        </div>
+                        <button type="button" class="btn-primary" style="margin-bottom:16px;" onclick="applyFunnelStats()">Aplicar</button>
+                        <div id="fStatsResults" style="color:rgba(255,255,255,.5); font-size:12px;">—</div>
+                    </div>
                 </div>
             </div>
 
@@ -6596,6 +6634,33 @@ let editingProductId = null;
     } else {
         showLoginScreen();
     }
+})();
+
+// ============================================================================
+// AVISO DE VERSÃO NOVA — aba do painel aberta através de um deploy mostra
+// banner pra recarregar (o HTML carregado não se atualiza sozinho).
+// ============================================================================
+(function watchBuild() {
+    let knownBuild = null;
+    async function check() {
+        try {
+            const r = await fetch('/build.json', { cache: 'no-store' });
+            const data = await r.json();
+            if (!data.build) return;
+            if (knownBuild === null) { knownBuild = data.build; return; }
+            if (data.build !== knownBuild && !document.getElementById('buildUpdateBanner')) {
+                const b = document.createElement('div');
+                b.id = 'buildUpdateBanner';
+                b.style.cssText = 'position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:99999;background:#e50914;color:#fff;font-size:13px;font-weight:700;padding:12px 20px;border-radius:999px;cursor:pointer;box-shadow:0 8px 30px rgba(0,0,0,.5);';
+                b.textContent = '🔄 Painel atualizado — clique pra recarregar';
+                b.onclick = () => location.reload();
+                document.body.appendChild(b);
+            }
+        } catch (_) {}
+    }
+    check();
+    setInterval(check, 5 * 60 * 1000);
+    window.addEventListener('focus', check);
 })();
 
 function showLoginScreen() {
@@ -13514,6 +13579,7 @@ async function loadFunnels() {
                 +     '<div style="flex:1;background:rgba(0,0,0,.3);padding:8px;border-radius:6px;text-align:center"><div style="font-size:18px;color:#e50914;font-weight:700">'+conversionRate+'%</div>Taxa</div>'
                 +   '</div>'
                 +   '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+                +     '<button class="btn-secondary" style="flex:1;min-width:70px" onclick=\'openFunnelStats('+f.id+', '+JSON.stringify(f.name||'').replace(/'/g,"&#39;")+')\'>📊 Métricas</button>'
                 +     '<button class="btn-secondary" style="flex:1;min-width:70px" onclick=\'editFunnel('+JSON.stringify(f).replace(/'/g,"&#39;")+')\'>Editar</button>'
                 +     '<button class="btn-secondary" style="flex:1;min-width:70px" onclick="toggleFunnel('+f.id+')">'+(f.active?'Desativar':'Ativar')+'</button>'
                 +     '<button class="btn-danger" style="flex:1;min-width:70px" onclick="deleteFunnel('+f.id+')">Excluir</button>'
@@ -13622,16 +13688,18 @@ async function loadFunnelSteps(funnelId) {
             return;
         }
         list.innerHTML = data.steps.map((s, idx) => {
-            const icon = s.type === 'video_call' ? '📞' : (s.type === 'open_product' ? '📦' : '🔔');
+            const icon = s.type === 'video_call' ? '📞' : (s.type === 'open_product' ? '📦' : (s.type === 'push' ? '📲' : '🔔'));
             const sub = s.type === 'video_call' ? (s.video_call_name || 'Chamada')
                       : s.type === 'open_product' ? (s.product_name || 'Produto')
-                      : (s.title || 'Notificação');
+                      : (s.title || (s.type === 'push' ? 'Push' : 'Notificação'));
             const delay = s.delay_seconds < 60 ? s.delay_seconds+'s'
                         : s.delay_seconds < 3600 ? Math.round(s.delay_seconds/60)+'min'
-                        : Math.round(s.delay_seconds/3600)+'h';
+                        : s.delay_seconds < 86400 ? Math.round(s.delay_seconds/3600)+'h'
+                        : Math.round(s.delay_seconds/86400)+'d';
+            const pushTag = s.type === 'push' ? ' · <span style="color:#e50914;">fora do app</span>' : '';
             return '<div style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:rgba(0,0,0,.3); border-radius:8px; border:1px solid rgba(255,255,255,.05);">'
                 + '<div style="width:28px; height:28px; background:rgba(229,9,20,.18); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0;">'+icon+'</div>'
-                + '<div style="flex:1; min-width:0;"><div style="font-size:13px; font-weight:700; color:#fff;">'+escHtmlAdmin(sub)+'</div><div style="font-size:11px; color:rgba(255,255,255,.5);">Após '+delay+'</div></div>'
+                + '<div style="flex:1; min-width:0;"><div style="font-size:13px; font-weight:700; color:#fff;">'+escHtmlAdmin(sub)+'</div><div style="font-size:11px; color:rgba(255,255,255,.5);">Após '+delay+pushTag+'</div></div>'
                 + '<button onclick=\'editStep('+JSON.stringify(s).replace(/'/g,"&#39;")+')\' class="btn-secondary" style="font-size:11px; padding:4px 10px;">Editar</button>'
                 + '<button onclick="deleteStep('+s.id+')" class="btn-danger" style="font-size:11px; padding:4px 10px;">×</button>'
                 + '</div>';
@@ -13641,9 +13709,10 @@ async function loadFunnelSteps(funnelId) {
 
 window.updateStepFields = function() {
     const t = document.getElementById('stepType').value;
+    const isMsg = (t === 'notification' || t === 'push');
     document.getElementById('stepCallWrap').style.display = t === 'video_call' ? 'block' : 'none';
     document.getElementById('stepProductWrap').style.display = t === 'open_product' ? 'block' : 'none';
-    document.getElementById('stepNotifWrap').style.display = t === 'notification' ? 'block' : 'none';
+    document.getElementById('stepNotifWrap').style.display = isMsg ? 'block' : 'none';
     // Popular dropdowns
     if (t === 'video_call') {
         fetch('/api/admin/calls', { credentials:'include' }).then(r => r.json()).then(data => {
@@ -13654,6 +13723,14 @@ window.updateStepFields = function() {
         fetch('/api/admin/products', { credentials:'include' }).then(r => r.json()).then(data => {
             const sel = document.getElementById('stepProductSelect');
             sel.innerHTML = '<option value="">— selecione —</option>' + (data.products||[]).map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
+        });
+    }
+    if (isMsg) {
+        fetch('/api/admin/products', { credentials:'include' }).then(r => r.json()).then(data => {
+            const sel = document.getElementById('stepLinkProductSelect');
+            const cur = sel.value;
+            sel.innerHTML = '<option value="">— nenhum produto —</option>' + (data.products||[]).map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
+            if (cur) sel.value = cur;
         });
     }
 };
@@ -13677,10 +13754,12 @@ function editStep(s) {
     document.getElementById('stepDelay').value = s.delay_seconds || 0;
     document.getElementById('stepNotifTitle').value = s.title || '';
     document.getElementById('stepNotifMsg').value = s.message || '';
+    document.getElementById('stepLinkUrl').value = s.link_url || '';
     updateStepFields();
     setTimeout(() => {
         if (s.video_call_id) document.getElementById('stepCallSelect').value = s.video_call_id;
-        if (s.product_id) document.getElementById('stepProductSelect').value = s.product_id;
+        if (s.product_id && s.type === 'open_product') document.getElementById('stepProductSelect').value = s.product_id;
+        if (s.product_id && (s.type === 'notification' || s.type === 'push')) document.getElementById('stepLinkProductSelect').value = s.product_id;
     }, 300);
     document.getElementById('stepModalBackdrop').style.display = 'flex';
 }
@@ -13690,13 +13769,21 @@ async function saveStep(e) {
     if (!_currentFunnelId) return false;
     const id = document.getElementById('stepId').value;
     const type = document.getElementById('stepType').value;
+    const isMsg = (type === 'notification' || type === 'push');
+    if (isMsg && !document.getElementById('stepNotifTitle').value.trim()) {
+        alert('Título é obrigatório pra notificação/push.');
+        return false;
+    }
     const payload = {
         type,
         delay_seconds: parseInt(document.getElementById('stepDelay').value, 10) || 0,
         video_call_id: type === 'video_call' ? (document.getElementById('stepCallSelect').value || null) : null,
-        product_id: type === 'open_product' ? (document.getElementById('stepProductSelect').value || null) : null,
-        title: type === 'notification' ? document.getElementById('stepNotifTitle').value.trim() : null,
-        message: type === 'notification' ? document.getElementById('stepNotifMsg').value.trim() : null,
+        product_id: type === 'open_product' ? (document.getElementById('stepProductSelect').value || null)
+                  : isMsg ? (document.getElementById('stepLinkProductSelect').value || null)
+                  : null,
+        title: isMsg ? document.getElementById('stepNotifTitle').value.trim() : null,
+        message: isMsg ? document.getElementById('stepNotifMsg').value.trim() : null,
+        link_url: isMsg ? (document.getElementById('stepLinkUrl').value.trim() || null) : null,
     };
     try {
         const url = id
@@ -13716,6 +13803,113 @@ async function deleteStep(id) {
     if (!confirm('Excluir esta etapa?')) return;
     await fetch('/api/admin/funnels/'+_currentFunnelId+'/steps/'+id, { method:'DELETE', credentials:'include' });
     loadFunnelSteps(_currentFunnelId);
+}
+
+// ═══════════════ MÉTRICAS DO FUNIL (período + comparação) ═══════════════
+let _statsFunnelId = null;
+
+function fStatsIso(d) { return d.toISOString().slice(0, 10); }
+function fStatsPreset(daysBack) {
+    const to = new Date();
+    const from = new Date(Date.now() - daysBack * 86400000);
+    document.getElementById('fStatsFromA').value = fStatsIso(from);
+    document.getElementById('fStatsToA').value = fStatsIso(to);
+    applyFunnelStats();
+}
+
+function openFunnelStats(id, name) {
+    _statsFunnelId = id;
+    document.getElementById('fStatsName').textContent = name || ('#' + id);
+    document.getElementById('fStatsFromA').value = fStatsIso(new Date(Date.now() - 6 * 86400000));
+    document.getElementById('fStatsToA').value = fStatsIso(new Date());
+    document.getElementById('fStatsCompare').checked = false;
+    document.getElementById('fStatsPeriodB').style.display = 'none';
+    document.getElementById('fStatsFromB').value = fStatsIso(new Date(Date.now() - 13 * 86400000));
+    document.getElementById('fStatsToB').value = fStatsIso(new Date(Date.now() - 7 * 86400000));
+    document.getElementById('funnelStatsBackdrop').style.display = 'flex';
+    applyFunnelStats();
+}
+function closeFunnelStats() { document.getElementById('funnelStatsBackdrop').style.display = 'none'; }
+
+async function fetchFunnelStats(from, to) {
+    const qs = [];
+    if (from) qs.push('from=' + from);
+    if (to) qs.push('to=' + to);
+    const r = await fetch('/api/admin/funnels/' + _statsFunnelId + '/stats' + (qs.length ? '?' + qs.join('&') : ''), { credentials: 'include' });
+    return r.json();
+}
+
+async function applyFunnelStats() {
+    const out = document.getElementById('fStatsResults');
+    if (!out || !_statsFunnelId) return;
+    out.innerHTML = '<div style="color:rgba(255,255,255,.4);">Carregando...</div>';
+    const fromA = document.getElementById('fStatsFromA').value;
+    const toA = document.getElementById('fStatsToA').value;
+    const comparing = document.getElementById('fStatsCompare').checked;
+    const fromB = document.getElementById('fStatsFromB').value;
+    const toB = document.getElementById('fStatsToB').value;
+    try {
+        const [ra, rb] = await Promise.all([
+            fetchFunnelStats(fromA, toA),
+            comparing ? fetchFunnelStats(fromB, toB) : Promise.resolve(null),
+        ]);
+        if (!ra.success) { out.innerHTML = '<div style="color:#f55">Erro carregando métricas</div>'; return; }
+        const sa = ra.stats;
+        const sb = rb && rb.success ? rb.stats : null;
+        const taxa = (s) => s.visits_total > 0 ? (s.conversions / s.visits_total * 100) : 0;
+
+        const delta = (a, b) => {
+            if (b === null || b === undefined) return '';
+            const diff = a - b;
+            if (b === 0) return a > 0 ? '<span style="color:#4CD964;font-size:10px;"> ▲ novo</span>' : '';
+            const pct = (diff / b * 100);
+            if (Math.abs(pct) < 0.05) return '<span style="color:rgba(255,255,255,.4);font-size:10px;"> =</span>';
+            const up = pct > 0;
+            return '<span style="color:' + (up ? '#4CD964' : '#FF3B30') + ';font-size:10px;"> ' + (up ? '▲' : '▼') + ' ' + Math.abs(pct).toFixed(0) + '%</span>';
+        };
+        const card = (label, va, vb, dHtml) => '<div style="background:rgba(0,0,0,.3); padding:10px; border-radius:8px; text-align:center;">'
+            + '<div style="font-size:19px; color:#fff; font-weight:700;">' + va + (dHtml || '') + '</div>'
+            + (vb !== null && vb !== undefined ? '<div style="font-size:11px; color:rgba(255,255,255,.45);">antes: ' + vb + '</div>' : '')
+            + '<div style="font-size:10px; color:rgba(255,255,255,.55); margin-top:2px; text-transform:uppercase; letter-spacing:.04em;">' + label + '</div>'
+            + '</div>';
+
+        let html = '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(105px,1fr)); gap:8px; margin-bottom:16px;">'
+            + card('Visitas', sa.visits_total, sb ? sb.visits_total : null, sb ? delta(sa.visits_total, sb.visits_total) : '')
+            + card('Únicos (IP)', sa.unique_ips, sb ? sb.unique_ips : null, sb ? delta(sa.unique_ips, sb.unique_ips) : '')
+            + card('E-mails', sa.unique_emails, sb ? sb.unique_emails : null, sb ? delta(sa.unique_emails, sb.unique_emails) : '')
+            + card('Conversões', sa.conversions, sb ? sb.conversions : null, sb ? delta(sa.conversions, sb.conversions) : '')
+            + card('Taxa', taxa(sa).toFixed(1) + '%', sb ? taxa(sb).toFixed(1) + '%' : null, sb ? delta(taxa(sa), taxa(sb)) : '')
+            + '</div>';
+
+        // Barras por dia (visitas; conversões em verde por cima)
+        const daily = Array.isArray(ra.daily) ? ra.daily : [];
+        if (daily.length > 0) {
+            const max = Math.max(...daily.map(d => d.visits), 1);
+            html += '<div style="font-size:11px; color:rgba(255,255,255,.5); margin-bottom:6px;">Por dia — <span style="color:#fff;">visitas</span> · <span style="color:#4CD964;">conversões</span></div>';
+            html += '<div style="display:flex; align-items:flex-end; gap:3px; height:90px; background:rgba(0,0,0,.2); border-radius:8px; padding:8px;">'
+                + daily.map(d => {
+                    const hv = Math.max(3, Math.round(d.visits / max * 74));
+                    const hc = Math.max(d.conversions > 0 ? 3 : 0, Math.round(d.conversions / max * 74));
+                    const dia = d.day.slice(8, 10) + '/' + d.day.slice(5, 7);
+                    return '<div title="' + dia + ': ' + d.visits + ' visitas, ' + d.conversions + ' conversões" style="flex:1; min-width:0; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:0; height:100%; position:relative; cursor:default;">'
+                        + '<div style="width:100%; max-width:26px; background:rgba(229,9,20,.55); border-radius:3px 3px 0 0; height:' + hv + 'px; position:relative;">'
+                        + (hc > 0 ? '<div style="position:absolute; bottom:0; left:0; right:0; background:#4CD964; border-radius:0 0 0 0; height:' + hc + 'px;"></div>' : '')
+                        + '</div>'
+                        + '</div>';
+                }).join('')
+                + '</div>';
+            if (daily.length <= 14) {
+                html += '<div style="display:flex; gap:3px; padding:4px 8px 0;">'
+                    + daily.map(d => '<div style="flex:1; text-align:center; font-size:9px; color:rgba(255,255,255,.4);">' + d.day.slice(8, 10) + '</div>').join('')
+                    + '</div>';
+            }
+        } else {
+            html += '<div style="color:rgba(255,255,255,.4); font-size:12px;">Sem visitas no período.</div>';
+        }
+        out.innerHTML = html;
+    } catch (e) {
+        out.innerHTML = '<div style="color:#f55">Erro: ' + e.message + '</div>';
+    }
 }
 
 
@@ -13926,7 +14120,7 @@ async function importProductsJSON(ev) {
             + '</div>'
             + '<div class="form-row"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pAudioEnabled" style="width:auto"/> Ativar áudio neste produto</label></div>'
             + '<div class="form-row"><label class="form-label">Título do áudio</label><input type="text" id="pAudioTitle" class="form-input" placeholder="Ex: Mensagem da modelo" maxlength="120"/></div>'
-            + '<div class="form-row"><label class="form-label">Arquivo de áudio</label><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><input type="file" id="pAudioFile" accept="audio/*" style="display:none"/><button type="button" class="btn-secondary" onclick="document.getElementById(\'pAudioFile\').click()" style="white-space:nowrap;">📁 Escolher arquivo</button><span id="pAudioFileName" style="flex:1;min-width:140px;font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Nenhum arquivo escolhido</span><button type="button" class="btn-secondary" id="pAudioUploadBtn">Enviar</button></div></div>'
+            + '<div class="form-row"><label class="form-label">Arquivo de áudio</label><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><input type="file" id="pAudioFile" accept="audio/*" style="display:none"/><button type="button" class="btn-secondary" onclick="document.getElementById(\'pAudioFile\').click()" style="white-space:nowrap;">📁 Escolher arquivo</button><span id="pAudioFileName" style="flex:1;min-width:140px;font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">O upload começa sozinho ao escolher</span></div></div>'
             + '<div class="form-row"><label class="form-label">Ou cole uma URL externa</label><input type="url" id="pAudioUrl" class="form-input" placeholder="https://..."/><div class="form-help">MP3 / M4A / WAV — até 25MB</div></div>'
             + '<div class="form-row"><audio id="pAudioPreview" controls preload="metadata" style="width:100%;display:none"></audio></div>';
         form.appendChild(block);
@@ -14217,27 +14411,41 @@ async function importProductsJSON(ev) {
                 sel.innerHTML = '<option value="">— produto comum —</option>'
                     + (data.calls || []).map(c => '<option value="'+c.id+'">'+escHtmlAdmin(c.model_name)+' ('+escHtmlAdmin(c.name)+')</option>').join('');
             }).catch(()=>{});
-        document.getElementById('pAudioFile').addEventListener('change', e => {
+        // Upload AUTOMÁTICO ao escolher o arquivo (sem botão "Enviar" — o passo
+        // extra fazia o áudio nunca chegar no produto). Sucesso: preenche a URL,
+        // ATIVA o áudio sozinho e mostra player de confirmação.
+        document.getElementById('pAudioFile').addEventListener('change', async (e) => {
             const nameEl = document.getElementById('pAudioFileName');
-            if (nameEl) nameEl.textContent = (e.target.files[0] && e.target.files[0].name) || 'Nenhum arquivo escolhido';
-        });
-        document.getElementById('pAudioUploadBtn').addEventListener('click', async () => {
-            const f = document.getElementById('pAudioFile').files[0];
-            if (!f) { alert('Escolha um arquivo'); return; }
+            const f = e.target.files[0];
+            if (!f) { if (nameEl) nameEl.textContent = 'O upload começa sozinho ao escolher'; return; }
+            if (nameEl) { nameEl.textContent = '⏳ Enviando "' + f.name + '"...'; nameEl.style.color = 'var(--text-muted)'; }
             const fd = new FormData(); fd.append('file', f);
             try {
                 const r = await fetch('/api/admin/upload/audio', { method:'POST', body:fd, credentials:'include' });
                 const data = await r.json();
-                if (data.success) {
+                if (data.success && data.url) {
                     document.getElementById('pAudioUrl').value = data.url;
+                    const en = document.getElementById('pAudioEnabled');
+                    if (en && !en.checked) en.checked = true;
                     const prev = document.getElementById('pAudioPreview');
-                    prev.src = data.url; prev.style.display = 'block';
-                } else alert('Erro: '+(data.error||''));
-            } catch(e) { alert('Erro: '+e.message); }
+                    if (prev) { prev.src = data.url; prev.style.display = 'block'; }
+                    if (nameEl) { nameEl.textContent = '✓ "' + f.name + '" enviado e ATIVADO — salve o produto pra publicar'; nameEl.style.color = '#5fdc87'; }
+                } else {
+                    if (nameEl) { nameEl.textContent = '✕ Falha no upload: ' + (data.error || 'erro desconhecido'); nameEl.style.color = '#ff6b73'; }
+                }
+            } catch(err) {
+                if (nameEl) { nameEl.textContent = '✕ Falha no upload: ' + err.message; nameEl.style.color = '#ff6b73'; }
+            }
+            e.target.value = '';
         });
         document.getElementById('pAudioUrl').addEventListener('input', e => {
             const prev = document.getElementById('pAudioPreview');
-            if (e.target.value) { prev.src = e.target.value; prev.style.display = 'block'; }
+            if (e.target.value) {
+                prev.src = e.target.value; prev.style.display = 'block';
+                // URL manual também ativa o áudio sozinho
+                const en = document.getElementById('pAudioEnabled');
+                if (en && !en.checked) en.checked = true;
+            }
             else { prev.style.display = 'none'; }
         });
     }

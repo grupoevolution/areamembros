@@ -1773,7 +1773,7 @@ router.post('/push/subscribe', async (req, res) => {
             INSERT INTO push_subscriptions (customer_email, endpoint, p256dh, auth, user_agent, last_used_at)
             VALUES ($1, $2, $3, $4, $5, NOW())
             ON CONFLICT (endpoint) DO UPDATE
-            SET customer_email = EXCLUDED.customer_email,
+            SET customer_email = COALESCE(EXCLUDED.customer_email, push_subscriptions.customer_email),
                 p256dh = EXCLUDED.p256dh,
                 auth = EXCLUDED.auth,
                 user_agent = EXCLUDED.user_agent,
@@ -1821,6 +1821,35 @@ router.get('/push/vapid-key', async (req, res) => {
 // Esse usuário não tem acesso a produtos e NÃO aparece em métricas.
 //
 
+// Agenda as etapas tipo 'push' do funil pro e-mail que converteu.
+// O worker (lib/push-worker.js) envia no horário — chega com o app FECHADO.
+// Idempotente: índice único (step_id, email) impede fila duplicada se o lead
+// converter duas vezes. E-mails anônimos (@preview.local) nunca entram na fila.
+async function scheduleFunnelPushes(slug, email) {
+    const s = String(slug || '').toLowerCase().slice(0, 80);
+    const e = String(email || '').toLowerCase().trim().slice(0, 255);
+    if (!s || !e || e.endsWith('@preview.local')) return;
+    try {
+        await db.query(`
+            INSERT INTO funnel_scheduled_pushes (funnel_id, step_id, customer_email, title, message, url, send_at)
+            SELECT fs.funnel_id, fs.id, $2,
+                   COALESCE(fs.title, 'Novidade pra você'),
+                   fs.message,
+                   COALESCE(
+                       fs.link_url,
+                       CASE WHEN fs.product_id IS NOT NULL THEN '/?p=' || fs.product_id ELSE NULL END
+                   ),
+                   NOW() + make_interval(secs => fs.delay_seconds)
+            FROM funnel_steps fs
+            JOIN funnels f ON f.id = fs.funnel_id
+            WHERE f.slug = $1 AND f.active = true AND fs.active = true AND fs.type = 'push'
+            ON CONFLICT DO NOTHING
+        `, [s, e]);
+    } catch (err) {
+        logger.warn('scheduleFunnelPushes falhou: ' + err.message);
+    }
+}
+
 // POST /api/user/login/promote — converte sessão anônima em email real
 // Body: { email, skipSuggestion?, funnel_slug? }
 // Igual ao /login normal, mas registra origem do funíl pra tracking.
@@ -1851,6 +1880,8 @@ router.post('/login/promote', async (req, res) => {
                       )
                 `, [String(funnel_slug).toLowerCase().slice(0,80), result.email]);
             } catch(_) {}
+            // Lead capturado → agenda os pushes server-side do funil
+            await scheduleFunnelPushes(funnel_slug, result.email);
         }
         res.cookie(USER_COOKIE_NAME, result.token, USER_COOKIE_OPTIONS);
 
@@ -1980,9 +2011,11 @@ router.get('/funnel/:slug/sequence', async (req, res) => {
         const { rows: f } = await db.query(`SELECT id FROM funnels WHERE slug = $1 AND active = true LIMIT 1`, [slug]);
         if (!f.length) return res.json({ success: true, steps: [] });
         const funnelId = f[0].id;
+        // Etapas tipo 'push' NÃO vão pro cliente: são enviadas pelo SERVIDOR
+        // (worker) no horário agendado — agendadas na conversão do lead.
         const { rows: steps } = await db.query(`
             SELECT fs.id, fs.type, fs.delay_seconds, fs.video_call_id, fs.product_id,
-                   fs.title, fs.message,
+                   fs.title, fs.message, fs.link_url,
                    (
                        SELECT json_build_object(
                            'id', vc.id, 'slug', vc.slug, 'category', vc.category,
@@ -1994,7 +2027,7 @@ router.get('/funnel/:slug/sequence', async (req, res) => {
                        ) FROM video_calls vc WHERE vc.id = fs.video_call_id AND vc.active = true
                    ) AS video_call
             FROM funnel_steps fs
-            WHERE fs.funnel_id = $1 AND fs.active = true
+            WHERE fs.funnel_id = $1 AND fs.active = true AND fs.type <> 'push'
             ORDER BY fs.step_order, fs.id
         `, [funnelId]);
 
@@ -2068,6 +2101,9 @@ router.post('/funnel/:slug/convert', async (req, res) => {
                 ORDER BY visited_at DESC LIMIT 1
               )
         `, [slug, email]);
+        // Garante o agendamento dos pushes mesmo se o promote não rodou
+        // (ex.: cliente já tinha sessão real e só seguiu o link do funil)
+        await scheduleFunnelPushes(slug, email);
         return res.json({ success: true });
     } catch (err) {
         logger.error('Erro convert funíl:', err);

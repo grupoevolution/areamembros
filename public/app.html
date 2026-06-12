@@ -1616,7 +1616,7 @@ body.is-slowconn .prod-cta-fixed {
 }
 .prod-urgency-text { font-size: 12px; color: var(--text); line-height: 1.35; }
 .prod-urgency-text strong { color: #ff3840; }
-.prod-desc { font-size: 13px; line-height: 1.6; color: rgba(255,255,255,0.9); margin-bottom: 24px; }
+.prod-desc { font-size: 13px; line-height: 1.6; color: rgba(255,255,255,0.9); margin-bottom: 24px; text-align: center; }
 .prod-feats-title {
     font-family: 'Bebas Neue', sans-serif;
     font-size: 24px; color: var(--text);
@@ -1644,7 +1644,9 @@ body.is-slowconn .prod-cta-fixed {
 .prod-cta-fixed {
     position: fixed; bottom: 0; left: 0; right: 0;
     padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
-    background: linear-gradient(180deg, rgba(0,0,0,0.5), rgba(0,0,0,0.95) 30%, var(--bg));
+    /* Fundo quase opaco: o conteúdo NÃO pode vazar por trás do preço/botão */
+    background: linear-gradient(180deg, rgba(10,4,5,0.92), #0a0405 26%, var(--bg));
+    border-top: 1px solid rgba(255,255,255,0.06);
     /* Fase I: blur removido em Android low-end + slowconn — vide regra abaixo.
        Em devices normais, mantém o visual premium do CTA flutuante. */
     backdrop-filter: blur(12px);
@@ -7382,7 +7384,7 @@ body.is-slowconn .prod-cta-fixed {
 =================================== -->
 <div class="screen" id="product">
     <div class="toast-container" id="toast-product"></div>
-    <div class="screen-scroll" style="padding-bottom: 160px;">
+    <div class="screen-scroll" style="padding-bottom: 210px;">
         <div class="prod-carousel">
             <div class="prod-slide active" data-pidx="0"><div class="prod-slide-img"></div></div>
             <div class="prod-actions-top">
@@ -10882,14 +10884,10 @@ function populateProductScreen(p) {
         }
         stats = stats.map(s => {
             let v = (s.value || '').toString().trim();
-            let label = (s.label || '').toString().trim();
+            const label = (s.label || '').toString().trim();
+            // "auto" é OPT-IN: vira a contagem de mídias da galeria. Qualquer outro
+            // valor é respeitado como o admin digitou — controle 100% manual.
             if (v.toLowerCase() === 'auto') v = galleryCount > 0 ? String(galleryCount) : '';
-            // Migra o antigo "∞" (a fonte Bebas não tem esse caractere — renderizava
-            // um glifo quebrado): vira a contagem real de conteúdos.
-            if (v === '∞') {
-                v = galleryCount > 0 ? String(galleryCount) : '';
-                if (v) label = 'Conteúdos';
-            }
             return { value: v, label };
         }).filter(s => s.value && s.label);
         if (stats.length > 0) {
@@ -10961,11 +10959,11 @@ function populateProductScreen(p) {
             plansList.innerHTML = '';
         } else {
             const fmtP = (v) => { const f = parseFloat(v) || 0; return 'R$ ' + f.toFixed(2).replace('.', ','); };
-            const benCheck = '<svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+            // Card enxuto: só radio + nome + badge + preço. Os BENEFÍCIOS do plano
+            // aparecem APENAS na seção "O que você recebe" (trocam ao selecionar).
             plansList.innerHTML = plansSorted.map(pl => {
                 const sel = pl.id === window.__selectedPlanId;
                 const badgeTxt = (pl.badge || '').trim() || (pl.is_recommended ? 'Mais escolhido' : '');
-                const bens = String(pl.benefits || '').split(/\n+/).map(s => s.trim()).filter(Boolean).slice(0, 3);
                 const orig = (pl.original_price && parseFloat(pl.original_price) > parseFloat(pl.price))
                     ? `<span class="prod-plan-price-old">${fmtP(pl.original_price)}</span>` : '';
                 return `<div class="prod-plan-card${sel ? ' is-selected' : ''}" data-plan-id="${pl.id}" onclick="selectProdPlan(${pl.id})">
@@ -10975,7 +10973,6 @@ function populateProductScreen(p) {
                         <span class="prod-plan-name">${escapeHtmlData(pl.name || 'Plano')}</span>
                         <span class="prod-plan-price">${orig}<strong>${fmtP(pl.price)}</strong></span>
                     </div>
-                    ${bens.length ? `<div class="prod-plan-bens">${bens.map(b => `<div>${benCheck}${escapeHtmlData(b)}</div>`).join('')}</div>` : ''}
                 </div>`;
             }).join('');
             plansSec.style.display = '';
@@ -14491,29 +14488,66 @@ window.tryTriggerCallAfterLogin = async function() {
 
     console.log('[funnel-trigger] ref=', ref, 'email=', email);
 
-    // 1) Se veio de funíl, executa sequência desse funíl
-    if (ref) {
+    // Progresso PERSISTIDO das etapas: delays grandes sobrevivem ao fechamento
+    // do app. Ao reabrir: o que venceu dispara na hora (escalonado), o resto
+    // continua agendado relativo ao momento da conversão (startedAt).
+    const PROGRESS_KEY = 'mv_funnel_progress';
+    const loadProgress = () => { try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) || 'null'); } catch(_) { return null; } };
+    const saveProgress = (p) => { try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(p)); } catch(_) {} };
+    const clearProgress = () => { try { localStorage.removeItem(PROGRESS_KEY); } catch(_) {} };
+
+    let saved = loadProgress();
+    // Sem cookie de funil mas com sequência pendente salva (mesmo e-mail) → retoma
+    let effectiveRef = ref;
+    if (!effectiveRef && saved && saved.slug && (!saved.email || !email || saved.email === email)) {
+        effectiveRef = saved.slug;
+    }
+
+    // 1) Se veio de funíl (ou tem sequência pendente), executa a sequência
+    if (effectiveRef) {
         try {
-            const r = await fetch('/api/user/funnel/' + encodeURIComponent(ref) + '/sequence?email=' + encodeURIComponent(email), { credentials:'include' });
+            const r = await fetch('/api/user/funnel/' + encodeURIComponent(effectiveRef) + '/sequence?email=' + encodeURIComponent(email), { credentials:'include' });
             const data = await r.json();
             console.log('[funnel-trigger] sequence:', data);
             if (data.success && Array.isArray(data.steps) && data.steps.length) {
-                // Marca conversão
-                try {
-                    fetch('/api/user/funnel/' + encodeURIComponent(ref) + '/convert', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ email }),
-                    });
-                } catch(_) {}
-                // Executa cada etapa no tempo certo
-                for (const step of data.steps) {
-                    const delay = Math.max(0, parseInt(step.delay_seconds, 10) || 0) * 1000;
-                    console.log('[funnel-trigger] step agendado em', delay, 'ms:', step.type);
-                    setTimeout(() => executeFunnelStep(step, ref, email), delay);
+                // Marca conversão (só na entrada original pelo funil)
+                if (ref) {
+                    try {
+                        fetch('/api/user/funnel/' + encodeURIComponent(ref) + '/convert', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ email }),
+                        });
+                    } catch(_) {}
                 }
-                // Limpa cookie do funíl pra não disparar de novo
+                // Inicia/retoma o progresso
+                if (!saved || saved.slug !== effectiveRef || (saved.email && email && saved.email !== email)) {
+                    saved = { slug: effectiveRef, email: email || '', startedAt: Date.now(), done: [] };
+                    saveProgress(saved);
+                }
+                const doneSet = new Set(saved.done || []);
+                const totalSteps = data.steps.length;
+                let lateStagger = 400;
+                let pending = 0;
+                for (const step of data.steps) {
+                    if (doneSet.has(step.id)) continue;
+                    pending++;
+                    const dueAt = saved.startedAt + (Math.max(0, parseInt(step.delay_seconds, 10) || 0) * 1000);
+                    let wait = dueAt - Date.now();
+                    if (wait <= 0) { wait = lateStagger; lateStagger += 1500; } // venceu offline: dispara já, escalonado
+                    console.log('[funnel-trigger] step', step.id, step.type, 'em', Math.round(wait/1000), 's');
+                    setTimeout(() => {
+                        executeFunnelStep(step, effectiveRef, email);
+                        const cur = loadProgress() || saved;
+                        cur.done = Array.from(new Set([...(cur.done || []), step.id]));
+                        if (cur.done.length >= totalSteps) clearProgress();
+                        else saveProgress(cur);
+                    }, wait);
+                }
+                if (pending === 0) clearProgress();
+                // Limpa cookie do funíl pra não disparar de novo (o progresso
+                // pendente fica no localStorage e retoma sozinho)
                 document.cookie = 'mv_funnel=; path=/; max-age=0; SameSite=Lax';
                 window.MV_FUNNEL_SLUG = null;
                 try { sessionStorage.removeItem('mv_funnel_ref'); } catch(_) {}
@@ -14521,6 +14555,7 @@ window.tryTriggerCallAfterLogin = async function() {
                 return;
             } else {
                 console.warn('[funnel-trigger] funil sem etapas configuradas');
+                if (!ref) clearProgress(); // funil saiu do ar — não fica retomando à toa
             }
         } catch(e) {
             console.error('[funnel-trigger] erro:', e);
@@ -14563,16 +14598,36 @@ function executeFunnelStep(step, funnelSlug, email) {
         } else if (step.type === 'open_product' && step.product_id) {
             if (typeof openProductPage === 'function') openProductPage(step.product_id);
         } else if (step.type === 'notification') {
-            // Notifica\u00e7\u00e3o in-app simples
-            showFunnelNotification(step.title || 'Aviso', step.message || '');
+            // Notifica\u00e7\u00e3o in-app com DESTINO: clique abre produto (product_id)
+            // ou o link configurado no painel (link_url)
+            showFunnelNotification(step.title || 'Aviso', step.message || '', {
+                product_id: step.product_id || null,
+                url: step.link_url || null,
+            });
         }
     } catch(_) {}
 }
 
-function showFunnelNotification(title, message) {
+function showFunnelNotification(title, message, action) {
+    const clickable = !!(action && (action.product_id || action.url));
     const el = document.createElement('div');
-    el.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#e50914,#8B0000);color:#fff;padding:14px 20px;border-radius:14px;box-shadow:0 10px 32px rgba(229,9,20,.4);z-index:10000;max-width:340px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;animation:funnelNotifSlide .4s ease-out;';
-    el.innerHTML = '<div style="font-size:13px;font-weight:800;margin-bottom:4px">'+title.replace(/</g,'&lt;')+'</div><div style="font-size:12px;opacity:.9;line-height:1.4">'+message.replace(/</g,'&lt;')+'</div>';
+    el.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#e50914,#8B0000);color:#fff;padding:14px 20px;border-radius:14px;box-shadow:0 10px 32px rgba(229,9,20,.4);z-index:10000;max-width:340px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;animation:funnelNotifSlide .4s ease-out;' + (clickable ? 'cursor:pointer;' : '');
+    el.innerHTML = '<div style="font-size:13px;font-weight:800;margin-bottom:4px">'+title.replace(/</g,'&lt;')+'</div><div style="font-size:12px;opacity:.9;line-height:1.4">'+message.replace(/</g,'&lt;')+'</div>'
+        + (clickable ? '<div style="font-size:11px;font-weight:700;margin-top:7px;text-decoration:underline;">Toque pra ver \u2192</div>' : '');
+    if (clickable) {
+        el.addEventListener('click', () => {
+            try {
+                if (action.product_id && typeof openProductPage === 'function') {
+                    openProductPage(action.product_id);
+                } else if (action.url) {
+                    // Caminho interno (ex: "/") navega no app; URL externa abre nova aba
+                    if (String(action.url).charAt(0) === '/') window.location.href = action.url;
+                    else window.open(action.url, '_blank', 'noopener,noreferrer');
+                }
+            } catch(_) {}
+            el.remove();
+        });
+    }
     if (!document.getElementById('funnelNotifAnim')) {
         const s = document.createElement('style');
         s.id = 'funnelNotifAnim';
@@ -14580,8 +14635,33 @@ function showFunnelNotification(title, message) {
         document.head.appendChild(s);
     }
     document.body.appendChild(el);
-    setTimeout(() => { el.style.transition = 'opacity .4s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 400); }, 6000);
+    // Clic\u00e1vel fica mais tempo na tela (10s) pra dar chance do toque
+    setTimeout(() => { el.style.transition = 'opacity .4s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 400); }, clickable ? 10000 : 6000);
 }
+
+// ═══════════════ DEEP-LINK DE PRODUTO (?p=ID) ═══════════════
+// Push do funil leva pra "/?p=123" → abre direto a página daquele produto.
+// Aguarda o app carregar (openProductPage + catálogo) por até 20s.
+(function handleProductDeepLink() {
+    try {
+        const m = window.location.search.match(/[?&]p=(\d+)/);
+        if (!m) return;
+        const pid = parseInt(m[1], 10);
+        if (!pid) return;
+        let tries = 0;
+        const t = setInterval(() => {
+            tries++;
+            if (typeof openProductPage === 'function' && window.AppState && Array.isArray(AppState.catalog) && AppState.catalog.length) {
+                clearInterval(t);
+                try { openProductPage(pid); } catch(_) {}
+                // Limpa o ?p= da URL pra não reabrir em refresh
+                try { history.replaceState(null, '', window.location.pathname); } catch(_) {}
+            } else if (tries > 40) {
+                clearInterval(t);
+            }
+        }, 500);
+    } catch(_) {}
+})();
 
 // ═══════════════ DETECTA MODO FUNÍL ═══════════════
 // Cliente acessou /f/SLUG → cookie 'mv_funnel' setado pelo servidor.
@@ -15004,6 +15084,15 @@ document.addEventListener('keydown', function(e) {
                 closeModal();
                 // Fase K2 — limpa campanha pendente (já resgatada no backend)
                 try { localStorage.removeItem('mv_pending_campaign'); } catch(_) {}
+                // Re-engajamento: pede permissão de push AGORA (gesto do usuário
+                // ainda fresco) e re-subscreve pra VINCULAR a subscription ao
+                // e-mail real — sem isso o push server-side do funil não acha o lead.
+                try {
+                    if (window.PUSH && 'Notification' in window) {
+                        if (Notification.permission === 'granted') PUSH.subscribe();
+                        else if (Notification.permission !== 'denied') PUSH.askPermission().then(ok => { if (ok) PUSH.subscribe(); });
+                    }
+                } catch(_) {}
                 // Dispara sequência do funíl
                 if (typeof window.tryTriggerCallAfterLogin === 'function') {
                     window.tryTriggerCallAfterLogin();
@@ -15044,6 +15133,12 @@ document.addEventListener('keydown', function(e) {
                         closeModal();
                         // Fase K2 — limpa campanha pendente após sucesso
                         try { localStorage.removeItem('mv_pending_campaign'); } catch(_) {}
+                        try {
+                            if (window.PUSH && 'Notification' in window) {
+                                if (Notification.permission === 'granted') PUSH.subscribe();
+                                else if (Notification.permission !== 'denied') PUSH.askPermission().then(ok => { if (ok) PUSH.subscribe(); });
+                            }
+                        } catch(_) {}
                         if (typeof window.tryTriggerCallAfterLogin === 'function') window.tryTriggerCallAfterLogin();
                         document.cookie = 'mv_funnel=; path=/; max-age=0; SameSite=Lax';
                     } else {

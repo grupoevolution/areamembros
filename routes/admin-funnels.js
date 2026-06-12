@@ -190,28 +190,56 @@ router.delete('/:id', requireAdmin, async (req, res) => {
 });
 
 
-// GET /:id/stats — estatísticas
+// GET /:id/stats — estatísticas com filtro de período
+// Query params opcionais: ?from=YYYY-MM-DD&to=YYYY-MM-DD (inclusivos).
+// Sem filtro = tudo. Retorna totais + série diária (pra gráfico e comparação
+// de períodos no painel — o painel chama 2x pra comparar dois períodos).
 router.get('/:id/stats', requireAdmin, async (req, res) => {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ success: false, error: 'ID inválido' });
     try {
+        const parseDay = (s) => (/^\d{4}-\d{2}-\d{2}$/.test(String(s || '')) ? s : null);
+        const from = parseDay(req.query.from);
+        const to = parseDay(req.query.to);
+        const conds = ['funnel_id = $1'];
+        const params = [id];
+        if (from) { params.push(from); conds.push(`visited_at >= $${params.length}::date`); }
+        if (to)   { params.push(to);   conds.push(`visited_at < ($${params.length}::date + INTERVAL '1 day')`); }
+        const where = conds.join(' AND ');
+
         const { rows: stats } = await db.query(`
             SELECT
                 COUNT(*)::int as visits_total,
-                COUNT(*) FILTER (WHERE converted = true)::int as conversions,
-                COUNT(DISTINCT customer_email)::int as unique_emails,
-                COUNT(DISTINCT ip)::int as unique_ips
+                COUNT(DISTINCT ip)::int as unique_ips,
+                COUNT(DISTINCT customer_email) FILTER (WHERE customer_email IS NOT NULL)::int as unique_emails,
+                COUNT(*) FILTER (WHERE converted = true)::int as conversions
             FROM funnel_visits
-            WHERE funnel_id = $1
-        `, [id]);
+            WHERE ${where}
+        `, params);
+
+        // Série diária — alimenta as barras e a comparação dia a dia
+        const { rows: daily } = await db.query(`
+            SELECT
+                TO_CHAR(visited_at::date, 'YYYY-MM-DD') as day,
+                COUNT(*)::int as visits,
+                COUNT(DISTINCT ip)::int as unique_ips,
+                COUNT(DISTINCT customer_email) FILTER (WHERE customer_email IS NOT NULL)::int as emails,
+                COUNT(*) FILTER (WHERE converted = true)::int as conversions
+            FROM funnel_visits
+            WHERE ${where}
+            GROUP BY visited_at::date
+            ORDER BY visited_at::date
+        `, params);
+
         const { rows: recent } = await db.query(`
             SELECT customer_email, ip, converted, visited_at, converted_at
             FROM funnel_visits
-            WHERE funnel_id = $1
+            WHERE ${where}
             ORDER BY visited_at DESC
             LIMIT 50
-        `, [id]);
-        return res.json({ success: true, stats: stats[0], recent });
+        `, params);
+
+        return res.json({ success: true, stats: stats[0], daily, recent, from, to });
     } catch (err) {
         logger.error('Erro stats funíl:', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
@@ -250,17 +278,18 @@ router.post('/:id/steps', requireAdmin, async (req, res) => {
     const funnelId = parseInt(req.params.id, 10);
     if (!funnelId) return res.status(400).json({ success: false, error: 'ID inválido' });
     try {
-        const { type, delay_seconds, video_call_id, product_id, title, message, step_order, active } = req.body || {};
-        const validTypes = ['video_call', 'notification', 'open_product'];
+        const { type, delay_seconds, video_call_id, product_id, title, message, link_url, step_order, active } = req.body || {};
+        // 'push' = web push enviado pelo SERVIDOR no horário (chega com app fechado)
+        const validTypes = ['video_call', 'notification', 'open_product', 'push'];
         const t = validTypes.includes(type) ? type : 'notification';
         const delay = Math.max(0, parseInt(delay_seconds, 10) || 0);
         const vcId = video_call_id ? parseInt(video_call_id, 10) : null;
         const pId = product_id ? parseInt(product_id, 10) : null;
         const order = parseInt(step_order, 10) || 0;
         const { rows } = await db.query(`
-            INSERT INTO funnel_steps (funnel_id, type, delay_seconds, video_call_id, product_id, title, message, step_order, active)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *
-        `, [funnelId, t, delay, vcId, pId, (title||'').trim().slice(0,120) || null, (message||'').trim().slice(0,500) || null, order, active !== false]);
+            INSERT INTO funnel_steps (funnel_id, type, delay_seconds, video_call_id, product_id, title, message, link_url, step_order, active)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *
+        `, [funnelId, t, delay, vcId, pId, (title||'').trim().slice(0,120) || null, (message||'').trim().slice(0,500) || null, (link_url||'').trim().slice(0,1000) || null, order, active !== false]);
         return res.json({ success: true, step: rows[0] });
     } catch (err) {
         logger.error('Erro criando etapa:', err);
@@ -273,10 +302,10 @@ router.put('/:id/steps/:stepId', requireAdmin, async (req, res) => {
     const stepId = parseInt(req.params.stepId, 10);
     if (!stepId) return res.status(400).json({ success: false, error: 'ID inválido' });
     try {
-        const { type, delay_seconds, video_call_id, product_id, title, message, step_order, active } = req.body || {};
+        const { type, delay_seconds, video_call_id, product_id, title, message, link_url, step_order, active } = req.body || {};
         const updates = []; const values = []; let p = 1;
         if (type !== undefined) {
-            const valid = ['video_call', 'notification', 'open_product'];
+            const valid = ['video_call', 'notification', 'open_product', 'push'];
             updates.push(`type = $${p++}`); values.push(valid.includes(type) ? type : 'notification');
         }
         if (delay_seconds !== undefined) { updates.push(`delay_seconds = $${p++}`); values.push(Math.max(0, parseInt(delay_seconds, 10) || 0)); }
@@ -284,6 +313,7 @@ router.put('/:id/steps/:stepId', requireAdmin, async (req, res) => {
         if (product_id !== undefined) { updates.push(`product_id = $${p++}`); values.push(product_id ? parseInt(product_id, 10) : null); }
         if (title !== undefined) { updates.push(`title = $${p++}`); values.push((title || '').trim().slice(0, 120) || null); }
         if (message !== undefined) { updates.push(`message = $${p++}`); values.push((message || '').trim().slice(0, 500) || null); }
+        if (link_url !== undefined) { updates.push(`link_url = $${p++}`); values.push((link_url || '').trim().slice(0, 1000) || null); }
         if (step_order !== undefined) { updates.push(`step_order = $${p++}`); values.push(parseInt(step_order, 10) || 0); }
         if (active !== undefined) { updates.push(`active = $${p++}`); values.push(!!active); }
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
