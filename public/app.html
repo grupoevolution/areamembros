@@ -1433,6 +1433,42 @@ body.is-slowconn .prod-cta-fixed {
     background: linear-gradient(180deg, transparent 30%, rgba(0,0,0,0.5) 70%, var(--bg) 100%), radial-gradient(ellipse at 70% 30%, #5a0a25, #1a0000 70%);
     animation: kenBurns 24s ease-in-out infinite alternate;
 }
+/* Galeria do produto — seção própria abaixo das features (grid 3 col) */
+.prod-gallery { margin-top: 28px; }
+.prod-gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+.prod-gallery-cell {
+    position: relative;
+    aspect-ratio: 3 / 4;
+    border-radius: 10px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #2a0d0d, #1a0505);
+    cursor: pointer;
+}
+.prod-gallery-cell img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover; object-position: center;
+}
+.prod-gallery-cell.is-locked img { filter: blur(14px); transform: scale(1.15); }
+.prod-gallery-overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    background: rgba(13,5,6,0.35);
+}
+.prod-gallery-badge {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: rgba(229,9,20,0.92);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+}
+.prod-gallery-lock-label {
+    font-size: 10px; color: #fff; font-weight: 600; letter-spacing: 0.02em;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6);
+}
 .prod-actions-top {
     position: absolute; top: 20px; left: 16px; right: 16px;
     display: flex; justify-content: space-between; z-index: 10;
@@ -7300,8 +7336,6 @@ body.is-slowconn .prod-cta-fixed {
     <div class="screen-scroll" style="padding-bottom: 160px;">
         <div class="prod-carousel">
             <div class="prod-slide active" data-pidx="0"><div class="prod-slide-img"></div></div>
-            <div class="prod-slide" data-pidx="1"><div class="prod-slide-img v2"></div></div>
-            <div class="prod-slide" data-pidx="2"><div class="prod-slide-img v3"></div></div>
             <div class="prod-actions-top">
                 <button class="prod-action-btn" onclick="switchScreen('home')">
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
@@ -7311,11 +7345,7 @@ body.is-slowconn .prod-cta-fixed {
                 </button>
             </div>
             <div class="prod-live"><span class="prod-live-dot"></span>Ao vivo</div>
-            <div class="prod-dots">
-                <div class="prod-dot active" data-pdot="0"></div>
-                <div class="prod-dot" data-pdot="1"></div>
-                <div class="prod-dot" data-pdot="2"></div>
-            </div>
+            <div class="prod-dots" style="display:none;"></div>
             <div class="prod-hero-content">
                 <div class="prod-category">Grupo VIP · Premium</div>
                 <h1 class="prod-title">Clube das<br><em>Casadas</em></h1>
@@ -7374,6 +7404,12 @@ body.is-slowconn .prod-cta-fixed {
                     <div class="feat-icon"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></div>
                     <div class="feat-text">Suporte direto via WhatsApp</div>
                 </div>
+            </div>
+
+            <!-- GALERIA do produto (seção própria — populada por populateProductScreen) -->
+            <div class="prod-gallery" id="prodGallery" style="display:none;">
+                <h3 class="prod-feats-title" id="prodGalleryTitle">Prévia do <em>conteúdo</em></h3>
+                <div class="prod-gallery-grid" id="prodGalleryGrid"></div>
             </div>
         </div>
     </div>
@@ -10519,6 +10555,40 @@ function closePreviewLock() {
     if (m) m.style.display = 'none';
 }
 
+// Abre item da galeria do produto no lightbox (reusa o #libLightbox da biblioteca).
+// Itens vêm de window.__prodGalleryItems (setado por populateProductScreen).
+function openProdGalleryItem(idx) {
+    const items = window.__prodGalleryItems || [];
+    const g = items[idx];
+    if (!g) return;
+    if (g.is_locked) { if (typeof openPreviewLock === 'function') openPreviewLock(); return; }
+    if (!g.url) return;
+    const inner = document.getElementById('libLightboxInner');
+    const box = document.getElementById('libLightbox');
+    if (!inner || !box) return;
+    const esc = s => String(s == null ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    if (g.type === 'video') {
+        const isBunny = g.url.indexOf('mediadelivery.net') !== -1;
+        if (isBunny) {
+            const embedUrl = g.url
+                .replace('player.mediadelivery.net/play/', 'iframe.mediadelivery.net/embed/')
+                .replace('mediadelivery.net/play/', 'iframe.mediadelivery.net/embed/');
+            inner.innerHTML = '<iframe class="lib-lightbox-media" src="' + esc(embedUrl) + '?autoplay=true" '
+                + 'style="width:100%;aspect-ratio:9/16;max-width:100%;max-height:100%;border:0;background:#000;" '
+                + 'allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;" allowfullscreen></iframe>';
+        } else {
+            inner.innerHTML = '<video class="lib-lightbox-media" src="' + esc(g.url) + '" controls autoplay playsinline preload="metadata" style="max-width:100%;max-height:100%;"></video>';
+        }
+    } else {
+        inner.innerHTML = '<img class="lib-lightbox-media" src="' + esc(g.url) + '" alt="" decoding="async" style="max-width:100%;max-height:100%;">';
+    }
+    box.classList.add('is-open');
+    box.setAttribute('aria-hidden', 'false');
+    if (navigator.vibrate) navigator.vibrate(8);
+}
+
 // Popula a tela #product com dados reais do produto
 function populateProductScreen(p) {
     if (!p) return;
@@ -10550,130 +10620,73 @@ function populateProductScreen(p) {
             if (g?.url || g?.thumbnail_url) pushItem(g.type || 'image', g.url, g.is_locked === true, g.thumbnail_url);
         }
     }
-    // Fallback: galeria vazia → usa capa como único slide
-    if (galleryItems.length === 0 && p.banner_url) {
-        galleryItems.push({ type: 'image', url: p.banner_url, is_locked: false, thumbnail_url: null });
-    }
-
-    // Renderiza slides dinâmicos no .prod-carousel — substitui os hardcoded
+    // === HERO (capa estática) ===
+    // O banner do topo é FIXO: usa banner_url do produto; se não houver, cai pra
+    // 1ª imagem liberada da galeria. A galeria NÃO roda mais como carrossel no
+    // banner — ela é renderizada como seção própria (grid) abaixo das features.
     const carousel = document.querySelector('#product .prod-carousel');
     if (carousel) {
-        const oldSlides = carousel.querySelectorAll('.prod-slide');
-        oldSlides.forEach(s => s.remove());
+        carousel.querySelectorAll('.prod-slide').forEach(s => s.remove());
         const oldDots = carousel.querySelector('.prod-dots');
-        if (galleryItems.length === 0) galleryItems.push({ type: 'image', url: '' });
-        // === Fase G — performance ===
-        // Antes: iframes Bunny e <video> autoplay eram montados de UMA VEZ no DOM.
-        // Cada iframe Bunny = ~200KB do player + handshake HLS. 6 vídeos na galeria
-        // = ~1.2MB e 6 conexões paralelas só pra ter slides "prontos".
-        // Loading="lazy" não cobre: slides ficam em opacity:0 (crossfade do .prod-slide)
-        // e o browser considera "visíveis". Resultado: iframe carregando em background
-        // enquanto user só queria ver as fotos.
-        // Solução: render placeholder (gradiente + play icon). Quando o slide vira
-        // .active (rotation / swipe / dot) → mountSlideMediaIfNeeded converte o
-        // placeholder no iframe/video real.
-        const html = galleryItems.map((item, idx) => {
-            const safeUrl = (item.url || '').replace(/'/g, "\\'");
-            if (item.is_locked) {
-                const poster = item.thumbnail_url || item.url || '';
-                const posterImg = poster
-                    ? `<img src="${escapeAttrData(poster)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(18px);transform:scale(1.12);">`
-                    : '';
-                const icon = item.type === 'video'
-                    ? '<svg width="22" height="22" fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>'
-                    : '<svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
-                return `<div class="prod-slide ${idx === 0 ? 'active' : ''}" data-pidx="${idx}" onclick="openPreviewLock()" style="cursor:pointer;">
-                    <div class="prod-slide-img" style="position:relative;overflow:hidden;background:linear-gradient(135deg,#2a0d0d,#1a0505);">
-                        ${posterImg}
-                        <div style="position:absolute;inset:0;background:rgba(13,5,6,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;">
-                            <div style="width:54px;height:54px;border-radius:50%;background:rgba(229,9,20,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.5);">${icon}</div>
-                            <div style="font-size:13px;color:#fff;font-weight:600;letter-spacing:.02em;">Toque pra desbloquear</div>
-                        </div>
-                    </div>
-                </div>`;
+        if (oldDots) { oldDots.innerHTML = ''; oldDots.style.display = 'none'; }
+        window.prodIdx = 0;
+        let heroUrl = p.banner_url || '';
+        let heroBlur = false;
+        if (!heroUrl) {
+            const firstOpen = galleryItems.find(it => it.type === 'image' && !it.is_locked && it.url);
+            if (firstOpen) {
+                heroUrl = firstOpen.url;
+            } else if (galleryItems[0]) {
+                heroUrl = galleryItems[0].thumbnail_url || galleryItems[0].url || '';
+                heroBlur = galleryItems[0].is_locked === true;
             }
-            if (item.type === 'video') {
-                const isBunnyEmbed = item.url && item.url.indexOf('mediadelivery.net') !== -1;
-                if (isBunnyEmbed) {
-                    const embedUrl = item.url
-                        .replace('player.mediadelivery.net/play/', 'iframe.mediadelivery.net/embed/')
-                        .replace('mediadelivery.net/play/', 'iframe.mediadelivery.net/embed/');
-                    // Placeholder visual; iframe real só monta quando slide ativar
-                    return `<div class="prod-slide ${idx === 0 ? 'active' : ''}" data-pidx="${idx}" data-bunny-embed="${escapeAttrData(embedUrl)}">
-                        <div class="prod-slide-img" style="position:relative;background:linear-gradient(135deg,#1a0000,#000);display:flex;align-items:center;justify-content:center;cursor:pointer;">
-                            <div style="width:56px;height:56px;border-radius:50%;background:rgba(229,9,20,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.5);">
-                                <svg width="22" height="22" fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                            </div>
+        }
+        const optHero = (heroUrl && window.optimizeImg) ? window.optimizeImg(heroUrl, 'hero') : heroUrl;
+        const heroImg = heroUrl
+            ? `<img class="prod-slide-cover-img" src="${escapeAttrData(optHero)}" alt="" decoding="async" data-fallback="${escapeAttrData(heroUrl)}" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none';}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;${heroBlur ? 'filter:blur(18px);transform:scale(1.12);' : ''}">`
+            : '';
+        const heroHtml = `<div class="prod-slide active" data-pidx="0">
+            <div class="prod-slide-img" style="overflow:hidden;background:linear-gradient(135deg,#2a0d0d,#1a0505);">${heroImg}</div>
+        </div>`;
+        const actionsTop = carousel.querySelector('.prod-actions-top');
+        if (actionsTop) actionsTop.insertAdjacentHTML('beforebegin', heroHtml);
+        else carousel.insertAdjacentHTML('afterbegin', heroHtml);
+    }
+
+    // === GALERIA (seção própria, abaixo de "O que você recebe") ===
+    // Grid 3 colunas. Bloqueada (prévia) → thumb borrada + cadeado → popup de compra.
+    // Liberada → lightbox (o mesmo da biblioteca). Vídeo → badge de play.
+    window.__prodGalleryItems = galleryItems;
+    const gallerySec = document.getElementById('prodGallery');
+    const galleryGrid = document.getElementById('prodGalleryGrid');
+    if (gallerySec && galleryGrid) {
+        if (galleryItems.length === 0) {
+            gallerySec.style.display = 'none';
+            galleryGrid.innerHTML = '';
+        } else {
+            const gTitle = document.getElementById('prodGalleryTitle');
+            if (gTitle) gTitle.innerHTML = owns ? 'Galeria do <em>conteúdo</em>' : 'Prévia do <em>conteúdo</em>';
+            galleryGrid.innerHTML = galleryItems.map((item, idx) => {
+                const thumbSrc = item.thumbnail_url || (item.type === 'image' ? item.url : '') || '';
+                const optThumb = (thumbSrc && window.optimizeImg) ? window.optimizeImg(thumbSrc, 'card') : thumbSrc;
+                const imgTag = thumbSrc
+                    ? `<img src="${escapeAttrData(optThumb)}" alt="" decoding="async" loading="lazy" data-fallback="${escapeAttrData(thumbSrc)}" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none';}">`
+                    : '';
+                if (item.is_locked) {
+                    return `<div class="prod-gallery-cell is-locked" onclick="openPreviewLock()">
+                        ${imgTag}
+                        <div class="prod-gallery-overlay">
+                            <div class="prod-gallery-badge"><svg width="16" height="16" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></div>
+                            <div class="prod-gallery-lock-label">Desbloquear</div>
                         </div>
                     </div>`;
                 }
-                // <video> legacy (MP4 cru). Sem autoplay nos inativos, preload=none.
-                const autoAttr = idx === 0 ? 'autoplay' : '';
-                const preloadAttr = idx === 0 ? 'metadata' : 'none';
-                return `<div class="prod-slide ${idx === 0 ? 'active' : ''}" data-pidx="${idx}" data-video-src="${escapeAttrData(safeUrl)}">
-                    <video class="prod-slide-img" src="${safeUrl}" muted loop ${autoAttr} playsinline preload="${preloadAttr}" style="width:100%;height:100%;object-fit:cover;"></video>
-                </div>`;
-            }
-            // .prod-slide-img mantém o gradiente de fallback como backdrop (atrás do <img>):
-            // aparece sem imagem, enquanto o <img> carrega, ou se a imagem quebrar.
-            // O <img> real evita re-decodificação ao trocar de tela.
-            // Fase L11: otimiza via wsrv.nl (preset gallery 900w q80 WebP). onerror cai
-            // pro URL original se proxy falhar (zero risco de imagem sumir).
-            const optImg = (item.url && window.optimizeImg) ? window.optimizeImg(item.url, 'gallery') : item.url;
-            const coverImg = (item.url)
-                ? `<img class="prod-slide-cover-img" src="${escapeAttrData(optImg)}" alt="" decoding="async"${idx === 0 ? '' : ' loading="lazy"'} data-fallback="${escapeAttrData(item.url)}" onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none';}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;">`
-                : '';
-            return `<div class="prod-slide ${idx === 0 ? 'active' : ''}" data-pidx="${idx}">
-                <div class="prod-slide-img" style="overflow:hidden;background:linear-gradient(135deg,#2a0d0d,#1a0505);">${coverImg}</div>
-            </div>`;
-        }).join('');
-        // Insere antes da barra de actions
-        const actionsTop = carousel.querySelector('.prod-actions-top');
-        if (actionsTop) actionsTop.insertAdjacentHTML('beforebegin', html);
-        else carousel.insertAdjacentHTML('afterbegin', html);
-        // Atualiza dots
-        if (oldDots) {
-            oldDots.innerHTML = galleryItems.map((_, idx) =>
-                `<div class="prod-dot ${idx === 0 ? 'active' : ''}" data-pdot="${idx}"></div>`
-            ).join('');
-            oldDots.style.display = galleryItems.length > 1 ? '' : 'none';
-        }
-        // Fase G — monta media no slide já ativo (1º slide)
-        const firstActive = carousel.querySelector('.prod-slide.active');
-        if (firstActive && typeof mountSlideMediaIfNeeded === 'function') {
-            mountSlideMediaIfNeeded(firstActive);
-        }
-        // Listener delegado: clique em placeholder OU dot ativa o slide e monta mídia
-        if (!carousel._lazyMountWired) {
-            carousel._lazyMountWired = true;
-            const activateSlide = (idx) => {
-                const all = carousel.querySelectorAll('.prod-slide');
-                if (idx < 0 || idx >= all.length) return;
-                all.forEach(s => s.classList.remove('active'));
-                all[idx].classList.add('active');
-                carousel.querySelectorAll('.prod-dot').forEach(d => d.classList.remove('active'));
-                const dot = carousel.querySelector(`.prod-dot[data-pdot="${idx}"]`);
-                if (dot) dot.classList.add('active');
-                if (typeof window !== 'undefined') window.prodIdx = idx;
-                if (typeof mountSlideMediaIfNeeded === 'function') mountSlideMediaIfNeeded(all[idx]);
-            };
-            carousel.addEventListener('click', (ev) => {
-                // Click em dot → ativa slide do dot
-                const dotEl = ev.target.closest && ev.target.closest('.prod-dot');
-                if (dotEl && carousel.contains(dotEl)) {
-                    ev.stopPropagation();
-                    activateSlide(parseInt(dotEl.dataset.pdot, 10) || 0);
-                    return;
-                }
-                // Click em slide → ativa e monta
-                const slide = ev.target.closest && ev.target.closest('.prod-slide');
-                if (!slide || !carousel.contains(slide)) return;
-                if (!slide.classList.contains('active')) {
-                    activateSlide(parseInt(slide.dataset.pidx, 10) || 0);
-                } else if (typeof mountSlideMediaIfNeeded === 'function') {
-                    mountSlideMediaIfNeeded(slide);
-                }
-            });
+                const playBadge = item.type === 'video'
+                    ? `<div class="prod-gallery-overlay"><div class="prod-gallery-badge"><svg width="16" height="16" fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div></div>`
+                    : '';
+                return `<div class="prod-gallery-cell" onclick="openProdGalleryItem(${idx})">${imgTag}${playBadge}</div>`;
+            }).join('');
+            gallerySec.style.display = '';
         }
     }
 

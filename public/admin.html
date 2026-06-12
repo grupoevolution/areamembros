@@ -7193,6 +7193,9 @@ function clearProductForm() {
     const btn = document.getElementById('pSaveBtn');
     if (btn) btn.innerHTML = 'Salvar produto <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
 
+    // Reseta a seção de planos ("Novo produto" começa sem planos)
+    if (typeof loadProductPlans === 'function') loadProductPlans(null);
+
     if (typeof updateProductMockup === 'function') updateProductMockup();
 }
 
@@ -7311,6 +7314,11 @@ async function editProduct(id) {
     // Navega pra tela do form
     const navBtn = document.querySelector('[data-screen="produtos"]');
     switchAdminScreen(null, 'produtos-novo', 'Editar produto');
+
+    // Carrega os planos do produto (seção "Planos / Checkouts" do form).
+    // Chamada direta: o observer antigo no atributo value do #pId nunca disparava
+    // (JS seta a propriedade .value, não o atributo) e o "+ Plano" ficava travado.
+    if (typeof loadProductPlans === 'function') loadProductPlans(p.id);
 
     // Atualiza mockup com os valores carregados
     if (typeof updateProductMockup === 'function') updateProductMockup();
@@ -7548,9 +7556,17 @@ async function saveProduct() {
     }
     
     alertProduct('Salvo com sucesso!', 'success');
-    
-    // Recarrega lista e volta
+
+    // Recarrega lista
     await loadProducts();
+
+    // Produto NOVO: entra direto no modo edição (com o ID criado) pra já poder
+    // adicionar planos, sem precisar voltar na lista e reabrir o produto.
+    if (!id && data.product && data.product.id) {
+        await editProduct(data.product.id);
+        return;
+    }
+
     setTimeout(() => {
         clearProductForm();
         const navBtn = document.querySelector('[data-screen="produtos"]');
@@ -13815,35 +13831,10 @@ async function deletePlan(id) {
     loadProductPlans(_currentProductId);
 }
 
-// Carrega planos quando produto é aberto pra edição.
-// Observer ESCOPADO ao formulário de produto pra não impactar outras abas.
-(function() {
-    function tryAttach() {
-        const formScreen = document.getElementById('screen-produtos-novo');
-        if (!formScreen) { setTimeout(tryAttach, 500); return; }
-        // Quando a tela de novo produto fica visível E tem pId preenchido, carrega planos
-        const checkAndLoad = () => {
-            // Só roda se a aba de produtos-novo está visível
-            if (formScreen.style.display === 'none' && !formScreen.classList.contains('active')) return;
-            const pIdEl = document.getElementById('pId');
-            if (!pIdEl) return;
-            const id = parseInt(pIdEl.value, 10);
-            if (id && id !== _currentProductId) loadProductPlans(id);
-            else if (!id && _currentProductId !== null) { _currentProductId = null; loadProductPlans(null); }
-        };
-        // Observa SÓ o input #pId (não o body inteiro)
-        const obs = new MutationObserver(checkAndLoad);
-        const pIdEl = document.getElementById('pId');
-        if (pIdEl) obs.observe(pIdEl, { attributes: true, attributeFilter: ['value'] });
-        // Também roda em clicks de nav-item que abrem a aba
-        document.addEventListener('click', e => {
-            const t = e.target.closest('[data-screen="produtos-novo"], [onclick*="produtos-novo"]');
-            if (t) setTimeout(checkAndLoad, 300);
-        }, true);
-    }
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', tryAttach);
-    else tryAttach();
-})();
+// Os planos são carregados por chamada DIRETA: editProduct() → loadProductPlans(id),
+// clearProductForm() → loadProductPlans(null) e saveProduct() (produto novo) → editProduct().
+// O MutationObserver antigo no atributo "value" do #pId nunca disparava — JS seta a
+// propriedade .value, que não reflete no atributo — e por isso o "+ Plano" ficava travado.
 
 
 // ═══════════════ IMPORTAR / EXPORTAR PRODUTOS ═══════════════
