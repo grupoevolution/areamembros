@@ -880,8 +880,17 @@ a { color: inherit; text-decoration: none; }
     background: var(--bg-elev);
     border: 1px solid var(--border);
     border-radius: 10px;
-    overflow: hidden;
+    overflow-x: auto;
 }
+/* Coluna de ações (Editar/Excluir) fixa na direita — sempre visível mesmo
+   quando a tabela é mais larga que a tela. */
+.data-table th:last-child,
+.data-table td:last-child {
+    position: sticky;
+    right: 0;
+    background: var(--bg-elev);
+}
+.data-table thead th:last-child { background: var(--bg-elev-2); }
 .data-table {
     width: 100%;
     border-collapse: collapse;
@@ -3818,7 +3827,6 @@ a { color: inherit; text-decoration: none; }
                                 <th>Categoria</th>
                                 <th>Conteúdo</th>
                                 <th class="numeric">Preço real</th>
-                                <th class="numeric">Desc. 💎</th>
                                 <th>Gateway</th>
                                 <th class="numeric"><span class="th-sort">Vendas 30d</span></th>
                                 <th>Status</th>
@@ -3826,7 +3834,7 @@ a { color: inherit; text-decoration: none; }
                             </tr>
                         </thead>
                         <tbody id="productsTableBody">
-                            <tr><td colspan="10" style="text-align:center; padding:40px; color:var(--text-muted);">Carregando produtos...</td></tr>
+                            <tr><td colspan="9" style="text-align:center; padding:40px; color:var(--text-muted);">Carregando produtos...</td></tr>
                         </tbody>
                     </table>
                     <div class="table-footer">
@@ -6774,12 +6782,12 @@ async function loadProducts() {
     const tbody = document.getElementById('productsTableBody');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:40px; color:var(--text-muted);">Carregando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:40px; color:var(--text-muted);">Carregando...</td></tr>';
 
     const { ok, data } = await API.call('/api/admin/products');
 
     if (!ok || !data.success) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:40px; color:var(--danger);">Erro ao carregar: ${data.error || 'desconhecido'}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:40px; color:var(--danger);">Erro ao carregar: ${data.error || 'desconhecido'}</td></tr>`;
         return;
     }
 
@@ -6847,7 +6855,7 @@ function renderProductsList() {
     // Subtítulo + estado vazio total
     updateProductsCount(total);
     if (total === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:60px;">
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:60px;">
             <div style="font-size:14px; color:var(--text-dim); margin-bottom:6px;">Nenhum produto cadastrado</div>
             <div style="font-size:12px; color:var(--text-muted);">Clique em "Novo produto" pra começar</div>
         </td></tr>`;
@@ -6870,7 +6878,7 @@ function renderProductsList() {
 
     const filteredTotal = filtered.length;
     if (filteredTotal === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:60px;">
+        tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:60px;">
             <div style="font-size:14px; color:var(--text-dim);">Nenhum produto encontrado com esses filtros</div>
         </td></tr>`;
         const footer = document.getElementById('productsTableFooterCount');
@@ -6943,7 +6951,6 @@ function renderProductsList() {
                 <td>${escapeHtml(catName)}</td>
                 <td>${contentBadge}</td>
                 <td class="numeric" style="font-weight:600;">${priceFmt}</td>
-                <td class="numeric">—</td>
                 <td>${gatewayLabel}</td>
                 <td class="numeric">—</td>
                 <td>${statusBadge}</td>
