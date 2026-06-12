@@ -3145,26 +3145,6 @@ a { color: inherit; text-decoration: none; }
             </div>
 
             <div class="nav-section">
-                <div class="nav-section-label">Gamificação</div>
-                <div class="nav-item" data-screen="elos" onclick="switchAdminScreen(this, 'elos', 'Níveis e XP')">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-                    Níveis e XP
-                </div>
-                <div class="nav-item" data-screen="desejos" onclick="switchAdminScreen(this, 'desejos', 'Desejos & Indicação')">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M11 3L8 9l4 13 4-13-3-6"/><path d="M2 9h20"/></svg>
-                    Desejos & Indicação
-                </div>
-                <div class="nav-item" data-screen="missoes" onclick="switchAdminScreen(this, 'missoes', 'Missões Semanais')">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-                    Missões Semanais
-                </div>
-                <div class="nav-item" data-screen="brindes" onclick="switchAdminScreen(this, 'brindes', 'Cofre e Roleta')">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 010-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 000-5C13 2 12 7 12 7z"/></svg>
-                    Cofre e Roleta
-                </div>
-            </div>
-
-            <div class="nav-section">
                 <div class="nav-section-label">Engajamento</div>
                 <div class="nav-item" data-screen="hero-banner" onclick="switchAdminScreen(this, 'hero-banner', 'Hero / Banner Principal')">
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M3 13l4-4 5 5 3-3 6 6"/></svg>
@@ -3185,10 +3165,6 @@ a { color: inherit; text-decoration: none; }
                 <div class="nav-item" data-screen="reviews" onclick="switchAdminScreen(this, 'reviews', 'Reviews')">
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                     Reviews (fake)
-                </div>
-                <div class="nav-item" data-screen="dopamine" onclick="switchAdminScreen(this, 'dopamine', 'Dia da Dopamina')">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    Dia da Dopamina
                 </div>
                 <div class="nav-item" data-screen="chamadas" onclick="switchAdminScreen(this, 'chamadas', 'Chamada de Vídeo Remarketing'); loadCalls();">
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
@@ -4780,21 +4756,6 @@ a { color: inherit; text-decoration: none; }
                     <button class="btn-primary" id="pushSendBtn" onclick="sendPushNotification()">Disparar push</button>
                 </div>
 
-                <!-- ===== REFERRALS ===== -->
-                <div class="form-card" style="padding:20px;margin-bottom:18px;">
-                    <div class="form-card-head" style="margin-bottom:16px;">
-                        <div class="form-card-title">🤝 Indicações virais</div>
-                        <div class="form-card-sub">Clientes que indicaram amigos pelo bot Telegram.</div>
-                    </div>
-                    <div id="growthReferralStats" style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">—</div>
-                    <div style="font-size:12px;color:var(--text-muted);background:rgba(0,0,0,0.3);padding:12px;border-radius:8px;border-left:3px solid var(--brand);">
-                        <strong>Webhook do bot Telegram:</strong><br>
-                        <code style="font-size:11px;word-break:break-all;">POST /api/admin/referral/webhook/telegram</code><br>
-                        Body: <code>{ "code": "ref_xxx", "referrer_email": "cliente@email.com", "referred_telegram_id": "123", "product_id": 5, "reward_desejos": 100, "secret": "..." }</code>
-                    </div>
-                    <div id="growthReferralsList" style="margin-top:14px;font-size:12px;"></div>
-                </div>
-
                 <!-- ===== QR PREVIEW MODAL ===== -->
                 <div id="previewQrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;padding:20px;">
                     <div style="background:#1a0a0a;border:1px solid var(--border);border-radius:14px;max-width:360px;width:100%;padding:24px;text-align:center;">
@@ -4881,314 +4842,6 @@ a { color: inherit; text-decoration: none; }
                 </div>
             </div>
 
-            <!-- =================================================================
-                 SCREEN: BRINDES — catálogo de prêmios da roleta/cofre
-            ================================================================= -->
-            <div class="screen-content" id="screen-brindes">
-                <div class="page-header">
-                    <div>
-                        <h1 class="page-title">Brindes</h1>
-                        <p class="page-subtitle" id="brindesSubtitle">Catálogo de prêmios disponíveis na roleta e cofre.</p>
-                    </div>
-                    <div class="page-actions">
-                        <button class="btn-secondary" onclick="loadGifts()">Atualizar</button>
-                        <button class="btn-primary" onclick="openGiftModal()">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                            Novo brinde
-                        </button>
-                    </div>
-                </div>
-                <!-- Toggles de ativação -->
-                <div class="form-card" style="margin-bottom:16px">
-                    <div class="form-card-head">
-                        <div class="form-card-title">⚙️ Funcionalidades ativadas</div>
-                        <div class="form-card-sub">Desative o que não quer mostrar no perfil do cliente.</div>
-                    </div>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="toggleWheel" onchange="saveGamiToggles()"/> Roleta da sorte</label>
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="toggleCofre" onchange="saveGamiToggles()"/> Cofre de bônus</label>
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="toggleMissions" onchange="saveGamiToggles()"/> Missões semanais</label>
-                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="toggleDesejos" onchange="saveGamiToggles()"/> Sistema de desejos</label>
-                    </div>
-                </div>
-                <!-- HIDE marker: bloco antigo de botões escondido (header acima já tem o "Novo brinde").
-                     Mantemos o markup pra não quebrar referências antigas, mas com display:none e
-                     fechamento DIV correto (uma abertura, um fechamento). -->
-                <div style="display:none">
-                    <button class="btn-primary" onclick="openGiftModal()">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Novo brinde
-                    </button>
-                </div>
-
-                <div class="data-table-wrap">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Ícone</th>
-                                <th>Nome</th>
-                                <th>Tipo</th>
-                                <th class="numeric">Valor</th>
-                                <th class="numeric">Peso (chance)</th>
-                                <th>Status</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="giftsTableBody">
-                            <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">Carregando...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Modal Brinde -->
-            <div class="modal-overlay" id="giftOverlay" onclick="closeGiftModal(event)" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
-                <div class="modal-box" onclick="event.stopPropagation()" style="background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;width:100%;max-width:520px;margin:20px;padding:24px;">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
-                        <div>
-                            <h2 id="giftModalTitle" style="font-size:18px;font-weight:700;margin-bottom:4px;">Novo brinde</h2>
-                            <p style="font-size:12px;color:var(--text-muted);">Brindes aparecem na roleta semanal e cofre diário.</p>
-                        </div>
-                        <button onclick="closeGiftModal()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;">×</button>
-                    </div>
-                    
-                    <input type="hidden" id="giftId" value="">
-                    
-                    <div class="form-row" style="margin-bottom:14px;">
-                        <label class="form-label">Nome</label>
-                        <input type="text" class="form-input" id="giftName" placeholder="Ex: 100 Desejos">
-                    </div>
-                    <div class="form-row-grid-2" style="margin-bottom:14px;">
-                        <div>
-                            <label class="form-label">Tipo</label>
-                            <select class="form-select" id="giftType" onchange="onGiftTypeChange()">
-                                <option value="wishes">Desejos (moeda)</option>
-                                <option value="video">Vídeo exclusivo</option>
-                                <option value="access">Acesso temporário</option>
-                                <option value="custom">Outro (custom)</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label">Ícone (emoji)</label>
-                            <input type="text" class="form-input" id="giftIcon" placeholder="💎" maxlength="4" value="💎">
-                        </div>
-                    </div>
-                    <div class="form-row" id="giftAmountRow" style="margin-bottom:14px;">
-                        <label class="form-label" id="giftAmountLabel">Quantidade de Desejos</label>
-                        <input type="number" class="form-input" id="giftAmount" placeholder="100" min="0">
-                    </div>
-                    <div class="form-row" id="giftUrlRow" style="margin-bottom:14px;display:none;">
-                        <label class="form-label">URL do vídeo</label>
-                        <input type="text" class="form-input" id="giftUrl" placeholder="https://...">
-                    </div>
-                    <div class="form-row" id="giftDurationRow" style="margin-bottom:14px;display:none;">
-                        <label class="form-label">Duração (horas)</label>
-                        <input type="number" class="form-input" id="giftDuration" value="24" min="1">
-                    </div>
-                    <div class="form-row-grid-2" style="margin-bottom:14px;">
-                        <div>
-                            <label class="form-label-row">
-                                <span>Peso (chance relativa)</span>
-                                <span class="form-hint-inline">Maior = mais comum</span>
-                            </label>
-                            <input type="number" class="form-input" id="giftWeight" value="10" min="1" max="1000">
-                            <div class="form-help">Ex: peso 50 sai 5x mais que peso 10.</div>
-                        </div>
-                        <div>
-                            <label class="form-label">Status</label>
-                            <select class="form-select" id="giftActive">
-                                <option value="true">Ativo</option>
-                                <option value="false">Pausado</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div id="giftAlert" style="display:none;padding:10px;border-radius:8px;font-size:13px;margin-bottom:14px;"></div>
-                    
-                    <div style="display:flex;gap:10px;justify-content:space-between;">
-                        <button class="btn-secondary" id="giftDeleteBtn" onclick="deleteGiftFromModal()" style="color:var(--danger);display:none;">Excluir</button>
-                        <div style="display:flex;gap:10px;margin-left:auto;">
-                            <button class="btn-secondary" onclick="closeGiftModal()">Cancelar</button>
-                            <button class="btn-primary" id="giftSaveBtn" onclick="saveGift()">Salvar</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- =================================================================
-                 SCREEN: DESEJOS — config geral da moeda
-            ================================================================= -->
-            <div class="screen-content" id="screen-desejos">
-                <div class="page-header">
-                    <div>
-                        <h1 class="page-title">Desejos (Moeda Virtual)</h1>
-                        <p class="page-subtitle">Configure como os clientes ganham e usam Desejos.</p>
-                    </div>
-                    <div class="page-actions">
-                        <button class="btn-secondary" onclick="loadWishesConfig()">Atualizar</button>
-                    </div>
-                </div>
-
-                <div class="form-card" style="padding:20px;margin-bottom:18px;">
-                    <div class="form-card-head" style="margin-bottom:16px;">
-                        <div class="form-card-title">Regras de uso (checkout)</div>
-                        <div class="form-card-sub">Quanto cliente pode descontar usando Desejos.</div>
-                    </div>
-                    <div class="form-row-grid-2">
-                        <div>
-                            <label class="form-label-row">
-                                <span>Desconto máximo</span>
-                                <span class="form-hint-inline">% do preço real</span>
-                            </label>
-                            <div class="form-input-wrap">
-                                <input type="number" class="form-input with-suffix" id="wcMaxDiscount" value="30" min="0" max="100">
-                                <span class="form-input-suffix">%</span>
-                            </div>
-                            <div class="form-help">Ex: 30% em R$14,99 = desconto máx de R$4,50</div>
-                        </div>
-                        <div>
-                            <label class="form-label">Mínimo de Desejos pra usar</label>
-                            <input type="number" class="form-input" id="wcMinUse" value="50" min="0">
-                            <div class="form-help">Cliente precisa ter pelo menos isso pra resgatar.</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-card" style="padding:20px;margin-bottom:18px;">
-                    <div class="form-card-head" style="margin-bottom:16px;">
-                        <div class="form-card-title">Como ganhar Desejos</div>
-                        <div class="form-card-sub">Recompensas automáticas por ações do cliente.</div>
-                    </div>
-                    <div class="form-row-grid-2">
-                        <div>
-                            <label class="form-label">XP → Desejos (proporção)</label>
-                            <input type="number" class="form-input" id="wcXpRatio" value="10" min="1">
-                            <div class="form-help">Cada X XP = 1 Desejo. Ex: 10 = ganha 1 Desejo a cada 10 XP.</div>
-                        </div>
-                        <div>
-                            <label class="form-label">Desejos por indicação</label>
-                            <input type="number" class="form-input" id="wcReferral" value="100" min="0">
-                            <div class="form-help">Cliente ganha isso quando amigo se cadastra.</div>
-                        </div>
-                    </div>
-                    <div class="form-row" style="margin-top:14px;">
-                        <label class="form-label">Desejos por avaliação (review)</label>
-                        <input type="number" class="form-input" id="wcReview" value="20" min="0" style="max-width:200px;">
-                    </div>
-                </div>
-
-                <div id="wishesAlert" style="display:none;padding:12px;border-radius:8px;font-size:13px;margin-bottom:14px;"></div>
-                
-                <div style="display:flex;justify-content:flex-end;">
-                    <button class="btn-primary" id="wishesSaveBtn" onclick="saveWishesConfig()">Salvar configurações</button>
-                </div>
-            </div>
-
-            <!-- =================================================================
-                 SCREEN: MISSÕES
-            ================================================================= -->
-            <div class="screen-content" id="screen-missoes">
-                <div class="page-header">
-                    <div>
-                        <h1 class="page-title">Missões</h1>
-                        <p class="page-subtitle" id="missoesSubtitle">Tarefas que dão XP e Desejos quando completadas.</p>
-                    </div>
-                    <div class="page-actions">
-                        <button class="btn-secondary" onclick="loadMissions()">Atualizar</button>
-                        <button class="btn-primary" onclick="openMissionModal()">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                            Nova missão
-                        </button>
-                    </div>
-                </div>
-
-                <div class="data-table-wrap">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Título</th>
-                                <th>Tipo</th>
-                                <th class="numeric">Meta</th>
-                                <th class="numeric">XP</th>
-                                <th class="numeric">Desejos</th>
-                                <th>Status</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="missionsTableBody">
-                            <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text-muted);">Carregando...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Modal Missão -->
-            <div class="modal-overlay" id="missionOverlay" onclick="closeMissionModal(event)" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
-                <div class="modal-box" onclick="event.stopPropagation()" style="background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;width:100%;max-width:520px;margin:20px;padding:24px;">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
-                        <div>
-                            <h2 id="missionModalTitle" style="font-size:18px;font-weight:700;margin-bottom:4px;">Nova missão</h2>
-                            <p style="font-size:12px;color:var(--text-muted);">Missões aparecem no perfil do cliente.</p>
-                        </div>
-                        <button onclick="closeMissionModal()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;">×</button>
-                    </div>
-                    
-                    <input type="hidden" id="missionId" value="">
-                    
-                    <div class="form-row" style="margin-bottom:14px;">
-                        <label class="form-label">Título da missão</label>
-                        <input type="text" class="form-input" id="missionTitle" placeholder="Ex: Faça login 5 dias seguidos">
-                    </div>
-                    <div class="form-row-grid-2" style="margin-bottom:14px;">
-                        <div>
-                            <label class="form-label">Tipo</label>
-                            <select class="form-select" id="missionType">
-                                <option value="login_streak">Login consecutivo</option>
-                                <option value="product_views">Visualizar produtos</option>
-                                <option value="favorites">Favoritar produtos</option>
-                                <option value="purchases">Compras</option>
-                                <option value="referral">Indicar amigo</option>
-                                <option value="custom">Custom</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label">Meta</label>
-                            <input type="number" class="form-input" id="missionGoal" value="5" min="1">
-                        </div>
-                    </div>
-                    <div class="form-row-grid-2" style="margin-bottom:14px;">
-                        <div>
-                            <label class="form-label">Recompensa em XP</label>
-                            <input type="number" class="form-input" id="missionXp" value="50" min="0">
-                        </div>
-                        <div>
-                            <label class="form-label">Recompensa em Desejos</label>
-                            <input type="number" class="form-input" id="missionWishes" value="0" min="0">
-                        </div>
-                    </div>
-                    <div class="form-row" style="margin-bottom:14px;">
-                        <label class="form-label">Status</label>
-                        <select class="form-select" id="missionActive" style="max-width:200px;">
-                            <option value="true">Ativa</option>
-                            <option value="false">Pausada</option>
-                        </select>
-                    </div>
-                    
-                    <div id="missionAlert" style="display:none;padding:10px;border-radius:8px;font-size:13px;margin-bottom:14px;"></div>
-                    
-                    <div style="display:flex;gap:10px;justify-content:space-between;">
-                        <button class="btn-secondary" id="missionDeleteBtn" onclick="deleteMissionFromModal()" style="color:var(--danger);display:none;">Excluir</button>
-                        <div style="display:flex;gap:10px;margin-left:auto;">
-                            <button class="btn-secondary" onclick="closeMissionModal()">Cancelar</button>
-                            <button class="btn-primary" id="missionSaveBtn" onclick="saveMission()">Salvar</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- =================================================================
-                 SCREEN: REVIEWS
-            ================================================================= -->
             <div class="screen-content" id="screen-reviews">
                 <div class="page-header">
                     <div>
@@ -5283,109 +4936,6 @@ a { color: inherit; text-decoration: none; }
             <!-- =================================================================
                  PLACEHOLDERS — telas que serão funcionais nos próximos turnos
             ================================================================= -->
-            <!-- =================================================================
-                 SCREEN: ELOS (Níveis baseados em XP)
-            ================================================================= -->
-            <div class="screen-content" id="screen-elos">
-                <div class="page-header">
-                    <div>
-                        <h1 class="page-title">Elos / Níveis</h1>
-                        <p class="page-subtitle" id="elosSubtitle">Configure os níveis de XP que o cliente atinge.</p>
-                    </div>
-                    <div class="page-actions">
-                        <button class="btn-secondary" onclick="loadLevels()">Atualizar</button>
-                        <button class="btn-primary" onclick="openLevelModal()">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                            Novo nível
-                        </button>
-                    </div>
-                </div>
-
-                <div class="data-table-wrap">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Ícone</th>
-                                <th>Nome do nível</th>
-                                <th class="numeric">XP necessário</th>
-                                <th>Benefícios</th>
-                                <th>Cor</th>
-                                <th>Status</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody id="levelsTableBody">
-                            <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">Carregando...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Modal Nível -->
-            <div class="modal-overlay" id="levelOverlay" onclick="closeLevelModal(event)" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
-                <div class="modal-box" onclick="event.stopPropagation()" style="background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;width:100%;max-width:520px;margin:20px;padding:24px;">
-                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
-                        <div>
-                            <h2 id="levelModalTitle" style="font-size:18px;font-weight:700;margin-bottom:4px;">Novo nível</h2>
-                            <p style="font-size:12px;color:var(--text-muted);">Níveis aparecem no perfil do cliente conforme acumula XP.</p>
-                        </div>
-                        <button onclick="closeLevelModal()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;">×</button>
-                    </div>
-                    
-                    <input type="hidden" id="levelId" value="">
-                    
-                    <div class="form-row" style="margin-bottom:14px;">
-                        <label class="form-label">Nome do nível</label>
-                        <input type="text" class="form-input" id="levelName" placeholder="Ex: Dominador">
-                    </div>
-                    <div class="form-row-grid-2" style="margin-bottom:14px;">
-                        <div>
-                            <label class="form-label">XP necessário</label>
-                            <input type="number" class="form-input" id="levelXp" value="0" min="0">
-                            <div class="form-help">XP acumulado pra atingir este nível.</div>
-                        </div>
-                        <div>
-                            <label class="form-label">Ícone (emoji)</label>
-                            <input type="text" class="form-input" id="levelIcon" placeholder="🔥" maxlength="4" value="🔥">
-                        </div>
-                    </div>
-                    <div class="form-row-grid-2" style="margin-bottom:14px;">
-                        <div>
-                            <label class="form-label">Cor (hex)</label>
-                            <input type="text" class="form-input" id="levelColor" placeholder="#e50914" value="#e50914">
-                            <div class="form-help">Ex: #e50914 (vermelho), #facc15 (amarelo).</div>
-                        </div>
-                        <div>
-                            <label class="form-label">Status</label>
-                            <select class="form-select" id="levelActive">
-                                <option value="true">Ativo</option>
-                                <option value="false">Inativo</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row" style="margin-bottom:14px;">
-                        <label class="form-label">Benefícios (texto curto)</label>
-                        <input type="text" class="form-input" id="levelPerks" placeholder="Ex: +10% XP em todas ações">
-                        <div class="form-help">Aparece embaixo do nome do elo no perfil.</div>
-                    </div>
-                    
-                    <div id="levelAlert" style="display:none;padding:10px;border-radius:8px;font-size:13px;margin-bottom:14px;"></div>
-                    
-                    <div style="display:flex;gap:10px;justify-content:space-between;">
-                        <button class="btn-secondary" id="levelDeleteBtn" onclick="deleteLevelFromModal()" style="color:var(--danger);display:none;">Excluir</button>
-                        <div style="display:flex;gap:10px;margin-left:auto;">
-                            <button class="btn-secondary" onclick="closeLevelModal()">Cancelar</button>
-                            <button class="btn-primary" id="levelSaveBtn" onclick="saveLevel()">Salvar</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- =================================================================
-                 SCREEN: QUINTA DA DOPAMINA
-            ================================================================= -->
-            <!-- ═══════════════ CHAMADAS DE VÍDEO ═══════════════ -->
             <div class="screen-content" id="screen-chamadas">
                 <div class="page-header">
                     <div>
@@ -5959,118 +5509,6 @@ a { color: inherit; text-decoration: none; }
                 </div>
             </div>
 
-            <div class="screen-content" id="screen-dopamine">
-                <div class="page-header">
-                    <div>
-                        <h1 class="page-title">Quinta da Dopamina</h1>
-                        <p class="page-subtitle">Evento semanal de bônus em XP e brindes.</p>
-                    </div>
-                    <div class="page-actions">
-                        <button class="btn-secondary" onclick="loadDopamineEvent()">Atualizar</button>
-                    </div>
-                </div>
-
-                <!-- Status do evento -->
-                <div class="form-card" style="padding:20px;margin-bottom:18px;background:linear-gradient(135deg, rgba(229,9,20,0.1), rgba(168,85,247,0.05));border-color:rgba(229,9,20,0.3);">
-                    <div style="display:flex;align-items:center;gap:14px;">
-                        <div style="width:54px;height:54px;border-radius:14px;background:linear-gradient(135deg,#e50914,#a855f7);display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0;">⚡</div>
-                        <div style="flex:1;">
-                            <div style="font-size:11px;letter-spacing:0.15em;color:var(--brand);font-weight:800;text-transform:uppercase;margin-bottom:2px;">Evento ativo</div>
-                            <div id="dopamineCurrentStatus" style="font-size:14px;color:var(--text);font-weight:600;">Carregando...</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Configuração -->
-                <div class="form-card" style="padding:20px;margin-bottom:18px;">
-                    <div class="form-card-head" style="margin-bottom:16px;">
-                        <div class="form-card-title">Quando acontece</div>
-                        <div class="form-card-sub">Define dia da semana e janela de horário. Fora dessa janela, o aviso some do app automaticamente.</div>
-                    </div>
-                    <div class="form-row-grid-2">
-                        <div>
-                            <label class="form-label">Dia da semana</label>
-                            <select class="form-select" id="dopamineWeekday" onchange="onDopamineWeekdayChange()">
-                                <option value="0">Domingo</option>
-                                <option value="1">Segunda</option>
-                                <option value="2">Terça</option>
-                                <option value="3">Quarta</option>
-                                <option value="4" selected>Quinta</option>
-                                <option value="5">Sexta</option>
-                                <option value="6">Sábado</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="form-label">Status</label>
-                            <select class="form-select" id="dopamineActive">
-                                <option value="true">Ativo</option>
-                                <option value="false">Pausado</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row-grid-2" style="margin-top:14px;">
-                        <div>
-                            <label class="form-label">Hora de início (0–23)</label>
-                            <input type="number" class="form-input" id="dopamineHourStart" min="0" max="23" step="1" placeholder="0">
-                            <div class="form-help">0 = meia-noite. Ex: 14 = começa às 14h.</div>
-                        </div>
-                        <div>
-                            <label class="form-label">Hora de término (1–24)</label>
-                            <input type="number" class="form-input" id="dopamineHourEnd" min="1" max="24" step="1" placeholder="24">
-                            <div class="form-help">24 = meia-noite do dia seguinte. Ex: 18 = termina às 18h.</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-card" style="padding:20px;margin-bottom:18px;">
-                    <div class="form-card-head" style="margin-bottom:16px;">
-                        <div class="form-card-title">Visual do evento</div>
-                        <div class="form-card-sub">Como aparece no app.</div>
-                    </div>
-                    <div class="form-row" style="margin-bottom:14px;">
-                        <label class="form-label">Título do evento</label>
-                        <input type="text" class="form-input" id="dopamineTitle" placeholder="Ex: Quinta da Dopamina" value="Quinta da Dopamina">
-                    </div>
-                    <div class="form-row">
-                        <label class="form-label">Subtítulo / chamada</label>
-                        <input type="text" class="form-input" id="dopamineSubtitle" placeholder="Ex: Brindes em dobro hoje!">
-                    </div>
-                </div>
-
-                <div class="form-card" style="padding:20px;margin-bottom:18px;">
-                    <div class="form-card-head" style="margin-bottom:16px;">
-                        <div class="form-card-title">Bônus do evento</div>
-                        <div class="form-card-sub">Recompensas extras enquanto durar.</div>
-                    </div>
-                    <div class="form-row-grid-2">
-                        <div>
-                            <label class="form-label-row">
-                                <span>Multiplicador de XP</span>
-                                <span class="form-hint-inline">No dia do evento</span>
-                            </label>
-                            <input type="number" class="form-input" id="dopamineXpMult" value="2" min="1" max="10" step="0.5">
-                            <div class="form-help">Ex: 2 = cliente ganha 2x mais XP que o normal.</div>
-                        </div>
-                        <div>
-                            <label class="form-label">Brinde especial (opcional)</label>
-                            <select class="form-select" id="dopamineSpecialGift">
-                                <option value="">— Sem brinde especial —</option>
-                            </select>
-                            <div class="form-help">Brinde que só sai na roleta no dia do evento.</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="dopamineAlert" style="display:none;padding:12px;border-radius:8px;font-size:13px;margin-bottom:14px;"></div>
-                
-                <div style="display:flex;justify-content:flex-end;">
-                    <button class="btn-primary" id="dopamineSaveBtn" onclick="saveDopamineEvent()">Salvar configurações</button>
-                </div>
-            </div>
-
-            <!-- =================================================================
-                 SCREEN: OFERTAS RELÂMPAGO
-            ================================================================= -->
             <div class="screen-content" id="screen-ofertas">
                 <div class="page-header">
                     <div>
@@ -6774,30 +6212,6 @@ a { color: inherit; text-decoration: none; }
                     </div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
                         <label class="toggle-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:8px;cursor:pointer;">
-                            <input type="checkbox" id="featWheel" onchange="saveAppFeatureToggle('wheel_enabled', this.checked)"/>
-                            <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#fff;">🎰 Roleta da sorte</div><div style="font-size:11px;color:rgba(255,255,255,.45);">Gira pra ganhar prêmios</div></div>
-                        </label>
-                        <label class="toggle-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:8px;cursor:pointer;">
-                            <input type="checkbox" id="featCofre" onchange="saveAppFeatureToggle('cofre_enabled', this.checked)"/>
-                            <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#fff;">🔓 Cofre de bônus</div><div style="font-size:11px;color:rgba(255,255,255,.45);">Desbloqueia em horários</div></div>
-                        </label>
-                        <label class="toggle-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:8px;cursor:pointer;">
-                            <input type="checkbox" id="featDesejos" onchange="saveAppFeatureToggle('desejos_enabled', this.checked)"/>
-                            <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#fff;">💎 Desejos (moeda)</div><div style="font-size:11px;color:rgba(255,255,255,.45);">Sistema de moeda interna</div></div>
-                        </label>
-                        <label class="toggle-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:8px;cursor:pointer;">
-                            <input type="checkbox" id="featXp" onchange="saveAppFeatureToggle('xp_enabled', this.checked)"/>
-                            <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#fff;">⭐ XP / Níveis</div><div style="font-size:11px;color:rgba(255,255,255,.45);">Pontuação e rankings</div></div>
-                        </label>
-                        <label class="toggle-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:8px;cursor:pointer;">
-                            <input type="checkbox" id="featMissions" onchange="saveAppFeatureToggle('missions_enabled', this.checked)"/>
-                            <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#fff;">🎯 Missões semanais</div><div style="font-size:11px;color:rgba(255,255,255,.45);">Tarefas pro cliente</div></div>
-                        </label>
-                        <label class="toggle-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:8px;cursor:pointer;">
-                            <input type="checkbox" id="featDopamine" onchange="saveAppFeatureToggle('dopamine_enabled', this.checked)"/>
-                            <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#fff;">⚡ Dia da Dopamina</div><div style="font-size:11px;color:rgba(255,255,255,.45);">Evento semanal de bônus</div></div>
-                        </label>
-                        <label class="toggle-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:8px;cursor:pointer;">
                             <input type="checkbox" id="featReviews" onchange="saveAppFeatureToggle('reviews_enabled', this.checked)"/>
                             <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#fff;">💬 Reviews fake</div><div style="font-size:11px;color:rgba(255,255,255,.45);">Depoimentos automáticos</div></div>
                         </label>
@@ -6810,10 +6224,6 @@ a { color: inherit; text-decoration: none; }
                             <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#fff;">⏱️ Ofertas Relâmpago</div><div style="font-size:11px;color:rgba(255,255,255,.45);">Countdown de promoção</div></div>
                         </label>
                         <label class="toggle-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:8px;cursor:pointer;">
-                            <input type="checkbox" id="featStreak" onchange="saveAppFeatureToggle('streak_enabled', this.checked)"/>
-                            <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#fff;">🔥 Streak</div><div style="font-size:11px;color:rgba(255,255,255,.45);">Dias seguidos logado</div></div>
-                        </label>
-                        <label class="toggle-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:8px;cursor:pointer;">
                             <input type="checkbox" id="featFavorites" onchange="saveAppFeatureToggle('favorites_enabled', this.checked)"/>
                             <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#fff;">❤️ Favoritos</div><div style="font-size:11px;color:rgba(255,255,255,.45);">Coração nos produtos + aba</div></div>
                         </label>
@@ -6824,10 +6234,6 @@ a { color: inherit; text-decoration: none; }
                         <label class="toggle-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:8px;cursor:pointer;">
                             <input type="checkbox" id="featOnboarding" onchange="saveAppFeatureToggle('onboarding_enabled', this.checked)"/>
                             <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#fff;">📘 Onboarding</div><div style="font-size:11px;color:rgba(255,255,255,.45);">Tour primeiro acesso</div></div>
-                        </label>
-                        <label class="toggle-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:8px;cursor:pointer;">
-                            <input type="checkbox" id="featReferral" onchange="saveAppFeatureToggle('referral_enabled', this.checked)"/>
-                            <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#fff;">📨 Indicação Telegram</div><div style="font-size:11px;color:rgba(255,255,255,.45);">Cliente convida amigos</div></div>
                         </label>
                         <label class="toggle-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:8px;cursor:pointer;">
                             <input type="checkbox" id="featExploreTab" onchange="saveAppFeatureToggle('explore_tab_enabled', this.checked)"/>
@@ -6906,45 +6312,6 @@ a { color: inherit; text-decoration: none; }
                     </div>
                 </div>
 
-                <!-- ================ NOMES CUSTOMIZÁVEIS ================ -->
-                <div class="form-card" style="padding:20px;margin-bottom:18px;">
-                    <div class="form-card-head" style="margin-bottom:16px;">
-                        <div class="form-card-title">Nomes customizados (opcional)</div>
-                        <div class="form-card-sub">Mude o nome dos elementos pra adequar ao seu nicho. Deixe em branco pra manter o padrão.</div>
-                    </div>
-                    <div class="form-row-grid-2" style="gap:14px;">
-                        <div>
-                            <label class="form-label">Nome do "Cofre"</label>
-                            <input type="text" class="form-input" id="appLabelCofre" placeholder="Cofre do Prazer" maxlength="40">
-                            <div class="form-help">Aparece na home como card e no modal.</div>
-                        </div>
-                        <div>
-                            <label class="form-label">Subtítulo do Cofre</label>
-                            <input type="text" class="form-input" id="appLabelCofreEyebrow" placeholder="Presente do dia" maxlength="40">
-                        </div>
-                        <div>
-                            <label class="form-label">Nome da "Roleta"</label>
-                            <input type="text" class="form-input" id="appLabelRoleta" placeholder="Roleta Proibida" maxlength="40">
-                        </div>
-                        <div>
-                            <label class="form-label">Subtítulo da Roleta</label>
-                            <input type="text" class="form-input" id="appLabelRoletaEyebrow" placeholder="Evento especial" maxlength="40">
-                        </div>
-                        <div>
-                            <label class="form-label">Nome da moeda virtual</label>
-                            <input type="text" class="form-input" id="appLabelDesejos" placeholder="Desejos" maxlength="20">
-                        </div>
-                        <div>
-                            <label class="form-label">Nome do XP</label>
-                            <input type="text" class="form-input" id="appLabelXp" placeholder="XP" maxlength="20">
-                        </div>
-                        <div>
-                            <label class="form-label">Nome do "Nível"</label>
-                            <input type="text" class="form-input" id="appLabelNivel" placeholder="Nível" maxlength="20">
-                        </div>
-                    </div>
-                </div>
-
                 <!-- ================ HOME — CONTROLE DE SEÇÕES ================ -->
                 <div class="form-card" style="padding:20px;margin-bottom:18px;">
                     <div class="form-card-head" style="margin-bottom:16px;">
@@ -6959,26 +6326,6 @@ a { color: inherit; text-decoration: none; }
                                 <option value="true">Ligado</option>
                             </select>
                             <div class="form-help">Só ligue quando tiver player de vídeo real com tracking de progresso. Senão fica vazio/fake.</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ================ COOLDOWNS gamificação ================ -->
-                <div class="form-card" style="padding:20px;margin-bottom:18px;">
-                    <div class="form-card-head" style="margin-bottom:16px;">
-                        <div class="form-card-title">Cooldown Cofre & Roleta</div>
-                        <div class="form-card-sub">Quanto tempo o cliente fica sem ver o card depois de usar. Após esse tempo, o card volta a aparecer pra ele usar de novo.</div>
-                    </div>
-                    <div class="form-row-grid-2" style="gap:14px;">
-                        <div>
-                            <label class="form-label">Cofre — cooldown (horas)</label>
-                            <input type="number" class="form-input" id="appCofreCooldown" min="1" max="720" step="1" placeholder="24">
-                            <div class="form-help">Padrão 24h. Ex: 168h = 1 vez por semana.</div>
-                        </div>
-                        <div>
-                            <label class="form-label">Roleta — cooldown (dias)</label>
-                            <input type="number" class="form-input" id="appRoletaCooldown" min="1" max="60" step="1" placeholder="7">
-                            <div class="form-help">Padrão 7 dias. Ex: 1 = todo dia, 30 = mensal.</div>
                         </div>
                     </div>
                 </div>
@@ -11093,14 +10440,6 @@ async function loadAppConfig() {
     set('appBonusDelay', cfg.bonus_delay_minutes ?? 3);
     set('appMaintenance', cfg.maintenance_mode === true ? 'true' : 'false');
     set('appMaintenanceMsg', cfg.maintenance_message || 'Estamos em manutenção. Volte em breve!');
-    // Labels customizáveis
-    set('appLabelCofre', cfg.label_cofre || '');
-    set('appLabelCofreEyebrow', cfg.label_cofre_eyebrow || '');
-    set('appLabelRoleta', cfg.label_roleta || '');
-    set('appLabelRoletaEyebrow', cfg.label_roleta_eyebrow || '');
-    set('appLabelDesejos', cfg.label_desejos || '');
-    set('appLabelXp', cfg.label_xp || '');
-    set('appLabelNivel', cfg.label_nivel || '');
     // Toggle de seções da home
     set('appShowContinueWatching', cfg.show_continue_watching === true ? 'true' : 'false');
     // Esteiras
@@ -11109,26 +10448,15 @@ async function loadAppConfig() {
     // Hero shimmer
     set('appHeroTitleStyle', cfg.hero_title_style || 'shimmer-all');
     set('appHeroShimmerColor', cfg.hero_shimmer_color || '');
-    // Cooldowns
-    set('appCofreCooldown', cfg.cofre_cooldown_hours ?? 24);
-    set('appRoletaCooldown', cfg.roleta_cooldown_days ?? 7);
 
     // Toggles de funcionalidades (default: false)
     const setCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val === true; };
-    setCheck('featWheel', cfg.wheel_enabled);
-    setCheck('featCofre', cfg.cofre_enabled);
-    setCheck('featDesejos', cfg.desejos_enabled);
-    setCheck('featXp', cfg.xp_enabled);
-    setCheck('featMissions', cfg.missions_enabled);
-    setCheck('featDopamine', cfg.dopamine_enabled);
     setCheck('featReviews', cfg.reviews_enabled);
     setCheck('featLiveNotif', cfg.live_notifications_enabled);
     setCheck('featFlashOffers', cfg.flash_offers_enabled);
-    setCheck('featStreak', cfg.streak_enabled);
     setCheck('featFavorites', cfg.favorites_enabled);
     setCheck('featContinueWatching', cfg.continue_watching_enabled);
     setCheck('featOnboarding', cfg.onboarding_enabled);
-    setCheck('featReferral', cfg.referral_enabled);
     setCheck('featExploreTab', cfg.explore_tab_enabled);
 }
 
@@ -11170,14 +10498,6 @@ async function saveAppConfig() {
         bonus_delay_minutes: bonusDelayRaw,
         maintenance_mode: get('appMaintenance') === 'true',
         maintenance_message: get('appMaintenanceMsg') || 'Estamos em manutenção. Volte em breve!',
-        // Labels customizáveis (vazios = mantém default)
-        label_cofre: get('appLabelCofre'),
-        label_cofre_eyebrow: get('appLabelCofreEyebrow'),
-        label_roleta: get('appLabelRoleta'),
-        label_roleta_eyebrow: get('appLabelRoletaEyebrow'),
-        label_desejos: get('appLabelDesejos'),
-        label_xp: get('appLabelXp'),
-        label_nivel: get('appLabelNivel'),
         // Seções da home
         show_continue_watching: get('appShowContinueWatching') === 'true',
         // Esteiras
@@ -11190,24 +10510,13 @@ async function saveAppConfig() {
             const c = get('appHeroShimmerColor');
             return /^#[0-9a-fA-F]{6}$/.test(c) ? c : '';
         })(),
-        // Cooldowns
-        cofre_cooldown_hours: Math.max(1, Math.min(720, parseInt(get('appCofreCooldown'), 10) || 24)),
-        roleta_cooldown_days: Math.max(1, Math.min(60, parseInt(get('appRoletaCooldown'), 10) || 7)),
         // Toggles de funcionalidades (lê dos checkboxes)
-        wheel_enabled: document.getElementById('featWheel')?.checked === true,
-        cofre_enabled: document.getElementById('featCofre')?.checked === true,
-        desejos_enabled: document.getElementById('featDesejos')?.checked === true,
-        xp_enabled: document.getElementById('featXp')?.checked === true,
-        missions_enabled: document.getElementById('featMissions')?.checked === true,
-        dopamine_enabled: document.getElementById('featDopamine')?.checked === true,
         reviews_enabled: document.getElementById('featReviews')?.checked === true,
         live_notifications_enabled: document.getElementById('featLiveNotif')?.checked === true,
         flash_offers_enabled: document.getElementById('featFlashOffers')?.checked === true,
-        streak_enabled: document.getElementById('featStreak')?.checked === true,
         favorites_enabled: document.getElementById('featFavorites')?.checked === true,
         continue_watching_enabled: document.getElementById('featContinueWatching')?.checked === true,
         onboarding_enabled: document.getElementById('featOnboarding')?.checked === true,
-        referral_enabled: document.getElementById('featReferral')?.checked === true,
         explore_tab_enabled: document.getElementById('featExploreTab')?.checked === true,
     };
     
@@ -11267,31 +10576,6 @@ async function loadGrowth() {
         document.getElementById('growthPushStatus').textContent = '⚠️ Erro carregando status';
     }
 
-    // Referrals
-    try {
-        const r = await fetch('/api/admin/referral/list', { credentials: 'include' }).then(r => r.json());
-        if (r.success) {
-            const s = r.stats || {};
-            document.getElementById('growthReferralStats').innerHTML =
-                `<strong>${s.total || 0}</strong> indicações · <strong>${s.converted || 0}</strong> converteram · <strong>${s.rewarded || 0}</strong> recompensadas · <strong>${s.total_desejos || 0}</strong> 💎 distribuídos`;
-            const list = document.getElementById('growthReferralsList');
-            if ((r.referrals || []).length === 0) {
-                list.innerHTML = '<div style="color:var(--text-muted);">Nenhuma indicação ainda. Configure o webhook no seu bot Telegram.</div>';
-            } else {
-                list.innerHTML = '<table style="width:100%;font-size:11px;border-collapse:collapse;">' +
-                    '<tr style="text-align:left;color:var(--text-muted);"><th style="padding:8px 6px;">Quando</th><th>Referrer</th><th>Convidado</th><th>Status</th><th>💎</th></tr>' +
-                    r.referrals.slice(0, 30).map(ref => `
-                        <tr style="border-top:1px solid rgba(255,255,255,0.05);">
-                            <td style="padding:8px 6px;color:var(--text-muted);">${new Date(ref.created_at).toLocaleString('pt-BR')}</td>
-                            <td style="color:#fff;">${escapeHtml(ref.referrer_email || '—')}</td>
-                            <td style="color:var(--text-dim);">${escapeHtml(ref.referred_email || ref.referred_telegram_id || '—')}</td>
-                            <td><span style="padding:2px 8px;border-radius:4px;font-size:10px;text-transform:uppercase;background:${ref.status === 'rewarded' ? 'rgba(0,220,130,0.15);color:var(--success);' : ref.status === 'converted' ? 'rgba(250,204,21,0.15);color:var(--warning);' : 'rgba(255,255,255,0.05);color:var(--text-muted);'}">${escapeHtml(ref.status)}</span></td>
-                            <td style="color:#facc15;">${ref.reward_desejos || 0}</td>
-                        </tr>
-                    `).join('') + '</table>';
-            }
-        }
-    } catch (err) {}
 }
 
 async function sendPushNotification() {
@@ -12387,12 +11671,7 @@ window.switchAdminScreen = function(el, screenId, breadcrumb) {
     if (screenId === 'categorias') loadCategoriesTable();
     if (screenId === 'dashboard') loadDashboard();
     if (screenId === 'gateways') loadGatewaysSettings();
-    if (screenId === 'brindes') loadGifts();
-    if (screenId === 'desejos') loadWishesConfig();
-    if (screenId === 'missoes') loadMissions();
     if (screenId === 'reviews') loadReviews();
-    if (screenId === 'elos') loadLevels();
-    if (screenId === 'dopamine') loadDopamineEvent();
     if (screenId === 'ofertas') loadFlashOffers();
     if (screenId === 'notifs') loadNotifications();
     if (screenId === 'app-config') loadAppConfig();
@@ -14368,10 +13647,6 @@ async function saveGamiToggles() {
         });
     } catch(e) { alert('Erro ao salvar: ' + e.message); }
 }
-// Carrega quando abre a aba Brindes
-document.addEventListener('click', e => {
-    if (e.target.closest('[data-screen="brindes"]')) setTimeout(loadGamiToggles, 200);
-}, true);
 
 
 // ═══════════════ PLANOS DO PRODUTO ═══════════════
