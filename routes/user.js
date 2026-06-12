@@ -461,6 +461,7 @@ router.get('/catalog', optionalUser, async (req, res) => {
                 p.video_call_id,
                 p.bunny_library_id,
                 p.bunny_collection_id,
+                COALESCE(p.preview_enabled, false) as preview_enabled,
                 (
                     SELECT json_build_object(
                         'id', vc.id, 'slug', vc.slug, 'category', vc.category,
@@ -506,10 +507,11 @@ router.get('/catalog', optionalUser, async (req, res) => {
                         json_build_object(
                             'type', pm.media_type,
                             'url', pm.url,
-                            'thumbnail_url', pm.thumbnail_url
+                            'thumbnail_url', pm.thumbnail_url,
+                            'is_locked', COALESCE(pm.is_locked, true)
                         ) ORDER BY pm.display_order
                     )
-                    FROM product_media pm 
+                    FROM product_media pm
                     WHERE pm.product_id = p.id
                 ) as gallery
             FROM products p
@@ -534,16 +536,40 @@ router.get('/catalog', optionalUser, async (req, res) => {
         // sub-objeto ganha is_bunny/bunny_hls_url. Em paralelo (Promise.all) pra
         // não somar latência das requests ao Bunny.
         const catalogEnriched = await Promise.all(catalog.map(async (p) => {
-            const withBunnyGallery = await appendBunnyCollectionToGallery(p);
             const owns = ownedIds.has(p.id);
+            const previewOn = p.preview_enabled === true;
+
+            // Galeria — quem decide o que sai:
+            //   - Dono: vê tudo (inclui o acervo completo do Bunny).
+            //   - Não-dono COM prévia ligada: vê só a galeria curada (product_media).
+            //       · mídia "amostra" (is_locked=false) vai inteira.
+            //       · imagem bloqueada vai com a URL (borrão é no front — escolha do dono).
+            //       · vídeo bloqueado vai SÓ com poster, sem URL tocável (protege o vídeo).
+            //   - Não-dono SEM prévia: galeria vazia (não vaza conteúdo pago).
+            let base;
+            if (owns) {
+                base = await appendBunnyCollectionToGallery(p);
+            } else if (previewOn) {
+                const preview = (Array.isArray(p.gallery) ? p.gallery : []).map(m => {
+                    if (!m || m.is_locked === false) return m;
+                    if (m.type === 'video' || m.media_type === 'video') {
+                        return { type: 'video', media_type: 'video', is_locked: true,
+                                 thumbnail_url: m.thumbnail_url || null, url: null };
+                    }
+                    return { ...m, is_locked: true };
+                });
+                base = { ...p, gallery: preview };
+            } else {
+                base = { ...p, gallery: [] };
+            }
+
             return {
-                ...withBunnyGallery,
+                ...base,
+                preview_enabled: previewOn,
                 price: parseFloat(p.price || 0),
                 hasAccess: owns,
-                // SEGURANÇA: o vídeo principal é conteúdo pago — só vai no payload
-                // pra quem tem acesso ativo. Não-compradores recebem null (o gating
-                // antes era só no front, então a API crua vazava o link).
-                main_video_url: owns ? (withBunnyGallery.main_video_url ?? p.main_video_url ?? null) : null,
+                // SEGURANÇA: vídeo principal é conteúdo pago — só pra quem comprou.
+                main_video_url: owns ? (base.main_video_url ?? p.main_video_url ?? null) : null,
                 video_call: enrichCallPayload(p.video_call),
             };
         }));

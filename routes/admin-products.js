@@ -159,6 +159,7 @@ router.post('/', requireAdmin, async (req, res) => {
         is_active,
         is_featured,
         is_published,
+        preview_enabled,
         badge_text,
         badge_color,
         extra_data,
@@ -247,8 +248,9 @@ router.post('/', requireAdmin, async (req, res) => {
                         access_url, price, is_active, is_featured, badge_text, badge_color, extra_data, is_published,
                         audio_url, audio_enabled, audio_title, video_call_id, product_type,
                         bunny_library_id, bunny_collection_id, direct_call_video_url,
-                        call_photo_url, call_ringing_text, call_ringtone_url
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+                        call_photo_url, call_ringing_text, call_ringtone_url,
+                        preview_enabled
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
                     RETURNING *
                 `, [
                     name, description || null, category_id || null,
@@ -271,6 +273,7 @@ router.post('/', requireAdmin, async (req, res) => {
                     effectiveCallPhoto,
                     effectiveCallRingingText,
                     effectiveCallRingtone,
+                    preview_enabled === true,
                 ]);
                 created = r.rows[0];
             } catch (e) {
@@ -320,9 +323,9 @@ router.post('/', requireAdmin, async (req, res) => {
                     if (!m.url || !m.media_type) continue;
                     await client.query(`
                         INSERT INTO product_media
-                        (product_id, media_type, url, display_order)
-                        VALUES ($1, $2, $3, $4)
-                    `, [created.id, m.media_type, m.url, m.display_order ?? i]);
+                        (product_id, media_type, url, display_order, is_locked)
+                        VALUES ($1, $2, $3, $4, $5)
+                    `, [created.id, m.media_type, m.url, m.display_order ?? i, m.is_locked !== false]);
                 }
             }
             
@@ -368,6 +371,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
         is_active,
         is_featured,
         is_published,
+        preview_enabled,
         badge_text,
         badge_color,
         extra_data,
@@ -457,8 +461,9 @@ router.put('/:id', requireAdmin, async (req, res) => {
                         direct_call_video_url = $21,
                         call_photo_url = $22,
                         call_ringing_text = $23,
-                        call_ringtone_url = $24
-                    WHERE id = $25
+                        call_ringtone_url = $24,
+                        preview_enabled = $25
+                    WHERE id = $26
                     RETURNING *
                 `, [
                     name, description || null, category_id || null,
@@ -481,6 +486,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
                     effectiveCallPhoto,
                     effectiveCallRingingText,
                     effectiveCallRingtone,
+                    preview_enabled === true,
                     productId,
                 ]);
                 updated = r.rows[0];
@@ -539,9 +545,9 @@ router.put('/:id', requireAdmin, async (req, res) => {
                     if (!m.url || !m.media_type) continue;
                     await client.query(`
                         INSERT INTO product_media
-                        (product_id, media_type, url, display_order)
-                        VALUES ($1, $2, $3, $4)
-                    `, [productId, m.media_type, m.url, m.display_order ?? i]);
+                        (product_id, media_type, url, display_order, is_locked)
+                        VALUES ($1, $2, $3, $4, $5)
+                    `, [productId, m.media_type, m.url, m.display_order ?? i, m.is_locked !== false]);
                 }
             }
             
