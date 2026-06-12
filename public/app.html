@@ -10482,35 +10482,77 @@ function openProductPage(productId) {
     if (typeof TRACK !== 'undefined') TRACK.view(product.id);
 }
 
+// Popup ao tocar numa mídia bloqueada da prévia → leva ao checkout do produto.
+function openPreviewLock() {
+    const p = window._previewProduct;
+    if (!p) return;
+    let modal = document.getElementById('previewLockModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'previewLockModal';
+        modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(5,2,3,.82);display:none;align-items:center;justify-content:center;padding:24px;';
+        modal.innerHTML = `<div style="background:#16090c;border:1px solid #3a1a20;border-radius:16px;padding:24px 20px;text-align:center;max-width:340px;width:100%;">
+            <div style="width:56px;height:56px;border-radius:50%;background:rgba(229,9,20,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;">
+                <svg width="26" height="26" fill="none" stroke="#ff3840" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+            </div>
+            <div style="font-size:18px;color:#fff;font-weight:700;margin-bottom:6px;">Conteúdo exclusivo</div>
+            <div id="previewLockSub" style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.5;margin-bottom:18px;"></div>
+            <button id="previewLockBuy" style="width:100%;border:0;background:#e50914;color:#fff;font-size:15px;font-weight:600;padding:14px;border-radius:10px;cursor:pointer;margin-bottom:8px;">Comprar e desbloquear</button>
+            <button id="previewLockClose" style="width:100%;border:0;background:transparent;color:rgba(255,255,255,.5);font-size:13px;padding:8px;cursor:pointer;">Continuar vendo a amostra</button>
+        </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) closePreviewLock(); });
+        modal.querySelector('#previewLockClose').addEventListener('click', closePreviewLock);
+    }
+    const sub = modal.querySelector('#previewLockSub');
+    if (sub) sub.textContent = `Compre pra liberar todas as fotos e vídeos de ${p.name || 'este produto'}.`;
+    modal.querySelector('#previewLockBuy').onclick = () => {
+        closePreviewLock();
+        if (typeof TRACK !== 'undefined') TRACK.event('preview_lock_buy_click', { product_id: p.id });
+        if (typeof populateCheckoutScreen === 'function') populateCheckoutScreen(p);
+        if (typeof switchScreen === 'function') switchScreen('checkout');
+    };
+    modal.style.display = 'flex';
+}
+function closePreviewLock() {
+    const m = document.getElementById('previewLockModal');
+    if (m) m.style.display = 'none';
+}
+
 // Popula a tela #product com dados reais do produto
 function populateProductScreen(p) {
     if (!p) return;
     const ed = p.extra_data || {};
+    window._previewProduct = p; // ref pro popup de compra ao tocar mídia bloqueada
 
     // === GALERIA / CARROSSEL ===
     // Capa (banner_url) NÃO entra no carrossel — é só do card do catálogo.
     // Carrossel usa: 1) extra_data.gallery (admin > Tela de detalhe), 2) product_media (legacy).
+    // is_locked: mídia de prévia bloqueada → slide borrado + cadeado (só pra quem NÃO comprou).
     // Fallback de segurança: se a galeria ficar vazia, usa banner_url como único slide.
+    const owns = p.hasAccess === true;
     const galleryItems = [];
+    const pushItem = (type, url, is_locked, thumb) => {
+        if (url && galleryItems.some(x => x.url === url)) return;
+        galleryItems.push({ type, url: url || '', is_locked: !owns && is_locked === true, thumbnail_url: thumb || null });
+    };
     if (Array.isArray(ed.gallery)) {
         for (const g of ed.gallery) {
             const url = (typeof g === 'string') ? g : g?.url;
-            if (url && !galleryItems.some(x => x.url === url)) {
-                const isVideo = /\.(mp4|webm|mov)$/i.test(url) || g?.type === 'video';
-                galleryItems.push({ type: isVideo ? 'video' : 'image', url });
-            }
+            const isVideo = (url && /\.(mp4|webm|mov)$/i.test(url)) || g?.type === 'video';
+            const locked = (typeof g === 'object') && g?.is_locked === true;
+            const thumb = (typeof g === 'object') ? (g?.thumbnail_url || null) : null;
+            if (url || thumb) pushItem(isVideo ? 'video' : 'image', url, locked, thumb);
         }
     }
     if (Array.isArray(p.gallery)) {
         for (const g of p.gallery) {
-            if (g?.url && !galleryItems.some(x => x.url === g.url)) {
-                galleryItems.push({ type: g.type || 'image', url: g.url });
-            }
+            if (g?.url || g?.thumbnail_url) pushItem(g.type || 'image', g.url, g.is_locked === true, g.thumbnail_url);
         }
     }
     // Fallback: galeria vazia → usa capa como único slide
     if (galleryItems.length === 0 && p.banner_url) {
-        galleryItems.push({ type: 'image', url: p.banner_url });
+        galleryItems.push({ type: 'image', url: p.banner_url, is_locked: false, thumbnail_url: null });
     }
 
     // Renderiza slides dinâmicos no .prod-carousel — substitui os hardcoded
@@ -10532,6 +10574,24 @@ function populateProductScreen(p) {
         // placeholder no iframe/video real.
         const html = galleryItems.map((item, idx) => {
             const safeUrl = (item.url || '').replace(/'/g, "\\'");
+            if (item.is_locked) {
+                const poster = item.thumbnail_url || item.url || '';
+                const posterImg = poster
+                    ? `<img src="${escapeAttrData(poster)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(18px);transform:scale(1.12);">`
+                    : '';
+                const icon = item.type === 'video'
+                    ? '<svg width="22" height="22" fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>'
+                    : '<svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
+                return `<div class="prod-slide ${idx === 0 ? 'active' : ''}" data-pidx="${idx}" onclick="openPreviewLock()" style="cursor:pointer;">
+                    <div class="prod-slide-img" style="position:relative;overflow:hidden;background:linear-gradient(135deg,#2a0d0d,#1a0505);">
+                        ${posterImg}
+                        <div style="position:absolute;inset:0;background:rgba(13,5,6,.4);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;">
+                            <div style="width:54px;height:54px;border-radius:50%;background:rgba(229,9,20,.92);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,0,0,.5);">${icon}</div>
+                            <div style="font-size:13px;color:#fff;font-weight:600;letter-spacing:.02em;">Toque pra desbloquear</div>
+                        </div>
+                    </div>
+                </div>`;
+            }
             if (item.type === 'video') {
                 const isBunnyEmbed = item.url && item.url.indexOf('mediadelivery.net') !== -1;
                 if (isBunnyEmbed) {

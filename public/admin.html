@@ -3929,18 +3929,30 @@ a { color: inherit; text-decoration: none; }
                                 <div class="form-card-sub">Tudo que o cliente vê ANTES de comprar. Galeria, stats, urgência, avaliações, texto do botão.</div>
                             </div>
 
+                            <!-- Prévia do produto (galeria com bloqueio) -->
+                            <div class="form-row" style="display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;padding:11px 13px;background:rgba(0,0,0,0.25);border-radius:8px;border:1px solid rgba(255,255,255,0.06);">
+                                <input type="checkbox" id="pPreviewEnabled" onchange="renderGalleryLockList()" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;margin-top:1px;">
+                                <label for="pPreviewEnabled" style="cursor:pointer;">
+                                    <div style="font-size:13px;color:var(--text);font-weight:600;">Ativar prévia deste produto</div>
+                                    <div style="font-size:11px;color:var(--text-muted);">Quem ainda não comprou vê as mídias marcadas como <strong>amostra</strong>; o resto aparece borrado com cadeado e leva ao checkout.</div>
+                                </label>
+                            </div>
+
                             <!-- Galeria adicional (carrossel de fotos/vídeos) -->
                             <div class="form-row">
                                 <label class="form-label">Galeria — fotos/vídeos extras (uma URL por linha)</label>
-                                <textarea class="form-textarea" id="pGalleryUrls" style="min-height:80px;font-family:monospace;font-size:12px;" placeholder="https://i.imgur.com/foto1.jpg&#10;https://i.imgur.com/foto2.jpg&#10;https://video.com/preview.mp4"></textarea>
+                                <textarea class="form-textarea" id="pGalleryUrls" oninput="renderGalleryLockList()" style="min-height:80px;font-family:monospace;font-size:12px;" placeholder="https://i.imgur.com/foto1.jpg&#10;https://i.imgur.com/foto2.jpg&#10;https://video.com/preview.mp4"></textarea>
                                 <div style="display:flex;gap:8px;margin-top:8px;">
                                     <button type="button" class="btn-secondary" onclick="UploadHelper.openPicker('_galleryTmpInput', 'banner-produto', (url) => {
                                         const ta = document.getElementById('pGalleryUrls');
                                         ta.value = (ta.value ? ta.value + '\n' : '') + url;
+                                        renderGalleryLockList();
                                     })" style="font-size:12px;">📤 Enviar foto</button>
                                     <input type="hidden" id="_galleryTmpInput">
                                 </div>
                                 <div class="form-help">Estas são as imagens/vídeos do carrossel da tela de detalhe. A capa NÃO entra aqui — ela é usada só no card do catálogo. Aceita JPG/PNG/WEBP/MP4.</div>
+                                <div id="pGalleryLockHint" style="display:none;font-size:11px;color:var(--text-muted);margin-top:12px;">Toque na chave de cada mídia: <strong style="color:#5fdc87;">amostra</strong> (aparece) ou <strong style="color:#ff6b73;">bloqueada</strong> (borra pro cliente).</div>
+                                <div id="pGalleryLockList" style="margin-top:8px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;"></div>
                             </div>
 
                             <!-- Badge AO VIVO -->
@@ -7121,6 +7133,9 @@ function clearProductForm() {
     set('pBadgeText', '');
     set('pBadgeColor', '');
     set('pGalleryUrls', '');
+    _galleryLocks = {};
+    const _pvClear = document.getElementById('pPreviewEnabled'); if (_pvClear) _pvClear.checked = false;
+    if (typeof renderGalleryLockList === 'function') renderGalleryLockList();
     set('pStat1Value', '4.9');
     set('pStat1Label', 'Avaliação');
     set('pStat2Value', '5.2K');
@@ -7208,8 +7223,15 @@ async function editProduct(id) {
 
     // Tela de detalhe (extra_data)
     const ed = p.extra_data || {};
-    const galleryUrls = Array.isArray(ed.gallery) ? ed.gallery.map(g => typeof g === 'string' ? g : (g.url || '')).filter(Boolean) : [];
+    const galleryItems = Array.isArray(ed.gallery) ? ed.gallery : [];
+    const galleryUrls = galleryItems.map(g => typeof g === 'string' ? g : (g.url || '')).filter(Boolean);
     set('pGalleryUrls', galleryUrls.join('\n'));
+    // Prévia: reconstrói o estado de bloqueio por URL + o toggle do produto
+    _galleryLocks = {};
+    galleryItems.forEach(g => { if (g && typeof g === 'object' && g.url) _galleryLocks[g.url] = g.is_locked !== false; });
+    const _previewCb = document.getElementById('pPreviewEnabled');
+    if (_previewCb) _previewCb.checked = p.preview_enabled === true;
+    if (typeof renderGalleryLockList === 'function') renderGalleryLockList();
     const stats = Array.isArray(ed.stats) ? ed.stats : [];
     set('pStat1Value', stats[0]?.value ?? '');
     set('pStat1Label', stats[0]?.label ?? '');
@@ -7471,7 +7493,7 @@ async function saveProduct() {
     const selectedCategories = getSelectedCategories();
 
     const extra_data = {
-        gallery: galleryUrls.map(url => ({ url, type: /\.(mp4|webm|mov)$/i.test(url) ? 'video' : 'image' })),
+        gallery: galleryUrls.map(url => ({ url, type: /\.(mp4|webm|mov)$/i.test(url) ? 'video' : 'image', is_locked: _galleryLocks[url] !== false })),
         stats,
         urgency_text: get('pUrgencyText') || '',
         cta_text: get('pCtaText') || '',
@@ -7500,8 +7522,9 @@ async function saveProduct() {
         extra_data,
         offers,
         is_published,
+        preview_enabled: document.getElementById('pPreviewEnabled')?.checked === true,
     };
-    
+
     const btn = document.getElementById('pSaveBtn');
     btn.disabled = true;
     btn.textContent = 'Salvando...';
@@ -7526,6 +7549,46 @@ async function saveProduct() {
         const navBtn = document.querySelector('[data-screen="produtos"]');
         switchAdminScreen(navBtn, 'produtos', 'Produtos');
     }, 600);
+}
+
+// ── Prévia: grade de bloqueio por mídia ─────────────────────────────────
+// _galleryLocks: { url -> is_locked }. Default (url ausente) = bloqueada.
+let _galleryLocks = {};
+
+function toggleGalleryLock(i) {
+    const ta = document.getElementById('pGalleryUrls');
+    const urls = (ta ? ta.value : '').split('\n').map(s => s.trim()).filter(Boolean);
+    const url = urls[i];
+    if (!url) return;
+    _galleryLocks[url] = (_galleryLocks[url] !== false) ? false : true; // alterna
+    renderGalleryLockList();
+}
+
+function renderGalleryLockList() {
+    const list = document.getElementById('pGalleryLockList');
+    const hint = document.getElementById('pGalleryLockHint');
+    if (!list) return;
+    const ta = document.getElementById('pGalleryUrls');
+    const urls = (ta ? ta.value : '').split('\n').map(s => s.trim()).filter(Boolean);
+    const previewOn = document.getElementById('pPreviewEnabled')?.checked === true;
+    if (hint) hint.style.display = (previewOn && urls.length) ? 'block' : 'none';
+    if (!previewOn || !urls.length) { list.innerHTML = ''; return; }
+    list.innerHTML = urls.map((url, i) => {
+        const isVideo = /\.(mp4|webm|mov)$/i.test(url);
+        const locked = _galleryLocks[url] !== false;
+        const bg = url.replace(/'/g, '%27');
+        const thumb = isVideo
+            ? '<div style="position:absolute;inset:0;background:#33181d;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.7);font-size:22px;">▶</div>'
+            : `<div style="position:absolute;inset:0;background-image:url('${bg}');background-size:cover;background-position:center;${locked ? 'filter:blur(6px);' : ''}"></div>`;
+        const lockBadge = locked ? '<span style="position:absolute;top:5px;right:5px;background:rgba(0,0,0,.55);border-radius:5px;padding:2px 6px;font-size:11px;">🔒</span>' : '';
+        const pill = locked
+            ? '<span style="color:#ff6b73;">🔒 Bloqueada</span>'
+            : '<span style="color:#5fdc87;">👁 Amostra</span>';
+        return `<div style="border:1px solid rgba(255,255,255,.08);border-radius:9px;overflow:hidden;background:#1a0e10;">
+            <div style="position:relative;aspect-ratio:1;">${thumb}${lockBadge}</div>
+            <button type="button" onclick="toggleGalleryLock(${i})" style="width:100%;border:0;background:rgba(0,0,0,.3);padding:7px;font-size:12px;font-weight:600;cursor:pointer;">${pill}</button>
+        </div>`;
+    }).join('');
 }
 
 function alertProduct(msg, type) {
