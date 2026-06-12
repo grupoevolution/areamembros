@@ -230,10 +230,10 @@ router.get('/chats', optionalUser, async (req, res) => {
                     const t = lm[0].type;
                     last = {
                         preview: t === 'text' || t === 'buttons' ? (lm[0].content || 'Mensagem') :
-                                 t === 'audio' ? '🎤 Áudio' :
-                                 t === 'image' ? '📷 Foto' :
-                                 t === 'view_once_image' ? '📷 Foto · 1x' :
-                                 t === 'view_once_video' ? '🎬 Vídeo · 1x' :
+                                 t === 'audio' ? 'Áudio' :
+                                 t === 'image' ? 'Foto' :
+                                 t === 'view_once_image' ? 'Foto · visualização única' :
+                                 t === 'view_once_video' ? 'Vídeo · visualização única' :
                                  t === 'cta' ? (lm[0].content || 'Oferta') : 'Mensagem',
                         at: lm[0].created_at,
                     };

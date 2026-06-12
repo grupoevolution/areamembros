@@ -204,6 +204,97 @@ router.delete('/:id/steps/:stepId', requireAdmin, async (req, res) => {
     }
 });
 
+// ── EXPORTAR / IMPORTAR roteiro completo (JSON) ──────────────────────────────
+
+// GET /:id/export — persona + todos os blocos num JSON (backup/replicação)
+router.get('/:id/export', requireAdmin, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1`, [id]);
+        if (!cr.length) return res.status(404).json({ success: false, error: 'Não encontrado' });
+        const c = cr[0];
+        const { rows: steps } = await db.query(
+            `SELECT step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, active
+             FROM chat_steps WHERE chat_id = $1 ORDER BY step_order, id`, [id]
+        );
+        const payload = {
+            format: 'mvchat',
+            version: 1,
+            exported_at: new Date().toISOString(),
+            chat: {
+                name: c.name, avatar_url: c.avatar_url, section: c.section,
+                status_label: c.status_label, show_online: c.show_online,
+                access: c.access, product_id: c.product_id, checkout_url: c.checkout_url,
+                reply_mode: c.reply_mode, allow_photo: c.allow_photo, display_order: c.display_order,
+            },
+            steps,
+        };
+        const fname = 'chat-' + String(c.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 40) + '.json';
+        res.setHeader('Content-Type', 'application/json; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${fname}"`);
+        return res.send(JSON.stringify(payload, null, 2));
+    } catch (err) {
+        logger.error('Erro exportando chat:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// POST /import — cria um chat NOVO a partir do JSON exportado
+router.post('/import', requireAdmin, async (req, res) => {
+    try {
+        const data = req.body || {};
+        if (data.format !== 'mvchat' || !data.chat || !Array.isArray(data.steps)) {
+            return res.status(400).json({ success: false, error: 'Arquivo inválido — exporte um chat pelo painel pra ver o formato.' });
+        }
+        const c = data.chat;
+        const { rows: created } = await db.query(`
+            INSERT INTO chats (name, avatar_url, section, status_label, show_online, access,
+                               product_id, checkout_url, reply_mode, allow_photo, display_order, active)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,true) RETURNING *
+        `, [
+            String(c.name || 'Chat importado').trim().slice(0, 80),
+            (c.avatar_url || '').trim().slice(0, 1000) || null,
+            (c.section || 'Minhas conversas').trim().slice(0, 60),
+            (c.status_label || 'online').trim().slice(0, 40),
+            c.show_online !== false,
+            c.access === 'vip' ? 'vip' : 'free',
+            c.product_id ? parseInt(c.product_id, 10) : null,
+            (c.checkout_url || '').trim().slice(0, 1000) || null,
+            REPLY_MODES.includes(c.reply_mode) ? c.reply_mode : 'vip',
+            c.allow_photo === true,
+            parseInt(c.display_order, 10) || 0,
+        ]);
+        const chat = created[0];
+        let imported = 0;
+        for (const s of data.steps.slice(0, 200)) {
+            const type = STEP_TYPES.includes(s.type) ? s.type : 'text';
+            await db.query(`
+                INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, active)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+            `, [
+                chat.id,
+                parseInt(s.step_order, 10) || 0,
+                (s.step_key || '').trim().slice(0, 40) || null,
+                type,
+                (s.content || '').trim().slice(0, 2000) || null,
+                (s.media_url || '').trim().slice(0, 1000) || null,
+                parseButtons(s.buttons),
+                (s.link_url || '').trim().slice(0, 1000) || null,
+                s.product_id ? parseInt(s.product_id, 10) : null,
+                Math.max(0, Math.min(8000, parseInt(s.typing_ms, 10) || 1200)),
+                (s.goto_key || '').trim().slice(0, 40) || null,
+                s.active !== false,
+            ]);
+            imported++;
+        }
+        return res.json({ success: true, chat, steps_imported: imported });
+    } catch (err) {
+        logger.error('Erro importando chat:', err);
+        return res.status(500).json({ success: false, error: err.message || 'Erro interno' });
+    }
+});
+
 // ── CONVERSAS RECEBIDAS (leitura) ────────────────────────────────────────────
 
 router.get('/:id/sessions', requireAdmin, async (req, res) => {

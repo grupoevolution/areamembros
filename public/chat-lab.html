@@ -77,8 +77,8 @@ body {
 /* áudio comprido */
 .audio-row { display: flex; align-items: center; gap: 8px; }
 .audio-row .face { width: 42px; height: 42px; border-radius: 50%; background: #c4a09a center/cover no-repeat; flex-shrink: 0; position: relative; }
-.audio-row .face::after { content: '🎤'; position: absolute; bottom: -4px; right: -5px; font-size: 13px; }
-.audio-row .play { width: 30px; border: none; background: none; color: #54656f; font-size: 24px; cursor: pointer; flex-shrink: 0; padding: 0; line-height: 1; }
+.audio-row .face .mic { position: absolute; bottom: -3px; right: -6px; color: #25D366; display: flex; }
+.audio-row .play { width: 30px; border: none; background: none; color: #54656f; cursor: pointer; flex-shrink: 0; padding: 0; line-height: 1; display: flex; align-items: center; justify-content: center; }
 .audio-row .wave { display: flex; align-items: center; gap: 2px; height: 22px; flex: 1; min-width: 0; }
 .audio-row .wave i { flex: 1; min-width: 2px; max-width: 4px; background: #c5c1bd; border-radius: 2px; }
 .audio-row .wave i.on { background: #25D366; }
@@ -150,21 +150,24 @@ body {
             <div class="nm" id="chName">—</div>
             <div class="st" id="chStatus">online</div>
         </div>
-        <button class="call" onclick="onCall()" aria-label="Chamada de vídeo">📹</button>
+        <button class="call" onclick="onCall()" aria-label="Chamada de vídeo">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.55-2.27A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 6h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg>
+        </button>
     </div>
     <div class="chat-body" id="chatBody"></div>
     <div class="locked-pane" id="lockedPane" style="display:none;">
-        <div class="ic">🔒</div>
+        <div class="ic"><svg width="30" height="30" fill="none" stroke="#e50914" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></div>
         <h2 id="lockedName">Conversa exclusiva</h2>
-        <p>Essa conversa é só pra assinantes VIP. Desbloqueie agora e tenha acesso total 🔥</p>
-        <button class="cta-btn" id="lockedCta" onclick="onUnlock()">💎 Desbloquear VIP →</button>
+        <p>Essa conversa é só pra assinantes VIP. Desbloqueie agora e tenha acesso total.</p>
+        <button class="cta-btn" id="lockedCta" onclick="onUnlock()">Desbloquear VIP →</button>
     </div>
     <div class="choices" id="choices" style="display:none;"></div>
     <div class="input-bar" id="inputBar">
         <div class="input-pill">
-            <button class="ico" aria-label="Emoji">😊</button>
             <input type="text" id="msgInput" placeholder="Mensagem" autocomplete="off"/>
-            <button class="ico" onclick="onPhoto()" aria-label="Enviar foto">📷</button>
+            <button class="ico" onclick="onPhoto()" aria-label="Enviar foto">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.66-.9l.82-1.2A2 2 0 0110.07 4h3.86a2 2 0 011.66.9l.82 1.2a2 2 0 001.66.9H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg>
+            </button>
             <input type="file" id="photoFile" accept="image/jpeg,image/png,image/webp" style="display:none;" onchange="sendPhoto(event)"/>
         </div>
         <button class="send-btn" onclick="onSend()" aria-label="Enviar">
@@ -175,14 +178,14 @@ body {
 
 <!-- toast VIP -->
 <div class="vip-toast" id="vipToast">
-    💎 Só assinantes <strong>VIP</strong> podem fazer isso<br>
+    Só assinantes <strong>VIP</strong> podem fazer isso<br>
     <button onclick="onUnlock()">Desbloquear VIP →</button>
 </div>
 
 <!-- visualizador 1x -->
 <div class="vonce-viewer" id="vonceViewer">
     <div class="top">
-        <span class="lbl">👁 Visualização única</span>
+        <span class="lbl" style="display:flex;align-items:center;gap:6px;"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Visualização única</span>
         <button onclick="closeVonce()" aria-label="Fechar">×</button>
     </div>
     <div class="media" id="vonceMedia"></div>
@@ -199,6 +202,17 @@ function visitorId() {
     return v;
 }
 const VID = visitorId();
+// Ícones SVG da interface (sem emoji)
+const ICO = {
+    lock: (s, c) => '<svg width="'+s+'" height="'+s+'" fill="none" stroke="'+(c||'currentColor')+'" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
+    play: '<svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+    pause: '<svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>',
+    mic: '<svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M12 14a3 3 0 003-3V5a3 3 0 00-6 0v6a3 3 0 003 3z"/><path d="M19 11a7 7 0 01-14 0H3a9 9 0 008 8.94V23h2v-3.06A9 9 0 0021 11h-2z"/></svg>',
+    camera: '<svg width="17" height="17" fill="none" stroke="#b5aea8" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.66-.9l.82-1.2A2 2 0 0110.07 4h3.86a2 2 0 011.66.9l.82 1.2a2 2 0 001.66.9H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/></svg>',
+    video: '<svg width="17" height="17" fill="none" stroke="#b5aea8" stroke-width="2" viewBox="0 0 24 24"><path d="M15 10l4.55-2.27A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 6h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg>',
+    playSm: '<svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+    eyeOff: '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>',
+};
 let CUR = null;          // chat aberto: { chat, permissions }
 let SEEN_IDS = new Set();// mensagens já renderizadas
 let RENDERING = false;   // fila de mensagens com "digitando..."
@@ -227,7 +241,7 @@ async function loadList() {
         const data = await r.json();
         const scroll = document.getElementById('listScroll');
         if (!data.success || !Array.isArray(data.chats) || data.chats.length === 0) {
-            scroll.innerHTML = '<div class="list-empty">Nenhuma conversa disponível ainda.<br>Volte em breve 😏</div>';
+            scroll.innerHTML = '<div class="list-empty">Nenhuma conversa disponível ainda.<br>Volte em breve.</div>';
             return;
         }
         const chats = data.chats;
@@ -238,7 +252,7 @@ async function loadList() {
             html += '<div class="online-row"><div class="sec-label">Online agora</div><div class="online-avatars">'
                 + online.map(c => {
                     const bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
-                    if (c.locked) return '<div class="online-item" onclick="openChat(' + c.id + ')"><div class="av locked">🔒</div><div class="nm">VIP</div></div>';
+                    if (c.locked) return '<div class="online-item" onclick="openChat(' + c.id + ')"><div class="av locked">' + ICO.lock(17, '#a09890') + '</div><div class="nm">VIP</div></div>';
                     return '<div class="online-item" onclick="openChat(' + c.id + ')"><div class="av"' + bg + '><span class="dot"></span></div><div class="nm">' + esc(c.name) + '</div></div>';
                 }).join('')
                 + '</div></div>';
@@ -246,7 +260,7 @@ async function loadList() {
         // Seções
         const sections = {};
         for (const c of chats) {
-            const sec = c.locked ? 'Só no VIP 🔒' : (c.section || 'Minhas conversas');
+            const sec = c.locked ? 'Só no VIP' : (c.section || 'Minhas conversas');
             (sections[sec] = sections[sec] || []).push(c);
         }
         for (const sec of Object.keys(sections)) {
@@ -254,7 +268,7 @@ async function loadList() {
             for (const c of sections[sec]) {
                 const bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
                 const av = c.locked
-                    ? '<div class="av locked">🔒</div>'
+                    ? '<div class="av locked">' + ICO.lock(16, '#a09890') + '</div>'
                     : '<div class="av"' + bg + '>' + (c.show_online ? '<span class="dot"></span>' : '') + '</div>';
                 const pv = c.locked
                     ? '<div class="pv vip">Desbloqueie com o VIP →</div>'
@@ -284,7 +298,7 @@ async function openChat(id) {
     document.getElementById('viewList').classList.remove('active');
     document.getElementById('viewChat').classList.add('active');
     const body = document.getElementById('chatBody');
-    body.innerHTML = '<div class="day-pill">HOJE</div><div class="crypt-pill">🔒 Suas mensagens são protegidas</div>';
+    body.innerHTML = '<div class="day-pill">HOJE</div><div class="crypt-pill" style="display:flex;align-items:center;gap:5px;justify-content:center;">' + ICO.lock(11, '#b08a4a') + ' Suas mensagens são protegidas</div>';
     SEEN_IDS = new Set(); QUEUE.length = 0; RENDERING = false;
     document.getElementById('choices').style.display = 'none';
     document.getElementById('lockedPane').style.display = 'none';
@@ -368,8 +382,8 @@ function renderMsg(m) {
             bars += '<i style="height:' + h + 'px"></i>';
         }
         const face = (CUR && CUR.chat.avatar_url) ? ' style="background-image:url(\'' + esc(CUR.chat.avatar_url) + '\')"' : '';
-        d.innerHTML = '<div class="audio-row"><div class="face"' + face + '></div>'
-            + '<button class="play" onclick="playAudio(this, \'' + esc(m.media_url || '') + '\')">▶</button>'
+        d.innerHTML = '<div class="audio-row"><div class="face"' + face + '><span class="mic">' + ICO.mic + '</span></div>'
+            + '<button class="play" onclick="playAudio(this, \'' + esc(m.media_url || '') + '\')">' + ICO.play + '</button>'
             + '<span class="wave">' + bars + '</span></div>'
             + '<div class="audio-meta"><span class="dur">áudio</span><span>' + hhmm(m.created_at) + ' <span class="ticks" style="color:#53BDEB;">' + (mine ? '✓✓' : '') + '</span></span></div>';
     } else if (m.type === 'image') {
@@ -386,10 +400,10 @@ function renderMsg(m) {
             d.dataset.mediaUrl = m.media_url || '';
             d.dataset.isVid = isVid ? '1' : '';
             d.innerHTML = '<div class="vonce-row" onclick="openVonce(this.parentNode)">'
-                + '<span class="circ">' + (isVid ? '▶' : '1') + '</span>'
+                + '<span class="circ">' + (isVid ? ICO.playSm : '1') + '</span>'
                 + '<div class="mid"><div class="lb">' + (isVid ? 'Vídeo' : 'Foto') + '</div>'
                 + '<div class="sb">Visualização única · toque pra abrir</div></div>'
-                + '<span style="color:#b5aea8;font-size:17px;">' + (isVid ? '🎬' : '📷') + '</span></div>'
+                + '<span style="display:flex;">' + (isVid ? ICO.video : ICO.camera) + '</span></div>'
                 + '<div class="tm">' + hhmm(m.created_at) + '</div>';
         }
     } else if (m.type === 'cta') {
@@ -404,7 +418,7 @@ function renderMsg(m) {
 }
 
 function vonceOpenedHtml(isVid, at) {
-    return '<div class="vonce-row opened"><span class="circ">👁</span>'
+    return '<div class="vonce-row opened"><span class="circ">' + ICO.eyeOff + '</span>'
         + '<div class="mid"><div class="lb">' + (isVid ? 'Aberto' : 'Aberta') + '</div>'
         + '<div class="sb">Você já viu ' + (isVid ? 'esse vídeo' : 'essa foto') + '</div></div></div>'
         + '<div class="tm">' + hhmm(at) + '</div>';
@@ -525,16 +539,16 @@ let audioEl = null, audioBtn = null, audioWave = null, audioIv = null;
 function playAudio(btn, url) {
     if (!url) return;
     if (audioEl && audioBtn === btn) {
-        if (audioEl.paused) { audioEl.play(); btn.textContent = '❚❚'; }
-        else { audioEl.pause(); btn.textContent = '▶'; }
+        if (audioEl.paused) { audioEl.play(); btn.innerHTML = ICO.pause; }
+        else { audioEl.pause(); btn.innerHTML = ICO.play; }
         return;
     }
     stopAudio();
     audioEl = new Audio(url);
     audioBtn = btn;
     audioWave = btn.parentNode.querySelector('.wave');
-    btn.textContent = '❚❚';
-    audioEl.play().catch(() => { btn.textContent = '▶'; });
+    btn.innerHTML = ICO.pause;
+    audioEl.play().catch(() => { btn.innerHTML = ICO.play; });
     const durEl = btn.parentNode.parentNode.querySelector('.dur');
     audioEl.addEventListener('loadedmetadata', () => {
         if (durEl && isFinite(audioEl.duration)) durEl.textContent = fmtDur(audioEl.duration);
@@ -548,7 +562,7 @@ function playAudio(btn, url) {
         if (durEl && isFinite(audioEl.duration)) durEl.textContent = fmtDur(audioEl.duration - audioEl.currentTime);
     }, 200);
     audioEl.addEventListener('ended', () => {
-        btn.textContent = '▶';
+        btn.innerHTML = ICO.play;
         if (audioWave) audioWave.querySelectorAll('i').forEach(b => b.classList.remove('on'));
         if (durEl && isFinite(audioEl.duration)) durEl.textContent = fmtDur(audioEl.duration);
         clearInterval(audioIv);
@@ -556,7 +570,7 @@ function playAudio(btn, url) {
 }
 function stopAudio() {
     if (audioEl) { try { audioEl.pause(); } catch(_) {} }
-    if (audioBtn) audioBtn.textContent = '▶';
+    if (audioBtn) audioBtn.innerHTML = ICO.play;
     if (audioWave) audioWave.querySelectorAll('i').forEach(b => b.classList.remove('on'));
     clearInterval(audioIv);
     audioEl = null; audioBtn = null; audioWave = null;
@@ -565,7 +579,7 @@ function fmtDur(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) +
 
 // ── Chamada (integra com a chamadinha do app na fase de integração) ──
 function onCall() {
-    alert('📹 Aqui dispara a CHAMADA DE VÍDEO da modelo (integração na fase 2, dentro do app).');
+    alert('Aqui dispara a CHAMADA DE VÍDEO da modelo (no app integrado ela toca de verdade).');
 }
 function openCta(url) {
     if (url) window.open(url, '_blank', 'noopener');
