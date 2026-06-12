@@ -535,36 +535,43 @@ router.get('/catalog', optionalUser, async (req, res) => {
         // Enriquece com Bunny: gallery ganha vídeos da Collection + video_call
         // sub-objeto ganha is_bunny/bunny_hls_url. Em paralelo (Promise.all) pra
         // não somar latência das requests ao Bunny.
+        // Transforma uma mídia bloqueada em "teaser" seguro pra quem não comprou:
+        //   - amostra (is_locked=false) → passa inteira
+        //   - imagem bloqueada → mantém a URL (o borrão é no front, escolha do dono)
+        //   - vídeo bloqueado → só poster, sem URL tocável (protege o vídeo de verdade)
+        const gateItem = (m) => {
+            if (!m || m.is_locked === false) return m;
+            if (m.type === 'video' || m.media_type === 'video') {
+                return { type: 'video', media_type: 'video', is_locked: true,
+                         thumbnail_url: m.thumbnail_url || m.thumb || null, url: null };
+            }
+            return { ...m, is_locked: true };
+        };
+        const gateList = (arr) => (Array.isArray(arr) ? arr.map(gateItem) : []);
+
         const catalogEnriched = await Promise.all(catalog.map(async (p) => {
             const owns = ownedIds.has(p.id);
             const previewOn = p.preview_enabled === true;
+            const extra = (p.extra_data && typeof p.extra_data === 'object') ? p.extra_data : {};
 
-            // Galeria — quem decide o que sai:
-            //   - Dono: vê tudo (inclui o acervo completo do Bunny).
-            //   - Não-dono COM prévia ligada: vê só a galeria curada (product_media).
-            //       · mídia "amostra" (is_locked=false) vai inteira.
-            //       · imagem bloqueada vai com a URL (borrão é no front — escolha do dono).
-            //       · vídeo bloqueado vai SÓ com poster, sem URL tocável (protege o vídeo).
-            //   - Não-dono SEM prévia: galeria vazia (não vaza conteúdo pago).
-            let base;
+            // A galeria real que o app usa fica em extra_data.gallery; product_media
+            // é legado. Protegemos as DUAS. Dono vê tudo (+ acervo Bunny). Não-dono
+            // só vê a prévia curada se preview_enabled; senão, galeria vazia (não vaza).
+            let base, outExtra;
             if (owns) {
                 base = await appendBunnyCollectionToGallery(p);
+                outExtra = extra;
             } else if (previewOn) {
-                const preview = (Array.isArray(p.gallery) ? p.gallery : []).map(m => {
-                    if (!m || m.is_locked === false) return m;
-                    if (m.type === 'video' || m.media_type === 'video') {
-                        return { type: 'video', media_type: 'video', is_locked: true,
-                                 thumbnail_url: m.thumbnail_url || null, url: null };
-                    }
-                    return { ...m, is_locked: true };
-                });
-                base = { ...p, gallery: preview };
+                base = { ...p, gallery: gateList(p.gallery) };
+                outExtra = { ...extra, gallery: gateList(extra.gallery) };
             } else {
                 base = { ...p, gallery: [] };
+                outExtra = { ...extra, gallery: [] };
             }
 
             return {
                 ...base,
+                extra_data: outExtra,
                 preview_enabled: previewOn,
                 price: parseFloat(p.price || 0),
                 hasAccess: owns,
