@@ -1532,8 +1532,7 @@ router.get('/app-config', async (req, res) => {
                 SELECT key, value FROM gamification_config
                 WHERE key IN (
                     'app_config', 'login_config', 'profile_config', 'home_layout',
-                    'levels_list', 'gifts_catalog', 'missions_list', 'reviews_list',
-                    'wishes_config', 'dopamine_event', 'flash_offers', 'live_notifications'
+                    'reviews_list', 'flash_offers', 'live_notifications'
                 )
             `),
             safe(`
@@ -1576,15 +1575,8 @@ router.get('/app-config', async (req, res) => {
             primary_color: '#e50914',
             maintenance_mode: false,
             maintenance_message: 'Estamos fazendo melhorias. Volte em breve!',
-            bonus_delay_minutes: 3,   // tempo até cofre/roleta/ticker aparecerem no 1º login
+            bonus_delay_minutes: 3,   // tempo até o ticker/notificações aparecerem no 1º login
             show_continue_watching: false,
-            label_cofre: '',
-            label_roleta: '',
-            label_desejos: '',
-            label_xp: '',
-            label_nivel: '',
-            label_cofre_eyebrow: '',
-            label_roleta_eyebrow: '',
             // Esteiras auto-loop
             carousel_speed_seconds: 30,
             carousel_paused: false,
@@ -1592,10 +1584,6 @@ router.get('/app-config', async (req, res) => {
             hero_title_style: 'shimmer-all',  // shimmer-all | shimmer-words | glow-red | plain
             hero_shimmer_enabled: true,
             hero_shimmer_color: '',
-            // Cooldowns gamificação
-            roleta_cooldown_days: 7,
-            cofre_cooldown_hours: 24,
-            // Quinta da Dopamina (também replicado em dopamine_event pra config dedicada)
             version: '1.0.0',
             ...configs.app_config,
         };
@@ -1621,22 +1609,13 @@ router.get('/app-config', async (req, res) => {
             autologin_days: 90,
         };
         if (!configs.profile_config) configs.profile_config = {
-            visible_cards: ['avatar', 'level', 'wishes', 'stats', 'streak', 'missions'],
+            visible_cards: ['avatar', 'stats'],
             show_apelido_edit: true,
             show_avatar_upload: true,
             show_logout: true,
         };
         if (!configs.home_layout) configs.home_layout = { sections: [] };
-        if (!configs.levels_list) configs.levels_list = { items: [] };
-        if (!configs.gifts_catalog) configs.gifts_catalog = { items: [] };
-        if (!configs.missions_list) configs.missions_list = { items: [] };
         if (!configs.reviews_list) configs.reviews_list = { items: [] };
-        if (!configs.wishes_config) configs.wishes_config = {
-            max_discount_percent: 30,
-            xp_to_wishes_ratio: 10,
-            min_wishes_to_use: 50,
-        };
-        if (!configs.dopamine_event) configs.dopamine_event = { active: false, weekday: 4 };
         if (!configs.flash_offers) configs.flash_offers = { items: [] };
         
         // Filtra ofertas: só ativas e dentro do período
@@ -1650,21 +1629,7 @@ router.get('/app-config', async (req, res) => {
         
         // Filtra reviews ativos
         const activeReviews = (configs.reviews_list.items || []).filter(r => r.active !== false);
-        
-        // Filtra brindes ativos
-        const activeGifts = (configs.gifts_catalog.items || []).filter(g => g.active !== false);
-        
-        // Filtra missões ativas
-        const activeMissions = (configs.missions_list.items || []).filter(m => m.active !== false);
-        
-        // Filtra níveis ativos
-        const activeLevels = (configs.levels_list.items || []).filter(lv => lv.active !== false);
-        
-        // Verifica se hoje é o dia da Quinta da Dopamina
-        const dopamineEvent = configs.dopamine_event || {};
-        const today = new Date().getDay();
-        const isDopamineDay = dopamineEvent.active === true && today === (dopamineEvent.weekday ?? 4);
-        
+
         // Monta carousels com seus produtos aninhados
         const productsByCarousel = {};
         for (const p of carouselProductsResult.rows) {
@@ -1697,15 +1662,7 @@ router.get('/app-config', async (req, res) => {
             home_layout: configs.home_layout.sections || [],
             hero_slides: heroResult.rows,
             carousels: carouselsWithProducts,
-            levels: activeLevels,
-            gifts: activeGifts,
-            missions: activeMissions,
             reviews: activeReviews,
-            wishes: configs.wishes_config,
-            dopamine: {
-                ...dopamineEvent,
-                is_today: isDopamineDay,
-            },
             flash_offers: activeOffers,
             categories: categoriesResult.rows,
             live_notifications: configs.live_notifications,
@@ -2122,192 +2079,6 @@ router.get('/active-call', optionalUser, async (req, res) => {
     }
 });
 
-
-// =============================================================================
-// REFERRALS — link de indicação do cliente pro bot Telegram
-// =============================================================================
-
-router.get('/referral/code', requireUser, async (req, res) => {
-    const email = req.user.email;
-    try {
-        // Gera/recupera código único do cliente baseado em hash do email
-        const hash = require('crypto').createHash('sha256').update(email + '|' + (process.env.JWT_SECRET || 'salt')).digest('hex').slice(0, 10);
-        const code = 'ref_' + hash;
-        // Conta indicações desse referrer
-        const { rows } = await db.query(`
-            SELECT
-              COUNT(*)::int AS total,
-              COUNT(*) FILTER (WHERE status = 'converted')::int AS converted,
-              COALESCE(SUM(reward_desejos) FILTER (WHERE status = 'rewarded'), 0)::int AS desejos_won
-            FROM referrals
-            WHERE LOWER(referrer_email) = $1
-        `, [email]);
-        return res.json({
-            success: true,
-            code,
-            stats: rows[0] || { total: 0, converted: 0, desejos_won: 0 },
-        });
-    } catch (err) {
-        logger.error('referral/code falhou:', err);
-        return res.status(500).json({ success: false, error: 'Erro interno' });
-    }
-});
-
-
-// =============================================================================
-// GAMIFICATION STATE — Sync server-side do progresso do cliente
-// Substitui o localStorage-only que resetava em cada limpeza de cache.
-// Schema: customers.metadata.gami_state = {
-//   activeTimeMs, xp, levelId, completedActions: { firstLogin, addedPhoto,
-//   addedName, openedCofreFirstTime, ... }, missionProgress: { ... },
-//   lastDailySpinAt, streak, etc
-// }
-// =============================================================================
-
-// GET /api/user/gami-state — retorna o estado salvo no servidor
-router.get('/gami-state', requireUser, async (req, res) => {
-    const email = req.user.email;
-    try {
-        const { rows: [c] } = await db.query(
-            `SELECT metadata FROM customers WHERE LOWER(email) = $1`,
-            [email]
-        );
-        const meta = c?.metadata || {};
-        const gami = meta.gami_state || {
-            activeTimeMs: 0,
-            xp: 0,
-            levelId: 'lv1',
-            completedActions: {},
-            missionProgress: {},
-            streak: 0,
-            lastSeenDate: null,
-            lastDailySpinAt: null,
-            firstLoadAt: new Date().toISOString(),
-        };
-        return res.json({ success: true, gami_state: gami });
-    } catch (err) {
-        logger.error('Erro lendo gami-state:', err);
-        return res.status(500).json({ success: false, error: 'Erro interno' });
-    }
-});
-
-// PUT /api/user/gami-state — salva o estado (cliente envia o objeto inteiro)
-// Limita tamanho pra evitar abuse.
-router.put('/gami-state', requireUser, async (req, res) => {
-    const email = req.user.email;
-    const incoming = req.body?.gami_state;
-    if (!incoming || typeof incoming !== 'object') {
-        return res.status(400).json({ success: false, error: 'gami_state obrigatório' });
-    }
-    // Limita campos permitidos pra evitar bypass de XP via API
-    const allowed = ['activeTimeMs', 'xp', 'levelId', 'completedActions',
-        'missionProgress', 'streak', 'lastSeenDate', 'lastDailySpinAt',
-        'firstLoadAt', 'cofreOpenedAt', 'lastLevelUpAt'];
-    const sanitized = {};
-    for (const k of allowed) {
-        if (incoming[k] !== undefined) sanitized[k] = incoming[k];
-    }
-    // Valida tamanho (máx 10KB de JSON)
-    const json = JSON.stringify(sanitized);
-    if (json.length > 10240) {
-        return res.status(400).json({ success: false, error: 'Estado muito grande' });
-    }
-    try {
-        await db.query(`
-            UPDATE customers
-            SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('gami_state', $1::jsonb)
-            WHERE LOWER(email) = $2
-        `, [json, email]);
-        return res.json({ success: true });
-    } catch (err) {
-        logger.error('Erro salvando gami-state:', err);
-        return res.status(500).json({ success: false, error: 'Erro interno' });
-    }
-});
-
-// POST /api/user/gami-state/action — registra uma ação atômica e ganha XP
-// Body: { action: 'first_login' | 'added_photo' | 'added_name' | 'opened_cofre' | ... }
-// Retorna: { gami_state, xp_gained, leveled_up: boolean, new_level_id? }
-router.post('/gami-state/action', requireUser, async (req, res) => {
-    const email = req.user.email;
-    const { action } = req.body || {};
-    if (!action || typeof action !== 'string') {
-        return res.status(400).json({ success: false, error: 'action obrigatória' });
-    }
-
-    // Tabela de XP por ação (futuramente vem do gamification_config)
-    const ACTION_XP = {
-        first_login: 40,
-        added_photo: 40,
-        added_name: 40,
-        opened_cofre_first: 80,
-        explored_5_products: 80,
-        favorited_3_products: 60,
-        login_day_2: 80,
-        login_day_3: 80,
-        spun_roleta: 200,
-        first_purchase: 300,
-    };
-    const xpGain = ACTION_XP[action] || 0;
-    if (xpGain === 0) {
-        return res.status(400).json({ success: false, error: 'action desconhecida' });
-    }
-
-    try {
-        // Lê estado atual
-        const { rows: [c] } = await db.query(
-            `SELECT metadata FROM customers WHERE LOWER(email) = $1`,
-            [email]
-        );
-        const meta = c?.metadata || {};
-        const gami = meta.gami_state || { xp: 0, levelId: 'lv1', completedActions: {} };
-        gami.completedActions = gami.completedActions || {};
-
-        // Idempotência: se ação já foi feita, não dá XP de novo (one-time actions)
-        const oneTime = ['first_login', 'added_photo', 'added_name', 'opened_cofre_first',
-            'explored_5_products', 'favorited_3_products', 'first_purchase'];
-        if (oneTime.includes(action) && gami.completedActions[action]) {
-            return res.json({ success: true, gami_state: gami, xp_gained: 0, already_done: true });
-        }
-
-        gami.completedActions[action] = new Date().toISOString();
-        gami.xp = (gami.xp || 0) + xpGain;
-
-        // Lê níveis configurados
-        const { rows: [levelsRow] } = await db.query(
-            `SELECT value FROM gamification_config WHERE key = 'levels_list'`
-        );
-        const levels = levelsRow?.value?.items || [];
-        const sortedLevels = [...levels].sort((a, b) => (a.xp_required || 0) - (b.xp_required || 0));
-        let newLevelId = gami.levelId;
-        for (const lv of sortedLevels) {
-            if (gami.xp >= (lv.xp_required || 0)) newLevelId = lv.id;
-        }
-        const leveledUp = newLevelId !== gami.levelId;
-        if (leveledUp) {
-            gami.levelId = newLevelId;
-            gami.lastLevelUpAt = new Date().toISOString();
-        }
-
-        // Salva
-        await db.query(`
-            UPDATE customers
-            SET metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('gami_state', $1::jsonb)
-            WHERE LOWER(email) = $2
-        `, [JSON.stringify(gami), email]);
-
-        return res.json({
-            success: true,
-            gami_state: gami,
-            xp_gained: xpGain,
-            leveled_up: leveledUp,
-            new_level_id: leveledUp ? newLevelId : null,
-        });
-    } catch (err) {
-        logger.error('Erro processando action:', err);
-        return res.status(500).json({ success: false, error: 'Erro interno' });
-    }
-});
 
 
 module.exports = router;
