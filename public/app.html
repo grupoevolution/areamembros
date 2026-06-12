@@ -6873,66 +6873,7 @@ body.is-slowconn .prod-cta-fixed {
             <div class="continue-row" id="continueWatchingRow"></div>
         </div>
 
-        <!-- ============================================================
-             BÔNUS / GAMIFICAÇÃO — só aparece após delay de 1º acesso
-             (controlado por GAMI.applyFirstLoginDelay + data-delay-hide)
-        ============================================================ -->
 
-        <!-- DOPAMINE DAY BANNER -->
-        <div class="dopamine-banner" id="dopamineBanner" data-feature="dopamine" data-delay-hide style="display:none;" onclick="showToast('home', '⚡', 'Dia especial: XP em dobro hoje!')">
-            <div class="dopamine-icon">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-            </div>
-            <div class="dopamine-info">
-                <div class="dopamine-label" id="dopamineLabel">Quinta da Dopamina</div>
-                <div class="dopamine-title" id="dopamineTitle">XP em DOBRO hoje</div>
-                <div class="dopamine-sub" id="dopamineSub">Aproveita que só rola hoje</div>
-            </div>
-        </div>
-
-        <!-- COFRE DO PRAZER -->
-        <div class="cofre-section" data-feature="cofre" data-delay-hide onclick="openCofre()">
-            <div class="cofre-section-content">
-                <div class="cofre-mini-icon">
-                    <div class="cofre-mini-glow"></div>
-                    <div class="cofre-mini-body">
-                        <div class="cofre-mini-dial"></div>
-                        <div class="cofre-mini-handle"></div>
-                    </div>
-                </div>
-                <div class="cofre-info">
-                    <div class="cofre-eyebrow">
-                        <span class="cofre-eyebrow-dot"></span>
-                        Presente do dia
-                    </div>
-                    <div class="cofre-title" data-label-key="cofre">Cofre do <em>Prazer</em></div>
-                    <div class="cofre-sub">Abra agora — pode ganhar até 100 💎</div>
-                </div>
-                <div class="cofre-arrow">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                </div>
-            </div>
-        </div>
-
-        <!-- ROLETA PROIBIDA -->
-        <div class="roleta-card" data-feature="roleta" data-delay-hide onclick="openRoleta()">
-            <div class="roleta-card-content">
-                <div class="roleta-mini">
-                    <div class="roleta-pointer"></div>
-                </div>
-                <div class="roleta-info">
-                    <div class="roleta-eyebrow">
-                        <span class="roleta-eyebrow-badge">Semanal</span>
-                        Evento especial
-                    </div>
-                    <div class="roleta-title" data-label-key="roleta">Roleta <em>Proibida</em></div>
-                    <div class="roleta-sub">Disponível em <span class="roleta-sub-timer">2 dias</span></div>
-                </div>
-                <div class="roleta-arrow">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                </div>
-            </div>
-        </div>
 
     </div>
 </div>
@@ -7284,67 +7225,6 @@ body.is-slowconn .prod-cta-fixed {
                 </div>
             </div>
 
-            <!-- VIBE DA SEMANA — chips minimalistas -->
-            <div class="p3-vibe" data-feature="xp">
-                <div class="p3-vibe-label">Sua vibe essa semana</div>
-                <div class="p3-vibe-chips" id="profileVibeChips">
-                    <button class="p3-vibe-chip" data-vibe="casadas">Casadas</button>
-                    <button class="p3-vibe-chip" data-vibe="solteiras">Solteiras</button>
-                    <button class="p3-vibe-chip" data-vibe="coroas">Coroas</button>
-                    <button class="p3-vibe-chip" data-vibe="novinhas">Novinhas</button>
-                </div>
-            </div>
-
-            <!-- CARD DA ROLETA (sutil, abre modal quando clica) -->
-            <div class="p3-roulette-card" data-feature="roleta" onclick="rouletteOpenModal()">
-                <div class="p3-roulette-card-mini">
-                    <div class="p3-roulette-card-pointer"></div>
-                </div>
-                <div class="p3-roulette-card-info">
-                    <div class="p3-roulette-card-eyebrow">
-                        <span class="p3-roulette-card-badge" id="profileRouletteBadge">Disponível</span>
-                        Programa de recompensas
-                    </div>
-                    <div class="p3-roulette-card-title">Gire e ganhe <em>produtos grátis</em></div>
-                    <div class="p3-roulette-card-sub" id="profileRouletteCardSub">Uma vez por dia · reseta à meia-noite</div>
-                </div>
-                <div class="p3-roulette-card-arrow">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                </div>
-            </div>
-
-            <!-- LEVEL PROGRESS BAR -->
-            <div class="p3-card" data-feature="xp">
-                <div class="p3-card-row">
-                    <div class="p3-level-current">Dominador</div>
-                    <div class="p3-level-next">Insaciável →</div>
-                </div>
-                <div class="p3-progress-track">
-                    <div class="p3-progress-fill"></div>
-                </div>
-                <div class="p3-progress-text">
-                    <strong>1.170 XP</strong> · faltam <strong>630 XP</strong> pra evoluir
-                </div>
-            </div>
-
-            <!-- DESEJOS BLOCK — pausado junto com gamificação (19/05/2026). Reativar quando FEATURES.gamification = true -->
-            <div class="p3-card p3-desejos" data-gami-element style="display:none;">
-                <div class="p3-desejos-row">
-                    <div class="p3-desejos-icon">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M6 3h12l4 6-10 13L2 9z"/>
-                            <path d="M11 3L8 9l4 13 4-13-3-6"/>
-                            <path d="M2 9h20"/>
-                        </svg>
-                    </div>
-                    <div class="p3-desejos-info">
-                        <div class="p3-desejos-label">Seus Desejos</div>
-                        <div class="p3-desejos-value">340 <em>= R$3,40 OFF</em></div>
-                    </div>
-                </div>
-                <div class="p3-desejos-sub">Use no checkout · Ganhe mais indicando amigos</div>
-            </div>
-
             <!-- ONBOARDING / JORNADA — movido da home pro perfil -->
             <div class="onboarding-card" data-feature="onboarding" style="margin: 0 0 18px;">
                 <div class="onboarding-header">
@@ -7399,111 +7279,6 @@ body.is-slowconn .prod-cta-fixed {
                 </div>
             </div>
 
-            <!-- STATS GRID — pausado (gami + "Dias na Casa" feio segundo decisão de produto 19/05/2026) -->
-            <div class="p3-stats" data-gami-element style="display:none;">
-                <div class="p3-stat">
-                    <div class="p3-stat-value" style="color:#ff3840;">1.170</div>
-                    <div class="p3-stat-label">Total XP</div>
-                </div>
-                <div class="p3-stat">
-                    <div class="p3-stat-value">27</div>
-                    <div class="p3-stat-label">Dias na Casa</div>
-                </div>
-                <div class="p3-stat">
-                    <div class="p3-stat-value" style="color:#ff7800;">4/12</div>
-                    <div class="p3-stat-label">Conquistas</div>
-                </div>
-            </div>
-
-            <!-- STREAK -->
-            <div class="p3-card p3-streak" data-feature="streak">
-                <div class="p3-streak-icon">🔥</div>
-                <div class="p3-streak-info">
-                    <div class="p3-streak-label">Sequência ativa</div>
-                    <div class="p3-streak-value">7 dias seguidos</div>
-                </div>
-                <div class="p3-streak-cta">Volte amanhã!</div>
-            </div>
-
-            <!-- MISSIONS -->
-            <div class="p3-section" data-feature="missions">
-                <div class="p3-section-head">
-                    <div class="p3-section-title">Missões da semana</div>
-                    <div class="p3-section-link">Reset 2ª</div>
-                </div>
-
-                <div class="p3-mission done">
-                    <div class="p3-mission-check">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                    </div>
-                    <div class="p3-mission-body">
-                        <div class="p3-mission-title">Faça login 5 dias seguidos</div>
-                        <div class="p3-mission-progress">
-                            <div class="p3-mission-track"><div class="p3-mission-fill" style="width:100%;"></div></div>
-                            <span class="p3-mission-count">5/5 ✓</span>
-                        </div>
-                    </div>
-                    <div class="p3-mission-reward">+50</div>
-                </div>
-
-                <div class="p3-mission">
-                    <div class="p3-mission-check"></div>
-                    <div class="p3-mission-body">
-                        <div class="p3-mission-title">Explore 20 produtos</div>
-                        <div class="p3-mission-progress">
-                            <div class="p3-mission-track"><div class="p3-mission-fill" style="width:65%;"></div></div>
-                            <span class="p3-mission-count">13/20</span>
-                        </div>
-                    </div>
-                    <div class="p3-mission-reward">+100</div>
-                </div>
-
-                <div class="p3-mission">
-                    <div class="p3-mission-check"></div>
-                    <div class="p3-mission-body">
-                        <div class="p3-mission-title">Favorite 5 produtos</div>
-                        <div class="p3-mission-progress">
-                            <div class="p3-mission-track"><div class="p3-mission-fill" style="width:40%;"></div></div>
-                            <span class="p3-mission-count">2/5</span>
-                        </div>
-                    </div>
-                    <div class="p3-mission-reward">+30</div>
-                </div>
-
-                <div class="p3-mission">
-                    <div class="p3-mission-check"></div>
-                    <div class="p3-mission-body">
-                        <div class="p3-mission-title">Indique 1 amigo que se cadastre</div>
-                        <div class="p3-mission-progress">
-                            <div class="p3-mission-track"><div class="p3-mission-fill" style="width:0%;"></div></div>
-                            <span class="p3-mission-count">0/1</span>
-                        </div>
-                    </div>
-                    <div class="p3-mission-reward">+200</div>
-                </div>
-            </div>
-
-            <!-- INDIQUE E GANHE — pausado (19/05/2026), depende da gami pra fazer sentido -->
-            <div class="p3-card p3-referral-card" id="profileReferralCard" data-gami-element style="margin-top:14px;display:none;">
-                <div class="p3-card-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
-                    <div style="display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:var(--red-bright,#ff3840);font-weight:800;">
-                        <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                        Indique e ganhe
-                    </div>
-                    <div style="font-size:14px;color:#fff;font-weight:600;line-height:1.35;">
-                        Convide amigos. Cada um que comprar te dá <strong style="color:#facc15;">+100 💎 + 50 XP</strong>.
-                    </div>
-                    <div id="referralStats" style="font-size:11px;color:#9ca3af;margin-top:2px;">—</div>
-                </div>
-                <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-                    <input id="referralLink" readonly value="" style="flex:1;min-width:0;background:#0d0506;border:1px solid #1f1212;border-radius:8px;padding:9px 12px;color:#fff;font-size:11px;font-family:monospace;">
-                    <button class="p3-logout-btn" style="flex:0 0 auto;color:#fff;border-color:rgba(255,56,64,0.4);" onclick="copyReferralLink()">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                        Copiar
-                    </button>
-                </div>
-            </div>
-
             <!-- FOOTER ACTIONS -->
             <button class="p3-logout-btn" onclick="doLogout()" style="margin-top:14px;">
                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
@@ -7515,41 +7290,6 @@ body.is-slowconn .prod-cta-fixed {
         </div>
     </div>
 
-    <!-- MODAL DA ROLETA (2 estados: girar / reveal) -->
-    <div class="p3-roulette-modal" id="rouletteModal" onclick="rouletteCloseModal(event)">
-        <div class="p3-roulette-modal-content" onclick="event.stopPropagation()">
-            <button class="p3-roulette-modal-close" onclick="rouletteCloseModal(true)" aria-label="Fechar">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-
-            <!-- ESTADO 1: roleta pra girar -->
-            <div id="rouletteStageView">
-                <div class="p3-roulette-modal-eyebrow">Programa de recompensas</div>
-                <div class="p3-roulette-modal-title">Gire e ganhe<br><em>produto grátis</em></div>
-
-                <div class="p3-roulette-stage">
-                    <div class="p3-roulette-stage-pointer"></div>
-                    <div class="p3-roulette-stage-wheel" id="profileRouletteWheel"></div>
-                    <div class="p3-roulette-stage-center">
-                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    </div>
-                </div>
-
-                <button class="p3-roulette-spin-btn" id="profileRouletteCta" onclick="rouletteSpin()">Girar agora</button>
-            </div>
-
-            <!-- ESTADO 2: reveal do prêmio -->
-            <div class="p3-roulette-reveal" id="rouletteReveal">
-                <div class="p3-roulette-modal-eyebrow" id="rouletteModalEyebrow">Parabéns!</div>
-                <div class="p3-roulette-reveal-img" id="rouletteModalImg"></div>
-                <div class="p3-roulette-reveal-name" id="rouletteModalName">—</div>
-                <div class="p3-roulette-reveal-msg" id="rouletteModalMsg">
-                    Você ganhou este item. Pra retirar, faça sua 1ª compra na área de membros — qualquer produto serve e este cai automaticamente no seu acervo.
-                </div>
-                <button class="p3-roulette-spin-btn" id="rouletteModalCta" onclick="rouletteGoShop()">Ver catálogo agora</button>
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- ===================================
@@ -11919,25 +11659,15 @@ function applyAppMetadata() {
         });
     }
 
-    // Gamificação principal
-    applyToggle(['.roleta-card', '[data-feature="roleta"]'], app.wheel_enabled);
-    applyToggle(['.cofre-section', '[data-feature="cofre"]'], app.cofre_enabled);
-    applyToggle(['[data-feature="desejos"]', '.desejos-card', '.wishes-card'], app.desejos_enabled);
-    applyToggle(['[data-feature="xp"]', '.xp-bar', '.level-card', '.elo-card'], app.xp_enabled);
-    applyToggle(['[data-feature="missions"]', '.missions-card'], app.missions_enabled);
-    applyToggle(['[data-feature="dopamine"]', '.dopamine-banner'], app.dopamine_enabled);
-
     // Social proof
     applyToggle(['[data-feature="reviews"]', '.reviews-section', '.reviews-ticker'], app.reviews_enabled);
     applyToggle(['[data-feature="live-notif"]', '.live-notif-toast', '.live-ticker'], app.live_notifications_enabled);
     applyToggle(['[data-feature="flash-offer"]', '.flash-offer-card', '.flash-countdown'], app.flash_offers_enabled);
 
     // Engajamento
-    applyToggle(['[data-feature="streak"]', '.streak-banner', '.p3-streak'], app.streak_enabled);
     applyToggle(['[data-feature="favorites"]', '.fav-btn', '.nav-item[data-nav="favorites"]'], app.favorites_enabled);
     applyToggle(['[data-feature="continue-watching"]', '.continue-watching', '.cw-row'], app.continue_watching_enabled);
     applyToggle(['[data-feature="onboarding"]', '.onboarding-card', '.jornada-card'], app.onboarding_enabled);
-    applyToggle(['[data-feature="referral"]', '.referral-card', '.indicacao-card'], app.referral_enabled);
 
     // Navegação
     applyToggle(['.nav-item[data-nav="explore"]', '[data-feature="explore"]'], app.explore_tab_enabled);
