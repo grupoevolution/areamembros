@@ -15,7 +15,7 @@ const db = require('../db');
 const { requireAdmin } = require('../lib/auth');
 const { logger } = require('../lib/logger');
 
-const STEP_TYPES = ['text', 'audio', 'image', 'view_once_image', 'view_once_video', 'buttons', 'wait_input', 'cta'];
+const STEP_TYPES = ['text', 'audio', 'image', 'view_once_image', 'view_once_video', 'buttons', 'wait_input', 'cta', 'delay'];
 const REPLY_MODES = ['vip', 'all', 'none'];
 
 // ── CHATS (personas) ─────────────────────────────────────────────────────────
@@ -141,8 +141,8 @@ router.post('/:id/steps', requireAdmin, async (req, res) => {
         const b = req.body || {};
         const type = STEP_TYPES.includes(b.type) ? b.type : 'text';
         const { rows } = await db.query(`
-            INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, active)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *
+            INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *
         `, [
             chatId,
             parseInt(b.step_order, 10) || 0,
@@ -155,6 +155,7 @@ router.post('/:id/steps', requireAdmin, async (req, res) => {
             b.product_id ? parseInt(b.product_id, 10) : null,
             Math.max(0, Math.min(8000, parseInt(b.typing_ms, 10) || 1200)),
             (b.goto_key || '').trim().slice(0, 40) || null,
+            Math.max(0, Math.min(7 * 24 * 3600, parseInt(b.delay_seconds, 10) || 0)),
             b.active !== false,
         ]);
         return res.json({ success: true, step: rows[0] });
@@ -181,6 +182,7 @@ router.put('/:id/steps/:stepId', requireAdmin, async (req, res) => {
         if (b.product_id !== undefined) set('product_id', b.product_id ? parseInt(b.product_id, 10) : null);
         if (b.typing_ms !== undefined) set('typing_ms', Math.max(0, Math.min(8000, parseInt(b.typing_ms, 10) || 1200)));
         if (b.goto_key !== undefined) set('goto_key', (b.goto_key || '').trim().slice(0, 40) || null);
+        if (b.delay_seconds !== undefined) set('delay_seconds', Math.max(0, Math.min(7 * 24 * 3600, parseInt(b.delay_seconds, 10) || 0)));
         if (b.active !== undefined) set('active', !!b.active);
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
         values.push(stepId);
@@ -215,7 +217,7 @@ router.get('/:id/export', requireAdmin, async (req, res) => {
         if (!cr.length) return res.status(404).json({ success: false, error: 'Não encontrado' });
         const c = cr[0];
         const { rows: steps } = await db.query(
-            `SELECT step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, active
+            `SELECT step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active
              FROM chat_steps WHERE chat_id = $1 ORDER BY step_order, id`, [id]
         );
         const payload = {
@@ -270,8 +272,8 @@ router.post('/import', requireAdmin, async (req, res) => {
         for (const s of data.steps.slice(0, 200)) {
             const type = STEP_TYPES.includes(s.type) ? s.type : 'text';
             await db.query(`
-                INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, active)
-                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+                INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
             `, [
                 chat.id,
                 parseInt(s.step_order, 10) || 0,
@@ -284,6 +286,7 @@ router.post('/import', requireAdmin, async (req, res) => {
                 s.product_id ? parseInt(s.product_id, 10) : null,
                 Math.max(0, Math.min(8000, parseInt(s.typing_ms, 10) || 1200)),
                 (s.goto_key || '').trim().slice(0, 40) || null,
+                Math.max(0, Math.min(7 * 24 * 3600, parseInt(s.delay_seconds, 10) || 0)),
                 s.active !== false,
             ]);
             imported++;

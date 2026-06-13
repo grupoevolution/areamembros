@@ -8698,29 +8698,67 @@ window.ChatApp = (function() {
                         ? '<div class="pv vip">Desbloqueie com o VIP →</div>'
                         : c.last ? '<div class="pv">' + esc(c.last.preview) + '</div>'
                         : '<div class="pv online">' + esc(c.status_label || 'online') + '</div>';
-                    const tm = c.last ? '<div class="tm">' + hhmm(c.last.at) + '</div>' : '';
+                    const badge = (!c.locked && c.unread > 0)
+                        ? '<span style="display:inline-flex;min-width:18px;height:18px;border-radius:999px;background:#25D366;color:#fff;font-size:10px;font-weight:600;align-items:center;justify-content:center;padding:0 5px;margin-top:3px;">' + (c.unread > 99 ? '99+' : c.unread) + '</span>'
+                        : '';
+                    const tm = (c.last || badge) ? '<div class="tm" style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">' + (c.last ? '<span'+(badge?' style="color:#1fa855;font-weight:600;"':'')+'>' + hhmm(c.last.at) + '</span>' : '') + badge + '</div>' : '';
                     html += '<div class="ca-row" onclick="ChatApp.open(' + c.id + ')">' + av
                         + '<div class="mid"><div class="nm">' + esc(c.name) + '</div>' + pv + '</div>' + tm + '</div>';
                 }
                 html += '</div>';
             }
             scroll.innerHTML = html;
+            // bolinha de não-lidas na aba Conversas
+            const totalUnread = chats.reduce((s, c) => s + (c.locked ? 0 : (c.unread || 0)), 0);
+            const dot = document.getElementById('chatNavDot');
+            if (dot) dot.style.display = totalUnread > 0 ? '' : 'none';
         } catch (e) {
             scroll.innerHTML = '<div class="ca-empty">Erro carregando conversas.</div>';
         }
     }
 
+    // Atualiza só a bolinha da aba (sem re-render da lista) — usado no boot/poll
+    async function refreshUnreadDot() {
+        try {
+            const r = await fetch('/api/user/chats?visitor_id=' + VID, { credentials: 'include' });
+            const data = await r.json();
+            if (!data.success) return;
+            const total = (data.chats || []).reduce((s, c) => s + (c.locked ? 0 : (c.unread || 0)), 0);
+            const dot = document.getElementById('chatNavDot');
+            if (dot) dot.style.display = total > 0 ? '' : 'none';
+        } catch (_) {}
+    }
+
+    let LAST_ID = 0, POLL_TIMER = null;
+    function stopPoll() { if (POLL_TIMER) { clearInterval(POLL_TIMER); POLL_TIMER = null; } }
+    function startPoll() {
+        stopPoll();
+        POLL_TIMER = setInterval(async () => {
+            if (!CUR) { stopPoll(); return; }
+            try {
+                const r = await fetch('/api/user/chats/' + CUR.id + '/poll?after=' + LAST_ID + '&visitor_id=' + VID, { credentials: 'include' });
+                const data = await r.json();
+                if (data.success && Array.isArray(data.messages) && data.messages.length) {
+                    handleAdvance({ messages: data.messages, awaiting: data.awaiting });
+                }
+                if (data.awaiting !== 'delay' && (!data.messages || !data.messages.length)) stopPoll();
+            } catch (_) {}
+        }, 4000);
+    }
+
     function back() {
+        stopPoll();
         switchScreen('chat');
         CUR = null; QUEUE = []; RENDERING = false;
         loadList();
     }
 
     async function open(id) {
+        stopPoll();
         switchScreen('chatconv');
         const body = document.getElementById('caBody');
         body.innerHTML = '<div class="ca-day">HOJE</div><div class="ca-crypt">' + ICO.lock(11, '#b08a4a') + ' Suas mensagens são protegidas</div>';
-        SEEN = new Set(); QUEUE = []; RENDERING = false; lastButtons = null;
+        SEEN = new Set(); QUEUE = []; RENDERING = false; lastButtons = null; LAST_ID = 0;
         document.getElementById('caChoices').style.display = 'none';
         document.getElementById('caLocked').style.display = 'none';
         body.style.display = 'flex';
@@ -8754,6 +8792,7 @@ window.ChatApp = (function() {
         for (const m of data.messages || []) {
             if (SEEN.has(m.id)) continue;
             SEEN.add(m.id);
+            if (m.id > LAST_ID) LAST_ID = m.id;
             QUEUE.push(m);
         }
         QUEUE._awaiting = data.awaiting;
@@ -8782,6 +8821,7 @@ window.ChatApp = (function() {
         }
         RENDERING = false;
         renderChoices(QUEUE._awaiting);
+        if (QUEUE._awaiting === 'delay') startPoll(); else stopPoll();
     }
 
     function renderMsg(m) {
@@ -8977,7 +9017,33 @@ window.ChatApp = (function() {
     const input = document.getElementById('caInput');
     if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
-    return { loadList, open, back, send, photo, sendPhoto, unlock, closeVonce, onCall };
+    return { loadList, open, back, send, photo, sendPhoto, unlock, closeVonce, onCall, refreshUnreadDot };
+})();
+
+// Deep-link do push de mensagem: /?chat=<id> abre a conversa direto
+(function handleChatDeepLink() {
+    try {
+        const m = window.location.search.match(/[?&]chat=(\d+)/);
+        if (!m) return;
+        const cid = parseInt(m[1], 10);
+        if (!cid) return;
+        let tries = 0;
+        const t = setInterval(() => {
+            tries++;
+            if (window.ChatApp && typeof switchScreen === 'function' && document.getElementById('chat')) {
+                clearInterval(t);
+                try { ChatApp.open(cid); } catch(_) {}
+                try { history.replaceState(null, '', window.location.pathname); } catch(_) {}
+            } else if (tries > 40) clearInterval(t);
+        }, 400);
+    } catch(_) {}
+})();
+
+// Bolinha de não-lidas: checa no boot e ao voltar o foco pro app
+(function chatUnreadBoot() {
+    const ping = () => { try { if (window.ChatApp) ChatApp.refreshUnreadDot(); } catch(_) {} };
+    setTimeout(ping, 4000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) ping(); });
 })();
 
 // Initial state — bottom nav hidden for login (mas visível em modo funíl).

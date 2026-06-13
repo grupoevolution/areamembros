@@ -445,6 +445,14 @@ let server;
         logger.warn('push-worker não iniciou: ' + err.message);
     }
 
+    // Worker do chat: retoma roteiros em delay (app fechado) + push de mensagem
+    try {
+        const { startChatWorker } = require('./lib/chat-worker');
+        startChatWorker();
+    } catch (err) {
+        logger.warn('chat-worker não iniciou: ' + err.message);
+    }
+
     server.on('error', (err) => {
         logger.error('Falha ao abrir a porta HTTP:', err.message);
         process.exit(1);

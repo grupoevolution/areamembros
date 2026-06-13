@@ -5554,6 +5554,7 @@ a { color: inherit; text-decoration: none; }
                                         <option value="view_once_video">🎬 Vídeo 1x (visualização única)</option>
                                         <option value="buttons">🔘 Botões de escolha</option>
                                         <option value="wait_input">⌨️ Esperar cliente digitar</option>
+                                        <option value="delay">⏱ Esperar (tempo) — manda depois</option>
                                         <option value="cta">💳 Botão de oferta (link)</option>
                                     </select>
                                 </div>
@@ -5577,6 +5578,18 @@ a { color: inherit; text-decoration: none; }
                             </div>
                             <div id="csCtaWrap" style="display:none;"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link do botão (checkout/oferta)</label>
                                 <input class="form-control" id="csLink" maxlength="1000" placeholder="https://pay..." style="width:100%;"/>
+                            </div>
+                            <div id="csDelayWrap" style="display:none; background:rgba(229,9,20,.06); border:1px solid rgba(229,9,20,.2); border-radius:10px; padding:12px;">
+                                <label style="display:block; font-size:12px; color:#fff; font-weight:700; margin-bottom:4px;">⏱ Esperar quanto tempo antes de mandar o próximo bloco?</label>
+                                <div style="display:flex; gap:8px;">
+                                    <input class="form-control" type="number" id="csDelayValue" min="1" value="10" style="flex:1;"/>
+                                    <select class="form-control" id="csDelayUnit" style="flex:1;">
+                                        <option value="1">segundos</option>
+                                        <option value="60" selected>minutos</option>
+                                        <option value="3600">horas</option>
+                                    </select>
+                                </div>
+                                <div style="font-size:11px; color:rgba(255,255,255,.5); margin-top:6px;">A conversa PAUSA aqui e continua sozinha depois — mesmo com o app fechado, manda push no celular. Máx 7 dias. Ótimo pra "sumiço": ofereça → espere 10min → "amor cadê você? 🥺".</div>
                             </div>
                             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
                                 <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Digitando (ms)</label><input class="form-control" type="number" id="csTyping" min="0" max="8000" value="1200" style="width:100%;"/></div>
@@ -14292,8 +14305,16 @@ async function deleteChatPersona(id) {
 const CHAT_STEP_LABELS = {
     text: '💬 Texto', audio: '🎤 Áudio', image: '📷 Foto',
     view_once_image: '👁 Foto 1x', view_once_video: '🎬 Vídeo 1x',
-    buttons: '🔘 Botões', wait_input: '⌨️ Espera digitar', cta: '💳 Oferta',
+    buttons: '🔘 Botões', wait_input: '⌨️ Espera digitar', delay: '⏱ Espera (tempo)', cta: '💳 Oferta',
 };
+// Formata segundos em "10 min", "2 h", "30 s"
+function fmtDelay(secs) {
+    secs = parseInt(secs, 10) || 0;
+    if (secs >= 86400) return Math.round(secs / 86400) + ' d';
+    if (secs >= 3600) return Math.round(secs / 3600) + ' h';
+    if (secs >= 60) return Math.round(secs / 60) + ' min';
+    return secs + ' s';
+}
 
 let _curChatSteps = [];
 let _curChatPersona = null;
@@ -14316,6 +14337,7 @@ async function loadChatSteps(chatId) {
             const label = CHAT_STEP_LABELS[s.type] || s.type;
             const preview = s.type === 'buttons'
                 ? (Array.isArray(s.buttons) ? s.buttons.map(b => b.label).join(' · ') : '')
+                : s.type === 'delay' ? ('espera ' + fmtDelay(s.delay_seconds))
                 : (s.content || s.media_url || '');
             const key = s.step_key ? '<span style="background:rgba(229,9,20,.18);color:#ff6b73;font-size:9px;padding:2px 6px;border-radius:999px;margin-left:6px;">'+escHtmlAdmin(s.step_key)+'</span>' : '';
             const upDis = idx === 0 ? ' disabled style="opacity:.3;font-size:11px;padding:4px 8px;"' : ' style="font-size:11px;padding:4px 8px;"';
@@ -14395,6 +14417,8 @@ function renderChatPreview() {
                 + '</div>';
         } else if (s.type === 'wait_input') {
             html += '<div style="align-self:center; font-size:9.5px; color:#999; background:#fdfcfa; padding:3px 9px; border-radius:8px;">⌨ espera o cliente digitar</div>';
+        } else if (s.type === 'delay') {
+            html += '<div style="align-self:center; font-size:9.5px; color:#b08a4a; background:#fdf3d7; padding:3px 10px; border-radius:8px;">⏱ espera ' + fmtDelay(s.delay_seconds) + ' (manda depois)</div>';
         } else if (s.type === 'cta') {
             html += '<div style="align-self:flex-start;"><span style="background:#e50914; color:#fff; font-size:11px; font-weight:700; padding:7px 13px; border-radius:999px; display:inline-block;">'+fill(s.content || 'Ver oferta')+'</span></div>';
         }
@@ -14432,6 +14456,7 @@ window.updateChatStepFields = function() {
     document.getElementById('csMediaWrap').style.display = (t === 'audio' || t === 'image' || t === 'view_once_image' || t === 'view_once_video') ? 'block' : 'none';
     document.getElementById('csButtonsWrap').style.display = t === 'buttons' ? 'block' : 'none';
     document.getElementById('csCtaWrap').style.display = t === 'cta' ? 'block' : 'none';
+    document.getElementById('csDelayWrap').style.display = t === 'delay' ? 'block' : 'none';
 };
 
 function addChatBtnRow(label, goto) {
@@ -14458,6 +14483,8 @@ function openChatStepModal() {
     document.getElementById('csId').value = '';
     document.getElementById('csType').value = 'text';
     document.getElementById('csTyping').value = 1200;
+    document.getElementById('csDelayValue').value = 10;
+    document.getElementById('csDelayUnit').value = '60';
     document.getElementById('csButtonRows').innerHTML = '';
     addChatBtnRow();
     updateChatStepFields();
@@ -14476,6 +14503,11 @@ function editChatStep(s) {
     document.getElementById('csTyping').value = s.typing_ms ?? 1200;
     document.getElementById('csKey').value = s.step_key || '';
     document.getElementById('csGoto').value = s.goto_key || '';
+    // delay: escolhe a maior unidade exata (h > min > s)
+    const ds = parseInt(s.delay_seconds, 10) || 0;
+    if (ds && ds % 3600 === 0) { document.getElementById('csDelayValue').value = ds / 3600; document.getElementById('csDelayUnit').value = '3600'; }
+    else if (ds && ds % 60 === 0) { document.getElementById('csDelayValue').value = ds / 60; document.getElementById('csDelayUnit').value = '60'; }
+    else { document.getElementById('csDelayValue').value = ds || 10; document.getElementById('csDelayUnit').value = ds && ds < 60 ? '1' : '60'; }
     const rows = document.getElementById('csButtonRows');
     rows.innerHTML = '';
     (Array.isArray(s.buttons) ? s.buttons : []).forEach(b => addChatBtnRow(b.label, b.goto));
@@ -14500,6 +14532,9 @@ async function saveChatStep(e) {
         typing_ms: parseInt(document.getElementById('csTyping').value, 10) || 1200,
         step_key: document.getElementById('csKey').value.trim() || null,
         goto_key: document.getElementById('csGoto').value.trim() || null,
+        delay_seconds: type === 'delay'
+            ? (Math.max(1, parseInt(document.getElementById('csDelayValue').value, 10) || 0) * parseInt(document.getElementById('csDelayUnit').value, 10))
+            : 0,
     };
     try {
         const url = id ? '/api/admin/chats/'+_curChatId+'/steps/'+id : '/api/admin/chats/'+_curChatId+'/steps';

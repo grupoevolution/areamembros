@@ -161,6 +161,24 @@ async function runScript(session, chat, steps, idx, ident) {
             awaiting = 'input';
             break;
         }
+        if (s.type === 'delay') {
+            // PAUSA o roteiro: marca quando retomar. O worker (app fechado) ou
+            // o poll (app aberto) seguem a partir do PRÓXIMO bloco no horário.
+            const secs = Math.max(1, Math.min(7 * 24 * 3600, parseInt(s.delay_seconds, 10) || 0));
+            const j = keyIndex(steps, s.goto_key);
+            const resumeIdx = j >= 0 ? j : idx + 1;
+            awaiting = 'delay';
+            const { rows: rr } = await db.query(
+                `UPDATE chat_sessions SET current_order = $2, awaiting = 'delay',
+                 resume_at = NOW() + make_interval(secs => $3), updated_at = NOW() WHERE id = $1
+                 RETURNING resume_at`,
+                [session.id, resumeIdx, secs]
+            );
+            session.current_order = resumeIdx;
+            session.awaiting = 'delay';
+            session.resume_at = rr[0] ? rr[0].resume_at : null;
+            return out; // sai sem o UPDATE final (já gravamos resume_at aqui)
+        }
         let type = s.type, content = null, media = null, meta = { typing_ms: typing };
         if (s.type === 'text') content = await fillVars(s.content, ident);
         else if (s.type === 'audio') { media = s.media_url; }
@@ -218,8 +236,9 @@ router.get('/chats', optionalUser, async (req, res) => {
         for (const c of chats) {
             const owns = await ownsProduct(ident.email, c.product_id);
             const perm = permissions(c, owns, ident);
-            // preview da última mensagem da sessão desse cliente (se houver)
+            // preview da última mensagem + não-lidas (bot, após last_seen_at)
             let last = null;
+            let unread = 0;
             const session = await findOrCreateSession(c.id, ident, false);
             if (session) {
                 const { rows: lm } = await db.query(
@@ -238,6 +257,13 @@ router.get('/chats', optionalUser, async (req, res) => {
                         at: lm[0].created_at,
                     };
                 }
+                const { rows: ur } = await db.query(
+                    `SELECT COUNT(*)::int AS n FROM chat_messages
+                     WHERE session_id = $1 AND sender = 'bot'
+                       AND ($2::timestamptz IS NULL OR created_at > $2)`,
+                    [session.id, session.last_seen_at]
+                );
+                unread = ur[0]?.n || 0;
             }
             out.push({
                 id: c.id,
@@ -249,6 +275,7 @@ router.get('/chats', optionalUser, async (req, res) => {
                 locked: perm.locked,
                 unlock: perm.unlock,
                 last,
+                unread,
             });
         }
         return res.json({ success: true, chats: out });
@@ -290,6 +317,9 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         let fresh = [];
         if (history.length === 0 && steps.length > 0) {
             fresh = await runScript(session, chat, steps, 0, ident);
+        } else if (session.awaiting === 'delay' && session.resume_at && new Date(session.resume_at) <= new Date()) {
+            // Delay já venceu e o cliente abriu a conversa: retoma na hora
+            fresh = await runScript(session, chat, steps, session.current_order, ident);
         }
         const all = history.concat(fresh).map(publicMsg);
         // histórico antigo não "re-digita": typing só nas mensagens novas
@@ -297,12 +327,15 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         for (const m of all) {
             if (!freshIds.has(m.id) && m.meta && m.meta.typing_ms) m.meta.typing_ms = 0;
         }
+        // Abrir = ler tudo até agora (zera não-lidas)
+        await db.query(`UPDATE chat_sessions SET last_seen_at = NOW() WHERE id = $1`, [session.id]);
         return res.json({
             success: true,
             chat: persona,
             permissions: perm,
             messages: all,
             awaiting: session.awaiting,
+            resume_at: session.awaiting === 'delay' ? session.resume_at : null,
         });
     } catch (err) {
         logger.error('Erro abrindo chat:', err);
@@ -365,14 +398,50 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
             return res.status(400).json({ success: false, error: 'Nada pra processar' });
         }
 
+        // Cliente interagiu = leu o que veio antes; só as mensagens novas do
+        // bot (geradas agora) é que contam como não-lidas até ele ver.
+        await db.query(`UPDATE chat_sessions SET last_seen_at = NOW() WHERE id = $1`, [session.id]);
         return res.json({
             success: true,
             messages: newMsgs.map(publicMsg),
             awaiting: session.awaiting,
+            resume_at: session.awaiting === 'delay' ? session.resume_at : null,
         });
     } catch (err) {
         logger.error('Erro no advance do chat:', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// GET /chats/:id/poll?after=<msgId> — mensagens novas (usado quando a conversa
+// está aberta e o roteiro tem delay: o app busca o que o bot mandou desde então)
+router.get('/chats/:id/poll', optionalUser, async (req, res) => {
+    const chatId = parseInt(req.params.id, 10);
+    const after = parseInt(req.query.after, 10) || 0;
+    if (!chatId) return res.json({ success: false });
+    try {
+        const ident = getIdentity(req);
+        const session = await findOrCreateSession(chatId, ident, false);
+        if (!session) return res.json({ success: true, messages: [], awaiting: null });
+
+        // Se o delay venceu, retoma o roteiro AGORA (cliente está com a tela aberta)
+        if (session.awaiting === 'delay' && session.resume_at && new Date(session.resume_at) <= new Date()) {
+            const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
+            if (cr.length) {
+                const steps = await loadSteps(chatId);
+                await runScript(session, cr[0], steps, session.current_order, ident);
+            }
+        }
+        const { rows: msgs } = await db.query(
+            `SELECT * FROM chat_messages WHERE session_id = $1 AND id > $2 ORDER BY id`,
+            [session.id, after]
+        );
+        if (msgs.length) {
+            await db.query(`UPDATE chat_sessions SET last_seen_at = NOW() WHERE id = $1`, [session.id]);
+        }
+        return res.json({ success: true, messages: msgs.map(publicMsg), awaiting: session.awaiting });
+    } catch (err) {
+        return res.json({ success: false });
     }
 });
 
@@ -438,4 +507,45 @@ router.post('/chats/:id/photo', optionalUser, (req, res) => {
     });
 });
 
+// ── Retomada de delays (chamada pelo worker — app fechado) ───────────────────
+// Pega sessões cujo delay venceu, continua o roteiro do ponto pausado e
+// devolve as mensagens novas + dados pro push. Reusa o MESMO motor (runScript).
+async function resumeDelayed(limit) {
+    const { rows: due } = await db.query(`
+        UPDATE chat_sessions SET awaiting = 'resuming'
+        WHERE id IN (
+            SELECT id FROM chat_sessions
+            WHERE awaiting = 'delay' AND resume_at IS NOT NULL AND resume_at <= NOW()
+            ORDER BY resume_at LIMIT $1 FOR UPDATE SKIP LOCKED
+        ) RETURNING *
+    `, [limit || 30]);
+
+    const results = [];
+    for (const session of due) {
+        try {
+            const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [session.chat_id]);
+            if (!cr.length) {
+                await db.query(`UPDATE chat_sessions SET awaiting = NULL WHERE id = $1`, [session.id]);
+                continue;
+            }
+            const chat = cr[0];
+            const ident = {
+                email: session.customer_email && !String(session.customer_email).endsWith('@preview.local') ? String(session.customer_email).toLowerCase() : null,
+                visitor: session.visitor_id || null,
+            };
+            const steps = await loadSteps(session.chat_id);
+            session.awaiting = 'delay'; // runScript lê/sobrescreve normalmente
+            const fresh = await runScript(session, chat, steps, session.current_order, ident);
+            if (fresh.length) {
+                results.push({ session, chat, messages: fresh, email: ident.email });
+            }
+        } catch (err) {
+            logger.warn('[chat] resumeDelayed falhou na sessão ' + session.id + ': ' + err.message);
+            await db.query(`UPDATE chat_sessions SET awaiting = NULL WHERE id = $1`, [session.id]).catch(() => {});
+        }
+    }
+    return results;
+}
+
 module.exports = router;
+module.exports.resumeDelayed = resumeDelayed;

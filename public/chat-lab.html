@@ -274,7 +274,10 @@ async function loadList() {
                     ? '<div class="pv vip">Desbloqueie com o VIP →</div>'
                     : c.last ? '<div class="pv">' + esc(c.last.preview) + '</div>'
                     : '<div class="pv online">' + esc(c.status_label || 'online') + '</div>';
-                const tm = c.last ? '<div class="tm">' + hhmm(c.last.at) + '</div>' : '';
+                const badge = (!c.locked && c.unread > 0)
+                    ? '<span style="display:inline-flex;min-width:18px;height:18px;border-radius:999px;background:#25D366;color:#fff;font-size:10px;font-weight:600;align-items:center;justify-content:center;padding:0 5px;margin-top:3px;">' + (c.unread > 99 ? '99+' : c.unread) + '</span>'
+                    : '';
+                const tm = (c.last || badge) ? '<div class="tm" style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">' + (c.last ? '<span'+(badge?' style="color:#1fa855;font-weight:600;"':'')+'>' + hhmm(c.last.at) + '</span>' : '') + badge + '</div>' : '';
                 html += '<div class="chat-row" onclick="openChat(' + c.id + ')">' + av
                     + '<div class="mid"><div class="nm">' + esc(c.name) + '</div>' + pv + '</div>' + tm + '</div>';
             }
@@ -287,7 +290,27 @@ async function loadList() {
 }
 
 // ═══════════════ CONVERSA ═══════════════
+let LAST_ID = 0;     // maior id de mensagem já visto (pro poll)
+let POLL_TIMER = null;
+function stopPoll() { if (POLL_TIMER) { clearInterval(POLL_TIMER); POLL_TIMER = null; } }
+function startPoll() {
+    stopPoll();
+    POLL_TIMER = setInterval(async () => {
+        if (!CUR) { stopPoll(); return; }
+        try {
+            const r = await fetch('/api/user/chats/' + CUR.id + '/poll?after=' + LAST_ID + '&visitor_id=' + VID, { credentials: 'include' });
+            const data = await r.json();
+            if (data.success && Array.isArray(data.messages) && data.messages.length) {
+                enqueueMessages(data.messages, data.awaiting);
+            }
+            // para de pollar quando não há mais delay pendente
+            if (data.awaiting !== 'delay' && (!data.messages || !data.messages.length)) stopPoll();
+        } catch (_) {}
+    }, 4000);
+}
+
 function backToList() {
+    stopPoll();
     document.getElementById('viewChat').classList.remove('active');
     document.getElementById('viewList').classList.add('active');
     CUR = null; QUEUE.length = 0; RENDERING = false;
@@ -295,11 +318,12 @@ function backToList() {
 }
 
 async function openChat(id) {
+    stopPoll();
     document.getElementById('viewList').classList.remove('active');
     document.getElementById('viewChat').classList.add('active');
     const body = document.getElementById('chatBody');
     body.innerHTML = '<div class="day-pill">HOJE</div><div class="crypt-pill" style="display:flex;align-items:center;gap:5px;justify-content:center;">' + ICO.lock(11, '#b08a4a') + ' Suas mensagens são protegidas</div>';
-    SEEN_IDS = new Set(); QUEUE.length = 0; RENDERING = false;
+    SEEN_IDS = new Set(); QUEUE.length = 0; RENDERING = false; LAST_ID = 0;
     document.getElementById('choices').style.display = 'none';
     document.getElementById('lockedPane').style.display = 'none';
     body.style.display = 'flex';
@@ -331,6 +355,7 @@ function enqueueMessages(msgs, awaiting) {
     for (const m of msgs || []) {
         if (SEEN_IDS.has(m.id)) continue;
         SEEN_IDS.add(m.id);
+        if (m.id > LAST_ID) LAST_ID = m.id;
         QUEUE.push(m);
     }
     QUEUE._awaiting = awaiting;
@@ -358,6 +383,8 @@ async function drainQueue() {
     }
     RENDERING = false;
     renderChoices(QUEUE._awaiting);
+    // roteiro pausado num "Esperar": fica pollando até a mensagem chegar
+    if (QUEUE._awaiting === 'delay') startPoll(); else if (QUEUE._awaiting !== 'delay') stopPoll();
 }
 
 function tickHtml(m) {
