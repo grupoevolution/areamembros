@@ -1377,34 +1377,21 @@ body.is-slowconn .prod-cta-fixed {
 }
 .fab-wrap {
     position: relative; flex: 1;
-    display: flex; justify-content: center;
-    margin-top: -24px;
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+    gap: 3px; padding: 6px 4px;
 }
 .fab {
-    width: 54px; height: 54px;
+    width: 40px; height: 40px;
     border-radius: 50%;
     background: linear-gradient(135deg, #ff3840, #e50914);
-    border: 3px solid #000;
+    border: none;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
-    box-shadow: 0 8px 24px rgba(229,9,20,0.5);
-    animation: fabPulse 2.5s ease-in-out infinite;
+    box-shadow: 0 2px 10px rgba(229,9,20,0.45);
     position: relative;
 }
-@keyframes fabPulse {
-    0%, 100% { box-shadow: 0 8px 24px rgba(229,9,20,0.5); }
-    50% { box-shadow: 0 8px 36px rgba(229,9,20,0.9); }
-}
-.fab::before {
-    content: ''; position: absolute;
-    inset: -4px; border-radius: 50%;
-    border: 2px solid rgba(255,56,64,0.4);
-    animation: fabRing 2.5s ease-in-out infinite;
-}
-@keyframes fabRing {
-    0% { transform: scale(1); opacity: 0.6; }
-    100% { transform: scale(1.3); opacity: 0; }
-}
+.fab svg { width: 18px; height: 18px; }
+.fab-label { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--red-bright); }
 .fab svg { width: 22px; height: 22px; color: #fff; }
 
 /* ================== PRODUCT PAGE ================== */
@@ -8175,6 +8162,21 @@ body.is-slowconn .prod-cta-fixed {
 .ca-viewer .top button { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; }
 .ca-viewer .media { flex: 1; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .ca-viewer img, .ca-viewer video { max-width: 100%; max-height: 100%; }
+/* visualizador de foto enquadrado (perfil estilo WhatsApp) */
+.ca-photo-viewer { position: fixed; inset: 0; background: rgba(0,0,0,.92); z-index: 700; display: none; flex-direction: column; }
+.ca-photo-viewer.show { display: flex; }
+.ca-photo-viewer .pv-top { display: flex; align-items: center; gap: 12px; padding: calc(14px + env(safe-area-inset-top)) 16px 14px; color: #fff; }
+.ca-photo-viewer .pv-top .pv-name { flex: 1; font-size: 16px; font-weight: 600; }
+.ca-photo-viewer .pv-top button { background: none; border: none; color: #fff; font-size: 26px; cursor: pointer; line-height: 1; }
+.ca-photo-viewer .pv-body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.ca-photo-viewer .pv-body img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+/* chamada saindo — anel pulsante */
+.ca-ring { position: relative; width: 132px; height: 132px; display: flex; align-items: center; justify-content: center; }
+.ca-ring-av { width: 120px; height: 120px; border-radius: 50%; background: #3a2a2c center/cover no-repeat; border: 3px solid rgba(255,255,255,.25); }
+.ca-ring-pulse { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(229,9,20,.6); animation: caRing 2s ease-out infinite; }
+@keyframes caRing { 0% { transform: scale(.85); opacity: .8; } 100% { transform: scale(1.45); opacity: 0; } }
+/* ícone da foto 1x — um pouco maior */
+.ca-vonce .circ { width: 44px; height: 44px; }
 </style>
 
 <div class="screen" id="chat">
@@ -8190,7 +8192,7 @@ body.is-slowconn .prod-cta-fixed {
 <div class="screen" id="chatconv">
     <div class="ca-ch-header">
         <button class="back" onclick="ChatApp.back()">‹</button>
-        <div class="av" id="caAv"><span class="dot" id="caDot"></span></div>
+        <div class="av" id="caAv" onclick="ChatApp.openProfile()" style="cursor:pointer;"><span class="dot" id="caDot"></span></div>
         <div class="mid">
             <div class="nm" id="caName">—</div>
             <div class="st" id="caStatus">online</div>
@@ -8232,6 +8234,14 @@ body.is-slowconn .prod-cta-fixed {
     </div>
     <div class="media" id="caViewerMedia"></div>
 </div>
+<!-- Visualizador de foto de perfil (enquadrado, estilo WhatsApp) -->
+<div class="ca-photo-viewer" id="caPhotoViewer">
+    <div class="pv-top">
+        <button onclick="ChatApp.closeProfile()" aria-label="Voltar">‹</button>
+        <span class="pv-name" id="caPhotoName"></span>
+    </div>
+    <div class="pv-body"><img id="caPhotoImg" src="" alt=""></div>
+</div>
 
 <div class="bottom-nav" id="bottomNav">
     <button class="nav-item active" data-nav="home">
@@ -8243,10 +8253,11 @@ body.is-slowconn .prod-cta-fixed {
         <div class="nav-label">Conversas</div>
         <span class="nav-dot" id="chatNavDot" style="display:none;"></span>
     </button>
-    <div class="fab-wrap">
-        <button class="fab" onclick="switchScreen('library')" aria-label="Meus conteúdos">
-            <svg fill="currentColor" viewBox="0 0 24 24"><path d="M4 6H2v14a2 2 0 002 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2zm-9 11V5l6 4.5-6 4.5z"/></svg>
+    <div class="fab-wrap" onclick="switchScreen('library')">
+        <button class="fab" aria-label="Meus conteúdos">
+            <svg fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
         </button>
+        <div class="fab-label">Conteúdos</div>
     </div>
     <button class="nav-item" id="navSoon" style="opacity:.45;" onclick="showSoonToast()">
         <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8-5-3.6-5 3.6 1.9-5.8L4 8.8h6.1L12 3z"/></svg>
@@ -8845,10 +8856,11 @@ window.ChatApp = (function() {
             }
             const face = (CUR && CUR.chat.avatar_url) ? ' style="background-image:url(\'' + esc(CUR.chat.avatar_url) + '\')"' : '';
             d.innerHTML = '<div class="ca-audio"><div class="face"' + face + '><span class="mic">' + ICO.mic + '</span></div>'
-                + '<button class="play" data-audio-url="' + esc(m.media_url || '') + '">' + ICO.play + '</button>'
+                + '<button class="play">' + ICO.play + '</button>'
                 + '<span class="wave">' + bars + '</span></div>'
-                + '<div class="ca-audio-meta"><span class="dur">áudio</span><span>' + hhmm(m.created_at) + '</span></div>';
-            d.querySelector('.play').addEventListener('click', function() { playAudio(this, this.dataset.audioUrl); });
+                + '<div class="ca-audio-meta"><span class="dur">0:00</span><span>' + hhmm(m.created_at) + '</span></div>'
+                + '<audio class="ca-aud" src="' + esc(m.media_url || '') + '" preload="none" playsinline></audio>';
+            d.querySelector('.play').addEventListener('click', () => toggleAudio(d));
         } else if (m.type === 'image') {
             d.className = 'ca-bub' + (mine ? ' mine' : '');
             d.innerHTML = (m.media_url ? '<img class="photo" src="' + esc(m.media_url) + '" alt="" loading="lazy">' : '')
@@ -8980,13 +8992,13 @@ window.ChatApp = (function() {
     function closeGate() { const o = document.getElementById('caGate'); if (o) o.style.display = 'none'; }
     function gateEmail(action) {
         const o = gateOverlay(
-            '<div style="width:54px;height:54px;border-radius:50%;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;"><svg width="26" height="26" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>'
-            + '<div style="font-size:17px;font-weight:700;color:#111;margin-bottom:6px;">Pra ver, é só o e-mail 😏</div>'
-            + '<div style="font-size:12.5px;color:#777;line-height:1.5;margin-bottom:14px;">Digite seu e-mail pra desbloquear o acesso a todas as fotos e vídeos.</div>'
-            + '<input id="caGateEmail" type="email" inputmode="email" placeholder="seu@email.com" style="width:100%;border:1.5px solid #ddd;border-radius:10px;padding:12px;font-size:15px;outline:none;margin-bottom:6px;text-align:center;">'
-            + '<div id="caGateErr" style="font-size:11.5px;color:#e50914;min-height:14px;margin-bottom:6px;"></div>'
-            + '<button id="caGateBtn" style="width:100%;background:#e50914;border:none;color:#fff;font-size:14px;font-weight:700;padding:13px;border-radius:10px;cursor:pointer;">VER AGORA</button>'
-            + '<div style="font-size:10px;color:#999;margin-top:8px;">100% grátis · sem cartão</div>'
+            '<div style="width:56px;height:56px;border-radius:50%;background:rgba(229,9,20,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"><svg width="26" height="26" fill="none" stroke="#e50914" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>'
+            + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">Liberar o conteúdo</div>'
+            + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:16px;">Informe seu e-mail pra desbloquear o acesso a todas as fotos e vídeos.</div>'
+            + '<input id="caGateEmail" type="email" inputmode="email" placeholder="seu@email.com" style="width:100%;border:1.5px solid #e2e2e2;border-radius:12px;padding:13px;font-size:15px;outline:none;margin-bottom:6px;text-align:center;">'
+            + '<div id="caGateErr" style="font-size:12px;color:#e50914;min-height:15px;margin-bottom:6px;"></div>'
+            + '<button id="caGateBtn" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;">Liberar acesso</button>'
+            + '<div style="font-size:11px;color:#999;margin-top:10px;">Acesso gratuito · sem cartão</div>'
         );
         const inp = o.querySelector('#caGateEmail');
         const btn = o.querySelector('#caGateBtn');
@@ -9007,8 +9019,8 @@ window.ChatApp = (function() {
                     try { document.body.classList.remove('funnel-mode'); } catch(_) {}
                     try { if (window.PUSH && Notification.permission === 'granted') PUSH.subscribe(); } catch(_) {}
                     gateInstall(action);
-                } else { err.textContent = d.error || 'Erro, tente de novo.'; btn.disabled = false; btn.textContent = 'VER AGORA'; }
-            } catch (_) { err.textContent = 'Erro de conexão.'; btn.disabled = false; btn.textContent = 'VER AGORA'; }
+                } else { err.textContent = d.error || 'Erro, tente de novo.'; btn.disabled = false; btn.textContent = 'Liberar acesso'; }
+            } catch (_) { err.textContent = 'Erro de conexão.'; btn.disabled = false; btn.textContent = 'Liberar acesso'; }
         };
         btn.addEventListener('click', submit);
         inp.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
@@ -9017,11 +9029,11 @@ window.ChatApp = (function() {
         if (isStandalone() || _gateInstalled) { closeGate(); action(); return; }
         const dp = window.deferredPrompt;
         gateOverlay(
-            '<div style="width:54px;height:54px;border-radius:14px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:26px;font-weight:800;color:#fff;">M</div>'
-            + '<div style="font-size:17px;font-weight:700;color:#111;margin-bottom:6px;">Quase lá! 🔥</div>'
-            + '<div style="font-size:12.5px;color:#777;line-height:1.5;margin-bottom:14px;">Pra ver o conteúdo, adicione o app à tela inicial. É 1 toque e você não perde o acesso.</div>'
-            + '<button id="caGateInstall" style="width:100%;background:#e50914;border:none;color:#fff;font-size:14px;font-weight:700;padding:13px;border-radius:10px;cursor:pointer;">📲 ADICIONAR E VER</button>'
-            + '<button id="caGateSkip" style="width:100%;background:none;border:none;color:#999;font-size:12px;padding:10px;margin-top:4px;cursor:pointer;">Continuar mesmo assim</button>'
+            '<div style="width:56px;height:56px;border-radius:16px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;font-weight:800;color:#fff;">M</div>'
+            + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">Falta um passo</div>'
+            + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:16px;">Adicione o app à tela inicial pra ver o conteúdo e não perder o acesso. É só um toque.</div>'
+            + '<button id="caGateInstall" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;">Adicionar e ver</button>'
+            + '<button id="caGateSkip" style="width:100%;background:none;border:none;color:#999;font-size:13px;padding:11px;margin-top:4px;cursor:pointer;">Continuar mesmo assim</button>'
         );
         const proceed = () => { _gateInstalled = true; closeGate(); action(); };
         document.getElementById('caGateInstall').addEventListener('click', () => {
@@ -9060,95 +9072,168 @@ window.ChatApp = (function() {
         await api('/api/user/chats/messages/' + id + '/viewed');
     }
 
-    let audioEl = null, audioBtn = null, audioWave = null, audioIv = null;
-    function playAudio(btn, url) {
-        if (!url) return;
-        if (audioEl && audioBtn === btn) {
-            if (audioEl.paused) { audioEl.play(); btn.innerHTML = ICO.pause; }
-            else { audioEl.pause(); btn.innerHTML = ICO.play; }
-            return;
+    // Áudio via <audio> no DOM (confiável no iOS). Um por vez.
+    let curAudioBubble = null;
+    function fmtSec(s) { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+    function toggleAudio(bubble) {
+        const au = bubble.querySelector('.ca-aud');
+        const btn = bubble.querySelector('.play');
+        if (!au || !btn) return;
+        if (!au.paused) { au.pause(); btn.innerHTML = ICO.play; return; }
+        // pausa qualquer outro tocando
+        if (curAudioBubble && curAudioBubble !== bubble) {
+            const o = curAudioBubble.querySelector('.ca-aud'); const ob = curAudioBubble.querySelector('.play');
+            if (o) { try { o.pause(); } catch(_) {} } if (ob) ob.innerHTML = ICO.play;
         }
-        stopAudio();
-        audioEl = new Audio(url);
-        audioBtn = btn;
-        audioWave = btn.parentNode.querySelector('.wave');
+        curAudioBubble = bubble;
+        const wave = bubble.querySelector('.wave');
+        const durEl = bubble.querySelector('.dur');
+        if (!au._wired) {
+            au._wired = true;
+            au.addEventListener('timeupdate', () => {
+                const pct = au.duration ? au.currentTime / au.duration : 0;
+                const bars = wave ? wave.querySelectorAll('i') : [];
+                const cut = Math.round(pct * bars.length);
+                bars.forEach((b, i) => b.classList.toggle('on', i < cut));
+                if (durEl) durEl.textContent = fmtSec(au.duration ? (au.duration - au.currentTime) : 0);
+            });
+            au.addEventListener('loadedmetadata', () => { if (durEl && isFinite(au.duration)) durEl.textContent = fmtSec(au.duration); });
+            au.addEventListener('ended', () => { btn.innerHTML = ICO.play; if (wave) wave.querySelectorAll('i').forEach(b => b.classList.remove('on')); if (durEl) durEl.textContent = fmtSec(au.duration); });
+            au.addEventListener('error', () => { btn.innerHTML = ICO.play; if (durEl) durEl.textContent = 'erro ao carregar'; });
+        }
         btn.innerHTML = ICO.pause;
-        audioEl.play().catch(() => { btn.innerHTML = ICO.play; });
-        audioIv = setInterval(() => {
-            if (!audioEl || !audioWave) return;
-            const pct = audioEl.duration ? audioEl.currentTime / audioEl.duration : 0;
-            const bars = audioWave.querySelectorAll('i');
-            const cut = Math.round(pct * bars.length);
-            bars.forEach((b, i) => b.classList.toggle('on', i < cut));
-        }, 200);
-        audioEl.addEventListener('ended', () => {
-            btn.innerHTML = ICO.play;
-            if (audioWave) audioWave.querySelectorAll('i').forEach(b => b.classList.remove('on'));
-            clearInterval(audioIv);
-        });
+        const p = au.play();
+        if (p && p.catch) p.catch(() => { btn.innerHTML = ICO.play; if (durEl) durEl.textContent = 'toque pra ouvir'; });
     }
     function stopAudio() {
-        if (audioEl) { try { audioEl.pause(); } catch(_) {} }
-        if (audioBtn) audioBtn.innerHTML = ICO.play;
-        if (audioWave) audioWave.querySelectorAll('i').forEach(b => b.classList.remove('on'));
-        clearInterval(audioIv);
-        audioEl = null; audioBtn = null; audioWave = null;
+        if (curAudioBubble) {
+            const o = curAudioBubble.querySelector('.ca-aud'); const ob = curAudioBubble.querySelector('.play');
+            if (o) { try { o.pause(); } catch(_) {} } if (ob) ob.innerHTML = ICO.play;
+        }
+        curAudioBubble = null;
     }
 
     function onCall() {
         if (!CUR) return;
         const chat = CUR.chat;
-        if (!chat.has_call || !chat.video_call) { showSoonToast('Ela não pode atender agora...'); return; }
-        if (CUR.perm && CUR.perm.is_vip) {
-            // VIP: atende de verdade (usa a chamadinha do sistema)
-            try { window.VideoCall.open(chat.video_call, { skipSeenGuard: true }); } catch(_) {}
-            return;
-        }
-        // não-VIP: 1ª vez vê a chamada "atendida" borrada com aviso; depois só o aviso
-        if (CUR.callSeen) { nonVipCallToast(); return; }
-        CUR.callSeen = true;
-        try { api('/api/user/chats/' + CUR.id + '/call-seen'); } catch(_) {}
-        nonVipCallScreen(chat);
+        if (!chat.has_call || !chat.video_call) { showSoonToast('Ela não pode atender agora'); return; }
+        const isVip = !!(CUR.perm && CUR.perm.is_vip);
+        // não-VIP que já tentou: vai direto pro popup (sem repetir o "chamando")
+        if (!isVip && CUR.callSeen) { showCallVipPopup(chat); return; }
+        outgoingCall(chat, isVip);
     }
-    function nonVipCallToast() {
-        const u = CUR && CUR.chat;
-        const url = (u && u.checkout_url) || null;
-        showSoonToast('Vira VIP pra ela te atender 😘');
-        if (url) setTimeout(() => { if (confirm('Desbloquear VIP pra falar e ligar pra ' + (u.name||'ela') + '?')) window.open(url, '_blank', 'noopener'); }, 400);
+
+    // Tela de "chamando..." (ELE liga PRA ela) — anel pulsando + toque
+    let _ringTimer = null, _ringCtx = null;
+    function startRingback() {
+        try {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!AC) return;
+            _ringCtx = new AC();
+            if (_ringCtx.resume) _ringCtx.resume();
+            const beep = () => {
+                if (!_ringCtx) return;
+                const o = _ringCtx.createOscillator(), g = _ringCtx.createGain();
+                o.frequency.value = 425; o.connect(g); g.connect(_ringCtx.destination);
+                const t = _ringCtx.currentTime;
+                g.gain.setValueAtTime(0.0001, t);
+                g.gain.exponentialRampToValueAtTime(0.18, t + 0.06);
+                g.gain.exponentialRampToValueAtTime(0.0001, t + 1.0);
+                o.start(t); o.stop(t + 1.05);
+            };
+            beep();
+            _ringTimer = setInterval(beep, 5000); // padrão Brasil: ~1s toque / 4s silêncio
+        } catch (_) {}
+        try { if (navigator.vibrate) navigator.vibrate([400, 200, 400, 1200]); } catch (_) {}
     }
-    function nonVipCallScreen(chat) {
-        const photo = (chat.video_call && chat.video_call.model_photo) || chat.avatar_url || '';
+    function stopRingback() {
+        try { if (_ringTimer) clearInterval(_ringTimer); } catch (_) {}
+        try { if (_ringCtx && _ringCtx.close) _ringCtx.close(); } catch (_) {}
+        _ringTimer = null; _ringCtx = null;
+        try { if (navigator.vibrate) navigator.vibrate(0); } catch (_) {}
+    }
+    function closeCallScreen() {
+        stopRingback();
+        const o = document.getElementById('caCallScr');
+        if (o) o.style.display = 'none';
+    }
+    function outgoingCall(chat, isVip) {
+        const photo = ((chat.video_call && chat.video_call.model_photo) || chat.avatar_url || '').replace(/'/g, '');
         let o = document.getElementById('caCallScr');
         if (!o) { o = document.createElement('div'); o.id = 'caCallScr'; document.body.appendChild(o); }
-        o.style.cssText = 'position:fixed;inset:0;z-index:730;background:#0a0405;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;';
+        o.style.cssText = 'position:fixed;inset:0;z-index:730;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;background:#0c0708;overflow:hidden;';
         o.innerHTML = ''
-            + '<div style="position:absolute;inset:0;background:#1a0a0c center/cover no-repeat;'+(photo?'background-image:url(\''+photo.replace(/'/g,'')+'\');':'')+'filter:blur(26px) brightness(.5);transform:scale(1.15);"></div>'
-            + '<div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px;">'
-            +   '<div id="caCallState" style="font-size:13px;color:rgba(255,255,255,.8);">chamando...</div>'
-            +   '<div style="font-size:22px;font-weight:700;color:#fff;">' + esc(chat.name) + '</div>'
-            +   '<div id="caCallPopup" style="display:none;margin-top:16px;background:rgba(0,0,0,.55);border:1px solid rgba(229,9,20,.4);border-radius:16px;padding:18px;max-width:300px;">'
-            +     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">💎 Ela atende só no VIP</div>'
-            +     '<div style="font-size:12.5px;color:rgba(255,255,255,.8);line-height:1.5;margin-bottom:12px;">Vira VIP pra ' + esc(chat.name) + ' te atender ao vivo, sem censura.</div>'
-            +     '<button id="caCallVip" style="width:100%;background:#e50914;border:none;color:#fff;font-size:14px;font-weight:700;padding:12px;border-radius:10px;cursor:pointer;">DESBLOQUEAR VIP →</button>'
-            +     '<button id="caCallClose" style="width:100%;background:none;border:none;color:rgba(255,255,255,.6);font-size:12px;padding:10px;margin-top:2px;cursor:pointer;">Agora não</button>'
-            +   '</div>'
+            + '<div style="position:absolute;inset:0;background:#1a0e10 center/cover no-repeat;' + (photo ? 'background-image:url(\'' + photo + '\');' : '') + 'filter:brightness(.45);"></div>'
+            + '<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,7,8,.55),rgba(12,7,8,.2) 40%,rgba(12,7,8,.92));"></div>'
+            + '<div style="position:relative;z-index:2;padding-top:calc(64px + env(safe-area-inset-top));display:flex;flex-direction:column;align-items:center;gap:8px;">'
+            +   '<div id="caCallState" style="font-size:14px;color:rgba(255,255,255,.85);letter-spacing:.02em;">chamando...</div>'
+            +   '<div style="font-size:26px;font-weight:700;color:#fff;">' + esc(chat.name) + '</div>'
+            + '</div>'
+            + '<div style="position:relative;z-index:2;">'
+            +   '<div class="ca-ring"><div class="ca-ring-pulse"></div><div class="ca-ring-pulse" style="animation-delay:1s"></div>'
+            +     '<div class="ca-ring-av"' + (photo ? ' style="background-image:url(\'' + photo + '\')"' : '') + '></div></div>'
+            + '</div>'
+            + '<div style="position:relative;z-index:2;padding-bottom:calc(54px + env(safe-area-inset-bottom));">'
+            +   '<button id="caCallHang" aria-label="Desligar" style="width:64px;height:64px;border-radius:50%;background:#e53935;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.5);">'
+            +     '<svg width="28" height="28" fill="#fff" viewBox="0 0 24 24" style="transform:rotate(135deg)"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24 11.36 11.36 0 003.57.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z"/></svg>'
+            +   '</button>'
             + '</div>';
         o.style.display = 'flex';
-        // "toca" 2.2s, "atende" borrado e revela o popup
-        setTimeout(() => {
+        startRingback();
+        o.querySelector('#caCallHang').onclick = closeCallScreen;
+        // "toca" ~5s e atende
+        clearTimeout(o._t1); clearTimeout(o._t2);
+        o._t1 = setTimeout(() => {
             const st = document.getElementById('caCallState');
-            if (st) st.textContent = 'conectada · vídeo bloqueado';
-            const pop = document.getElementById('caCallPopup');
-            if (pop) pop.style.display = 'block';
-        }, 2200);
-        o.querySelector('#caCallVip').onclick = () => { const url = chat.checkout_url; o.style.display = 'none'; if (url) window.open(url, '_blank', 'noopener'); else unlock(); };
-        o.querySelector('#caCallClose').onclick = () => { o.style.display = 'none'; };
+            if (st) st.textContent = 'conectando...';
+        }, 5000);
+        o._t2 = setTimeout(() => {
+            stopRingback();
+            if (isVip) {
+                closeCallScreen();
+                try { window.VideoCall.open(chat.video_call, { skipSeenGuard: true }); } catch (_) {}
+            } else {
+                CUR.callSeen = true;
+                try { api('/api/user/chats/' + CUR.id + '/call-seen'); } catch (_) {}
+                showCallVipPopup(chat);
+            }
+        }, 6200);
+    }
+    // Popup VIP da chamada — limpo, com cara de app, sem emoji
+    function showCallVipPopup(chat) {
+        closeCallScreen();
+        let o = document.getElementById('caCallPop');
+        if (!o) { o = document.createElement('div'); o.id = 'caCallPop'; document.body.appendChild(o); }
+        o.style.cssText = 'position:fixed;inset:0;z-index:740;background:rgba(13,5,6,.82);display:flex;align-items:flex-end;justify-content:center;padding:0;';
+        o.innerHTML = '<div style="background:#15090b;border-top:1px solid rgba(229,9,20,.35);border-radius:22px 22px 0 0;width:100%;max-width:520px;padding:26px 22px calc(26px + env(safe-area-inset-bottom));text-align:center;box-shadow:0 -16px 50px rgba(0,0,0,.6);">'
+            + '<div style="width:58px;height:58px;border-radius:50%;background:rgba(229,9,20,.14);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"><svg width="28" height="28" fill="none" stroke="#e50914" stroke-width="2" viewBox="0 0 24 24"><path d="M15 10l4.55-2.27A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 6h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg></div>'
+            + '<div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:8px;">Chamada exclusiva</div>'
+            + '<div style="font-size:13.5px;color:rgba(255,255,255,.7);line-height:1.55;margin-bottom:20px;">Só assinantes VIP podem falar com a ' + esc(chat.name) + ' ao vivo. Libere o acesso e ligue quando quiser.</div>'
+            + '<button id="caCallPopVip" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:15px;border-radius:12px;cursor:pointer;">Liberar acesso VIP</button>'
+            + '<button id="caCallPopClose" style="width:100%;background:none;border:none;color:rgba(255,255,255,.55);font-size:13px;padding:12px;margin-top:4px;cursor:pointer;">Agora não</button>'
+            + '</div>';
+        o.style.display = 'flex';
+        o.querySelector('#caCallPopVip').onclick = () => { o.style.display = 'none'; const url = chat.checkout_url; if (url) window.open(url, '_blank', 'noopener'); else unlock(); };
+        o.querySelector('#caCallPopClose').onclick = () => { o.style.display = 'none'; };
+        o.onclick = (ev) => { if (ev.target === o) o.style.display = 'none'; };
+    }
+
+    // Foto de perfil enquadrada (toque no avatar do topo)
+    function openProfile() {
+        if (!CUR || !CUR.chat.avatar_url) return;
+        document.getElementById('caPhotoName').textContent = CUR.chat.name || '';
+        document.getElementById('caPhotoImg').src = CUR.chat.avatar_url;
+        document.getElementById('caPhotoViewer').classList.add('show');
+    }
+    function closeProfile() {
+        document.getElementById('caPhotoViewer').classList.remove('show');
+        document.getElementById('caPhotoImg').src = '';
     }
 
     const input = document.getElementById('caInput');
     if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
-    return { loadList, open, back, send, photo, sendPhoto, unlock, closeVonce, onCall, refreshUnreadDot };
+    return { loadList, open, back, send, photo, sendPhoto, unlock, closeVonce, onCall, refreshUnreadDot, openProfile, closeProfile };
 })();
 
 // Deep-link do push de mensagem: /?chat=<id> abre a conversa direto
@@ -15839,7 +15924,7 @@ document.addEventListener('keydown', function(e) {
         if (t.closest('#videoCallOverlay')) return;
         // Não intercepta o CHAT (lista/conversa) nem os popups do gate/chamada:
         // a conversa rola livre e o e-mail é pedido só ao tocar pra ver a mídia.
-        if (t.closest('#chat') || t.closest('#chatconv') || t.closest('#caGate') || t.closest('#caCallScr') || t.closest('#caViewer') || t.closest('#caVipToast')) return;
+        if (t.closest('#chat') || t.closest('#chatconv') || t.closest('#caGate') || t.closest('#caCallScr') || t.closest('#caCallPop') || t.closest('#caViewer') || t.closest('#caPhotoViewer') || t.closest('#caVipToast')) return;
         // Não intercepta controles próprios (audio/video do navegador)
         if (t.matches('audio, video, audio *, video *')) return;
         // Pra TUDO o resto, bloqueia e abre login

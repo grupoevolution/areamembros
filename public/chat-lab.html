@@ -410,9 +410,11 @@ function renderMsg(m) {
         }
         const face = (CUR && CUR.chat.avatar_url) ? ' style="background-image:url(\'' + esc(CUR.chat.avatar_url) + '\')"' : '';
         d.innerHTML = '<div class="audio-row"><div class="face"' + face + '><span class="mic">' + ICO.mic + '</span></div>'
-            + '<button class="play" onclick="playAudio(this, \'' + esc(m.media_url || '') + '\')">' + ICO.play + '</button>'
+            + '<button class="play">' + ICO.play + '</button>'
             + '<span class="wave">' + bars + '</span></div>'
-            + '<div class="audio-meta"><span class="dur">áudio</span><span>' + hhmm(m.created_at) + ' <span class="ticks" style="color:#53BDEB;">' + (mine ? '✓✓' : '') + '</span></span></div>';
+            + '<div class="audio-meta"><span class="dur">0:00</span><span>' + hhmm(m.created_at) + '</span></div>'
+            + '<audio class="lab-aud" src="' + esc(m.media_url || '') + '" preload="none" playsinline></audio>';
+        setTimeout(() => { const b = d.querySelector('.play'); if (b) b.addEventListener('click', () => toggleAudio(d)); }, 0);
     } else if (m.type === 'image') {
         d.className = 'bub' + (mine ? ' mine' : '');
         d.innerHTML = (m.media_url ? '<img class="photo" src="' + esc(m.media_url) + '" alt="" loading="lazy">' : '')
@@ -576,48 +578,38 @@ async function closeVonce() {
     await api('/api/user/chats/messages/' + id + '/viewed');
 }
 
-// ── Áudio real ──
-let audioEl = null, audioBtn = null, audioWave = null, audioIv = null;
-function playAudio(btn, url) {
-    if (!url) return;
-    if (audioEl && audioBtn === btn) {
-        if (audioEl.paused) { audioEl.play(); btn.innerHTML = ICO.pause; }
-        else { audioEl.pause(); btn.innerHTML = ICO.play; }
-        return;
+// ── Áudio via <audio> no DOM (confiável no iOS). Um por vez. ──
+let curAudioBubble = null;
+function fmtDur(s) { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+function toggleAudio(bubble) {
+    const au = bubble.querySelector('.lab-aud');
+    const btn = bubble.querySelector('.play');
+    if (!au || !btn) return;
+    if (!au.paused) { au.pause(); btn.innerHTML = ICO.play; return; }
+    if (curAudioBubble && curAudioBubble !== bubble) {
+        const o = curAudioBubble.querySelector('.lab-aud'); const ob = curAudioBubble.querySelector('.play');
+        if (o) { try { o.pause(); } catch(_) {} } if (ob) ob.innerHTML = ICO.play;
     }
-    stopAudio();
-    audioEl = new Audio(url);
-    audioBtn = btn;
-    audioWave = btn.parentNode.querySelector('.wave');
+    curAudioBubble = bubble;
+    const wave = bubble.querySelector('.wave');
+    const durEl = bubble.querySelector('.dur');
+    if (!au._wired) {
+        au._wired = true;
+        au.addEventListener('timeupdate', () => {
+            const pct = au.duration ? au.currentTime / au.duration : 0;
+            const bars = wave ? wave.querySelectorAll('i') : [];
+            const cut = Math.round(pct * bars.length);
+            bars.forEach((b, i) => b.classList.toggle('on', i < cut));
+            if (durEl) durEl.textContent = fmtDur(au.duration ? (au.duration - au.currentTime) : 0);
+        });
+        au.addEventListener('loadedmetadata', () => { if (durEl && isFinite(au.duration)) durEl.textContent = fmtDur(au.duration); });
+        au.addEventListener('ended', () => { btn.innerHTML = ICO.play; if (wave) wave.querySelectorAll('i').forEach(b => b.classList.remove('on')); if (durEl) durEl.textContent = fmtDur(au.duration); });
+        au.addEventListener('error', () => { btn.innerHTML = ICO.play; if (durEl) durEl.textContent = 'erro ao carregar'; });
+    }
     btn.innerHTML = ICO.pause;
-    audioEl.play().catch(() => { btn.innerHTML = ICO.play; });
-    const durEl = btn.parentNode.parentNode.querySelector('.dur');
-    audioEl.addEventListener('loadedmetadata', () => {
-        if (durEl && isFinite(audioEl.duration)) durEl.textContent = fmtDur(audioEl.duration);
-    });
-    audioIv = setInterval(() => {
-        if (!audioEl || !audioWave) return;
-        const pct = audioEl.duration ? audioEl.currentTime / audioEl.duration : 0;
-        const bars = audioWave.querySelectorAll('i');
-        const cut = Math.round(pct * bars.length);
-        bars.forEach((b, i) => b.classList.toggle('on', i < cut));
-        if (durEl && isFinite(audioEl.duration)) durEl.textContent = fmtDur(audioEl.duration - audioEl.currentTime);
-    }, 200);
-    audioEl.addEventListener('ended', () => {
-        btn.innerHTML = ICO.play;
-        if (audioWave) audioWave.querySelectorAll('i').forEach(b => b.classList.remove('on'));
-        if (durEl && isFinite(audioEl.duration)) durEl.textContent = fmtDur(audioEl.duration);
-        clearInterval(audioIv);
-    });
+    const p = au.play();
+    if (p && p.catch) p.catch(() => { btn.innerHTML = ICO.play; if (durEl) durEl.textContent = 'toque pra ouvir'; });
 }
-function stopAudio() {
-    if (audioEl) { try { audioEl.pause(); } catch(_) {} }
-    if (audioBtn) audioBtn.innerHTML = ICO.play;
-    if (audioWave) audioWave.querySelectorAll('i').forEach(b => b.classList.remove('on'));
-    clearInterval(audioIv);
-    audioEl = null; audioBtn = null; audioWave = null;
-}
-function fmtDur(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 
 // ── Chamada — no app a chamadinha toca de verdade; aqui só descreve ──
 function onCall() {
