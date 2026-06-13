@@ -28,8 +28,25 @@ const multer = require('multer');
 const db = require('../db');
 const { logger } = require('../lib/logger');
 const { optionalUser } = require('../lib/user-auth');
+const { parseBunnyUrl, bunnyHlsUrl } = require('../lib/bunny');
 
 const MAX_STEPS_PER_RUN = 25;
+
+// Carrega + enriquece a chamada vinculada ao chat (pro VideoCall do app)
+async function loadChatCall(callId) {
+    if (!callId) return null;
+    try {
+        const { rows } = await db.query(
+            `SELECT id, slug, category, model_name, model_photo, video_url, redirect_link,
+                    cta_text, trigger_delay_sec, COALESCE(cta_type,'home') AS cta_type, cta_target_id
+             FROM video_calls WHERE id = $1 AND active = true LIMIT 1`, [callId]
+        );
+        if (!rows.length) return null;
+        const c = rows[0];
+        const bunny = parseBunnyUrl(c.video_url);
+        return { ...c, is_bunny: !!bunny, bunny_hls_url: bunny ? bunnyHlsUrl(bunny.guid) : null };
+    } catch (_) { return null; }
+}
 
 // ── Identidade do cliente ────────────────────────────────────────────────────
 function getIdentity(req) {
@@ -101,18 +118,45 @@ async function findOrCreateSession(chatId, ident, createIfMissing) {
     return row;
 }
 
-// ── Variáveis ({nome}) ───────────────────────────────────────────────────────
-async function fillVars(text, ident) {
+// ── Variáveis: {nome}, {saudacao}, {cidade} ──────────────────────────────────
+function saudacaoBrasilia() {
+    // Brasília = UTC-3 (sem horário de verão desde 2019)
+    const h = new Date(Date.now() - 3 * 3600 * 1000).getUTCHours();
+    if (h >= 5 && h < 12) return 'bom dia';
+    if (h >= 12 && h < 18) return 'boa tarde';
+    return 'boa noite';
+}
+async function fillVars(text, ctx) {
     if (!text || text.indexOf('{') === -1) return text;
     let nome = 'amor';
-    if (ident.email) {
+    if (ctx && ctx.email) {
         try {
-            const { rows } = await db.query(`SELECT name FROM customers WHERE LOWER(email) = $1 LIMIT 1`, [ident.email]);
+            const { rows } = await db.query(`SELECT name FROM customers WHERE LOWER(email) = $1 LIMIT 1`, [ctx.email]);
             const n = (rows[0]?.name || '').trim().split(/\s+/)[0];
             if (n) nome = n.charAt(0).toUpperCase() + n.slice(1).toLowerCase();
         } catch (_) {}
     }
-    return text.replace(/\{nome\}/gi, nome);
+    const cidade = (ctx && ctx.city) || (ctx && ctx.cityFallback) || 'sua região';
+    return text
+        .replace(/\{nome\}/gi, nome)
+        .replace(/\{saudacao\}/gi, saudacaoBrasilia())
+        .replace(/\{cidade\}/gi, cidade);
+}
+
+// Resolve IP→cidade UMA vez por sessão e guarda (alimenta {cidade})
+async function ensureSessionGeo(session, req) {
+    if (!session || session.ip) return session;
+    const ip = (String(req.headers['x-forwarded-for'] || '').split(',')[0].trim())
+        || req.headers['x-real-ip'] || req.ip || '';
+    let city = null;
+    try { city = require('../lib/geo').resolveCity(ip); } catch (_) {}
+    try {
+        await db.query(`UPDATE chat_sessions SET ip = $2, city = $3 WHERE id = $1`,
+            [session.id, (ip || '').slice(0, 45) || null, city]);
+    } catch (_) {}
+    session.ip = ip || null;
+    session.city = city;
+    return session;
 }
 
 // ── Motor do roteiro ─────────────────────────────────────────────────────────
@@ -188,6 +232,11 @@ async function runScript(session, chat, steps, idx, ident) {
             content = await fillVars(s.content, ident) || 'Ver oferta';
             meta.link_url = s.link_url || null;
             meta.product_id = s.product_id || null;
+        } else if (s.type === 'call') {
+            // "Ela liga": o app dispara a chamada recebida (VideoCall). A mensagem
+            // carrega só uma marca + texto; o payload da chamada vem do chat.
+            content = await fillVars(s.content, ident) || null;
+            meta.is_call = true;
         } else {
             // tipo desconhecido: pula
             idx = idx + 1;
@@ -297,18 +346,28 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         const owns = await ownsProduct(ident.email, chat.product_id);
         const perm = permissions(chat, owns, ident);
 
+        const callPayload = await loadChatCall(chat.call_video_call_id);
         const persona = {
             id: chat.id, name: chat.name, avatar_url: chat.avatar_url,
             status_label: chat.status_label, show_online: chat.show_online,
+            gate_media: chat.gate_media === true,
+            checkout_url: chat.checkout_url || null,
+            has_call: !!callPayload,
+            video_call: callPayload,
         };
+        // identificado = e-mail real capturado (gate de mídia só vale pra anônimo)
+        const identified = !!ident.email;
         // Bloqueado: não roda roteiro nem cria sessão
         if (perm.locked) {
-            return res.json({ success: true, chat: persona, permissions: perm, messages: [], awaiting: null });
+            return res.json({ success: true, chat: persona, permissions: perm, identified, messages: [], awaiting: null });
         }
         if (!ident.email && !ident.visitor) {
             return res.status(400).json({ success: false, error: 'visitor_id obrigatório' });
         }
         const session = await findOrCreateSession(chatId, ident, true);
+        await ensureSessionGeo(session, req);
+        ident.city = session.city;
+        ident.cityFallback = chat.city_fallback;
         const steps = await loadSteps(chatId);
 
         const { rows: history } = await db.query(
@@ -333,6 +392,8 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
             success: true,
             chat: persona,
             permissions: perm,
+            identified,
+            call_seen: !!session.call_seen_at,
             messages: all,
             awaiting: session.awaiting,
             resume_at: session.awaiting === 'delay' ? session.resume_at : null,
@@ -357,6 +418,9 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
         if (perm.locked) return res.status(403).json({ success: false, error: 'vip_required' });
 
         const session = await findOrCreateSession(chatId, ident, true);
+        await ensureSessionGeo(session, req);
+        ident.city = session.city;
+        ident.cityFallback = chat.city_fallback;
         const steps = await loadSteps(chatId);
 
         const choice = req.body?.choice;
@@ -428,6 +492,8 @@ router.get('/chats/:id/poll', optionalUser, async (req, res) => {
         if (session.awaiting === 'delay' && session.resume_at && new Date(session.resume_at) <= new Date()) {
             const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
             if (cr.length) {
+                ident.city = session.city;
+                ident.cityFallback = cr[0].city_fallback;
                 const steps = await loadSteps(chatId);
                 await runScript(session, cr[0], steps, session.current_order, ident);
             }
@@ -466,6 +532,19 @@ router.post('/chats/messages/:id/viewed', optionalUser, async (req, res) => {
     } catch (err) {
         return res.json({ success: false });
     }
+});
+
+// POST /chats/:id/call-seen — marca que o não-VIP já tentou ligar (blur 1x).
+// Na próxima vez o app mostra só o aviso, sem a tela de chamada borrada.
+router.post('/chats/:id/call-seen', optionalUser, async (req, res) => {
+    const chatId = parseInt(req.params.id, 10);
+    if (!chatId) return res.json({ success: false });
+    try {
+        const ident = getIdentity(req);
+        const session = await findOrCreateSession(chatId, ident, true);
+        if (session) await db.query(`UPDATE chat_sessions SET call_seen_at = NOW() WHERE id = $1 AND call_seen_at IS NULL`, [session.id]);
+        return res.json({ success: true });
+    } catch (_) { return res.json({ success: false }); }
 });
 
 // POST /chats/:id/photo — foto do cliente (só VIP com allow_photo)
@@ -532,6 +611,8 @@ async function resumeDelayed(limit) {
             const ident = {
                 email: session.customer_email && !String(session.customer_email).endsWith('@preview.local') ? String(session.customer_email).toLowerCase() : null,
                 visitor: session.visitor_id || null,
+                city: session.city || null,
+                cityFallback: chat.city_fallback,
             };
             const steps = await loadSteps(session.chat_id);
             session.awaiting = 'delay'; // runScript lê/sobrescreve normalmente
@@ -547,5 +628,39 @@ async function resumeDelayed(limit) {
     return results;
 }
 
+// ── Pós-compra: inicia o roteiro dos chats vinculados ao produto comprado ────
+// Chamado pelo sales-processor quando uma venda é aprovada. Para cada chat com
+// trigger_product_ids contendo um dos produtos, cria a sessão do e-mail (se a
+// conversa ainda não começou) e roda o roteiro. Devolve [{chat, messages}] pro
+// caller disparar o push de "ela te mandou mensagem".
+async function triggerPostPurchaseChats(email, productIds) {
+    const e = String(email || '').toLowerCase().trim();
+    const ids = (Array.isArray(productIds) ? productIds : []).map(x => parseInt(x, 10)).filter(Boolean);
+    if (!e || e.endsWith('@preview.local') || !ids.length) return [];
+    const { rows: chats } = await db.query(`SELECT * FROM chats WHERE active = true AND trigger_product_ids IS NOT NULL`);
+    const out = [];
+    for (const chat of chats) {
+        let trig = [];
+        try { trig = Array.isArray(chat.trigger_product_ids) ? chat.trigger_product_ids : JSON.parse(chat.trigger_product_ids || '[]'); } catch (_) {}
+        if (!trig.some(pid => ids.includes(parseInt(pid, 10)))) continue;
+        try {
+            // sessão por e-mail; se já existe e já tem mensagens, não reinicia
+            let session = await findOrCreateSession(chat.id, { email: e, visitor: null }, true);
+            const { rows: existing } = await db.query(`SELECT COUNT(*)::int AS n FROM chat_messages WHERE session_id = $1`, [session.id]);
+            const steps = await loadSteps(chat.id);
+            if (existing[0].n > 0 || !steps.length) continue;
+            const ident = { email: e, visitor: null, city: session.city || null, cityFallback: chat.city_fallback };
+            const fresh = await runScript(session, chat, steps, 0, ident);
+            // pós-compra chega como NÃO-lida (last_seen fica no passado)
+            await db.query(`UPDATE chat_sessions SET last_seen_at = NULL WHERE id = $1`, [session.id]);
+            if (fresh.length) out.push({ chat, messages: fresh, email: e });
+        } catch (err) {
+            logger.warn('[chat] triggerPostPurchase falhou chat ' + chat.id + ': ' + err.message);
+        }
+    }
+    return out;
+}
+
 module.exports = router;
 module.exports.resumeDelayed = resumeDelayed;
+module.exports.triggerPostPurchaseChats = triggerPostPurchaseChats;

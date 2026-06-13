@@ -438,6 +438,9 @@ function renderMsg(m) {
         d.style.maxWidth = '82%';
         const link = (m.meta && m.meta.link_url) || '';
         d.innerHTML = '<button class="cta-btn" onclick="openCta(\'' + esc(link) + '\')">' + esc(m.content || 'Ver oferta') + '</button>';
+    } else if (m.type === 'call') {
+        d.style.alignSelf = 'center';
+        d.innerHTML = '<div style="font-size:11px;color:#1fa855;background:#e7f8ee;padding:5px 12px;border-radius:999px;">📹 ' + esc((CUR && CUR.chat.name) || 'Ela') + ' está te ligando...</div>';
     } else {
         return;
     }
@@ -537,7 +540,19 @@ function onUnlock() {
 
 // ── Visualização única ──
 let vonceCurrent = null;
+function chatLabIdentified() { return CUR && CUR._identified; }
 function openVonce(bubble) {
+    // Gate de mídia (funil principal): pede e-mail antes de abrir
+    if (CUR && CUR.chat && CUR.chat.gate_media && !chatLabIdentified()) {
+        const email = prompt('Pra ver, digite seu e-mail (acesso total às fotos):');
+        if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) return;
+        fetch('/api/user/login/promote', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body: JSON.stringify({ email: email.trim(), skipSuggestion: true }) })
+            .then(r => r.json()).then(d => { if (d.success) { CUR._identified = true; alert('No app, aqui aparece o passo de instalar o app. Liberado!'); doOpenVonce(bubble); } else alert('Erro: ' + (d.error||'')); });
+        return;
+    }
+    doOpenVonce(bubble);
+}
+function doOpenVonce(bubble) {
     const url = bubble.dataset.mediaUrl;
     const isVid = bubble.dataset.isVid === '1';
     if (!url) return;
@@ -604,9 +619,11 @@ function stopAudio() {
 }
 function fmtDur(s) { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
 
-// ── Chamada (integra com a chamadinha do app na fase de integração) ──
+// ── Chamada — no app a chamadinha toca de verdade; aqui só descreve ──
 function onCall() {
-    alert('Aqui dispara a CHAMADA DE VÍDEO da modelo (no app integrado ela toca de verdade).');
+    const has = CUR && CUR.chat && CUR.chat.has_call;
+    if (!has) { alert('Sem chamada vinculada. Configure no painel (campo "Chamada de vídeo").'); return; }
+    alert('No app: VIP → atende de verdade; não-VIP → atende borrado com aviso "vira VIP" (1x). Aqui no chat-lab é só a prévia.');
 }
 function openCta(url) {
     if (url) window.open(url, '_blank', 'noopener');

@@ -5491,6 +5491,31 @@ a { color: inherit; text-decoration: none; }
                                 </div>
                                 <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="cpPhoto" style="width:16px; height:16px;"> VIP pode mandar FOTO</label>
                             </div>
+
+                            <!-- Chamada de vídeo vinculada -->
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">📹 Chamada de vídeo (ícone de ligar no topo da conversa)</label>
+                                <select class="form-control" id="cpCall" style="width:100%;"><option value="">— sem chamada —</option></select>
+                                <div class="form-help" style="margin-top:4px;">VIP liga e ela atende de verdade. Não-VIP vê a chamada borrada com aviso (1x) e depois só o aviso. Use também no bloco "Ela liga" do roteiro.</div>
+                            </div>
+
+                            <!-- Gate de mídia (funil principal) -->
+                            <div style="background:rgba(229,9,20,.06); border:1px solid rgba(229,9,20,.2); border-radius:10px; padding:12px;">
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="cpGate" style="width:16px; height:16px;"> 🔒 Exigir e-mail + instalar app pra ver as mídias</label>
+                                <div class="form-help" style="margin-top:6px;">Ligado: a conversa rola livre, mas ao tocar pra ABRIR uma foto/vídeo, pede o e-mail e a instalação do app antes de liberar. É o pedágio do funil principal de tráfego.</div>
+                            </div>
+
+                            <!-- {cidade} fallback -->
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Texto de {cidade} quando não achar (fallback)</label>
+                                <input class="form-control" id="cpCityFallback" maxlength="60" placeholder="sua região" style="width:100%;"/>
+                                <div class="form-help" style="margin-top:4px;">No roteiro use {nome}, {saudacao} (bom dia/tarde/noite) e {cidade}. Se o IP não revelar a cidade, {cidade} vira esse texto.</div>
+                            </div>
+
+                            <!-- Pós-compra: produtos-gatilho -->
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">🎉 Disparar este chat quando comprar (pós-venda)</label>
+                                <div id="cpTriggerProducts" style="display:flex; flex-direction:column; gap:5px; max-height:140px; overflow-y:auto; background:rgba(0,0,0,.2); border-radius:8px; padding:8px;"></div>
+                                <div class="form-help" style="margin-top:4px;">Marque os produtos: quando a venda for aprovada, este roteiro começa pro e-mail do comprador e ele recebe push. Ótimo pra onboarding/suporte.</div>
+                            </div>
+
                             <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Ordem na lista</label><input class="form-control" type="number" id="cpOrder" min="0" max="99" value="0" style="width:100px;"/></div>
 
                             <!-- Roteiro (só ao editar) -->
@@ -5555,6 +5580,7 @@ a { color: inherit; text-decoration: none; }
                                         <option value="buttons">🔘 Botões de escolha</option>
                                         <option value="wait_input">⌨️ Esperar cliente digitar</option>
                                         <option value="delay">⏱ Esperar (tempo) — manda depois</option>
+                                        <option value="call">📹 Ela liga pra ele (chamada recebida)</option>
                                         <option value="cta">💳 Botão de oferta (link)</option>
                                     </select>
                                 </div>
@@ -5637,10 +5663,16 @@ a { color: inherit; text-decoration: none; }
                                     <option value="home">🏠 Home do app (padrão)</option>
                                     <option value="product">📦 Direto na página de um produto</option>
                                     <option value="category">🗂 Numa categoria específica</option>
+                                    <option value="chat">💬 Direto numa conversa (abre o chat)</option>
+                                    <option value="chat_list">📨 Lista de conversas (chega mensagem dela)</option>
                                 </select>
                                 <div id="funnelEntryProductWrap" style="display:none; margin-top:10px;">
                                     <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Produto de destino</label>
                                     <select class="form-control" id="funnelEntryProduct" style="width:100%;"><option value="">— selecione —</option></select>
+                                </div>
+                                <div id="funnelEntryChatWrap" style="display:none; margin-top:10px;">
+                                    <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Conversa de destino</label>
+                                    <select class="form-control" id="funnelEntryChat" style="width:100%;"><option value="">— selecione —</option></select>
                                 </div>
                                 <div id="funnelEntryCategoryWrap" style="display:none; margin-top:10px;">
                                     <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Categoria de destino</label>
@@ -13781,7 +13813,7 @@ async function loadFunnels() {
                 + '<div style="padding:14px 16px;border-bottom:1px solid var(--border,rgba(255,255,255,.08));display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
                 +   '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;color:#fff">'+escHtmlAdmin(f.name)+'</div>'
                 +     '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px">'
-                +       (f.entry_type === 'product' ? '🎯 Direto no produto' : f.entry_type === 'category' ? '🎯 Direto na categoria' : '🎯 Home')
+                +       (f.entry_type === 'product' ? '🎯 Direto no produto' : f.entry_type === 'category' ? '🎯 Direto na categoria' : (f.entry_type === 'chat' || f.entry_type === 'chat_list') ? '🎯 Direto na conversa' : '🎯 Home')
                 +       (f.featured_product_name ? ' · 📦 '+escHtmlAdmin(f.featured_product_name) : '')+(f.video_call_model_name ? ' · 📞 '+escHtmlAdmin(f.video_call_model_name) : '')+'</div>'
                 +   '</div>'+status
                 + '</div>'
@@ -13831,6 +13863,14 @@ async function loadFunnelDropdowns() {
             const list = (cats && cats.categories) || [];
             ec.innerHTML = '<option value="">— selecione —</option>' + list.map(c => '<option value="'+c.id+'">'+escHtmlAdmin(c.name)+'</option>').join('');
         }
+        // Conversas (entrada chat/chat_list)
+        const ech = document.getElementById('funnelEntryChat');
+        if (ech) {
+            try {
+                const chs = await fetch('/api/admin/chats', { credentials:'include' }).then(r => r.json());
+                ech.innerHTML = '<option value="">— selecione —</option>' + ((chs.chats)||[]).map(c => '<option value="'+c.id+'">'+escHtmlAdmin(c.name)+'</option>').join('');
+            } catch(_) {}
+        }
     } catch(e) {}
 }
 
@@ -13839,6 +13879,7 @@ window.updateFunnelEntryFields = function() {
     const t = document.getElementById('funnelEntryType').value;
     document.getElementById('funnelEntryProductWrap').style.display = t === 'product' ? 'block' : 'none';
     document.getElementById('funnelEntryCategoryWrap').style.display = t === 'category' ? 'block' : 'none';
+    document.getElementById('funnelEntryChatWrap').style.display = (t === 'chat' || t === 'chat_list') ? 'block' : 'none';
 };
 
 function openFunnelModal() {
@@ -13873,6 +13914,9 @@ function editFunnel(f) {
             if (f.entry_category_id) document.getElementById('funnelEntryCategory').value = f.entry_category_id;
             if (f.entry_product_id) document.getElementById('funnelEntryFocusProduct').value = f.entry_product_id;
         }
+        if ((f.entry_type === 'chat' || f.entry_type === 'chat_list') && f.entry_chat_id) {
+            document.getElementById('funnelEntryChat').value = f.entry_chat_id;
+        }
     });
     // Carrega etapas
     loadFunnelSteps(f.id);
@@ -13896,6 +13940,10 @@ async function saveFunnel(e) {
         alert('Escolha a categoria de destino.');
         return false;
     }
+    if ((entryType === 'chat' || entryType === 'chat_list') && !document.getElementById('funnelEntryChat').value) {
+        alert('Escolha a conversa de destino.');
+        return false;
+    }
     const payload = {
         name: document.getElementById('funnelName').value.trim(),
         slug: document.getElementById('funnelSlug').value.trim(),
@@ -13908,6 +13956,7 @@ async function saveFunnel(e) {
                         : entryType === 'category' ? (document.getElementById('funnelEntryFocusProduct').value || null)
                         : null,
         entry_category_id: entryType === 'category' ? document.getElementById('funnelEntryCategory').value : null,
+        entry_chat_id: (entryType === 'chat' || entryType === 'chat_list') ? document.getElementById('funnelEntryChat').value : null,
     };
     try {
         const url = id ? '/api/admin/funnels/'+id : '/api/admin/funnels';
@@ -14211,14 +14260,31 @@ async function loadAdminChats() {
     } catch(e) { list.innerHTML = '<div style="color:#f55">Erro: '+e.message+'</div>'; }
 }
 
-async function loadChatProductsDropdown(selectedId) {
+async function loadChatProductsDropdown(selectedId, callId, triggerIds) {
     try {
-        const r = await fetch('/api/admin/products', { credentials:'include' });
-        const data = await r.json();
+        const [pr, cr] = await Promise.all([
+            fetch('/api/admin/products', { credentials:'include' }).then(r => r.json()),
+            fetch('/api/admin/calls', { credentials:'include' }).then(r => r.json()).catch(() => ({})),
+        ]);
+        const products = pr.products || [];
         const sel = document.getElementById('cpProduct');
         if (sel) {
-            sel.innerHTML = '<option value="">— nenhum —</option>' + (data.products||[]).map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
+            sel.innerHTML = '<option value="">— nenhum —</option>' + products.map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
             if (selectedId) sel.value = selectedId;
+        }
+        // Chamada vinculada
+        const callSel = document.getElementById('cpCall');
+        if (callSel) {
+            callSel.innerHTML = '<option value="">— sem chamada —</option>' + ((cr.calls)||[]).map(c => '<option value="'+c.id+'">'+escHtmlAdmin(c.model_name)+' ('+escHtmlAdmin(c.name)+')</option>').join('');
+            if (callId) callSel.value = callId;
+        }
+        // Produtos-gatilho (checkboxes)
+        const trigBox = document.getElementById('cpTriggerProducts');
+        if (trigBox) {
+            const sset = new Set((triggerIds || []).map(x => parseInt(x, 10)));
+            trigBox.innerHTML = products.length
+                ? products.map(p => '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:#fff;cursor:pointer;"><input type="checkbox" class="cp-trigger" value="'+p.id+'" '+(sset.has(p.id)?'checked':'')+' style="width:15px;height:15px;"> '+escHtmlAdmin(p.name)+'</label>').join('')
+                : '<div style="font-size:11px;color:rgba(255,255,255,.4);">Nenhum produto cadastrado.</div>';
         }
     } catch(_) {}
 }
@@ -14231,6 +14297,8 @@ function openChatModal() {
     document.getElementById('chatForm').reset();
     document.getElementById('cpId').value = '';
     document.getElementById('cpOnline').checked = true;
+    document.getElementById('cpGate').checked = false;
+    document.getElementById('cpCityFallback').value = '';
     document.getElementById('chatStepsSection').style.display = 'none';
     document.getElementById('chatPreviewPane').style.display = 'none';
     loadChatProductsDropdown();
@@ -14252,8 +14320,12 @@ function editChatPersona(c) {
     document.getElementById('cpCheckout').value = c.checkout_url || '';
     document.getElementById('cpReply').value = c.reply_mode || 'vip';
     document.getElementById('cpPhoto').checked = c.allow_photo === true;
+    document.getElementById('cpGate').checked = c.gate_media === true;
+    document.getElementById('cpCityFallback').value = c.city_fallback || '';
     document.getElementById('cpOrder').value = c.display_order || 0;
-    loadChatProductsDropdown(c.product_id || '');
+    let trig = [];
+    try { trig = Array.isArray(c.trigger_product_ids) ? c.trigger_product_ids : JSON.parse(c.trigger_product_ids || '[]'); } catch(_) {}
+    loadChatProductsDropdown(c.product_id || '', c.call_video_call_id || '', trig);
     document.getElementById('chatStepsSection').style.display = 'block';
     loadChatSteps(c.id);
     document.getElementById('chatModalBackdrop').style.display = 'flex';
@@ -14274,6 +14346,10 @@ async function saveChatPersona(e) {
         reply_mode: document.getElementById('cpReply').value,
         allow_photo: document.getElementById('cpPhoto').checked,
         display_order: parseInt(document.getElementById('cpOrder').value, 10) || 0,
+        gate_media: document.getElementById('cpGate').checked,
+        city_fallback: document.getElementById('cpCityFallback').value.trim() || 'sua região',
+        call_video_call_id: document.getElementById('cpCall').value || null,
+        trigger_product_ids: Array.from(document.querySelectorAll('#cpTriggerProducts .cp-trigger:checked')).map(el => parseInt(el.value, 10)),
     };
     try {
         const url = id ? '/api/admin/chats/'+id : '/api/admin/chats';
@@ -14305,7 +14381,7 @@ async function deleteChatPersona(id) {
 const CHAT_STEP_LABELS = {
     text: '💬 Texto', audio: '🎤 Áudio', image: '📷 Foto',
     view_once_image: '👁 Foto 1x', view_once_video: '🎬 Vídeo 1x',
-    buttons: '🔘 Botões', wait_input: '⌨️ Espera digitar', delay: '⏱ Espera (tempo)', cta: '💳 Oferta',
+    buttons: '🔘 Botões', wait_input: '⌨️ Espera digitar', delay: '⏱ Espera (tempo)', call: '📹 Ela liga', cta: '💳 Oferta',
 };
 // Formata segundos em "10 min", "2 h", "30 s"
 function fmtDelay(secs) {
@@ -14387,7 +14463,8 @@ function renderChatPreview() {
     document.getElementById('cpvAvatar').style.backgroundImage = p.avatar_url ? 'url("'+p.avatar_url+'")' : 'none';
 
     const esc = escHtmlAdmin;
-    const fill = (t) => esc(String(t || '').replace(/\{nome\}/gi, 'Amor'));
+    const _cityEx = (document.getElementById('cpCityFallback') && document.getElementById('cpCityFallback').value.trim()) || 'São Paulo';
+    const fill = (t) => esc(String(t || '').replace(/\{nome\}/gi, 'Amor').replace(/\{saudacao\}/gi, 'boa noite').replace(/\{cidade\}/gi, _cityEx));
     const lockSvg = '<svg width="11" height="11" fill="none" stroke="#b08a4a" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
     let html = '<div style="align-self:center; font-size:9px; color:#777; background:#fdfcfa; padding:3px 9px; border-radius:8px;">HOJE</div>'
         + '<div style="align-self:center; font-size:9px; color:#b08a4a; background:#fdf3d7; padding:3px 9px; border-radius:8px; display:flex; align-items:center; gap:4px;">'+lockSvg+' Suas mensagens são protegidas</div>';
@@ -14417,6 +14494,8 @@ function renderChatPreview() {
                 + '</div>';
         } else if (s.type === 'wait_input') {
             html += '<div style="align-self:center; font-size:9.5px; color:#999; background:#fdfcfa; padding:3px 9px; border-radius:8px;">⌨ espera o cliente digitar</div>';
+        } else if (s.type === 'call') {
+            html += '<div style="align-self:center; font-size:9.5px; color:#1fa855; background:#e7f8ee; padding:3px 10px; border-radius:8px;">📹 ela liga pra ele (chamada recebida)</div>';
         } else if (s.type === 'delay') {
             html += '<div style="align-self:center; font-size:9.5px; color:#b08a4a; background:#fdf3d7; padding:3px 10px; border-radius:8px;">⏱ espera ' + fmtDelay(s.delay_seconds) + ' (manda depois)</div>';
         } else if (s.type === 'cta') {
@@ -14452,7 +14531,7 @@ async function importChatJSON(ev) {
 
 window.updateChatStepFields = function() {
     const t = document.getElementById('csType').value;
-    document.getElementById('csContentWrap').style.display = (t === 'text' || t === 'buttons' || t === 'cta' || t === 'image') ? 'block' : 'none';
+    document.getElementById('csContentWrap').style.display = (t === 'text' || t === 'buttons' || t === 'cta' || t === 'image' || t === 'call') ? 'block' : 'none';
     document.getElementById('csMediaWrap').style.display = (t === 'audio' || t === 'image' || t === 'view_once_image' || t === 'view_once_video') ? 'block' : 'none';
     document.getElementById('csButtonsWrap').style.display = t === 'buttons' ? 'block' : 'none';
     document.getElementById('csCtaWrap').style.display = t === 'cta' ? 'block' : 'none';

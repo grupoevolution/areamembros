@@ -15,7 +15,7 @@ const db = require('../db');
 const { requireAdmin } = require('../lib/auth');
 const { logger } = require('../lib/logger');
 
-const STEP_TYPES = ['text', 'audio', 'image', 'view_once_image', 'view_once_video', 'buttons', 'wait_input', 'cta', 'delay'];
+const STEP_TYPES = ['text', 'audio', 'image', 'view_once_image', 'view_once_video', 'buttons', 'wait_input', 'cta', 'delay', 'call'];
 const REPLY_MODES = ['vip', 'all', 'none'];
 
 // ── CHATS (personas) ─────────────────────────────────────────────────────────
@@ -41,12 +41,14 @@ router.get('/', requireAdmin, async (req, res) => {
 router.post('/', requireAdmin, async (req, res) => {
     try {
         const { name, avatar_url, section, status_label, show_online, access,
-                product_id, checkout_url, reply_mode, allow_photo, display_order, active } = req.body || {};
+                product_id, checkout_url, reply_mode, allow_photo, display_order, active,
+                city_fallback, gate_media, call_video_call_id, trigger_product_ids } = req.body || {};
         if (!name || !String(name).trim()) return res.status(400).json({ success: false, error: 'Nome obrigatório' });
         const { rows } = await db.query(`
             INSERT INTO chats (name, avatar_url, section, status_label, show_online, access,
-                               product_id, checkout_url, reply_mode, allow_photo, display_order, active)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *
+                               product_id, checkout_url, reply_mode, allow_photo, display_order, active,
+                               city_fallback, gate_media, call_video_call_id, trigger_product_ids)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *
         `, [
             String(name).trim().slice(0, 80),
             (avatar_url || '').trim().slice(0, 1000) || null,
@@ -60,6 +62,10 @@ router.post('/', requireAdmin, async (req, res) => {
             allow_photo === true,
             parseInt(display_order, 10) || 0,
             active !== false,
+            (city_fallback || 'sua região').trim().slice(0, 60),
+            gate_media === true,
+            call_video_call_id ? parseInt(call_video_call_id, 10) : null,
+            cleanTriggerIds(trigger_product_ids),
         ]);
         return res.json({ success: true, chat: rows[0] });
     } catch (err) {
@@ -87,6 +93,10 @@ router.put('/:id', requireAdmin, async (req, res) => {
         if (b.allow_photo !== undefined) set('allow_photo', !!b.allow_photo);
         if (b.display_order !== undefined) set('display_order', parseInt(b.display_order, 10) || 0);
         if (b.active !== undefined) set('active', !!b.active);
+        if (b.city_fallback !== undefined) set('city_fallback', (b.city_fallback || 'sua região').trim().slice(0, 60));
+        if (b.gate_media !== undefined) set('gate_media', !!b.gate_media);
+        if (b.call_video_call_id !== undefined) set('call_video_call_id', b.call_video_call_id ? parseInt(b.call_video_call_id, 10) : null);
+        if (b.trigger_product_ids !== undefined) set('trigger_product_ids', cleanTriggerIds(b.trigger_product_ids));
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
         values.push(id);
         const { rows } = await db.query(`UPDATE chats SET ${updates.join(', ')} WHERE id = $${p} RETURNING *`, values);
@@ -124,6 +134,13 @@ router.get('/:id/steps', requireAdmin, async (req, res) => {
         return res.status(500).json({ success: false, error: 'Erro interno' });
     }
 });
+
+// Normaliza a lista de produtos-gatilho do pós-compra (array de IDs → JSONB)
+function cleanTriggerIds(raw) {
+    if (!Array.isArray(raw)) return null;
+    const ids = raw.map(x => parseInt(x, 10)).filter(x => x > 0).slice(0, 50);
+    return ids.length ? JSON.stringify(ids) : null;
+}
 
 function parseButtons(raw) {
     if (!Array.isArray(raw)) return null;

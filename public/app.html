@@ -8739,7 +8739,7 @@ window.ChatApp = (function() {
                 const r = await fetch('/api/user/chats/' + CUR.id + '/poll?after=' + LAST_ID + '&visitor_id=' + VID, { credentials: 'include' });
                 const data = await r.json();
                 if (data.success && Array.isArray(data.messages) && data.messages.length) {
-                    handleAdvance({ messages: data.messages, awaiting: data.awaiting });
+                    handleAdvance({ messages: data.messages, awaiting: data.awaiting }, true);
                 }
                 if (data.awaiting !== 'delay' && (!data.messages || !data.messages.length)) stopPoll();
             } catch (_) {}
@@ -8766,7 +8766,7 @@ window.ChatApp = (function() {
 
         const { data } = await api('/api/user/chats/' + id + '/open');
         if (!data.success) { body.innerHTML += '<div class="ca-day">erro ao abrir</div>'; return; }
-        CUR = { id, chat: data.chat, perm: data.permissions };
+        CUR = { id, chat: data.chat, perm: data.permissions, callSeen: data.call_seen === true };
 
         document.getElementById('caName').textContent = data.chat.name;
         document.getElementById('caStatus').textContent = data.chat.status_label || 'online';
@@ -8783,7 +8783,7 @@ window.ChatApp = (function() {
         handleAdvance(data);
     }
 
-    function handleAdvance(data) {
+    function handleAdvance(data, isFresh) {
         for (const m of data.messages || []) {
             if (m.type === 'buttons' && m.meta && Array.isArray(m.meta.buttons) && !m.meta.answered) {
                 lastButtons = m.meta.buttons;
@@ -8793,6 +8793,7 @@ window.ChatApp = (function() {
             if (SEEN.has(m.id)) continue;
             SEEN.add(m.id);
             if (m.id > LAST_ID) LAST_ID = m.id;
+            m._fresh = !!isFresh; // só dispara chamada/efeitos em tempo real
             QUEUE.push(m);
         }
         QUEUE._awaiting = data.awaiting;
@@ -8875,6 +8876,14 @@ window.ChatApp = (function() {
             const link = (m.meta && m.meta.link_url) || '';
             d.innerHTML = '<button class="ca-cta">' + esc(m.content || 'Ver oferta') + '</button>';
             d.querySelector('button').addEventListener('click', () => { if (link) window.open(link, '_blank', 'noopener'); });
+        } else if (m.type === 'call') {
+            // "Ela liga": pílula no chat + dispara a chamada recebida (VideoCall)
+            d.style.alignSelf = 'center';
+            d.innerHTML = '<div style="font-size:11px;color:#1fa855;background:#e7f8ee;padding:5px 12px;border-radius:999px;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" fill="none" stroke="#1fa855" stroke-width="2" viewBox="0 0 24 24"><path d="M15 10l4.55-2.27A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 6h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg>' + esc((CUR && CUR.chat.name) || 'Ela') + ' está te ligando...</div>';
+            // só dispara em mensagens NOVAS (não ao recarregar histórico)
+            if (m._fresh && CUR && CUR.chat.video_call && window.VideoCall) {
+                setTimeout(() => { try { window.VideoCall.open(CUR.chat.video_call, { skipSeenGuard: true }); } catch(_) {} }, 600);
+            }
         } else {
             return;
         }
@@ -8903,7 +8912,7 @@ window.ChatApp = (function() {
         document.getElementById('caChoices').style.display = 'none';
         lastButtons = null;
         const { data } = await api('/api/user/chats/' + CUR.id + '/advance', { choice: i });
-        if (data.success) handleAdvance(data);
+        if (data.success) handleAdvance(data, true);
     }
 
     async function send() {
@@ -8913,7 +8922,7 @@ window.ChatApp = (function() {
         if (!text) { input.focus(); return; }
         const { status, data } = await api('/api/user/chats/' + CUR.id + '/advance', { text });
         if (status === 403 || (data && data.error === 'vip_required')) { vipToast(); return; }
-        if (data.success) { input.value = ''; handleAdvance(data); }
+        if (data.success) { input.value = ''; handleAdvance(data, true); }
     }
 
     function photo() {
@@ -8931,7 +8940,7 @@ window.ChatApp = (function() {
         const r = await fetch('/api/user/chats/' + CUR.id + '/photo', { method: 'POST', credentials: 'include', body: fd });
         const data = await r.json().catch(() => ({}));
         if (r.status === 403) { vipToast(); return; }
-        if (data.success && data.message) handleAdvance({ messages: [data.message], awaiting: null });
+        if (data.success && data.message) handleAdvance({ messages: [data.message], awaiting: null }, true);
     }
 
     let vipTimer = null;
@@ -8950,8 +8959,86 @@ window.ChatApp = (function() {
         if (url) window.open(url, '_blank', 'noopener');
     }
 
+    // ── GATE de mídia (funil principal): e-mail → instalar PWA → libera ──
+    function isStandalone() {
+        try { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || localStorage.getItem('mv_pwa_installed') === '1'; }
+        catch (_) { return false; }
+    }
+    function identified() { return !!(window.currentUserEmail && window.MV_ANONYMOUS !== true && !String(window.currentUserEmail).endsWith('@preview.local')); }
+    let _gateInstalled = false;
+    function gateThen(action) {
+        if (!CUR || !CUR.chat.gate_media || identified()) { action(); return; }
+        gateEmail(action);
+    }
+    function gateOverlay(inner) {
+        let o = document.getElementById('caGate');
+        if (!o) { o = document.createElement('div'); o.id = 'caGate'; o.style.cssText = 'position:fixed;inset:0;z-index:720;background:rgba(13,5,6,.82);display:flex;align-items:center;justify-content:center;padding:22px;'; document.body.appendChild(o); }
+        o.innerHTML = '<div style="background:#fff;border-radius:18px;max-width:340px;width:100%;padding:22px 20px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5);">' + inner + '</div>';
+        o.style.display = 'flex';
+        return o;
+    }
+    function closeGate() { const o = document.getElementById('caGate'); if (o) o.style.display = 'none'; }
+    function gateEmail(action) {
+        const o = gateOverlay(
+            '<div style="width:54px;height:54px;border-radius:50%;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;"><svg width="26" height="26" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>'
+            + '<div style="font-size:17px;font-weight:700;color:#111;margin-bottom:6px;">Pra ver, é só o e-mail 😏</div>'
+            + '<div style="font-size:12.5px;color:#777;line-height:1.5;margin-bottom:14px;">Digite seu e-mail pra desbloquear o acesso a todas as fotos e vídeos.</div>'
+            + '<input id="caGateEmail" type="email" inputmode="email" placeholder="seu@email.com" style="width:100%;border:1.5px solid #ddd;border-radius:10px;padding:12px;font-size:15px;outline:none;margin-bottom:6px;text-align:center;">'
+            + '<div id="caGateErr" style="font-size:11.5px;color:#e50914;min-height:14px;margin-bottom:6px;"></div>'
+            + '<button id="caGateBtn" style="width:100%;background:#e50914;border:none;color:#fff;font-size:14px;font-weight:700;padding:13px;border-radius:10px;cursor:pointer;">VER AGORA</button>'
+            + '<div style="font-size:10px;color:#999;margin-top:8px;">100% grátis · sem cartão</div>'
+        );
+        const inp = o.querySelector('#caGateEmail');
+        const btn = o.querySelector('#caGateBtn');
+        const err = o.querySelector('#caGateErr');
+        setTimeout(() => inp && inp.focus(), 150);
+        const submit = async () => {
+            const email = (inp.value || '').trim();
+            if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = 'Digite um e-mail válido.'; return; }
+            btn.disabled = true; btn.textContent = 'AGUARDE...';
+            try {
+                const r = await fetch('/api/user/login/promote', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                    body: JSON.stringify({ email, skipSuggestion: true, funnel_slug: window.MV_FUNNEL_SLUG || '' }),
+                });
+                const d = await r.json();
+                if (d.success) {
+                    window.currentUserEmail = d.email; window.MV_ANONYMOUS = false;
+                    try { document.body.classList.remove('funnel-mode'); } catch(_) {}
+                    try { if (window.PUSH && Notification.permission === 'granted') PUSH.subscribe(); } catch(_) {}
+                    gateInstall(action);
+                } else { err.textContent = d.error || 'Erro, tente de novo.'; btn.disabled = false; btn.textContent = 'VER AGORA'; }
+            } catch (_) { err.textContent = 'Erro de conexão.'; btn.disabled = false; btn.textContent = 'VER AGORA'; }
+        };
+        btn.addEventListener('click', submit);
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+    }
+    function gateInstall(action) {
+        if (isStandalone() || _gateInstalled) { closeGate(); action(); return; }
+        const dp = window.deferredPrompt;
+        gateOverlay(
+            '<div style="width:54px;height:54px;border-radius:14px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:26px;font-weight:800;color:#fff;">M</div>'
+            + '<div style="font-size:17px;font-weight:700;color:#111;margin-bottom:6px;">Quase lá! 🔥</div>'
+            + '<div style="font-size:12.5px;color:#777;line-height:1.5;margin-bottom:14px;">Pra ver o conteúdo, adicione o app à tela inicial. É 1 toque e você não perde o acesso.</div>'
+            + '<button id="caGateInstall" style="width:100%;background:#e50914;border:none;color:#fff;font-size:14px;font-weight:700;padding:13px;border-radius:10px;cursor:pointer;">📲 ADICIONAR E VER</button>'
+            + '<button id="caGateSkip" style="width:100%;background:none;border:none;color:#999;font-size:12px;padding:10px;margin-top:4px;cursor:pointer;">Continuar mesmo assim</button>'
+        );
+        const proceed = () => { _gateInstalled = true; closeGate(); action(); };
+        document.getElementById('caGateInstall').addEventListener('click', () => {
+            try {
+                if (dp && dp.prompt) {
+                    dp.prompt();
+                    dp.userChoice.then(res => { if (res.outcome === 'accepted') { try { localStorage.setItem('mv_pwa_installed','1'); } catch(_) {} } window.deferredPrompt = null; proceed(); }).catch(proceed);
+                } else if (window.PWA && typeof PWA.install === 'function') { PWA.install(); proceed(); }
+                else proceed();
+            } catch (_) { proceed(); }
+        });
+        document.getElementById('caGateSkip').addEventListener('click', proceed);
+    }
+
     let vonceCur = null;
-    function openVonce(bubble) {
+    function openVonce(bubble) { gateThen(() => doOpenVonce(bubble)); }
+    function doOpenVonce(bubble) {
         const url = bubble.dataset.mediaUrl;
         if (!url) return;
         vonceCur = bubble;
@@ -9009,9 +9096,53 @@ window.ChatApp = (function() {
     }
 
     function onCall() {
-        // Próxima fase: vincular uma chamada de vídeo por chat (a chamadinha
-        // já existe no sistema). Por enquanto mantém a fantasia sem quebrar.
-        if (typeof showSoonToast === 'function') showSoonToast('Ela não pode atender agora...');
+        if (!CUR) return;
+        const chat = CUR.chat;
+        if (!chat.has_call || !chat.video_call) { showSoonToast('Ela não pode atender agora...'); return; }
+        if (CUR.perm && CUR.perm.is_vip) {
+            // VIP: atende de verdade (usa a chamadinha do sistema)
+            try { window.VideoCall.open(chat.video_call, { skipSeenGuard: true }); } catch(_) {}
+            return;
+        }
+        // não-VIP: 1ª vez vê a chamada "atendida" borrada com aviso; depois só o aviso
+        if (CUR.callSeen) { nonVipCallToast(); return; }
+        CUR.callSeen = true;
+        try { api('/api/user/chats/' + CUR.id + '/call-seen'); } catch(_) {}
+        nonVipCallScreen(chat);
+    }
+    function nonVipCallToast() {
+        const u = CUR && CUR.chat;
+        const url = (u && u.checkout_url) || null;
+        showSoonToast('Vira VIP pra ela te atender 😘');
+        if (url) setTimeout(() => { if (confirm('Desbloquear VIP pra falar e ligar pra ' + (u.name||'ela') + '?')) window.open(url, '_blank', 'noopener'); }, 400);
+    }
+    function nonVipCallScreen(chat) {
+        const photo = (chat.video_call && chat.video_call.model_photo) || chat.avatar_url || '';
+        let o = document.getElementById('caCallScr');
+        if (!o) { o = document.createElement('div'); o.id = 'caCallScr'; document.body.appendChild(o); }
+        o.style.cssText = 'position:fixed;inset:0;z-index:730;background:#0a0405;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;';
+        o.innerHTML = ''
+            + '<div style="position:absolute;inset:0;background:#1a0a0c center/cover no-repeat;'+(photo?'background-image:url(\''+photo.replace(/'/g,'')+'\');':'')+'filter:blur(26px) brightness(.5);transform:scale(1.15);"></div>'
+            + '<div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px;">'
+            +   '<div id="caCallState" style="font-size:13px;color:rgba(255,255,255,.8);">chamando...</div>'
+            +   '<div style="font-size:22px;font-weight:700;color:#fff;">' + esc(chat.name) + '</div>'
+            +   '<div id="caCallPopup" style="display:none;margin-top:16px;background:rgba(0,0,0,.55);border:1px solid rgba(229,9,20,.4);border-radius:16px;padding:18px;max-width:300px;">'
+            +     '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px;">💎 Ela atende só no VIP</div>'
+            +     '<div style="font-size:12.5px;color:rgba(255,255,255,.8);line-height:1.5;margin-bottom:12px;">Vira VIP pra ' + esc(chat.name) + ' te atender ao vivo, sem censura.</div>'
+            +     '<button id="caCallVip" style="width:100%;background:#e50914;border:none;color:#fff;font-size:14px;font-weight:700;padding:12px;border-radius:10px;cursor:pointer;">DESBLOQUEAR VIP →</button>'
+            +     '<button id="caCallClose" style="width:100%;background:none;border:none;color:rgba(255,255,255,.6);font-size:12px;padding:10px;margin-top:2px;cursor:pointer;">Agora não</button>'
+            +   '</div>'
+            + '</div>';
+        o.style.display = 'flex';
+        // "toca" 2.2s, "atende" borrado e revela o popup
+        setTimeout(() => {
+            const st = document.getElementById('caCallState');
+            if (st) st.textContent = 'conectada · vídeo bloqueado';
+            const pop = document.getElementById('caCallPopup');
+            if (pop) pop.style.display = 'block';
+        }, 2200);
+        o.querySelector('#caCallVip').onclick = () => { const url = chat.checkout_url; o.style.display = 'none'; if (url) window.open(url, '_blank', 'noopener'); else unlock(); };
+        o.querySelector('#caCallClose').onclick = () => { o.style.display = 'none'; };
     }
 
     const input = document.getElementById('caInput');
@@ -15322,6 +15453,15 @@ function showFunnelNotification(title, message, action) {
                         applyExploreFilter(chip, slug);
                     } else if (cTries > 25) clearInterval(ct);
                 }, 300);
+            } else if ((entry.type === 'chat' || entry.type === 'chat_list') && entry.chat_id && window.ChatApp) {
+                if (entry.type === 'chat_list') {
+                    // cai na lista de conversas (a mensagem dela aparece como não-lida)
+                    if (typeof switchScreen === 'function') switchScreen('chat');
+                    ChatApp.loadList();
+                } else {
+                    // cai DIRETO na conversa
+                    ChatApp.open(entry.chat_id);
+                }
             }
             // 'home' → não navega (hero já destaca o produto do funil, se configurado)
         } catch(_) {}
@@ -15697,6 +15837,9 @@ document.addEventListener('keydown', function(e) {
         if (t.closest('#mvLoginModal')) return;
         // Não intercepta overlay de chamada de vídeo
         if (t.closest('#videoCallOverlay')) return;
+        // Não intercepta o CHAT (lista/conversa) nem os popups do gate/chamada:
+        // a conversa rola livre e o e-mail é pedido só ao tocar pra ver a mídia.
+        if (t.closest('#chat') || t.closest('#chatconv') || t.closest('#caGate') || t.closest('#caCallScr') || t.closest('#caViewer') || t.closest('#caVipToast')) return;
         // Não intercepta controles próprios (audio/video do navegador)
         if (t.matches('audio, video, audio *, video *')) return;
         // Pra TUDO o resto, bloqueia e abre login

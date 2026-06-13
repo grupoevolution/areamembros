@@ -1971,7 +1971,7 @@ router.get('/funnel/:slug', async (req, res) => {
         const { rows } = await db.query(`
             SELECT f.id, f.slug, f.name, f.description,
                    f.featured_product_id, f.video_call_id,
-                   f.entry_type, f.entry_product_id, f.entry_category_id,
+                   f.entry_type, f.entry_product_id, f.entry_category_id, f.entry_chat_id,
                    c.slug AS entry_category_slug, c.name AS entry_category_name,
                    p.id AS product_id, p.name AS product_name,
                    p.description AS product_description, p.banner_url AS product_banner,
@@ -1998,6 +1998,7 @@ router.get('/funnel/:slug', async (req, res) => {
                 product_id: r.entry_product_id || null,
                 category_id: r.entry_category_id || null,
                 category_slug: r.entry_category_slug || null,
+                chat_id: r.entry_chat_id || null,
             },
             featured_product: r.product_id ? {
                 id: r.product_id, name: r.product_name, description: r.product_description,
