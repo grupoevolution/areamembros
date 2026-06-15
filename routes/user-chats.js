@@ -375,6 +375,7 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
             input_mode: chat.input_mode === 'gated' ? 'gated' : 'always',
             checkout_url: chat.checkout_url || null,
             has_call: !!callPayload,
+            call_trigger: !!chat.call_goto_key,
             video_call: callPayload,
         };
         // identificado = e-mail real capturado (gate de mídia só vale pra anônimo)
@@ -702,6 +703,125 @@ async function triggerPostPurchaseChats(email, productIds) {
     }
     return out;
 }
+
+// ── STATUS (stories) ─────────────────────────────────────────────────────────
+async function markStatusViewed(sid, ident) {
+    try {
+        await db.query(
+            `INSERT INTO chat_status_views (status_id, customer_email, visitor_id) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING`,
+            [sid, ident.email, ident.visitor]
+        );
+    } catch (_) {}
+}
+
+// GET /chats/status — fileira de stories: personas com status ativo (24h) + não-visto
+router.get('/chats/status', optionalUser, async (req, res) => {
+    try {
+        const ident = getIdentity(req);
+        const { rows } = await db.query(`
+            SELECT s.id, s.chat_id, s.type, s.media_url, s.caption, s.bg_color, s.created_at,
+                   c.name, c.avatar_url, c.display_order,
+                   EXISTS(SELECT 1 FROM chat_status_views v WHERE v.status_id = s.id
+                          AND (($1 <> '' AND LOWER(v.customer_email) = $1) OR ($2 <> '' AND v.visitor_id = $2))) AS seen
+            FROM chat_status s
+            JOIN chats c ON c.id = s.chat_id
+            WHERE s.active = true AND s.expires_at > NOW() AND c.active = true
+            ORDER BY c.display_order, c.id, s.created_at
+        `, [ident.email || '', ident.visitor || '']);
+        const map = new Map();
+        for (const r of rows) {
+            if (!map.has(r.chat_id)) {
+                map.set(r.chat_id, { chat_id: r.chat_id, name: r.name, avatar_url: r.avatar_url, has_unseen: false, items: [] });
+            }
+            const g = map.get(r.chat_id);
+            g.items.push({ id: r.id, type: r.type, media_url: r.media_url, caption: r.caption, bg_color: r.bg_color, created_at: r.created_at });
+            if (!r.seen) g.has_unseen = true;
+        }
+        // não-vistos primeiro (anel verde acende), igual WhatsApp
+        const stories = Array.from(map.values()).sort((a, b) => (b.has_unseen - a.has_unseen));
+        return res.json({ success: true, stories });
+    } catch (err) {
+        logger.error('Erro no feed de status:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// POST /chats/status/:sid/view — marca que o cliente viu o status
+router.post('/chats/status/:sid/view', optionalUser, async (req, res) => {
+    const sid = parseInt(req.params.sid, 10);
+    if (!sid) return res.json({ success: false });
+    const ident = getIdentity(req);
+    if (!ident.email && !ident.visitor) return res.json({ success: false });
+    await markStatusViewed(sid, ident);
+    return res.json({ success: true });
+});
+
+// POST /status/:sid/reply — responder o status: a resposta CAI NA CONVERSA e,
+// se o status tiver gatilho (reply_goto_key), o roteiro pula pro bloco e a
+// modelo "reage". Devolve chat_id pro app abrir a conversa.
+router.post('/chats/status/:sid/reply', optionalUser, async (req, res) => {
+    const sid = parseInt(req.params.sid, 10);
+    if (!sid) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const ident = getIdentity(req);
+        if (!ident.email && !ident.visitor) return res.status(400).json({ success: false, error: 'visitor_id obrigatório' });
+        const text = (req.body?.text || '').toString().trim().slice(0, 1000);
+        const { rows: sr } = await db.query(
+            `SELECT s.* FROM chat_status s JOIN chats c ON c.id = s.chat_id
+             WHERE s.id = $1 AND s.active = true AND s.expires_at > NOW() AND c.active = true`, [sid]
+        );
+        if (!sr.length) return res.status(404).json({ success: false, error: 'Status expirado' });
+        const st = sr[0];
+        const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1`, [st.chat_id]);
+        if (!cr.length) return res.status(404).json({ success: false, error: 'Chat não encontrado' });
+        const chat = cr[0];
+        const session = await findOrCreateSession(st.chat_id, ident, true);
+        await ensureSessionGeo(session, req);
+        ident.city = session.city; ident.cityFallback = chat.city_fallback;
+        await markStatusViewed(sid, ident);
+        if (text) {
+            await insertMsg(session.id, 'user', 'text', text, null, { status_reply: sid }, null);
+        }
+        // gatilho: pula o roteiro pro bloco configurado (a modelo reage ao status)
+        if (st.reply_goto_key) {
+            const steps = await loadSteps(st.chat_id);
+            const j = keyIndex(steps, st.reply_goto_key);
+            if (j >= 0) await runScript(session, chat, steps, j, ident);
+        }
+        // chega como não-lida (o app vai abrir a conversa e marcar como visto)
+        await db.query(`UPDATE chat_sessions SET last_seen_at = NULL WHERE id = $1`, [session.id]);
+        return res.json({ success: true, chat_id: st.chat_id, replied: !!text, triggered: !!st.reply_goto_key });
+    } catch (err) {
+        logger.error('Erro respondendo status:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// POST /chats/:id/call-trigger — gatilho de LIGAÇÃO: quando o cliente liga, o
+// roteiro pula pro bloco call_goto_key (a "reação" da ligação). Idempotente o
+// suficiente: só roda se o bloco existir. Devolve as mensagens novas pro app.
+router.post('/chats/:id/call-trigger', optionalUser, async (req, res) => {
+    const chatId = parseInt(req.params.id, 10);
+    if (!chatId) return res.json({ success: false });
+    try {
+        const ident = getIdentity(req);
+        if (!ident.email && !ident.visitor) return res.json({ success: false });
+        const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
+        if (!cr.length || !cr[0].call_goto_key) return res.json({ success: true, messages: [] });
+        const chat = cr[0];
+        const session = await findOrCreateSession(chatId, ident, true);
+        await ensureSessionGeo(session, req);
+        ident.city = session.city; ident.cityFallback = chat.city_fallback;
+        const steps = await loadSteps(chatId);
+        const j = keyIndex(steps, chat.call_goto_key);
+        if (j < 0) return res.json({ success: true, messages: [] });
+        const fresh = await runScript(session, chat, steps, j, ident);
+        return res.json({ success: true, messages: fresh.map(publicMsg), awaiting: session.awaiting });
+    } catch (err) {
+        logger.error('Erro no gatilho de ligação:', err);
+        return res.json({ success: false });
+    }
+});
 
 module.exports = router;
 module.exports.resumeDelayed = resumeDelayed;

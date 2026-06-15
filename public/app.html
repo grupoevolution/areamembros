@@ -8087,6 +8087,34 @@ body.is-slowconn .prod-cta-fixed {
 .ca-online-item .av.locked { border-color: #d0c8c0; display: flex; align-items: center; justify-content: center; }
 .ca-online-item .dot { position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; border-radius: 50%; background: #25D366; border: 2px solid #fff; }
 .ca-online-item .nm { font-size: 10px; color: #555; margin-top: 4px; max-width: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Fileira de STATUS (stories) */
+.ca-stories { padding: 12px 16px 6px; background: #fff; border-bottom: 8px solid #ECE5DD; }
+.ca-stories-row { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; }
+.ca-story-item { text-align: center; flex-shrink: 0; cursor: pointer; }
+.ca-story-item .ring { width: 60px; height: 60px; border-radius: 50%; padding: 2.5px; background: #d0c8c0; }
+.ca-story-item .ring.unseen { background: linear-gradient(135deg, #25D366, #128C7E); }
+.ca-story-item .ring .av { width: 100%; height: 100%; border-radius: 50%; background: #ddd6d0 center/cover no-repeat; border: 2px solid #fff; box-sizing: border-box; }
+.ca-story-item .nm { font-size: 10px; color: #555; margin-top: 4px; max-width: 62px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Viewer de stories (tela cheia, estilo Instagram) */
+#caStory { position: fixed; inset: 0; z-index: 740; background: #000; display: none; flex-direction: column; }
+#caStory.show { display: flex; }
+#caStory .bars { display: flex; gap: 4px; padding: 10px 12px 6px; }
+#caStory .bars .b { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,.3); overflow: hidden; }
+#caStory .bars .b > i { display: block; height: 100%; width: 0; background: #fff; }
+#caStory .shead { display: flex; align-items: center; gap: 10px; padding: 2px 14px 8px; color: #fff; }
+#caStory .shead .av { width: 34px; height: 34px; border-radius: 50%; background: #555 center/cover no-repeat; }
+#caStory .shead .nm { font-size: 14px; font-weight: 600; flex: 1; }
+#caStory .shead .x { background: none; border: none; color: #fff; font-size: 26px; line-height: 1; cursor: pointer; }
+#caStory .smedia { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+#caStory .smedia img, #caStory .smedia video { max-width: 100%; max-height: 100%; object-fit: contain; }
+#caStory .smedia .txtcard { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; text-align: center; padding: 30px; color: #fff; font-size: 22px; font-weight: 600; }
+#caStory .scap { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px; color: #fff; font-size: 15px; background: linear-gradient(transparent, rgba(0,0,0,.6)); text-align: center; }
+#caStory .snav { position: absolute; top: 0; bottom: 0; width: 35%; }
+#caStory .snav.left { left: 0; } #caStory .snav.right { right: 0; }
+#caStory .sreply { display: flex; gap: 8px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); background: #000; }
+#caStory .sreply input { flex: 1; border: 1.5px solid rgba(255,255,255,.35); background: rgba(255,255,255,.08); color: #fff; border-radius: 999px; padding: 11px 16px; font-size: 14px; outline: none; }
+#caStory .sreply button { background: #25D366; border: none; color: #fff; border-radius: 50%; width: 44px; height: 44px; cursor: pointer; flex-shrink: 0; }
+#caStory .sreply button svg { width: 20px; height: 20px; }
 .ca-sec-block { padding: 8px 0 0; background: #fff; }
 .ca-sec-block .ca-sec-label { padding: 6px 16px 0; }
 .ca-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #f0ebe6; cursor: pointer; }
@@ -8676,18 +8704,131 @@ window.ChatApp = (function() {
         return { status: r.status, data: await r.json().catch(() => ({})) };
     }
 
+    // ── STATUS (stories) ──
+    let STORIES = [];
+    let STORY = null; // { group, idx, timer, started }
+    function storiesStripHtml() {
+        if (!STORIES.length) return '';
+        const items = STORIES.map(g => {
+            const bg = g.avatar_url ? ' style="background-image:url(\'' + esc(g.avatar_url) + '\')"' : '';
+            return '<div class="ca-story-item" onclick="ChatApp.openStory(' + g.chat_id + ')">'
+                + '<div class="ring' + (g.has_unseen ? ' unseen' : '') + '"><div class="av"' + bg + '></div></div>'
+                + '<div class="nm">' + esc(g.name) + '</div></div>';
+        }).join('');
+        return '<div class="ca-stories"><div class="ca-sec-label">Status</div><div class="ca-stories-row">' + items + '</div></div>';
+    }
+    function ensureStoryEl() {
+        let el = document.getElementById('caStory');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'caStory';
+            document.body.appendChild(el);
+        }
+        return el;
+    }
+    function openStory(chatId) {
+        const group = STORIES.find(g => g.chat_id === chatId);
+        if (!group || !group.items.length) return;
+        STORY = { group, idx: 0 };
+        renderStory();
+    }
+    function renderStory() {
+        if (!STORY) return;
+        const g = STORY.group;
+        const it = g.items[STORY.idx];
+        if (!it) { closeStory(); return; }
+        const el = ensureStoryEl();
+        const bars = g.items.map((_, i) => '<div class="b"><i id="caStoryBar' + i + '"></i></div>').join('');
+        const avbg = g.avatar_url ? ' style="background-image:url(\'' + esc(g.avatar_url) + '\')"' : '';
+        let media;
+        if (it.type === 'video') media = '<video id="caStoryVid" src="' + esc(it.media_url || '') + '" autoplay playsinline></video>';
+        else if (it.type === 'text') media = '<div class="txtcard" style="background:' + (it.bg_color ? esc(it.bg_color) : '#128C7E') + '">' + esc(it.caption || '') + '</div>';
+        else media = '<img src="' + esc(it.media_url || '') + '" alt="">';
+        const cap = (it.type !== 'text' && it.caption) ? '<div class="scap">' + esc(it.caption) + '</div>' : '';
+        el.innerHTML = '<div class="bars">' + bars + '</div>'
+            + '<div class="shead"><div class="av"' + avbg + '></div><div class="nm">' + esc(g.name) + '</div>'
+            + '<button class="x" onclick="ChatApp.closeStory()" aria-label="Fechar">×</button></div>'
+            + '<div class="smedia">' + media + cap
+            + '<div class="snav left" onclick="ChatApp.storyNav(-1)"></div><div class="snav right" onclick="ChatApp.storyNav(1)"></div></div>'
+            + '<div class="sreply"><input id="caStoryReply" type="text" placeholder="Responder ' + esc(g.name) + '..." autocomplete="off">'
+            + '<button onclick="ChatApp.storyReply()" aria-label="Enviar"><svg viewBox="0 0 24 24" fill="#fff"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a.993.993 0 00-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z"/></svg></button></div>';
+        el.classList.add('show');
+        // pausa o auto-advance enquanto o cliente digita a resposta
+        const rep = document.getElementById('caStoryReply');
+        if (rep) { rep.addEventListener('focus', stopStoryTimer); rep.addEventListener('keydown', e => { if (e.key === 'Enter') storyReply(); }); }
+        // marca como visto
+        api('/api/user/chats/status/' + it.id + '/view').catch(() => {});
+        startStoryTimer();
+    }
+    function startStoryTimer() {
+        stopStoryTimer();
+        const g = STORY.group, idx = STORY.idx;
+        // barras anteriores cheias, atual anima, próximas vazias
+        g.items.forEach((_, i) => { const b = document.getElementById('caStoryBar' + i); if (b) { b.style.transition = 'none'; b.style.width = i < idx ? '100%' : '0%'; } });
+        const it = g.items[idx];
+        const dur = it.type === 'video' ? 15000 : 5000;
+        const bar = document.getElementById('caStoryBar' + idx);
+        if (bar) { void bar.offsetWidth; bar.style.transition = 'width ' + dur + 'ms linear'; bar.style.width = '100%'; }
+        const vid = document.getElementById('caStoryVid');
+        if (vid) { try { vid.onended = () => storyNav(1); } catch (_) {} }
+        STORY.timer = setTimeout(() => storyNav(1), dur);
+    }
+    function stopStoryTimer() { if (STORY && STORY.timer) { clearTimeout(STORY.timer); STORY.timer = null; } const b = STORY && document.getElementById('caStoryBar' + STORY.idx); if (b) { const w = getComputedStyle(b).width; b.style.transition = 'none'; b.style.width = w; } }
+    function storyNav(dir) {
+        if (!STORY) return;
+        const next = STORY.idx + dir;
+        if (next < 0) { STORY.idx = 0; renderStory(); return; }
+        if (next >= STORY.group.items.length) {
+            STORY.group.has_unseen = false; // viu tudo → anel apaga
+            closeStory();
+            renderStripInline();
+            return;
+        }
+        STORY.idx = next;
+        renderStory();
+    }
+    function closeStory() {
+        stopStoryTimer();
+        const el = document.getElementById('caStory');
+        if (el) { el.classList.remove('show'); el.innerHTML = ''; }
+        STORY = null;
+    }
+    // atualiza só a fileira de stories sem recarregar a lista toda
+    function renderStripInline() {
+        const old = document.querySelector('#caListScroll .ca-stories');
+        if (old) old.outerHTML = storiesStripHtml();
+    }
+    async function storyReply() {
+        if (!STORY) return;
+        const inp = document.getElementById('caStoryReply');
+        const text = (inp && inp.value || '').trim();
+        if (!text) { if (inp) inp.focus(); return; }
+        const g = STORY.group, it = g.items[STORY.idx];
+        const chatId = g.chat_id;
+        const { data } = await api('/api/user/chats/status/' + it.id + '/reply', { text });
+        closeStory();
+        if (data && data.success) {
+            // a resposta caiu na conversa → abre a conversa direto
+            open(chatId);
+        }
+    }
+
     async function loadList() {
         const scroll = document.getElementById('caListScroll');
         if (!scroll) return;
         try {
-            const r = await fetch('/api/user/chats?visitor_id=' + VID, { credentials: 'include' });
+            const [r, sr] = await Promise.all([
+                fetch('/api/user/chats?visitor_id=' + VID, { credentials: 'include' }),
+                fetch('/api/user/chats/status?visitor_id=' + VID, { credentials: 'include' }).catch(() => null),
+            ]);
             const data = await r.json();
+            try { const sd = sr && await sr.json(); STORIES = (sd && sd.success && Array.isArray(sd.stories)) ? sd.stories : []; } catch (_) { STORIES = []; }
             if (!data.success || !Array.isArray(data.chats) || data.chats.length === 0) {
-                scroll.innerHTML = '<div class="ca-empty">Nenhuma conversa disponível ainda.<br>Volte em breve.</div>';
+                scroll.innerHTML = storiesStripHtml() || '<div class="ca-empty">Nenhuma conversa disponível ainda.<br>Volte em breve.</div>';
                 return;
             }
             const chats = data.chats;
-            let html = '';
+            let html = storiesStripHtml();
             const online = chats.filter(c => c.show_online);
             if (online.length) {
                 html += '<div class="ca-online-row"><div class="ca-sec-label">Online agora</div><div class="ca-online-avatars">'
@@ -9195,6 +9336,15 @@ window.ChatApp = (function() {
         if (!CUR) return;
         const chat = CUR.chat;
         if (!chat.has_call || !chat.video_call) { showSoonToast('Ela não pode atender agora'); return; }
+        // gatilho de ligação: a modelo "reage" no roteiro (pula pro call_goto_key).
+        // As mensagens aparecem na conversa quando a tela de chamada fechar.
+        if (chat.call_trigger) {
+            api('/api/user/chats/' + CUR.id + '/call-trigger').then(({ data }) => {
+                if (data && data.success && Array.isArray(data.messages) && data.messages.length) {
+                    handleAdvance({ messages: data.messages, awaiting: data.awaiting }, true);
+                }
+            }).catch(() => {});
+        }
         const isVip = !!(CUR.perm && CUR.perm.is_vip);
         // não-VIP que já tentou: vai direto pro popup (sem repetir o "chamando")
         if (!isVip && CUR.callSeen) { showCallVipPopup(chat); return; }
@@ -9311,7 +9461,8 @@ window.ChatApp = (function() {
     const input = document.getElementById('caInput');
     if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
-    return { loadList, open, back, send, photo, sendPhoto, unlock, closeVonce, onCall, refreshUnreadDot, openProfile, closeProfile };
+    return { loadList, open, back, send, photo, sendPhoto, unlock, closeVonce, onCall, refreshUnreadDot, openProfile, closeProfile,
+             openStory, closeStory, storyNav, storyReply };
 })();
 
 // Deep-link do push de mensagem: /?chat=<id> abre a conversa direto

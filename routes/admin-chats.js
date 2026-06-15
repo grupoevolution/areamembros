@@ -43,13 +43,13 @@ router.post('/', requireAdmin, async (req, res) => {
     try {
         const { name, avatar_url, section, status_label, show_online, access,
                 product_id, checkout_url, reply_mode, allow_photo, display_order, active,
-                city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode } = req.body || {};
+                city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key } = req.body || {};
         if (!name || !String(name).trim()) return res.status(400).json({ success: false, error: 'Nome obrigatório' });
         const { rows } = await db.query(`
             INSERT INTO chats (name, avatar_url, section, status_label, show_online, access,
                                product_id, checkout_url, reply_mode, allow_photo, display_order, active,
-                               city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *
+                               city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *
         `, [
             String(name).trim().slice(0, 80),
             (avatar_url || '').trim().slice(0, 1000) || null,
@@ -68,6 +68,7 @@ router.post('/', requireAdmin, async (req, res) => {
             call_video_call_id ? parseInt(call_video_call_id, 10) : null,
             cleanTriggerIds(trigger_product_ids),
             INPUT_MODES.includes(input_mode) ? input_mode : 'always',
+            (call_goto_key || '').trim().slice(0, 40) || null,
         ]);
         return res.json({ success: true, chat: rows[0] });
     } catch (err) {
@@ -100,6 +101,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
         if (b.call_video_call_id !== undefined) set('call_video_call_id', b.call_video_call_id ? parseInt(b.call_video_call_id, 10) : null);
         if (b.trigger_product_ids !== undefined) set('trigger_product_ids', cleanTriggerIds(b.trigger_product_ids));
         if (b.input_mode !== undefined) set('input_mode', INPUT_MODES.includes(b.input_mode) ? b.input_mode : 'always');
+        if (b.call_goto_key !== undefined) set('call_goto_key', (b.call_goto_key || '').trim().slice(0, 40) || null);
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
         values.push(id);
         const { rows } = await db.query(`UPDATE chats SET ${updates.join(', ')} WHERE id = $${p} RETURNING *`, values);
@@ -356,6 +358,67 @@ router.get('/sessions/:sid/messages', requireAdmin, async (req, res) => {
              FROM chat_messages WHERE session_id = $1 ORDER BY id LIMIT 500`, [sid]
         );
         return res.json({ success: true, messages: rows });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// ── STATUS (stories) ─────────────────────────────────────────────────────────
+const STATUS_TYPES = ['image', 'video', 'text'];
+
+// Lista status de um chat (inclui expirados, marcados como tal — admin vê tudo)
+router.get('/:id/status', requireAdmin, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const { rows } = await db.query(`
+            SELECT s.*, (s.expires_at <= NOW()) AS expired,
+                   (SELECT COUNT(*)::int FROM chat_status_views v WHERE v.status_id = s.id) AS views
+            FROM chat_status s WHERE s.chat_id = $1 ORDER BY s.created_at DESC LIMIT 100
+        `, [id]);
+        return res.json({ success: true, status: rows });
+    } catch (err) {
+        logger.error('Erro listando status:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+router.post('/:id/status', requireAdmin, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const b = req.body || {};
+        const type = STATUS_TYPES.includes(b.type) ? b.type : 'image';
+        const mediaUrl = (b.media_url || '').trim().slice(0, 1000) || null;
+        if ((type === 'image' || type === 'video') && !mediaUrl) {
+            return res.status(400).json({ success: false, error: 'Mídia obrigatória pra status de foto/vídeo' });
+        }
+        // duração configurável: padrão 24h, aceita horas custom (1..168)
+        const hours = Math.max(1, Math.min(168, parseInt(b.expires_hours, 10) || 24));
+        const { rows } = await db.query(`
+            INSERT INTO chat_status (chat_id, type, media_url, caption, bg_color, reply_goto_key, expires_at)
+            VALUES ($1,$2,$3,$4,$5,$6, NOW() + make_interval(hours => $7)) RETURNING *
+        `, [
+            id, type, mediaUrl,
+            (b.caption || '').trim().slice(0, 300) || null,
+            (b.bg_color || '').trim().slice(0, 20) || null,
+            (b.reply_goto_key || '').trim().slice(0, 40) || null,
+            hours,
+        ]);
+        return res.json({ success: true, status: rows[0] });
+    } catch (err) {
+        logger.error('Erro criando status:', err);
+        return res.status(500).json({ success: false, error: err.message || 'Erro interno' });
+    }
+});
+
+router.delete('/:id/status/:sid', requireAdmin, async (req, res) => {
+    const sid = parseInt(req.params.sid, 10);
+    if (!sid) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const { rowCount } = await db.query(`DELETE FROM chat_status WHERE id = $1`, [sid]);
+        if (!rowCount) return res.status(404).json({ success: false, error: 'Não encontrado' });
+        return res.json({ success: true, deleted: true });
     } catch (err) {
         return res.status(500).json({ success: false, error: 'Erro interno' });
     }

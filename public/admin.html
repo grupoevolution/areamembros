@@ -5535,6 +5535,12 @@ a { color: inherit; text-decoration: none; }
                                 <div class="form-help" style="margin-top:4px;">VIP liga e ela atende de verdade. Não-VIP vê a chamada borrada com aviso (1x) e depois só o aviso. Use também no bloco "Ela liga" do roteiro.</div>
                             </div>
 
+                            <!-- Gatilho de ligação -->
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">📞 Gatilho ao LIGAR — pular o roteiro pra (rótulo)</label>
+                                <input class="form-control" id="cpCallGoto" maxlength="40" placeholder="ex: pos_ligacao" style="width:100%;"/>
+                                <div class="form-help" style="margin-top:4px;">Quando o cliente tenta LIGAR pra modelo, a conversa pula pro bloco com esse rótulo (a "reação" da ligação — ex: "vi que você me ligou 🥺"). Vazio = sem gatilho.</div>
+                            </div>
+
                             <!-- Gate de mídia (funil principal) -->
                             <div style="background:rgba(229,9,20,.06); border:1px solid rgba(229,9,20,.2); border-radius:10px; padding:12px;">
                                 <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="cpGate" style="width:16px; height:16px;"> 🔒 Exigir e-mail + instalar app pra ver as mídias</label>
@@ -5566,6 +5572,7 @@ a { color: inherit; text-decoration: none; }
                                 </div>
                                 <div id="chatStepsList" style="display:flex; flex-direction:column; gap:8px;"></div>
                                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+                                    <button type="button" class="btn-secondary" onclick="openChatStatus()" style="font-size:12px;">📸 Status (stories)</button>
                                     <button type="button" class="btn-secondary" onclick="openChatSessions()" style="font-size:12px;">📥 Conversas recebidas</button>
                                     <button type="button" class="btn-secondary" onclick="exportChatJSON()" style="font-size:12px;">⬆ Exportar JSON</button>
                                 </div>
@@ -5683,6 +5690,45 @@ a { color: inherit; text-decoration: none; }
                         <button onclick="document.getElementById('chatSessionsBackdrop').style.display='none'" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">×</button>
                     </div>
                     <div id="chatSessionsBody" style="padding:18px 24px; color:rgba(255,255,255,.6); font-size:12px;">—</div>
+                </div>
+            </div>
+
+            <!-- Modal Status (stories) -->
+            <div id="chatStatusBackdrop" style="position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:300; display:none; align-items:center; justify-content:center; padding:16px;">
+                <div style="background:var(--card,#1a1a1a); border-radius:16px; width:100%; max-width:560px; max-height:92vh; overflow-y:auto;">
+                    <div style="padding:20px 24px; border-bottom:1px solid var(--border,rgba(255,255,255,.1)); display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:16px; font-weight:700; color:#fff;">📸 Status (stories)</span>
+                        <button onclick="document.getElementById('chatStatusBackdrop').style.display='none'" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">×</button>
+                    </div>
+                    <div style="padding:18px 24px; display:flex; flex-direction:column; gap:12px;">
+                        <div style="font-size:11.5px; color:rgba(255,255,255,.5);">O status aparece numa fileira de "stories" no topo da lista de conversas. Expira sozinho (padrão 24h). Se o cliente responder, a resposta cai na conversa — e, com gatilho, a modelo reage pulando pro bloco do rótulo.</div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Tipo</label>
+                                <select class="form-control" id="stType" style="width:100%;" onchange="updateStatusFields()">
+                                    <option value="image">📷 Foto</option>
+                                    <option value="video">🎬 Vídeo</option>
+                                    <option value="text">📝 Texto</option>
+                                </select>
+                            </div>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Expira em (horas)</label><input class="form-control" type="number" id="stHours" min="1" max="168" value="24" style="width:100%;"/></div>
+                        </div>
+                        <div id="stMediaWrap"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">URL da mídia</label>
+                            <div style="display:flex; gap:8px;">
+                                <input class="form-control" id="stMedia" maxlength="1000" placeholder="https://..." style="flex:1;"/>
+                                <button type="button" class="btn-secondary" onclick="UploadHelper.openPicker('stMedia', 'banner-produto', () => {})" style="white-space:nowrap; font-size:12px;">📤</button>
+                            </div>
+                        </div>
+                        <div id="stBgWrap" style="display:none;"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Cor de fundo</label><input class="form-control" type="text" id="stBg" placeholder="#e50914" style="width:140px;"/></div>
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Legenda / texto</label><input class="form-control" id="stCaption" maxlength="300" placeholder="oi amor, viu meu story? 😏" style="width:100%;"/></div>
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">📞 Gatilho ao RESPONDER — pular pro bloco (rótulo)</label><input class="form-control" id="stReplyGoto" maxlength="40" placeholder="ex: reacao_story" style="width:100%;"/>
+                            <div class="form-help" style="margin-top:4px;">Vazio = a resposta só cai na conversa. Com rótulo = a modelo reage pulando pro bloco.</div>
+                        </div>
+                        <button type="button" class="btn-primary" onclick="saveChatStatus()">+ Publicar status</button>
+                        <div style="border-top:1px solid rgba(255,255,255,.08); padding-top:12px;">
+                            <div style="font-size:12px; font-weight:700; color:#fff; margin-bottom:8px;">Status publicados</div>
+                            <div id="chatStatusList" style="display:flex; flex-direction:column; gap:8px;"><div style="color:rgba(255,255,255,.4); font-size:12px;">—</div></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -14405,6 +14451,7 @@ function editChatPersona(c) {
     document.getElementById('cpCheckout').value = c.checkout_url || '';
     document.getElementById('cpReply').value = c.reply_mode || 'vip';
     document.getElementById('cpInputMode').value = c.input_mode === 'gated' ? 'gated' : 'always';
+    document.getElementById('cpCallGoto').value = c.call_goto_key || '';
     document.getElementById('cpPhoto').checked = c.allow_photo === true;
     document.getElementById('cpGate').checked = c.gate_media === true;
     document.getElementById('cpCityFallback').value = c.city_fallback || '';
@@ -14431,6 +14478,7 @@ async function saveChatPersona(e) {
         checkout_url: document.getElementById('cpCheckout').value.trim() || null,
         reply_mode: document.getElementById('cpReply').value,
         input_mode: document.getElementById('cpInputMode').value,
+        call_goto_key: document.getElementById('cpCallGoto').value.trim() || null,
         allow_photo: document.getElementById('cpPhoto').checked,
         display_order: parseInt(document.getElementById('cpOrder').value, 10) || 0,
         gate_media: document.getElementById('cpGate').checked,
@@ -14763,6 +14811,68 @@ async function viewChatSession(sid) {
                     + txt + '<div style="font-size:9px; color:rgba(255,255,255,.4); text-align:right; margin-top:2px;">'+new Date(m.created_at).toLocaleTimeString('pt-BR').slice(0,5)+'</div></div></div>';
             }).join('');
     } catch(e) { body.innerHTML = 'Erro: ' + e.message; }
+}
+
+// ── Status (stories) ──
+function updateStatusFields() {
+    const t = document.getElementById('stType').value;
+    document.getElementById('stMediaWrap').style.display = (t === 'image' || t === 'video') ? 'block' : 'none';
+    document.getElementById('stBgWrap').style.display = (t === 'text') ? 'block' : 'none';
+}
+function openChatStatus() {
+    if (!_curChatId) { alert('Salve o chat primeiro.'); return; }
+    document.getElementById('stType').value = 'image';
+    document.getElementById('stHours').value = 24;
+    document.getElementById('stMedia').value = '';
+    document.getElementById('stBg').value = '';
+    document.getElementById('stCaption').value = '';
+    document.getElementById('stReplyGoto').value = '';
+    updateStatusFields();
+    document.getElementById('chatStatusBackdrop').style.display = 'flex';
+    loadChatStatus();
+}
+async function loadChatStatus() {
+    const list = document.getElementById('chatStatusList');
+    list.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:12px;">Carregando...</div>';
+    try {
+        const r = await fetch('/api/admin/chats/'+_curChatId+'/status', { credentials:'include' });
+        const data = await r.json();
+        if (!data.success || !data.status.length) { list.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:12px;">Nenhum status publicado.</div>'; return; }
+        list.innerHTML = data.status.map(s => {
+            const icon = s.type === 'video' ? '🎬' : s.type === 'text' ? '📝' : '📷';
+            const exp = s.expired ? '<span style="color:#FF3B30;">expirado</span>' : ('expira '+new Date(s.expires_at).toLocaleString('pt-BR').slice(0,16));
+            const trig = s.reply_goto_key ? ' · ↪ '+escHtmlAdmin(s.reply_goto_key) : '';
+            return '<div style="display:flex; align-items:center; gap:10px; padding:9px 10px; background:rgba(0,0,0,.3); border-radius:8px;">'
+                + '<div style="flex:1; min-width:0;"><div style="font-size:12.5px; font-weight:700; color:#fff;">'+icon+' '+escHtmlAdmin(s.caption || '(sem legenda)')+'</div>'
+                + '<div style="font-size:10.5px; color:rgba(255,255,255,.5);">'+exp+' · 👁 '+s.views+trig+'</div></div>'
+                + '<button type="button" onclick="deleteChatStatus('+s.id+')" class="btn-danger" style="font-size:11px; padding:4px 10px;">×</button></div>';
+        }).join('');
+    } catch(e) { list.innerHTML = '<div style="color:#f55">Erro: '+e.message+'</div>'; }
+}
+async function saveChatStatus() {
+    const type = document.getElementById('stType').value;
+    const payload = {
+        type,
+        media_url: document.getElementById('stMedia').value.trim() || null,
+        bg_color: document.getElementById('stBg').value.trim() || null,
+        caption: document.getElementById('stCaption').value.trim() || null,
+        reply_goto_key: document.getElementById('stReplyGoto').value.trim() || null,
+        expires_hours: parseInt(document.getElementById('stHours').value, 10) || 24,
+    };
+    if ((type === 'image' || type === 'video') && !payload.media_url) { alert('Informe a URL da mídia.'); return; }
+    try {
+        const r = await fetch('/api/admin/chats/'+_curChatId+'/status', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payload) });
+        const data = await r.json();
+        if (!data.success) { alert('Erro: '+(data.error||'')); return; }
+        document.getElementById('stMedia').value = '';
+        document.getElementById('stCaption').value = '';
+        loadChatStatus();
+    } catch(e) { alert('Erro: '+e.message); }
+}
+async function deleteChatStatus(id) {
+    if (!confirm('Excluir este status?')) return;
+    await fetch('/api/admin/chats/'+_curChatId+'/status/'+id, { method:'DELETE', credentials:'include' });
+    loadChatStatus();
 }
 
 // ═══════════════ TOGGLES DE GAMIFICAÇÃO (roleta, cofre, etc.) ═══════════════
