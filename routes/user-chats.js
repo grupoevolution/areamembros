@@ -196,7 +196,7 @@ async function runScript(session, chat, steps, idx, ident) {
             const btns = Array.isArray(s.buttons) ? s.buttons : [];
             const msg = await insertMsg(session.id, 'bot', 'buttons',
                 await fillVars(s.content, ident), null,
-                { buttons: btns.map(b => ({ label: String(b.label || '').slice(0, 60) })), typing_ms: typing }, s.id);
+                { buttons: btns.map(b => ({ label: String(b.label || '').slice(0, 60) })), typing_ms: typing, allow_input: s.allow_input === true }, s.id);
             out.push(msg);
             awaiting = 'buttons';
             break;
@@ -351,6 +351,7 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
             id: chat.id, name: chat.name, avatar_url: chat.avatar_url,
             status_label: chat.status_label, show_online: chat.show_online,
             gate_media: chat.gate_media === true,
+            input_mode: chat.input_mode === 'gated' ? 'gated' : 'always',
             checkout_url: chat.checkout_url || null,
             has_call: !!callPayload,
             video_call: callPayload,
@@ -449,6 +450,26 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
             const step = steps[stepIdx];
             newMsgs.push(await insertMsg(session.id, 'user', 'text', text, null, null, step ? step.id : null));
             const j = step ? keyIndex(steps, step.goto_key) : -1;
+            const nextIdx = j >= 0 ? j : stepIdx + 1;
+            const fresh = await runScript(session, chat, steps, nextIdx, ident);
+            newMsgs.push(...fresh);
+        } else if (text && session.awaiting === 'buttons') {
+            // Bloco de BOTÕES com "permitir digitar" (allow_input): o cliente
+            // pode DIGITAR em vez de clicar — a resposta livre avança o roteiro
+            // (segue o goto do bloco, ou o próximo). É o modo TapBot.
+            const stepIdx = Math.min(session.current_order, steps.length - 1);
+            const step = steps[stepIdx];
+            if (!step || step.allow_input !== true) {
+                // Botões sem digitação liberada: não avança por texto.
+                return res.status(400).json({ success: false, error: 'Escolha uma opção' });
+            }
+            await db.query(
+                `UPDATE chat_messages SET meta = COALESCE(meta, '{}'::jsonb) || '{"answered":true}'::jsonb
+                 WHERE session_id = $1 AND type = 'buttons' AND step_id = $2`,
+                [session.id, step.id]
+            );
+            newMsgs.push(await insertMsg(session.id, 'user', 'text', text, null, null, step.id));
+            const j = keyIndex(steps, step.goto_key);
             const nextIdx = j >= 0 ? j : stepIdx + 1;
             const fresh = await runScript(session, chat, steps, nextIdx, ident);
             newMsgs.push(...fresh);

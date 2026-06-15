@@ -8777,16 +8777,19 @@ window.ChatApp = (function() {
         document.getElementById('caChoices').style.display = 'none';
         document.getElementById('caLocked').style.display = 'none';
         body.style.display = 'flex';
-        document.getElementById('caInputBar').style.display = 'flex';
+        // barra de digitar começa escondida; updateInputBar() decide se aparece
+        // (modo 'gated' só libera nos pontos do roteiro; 'always' = sempre).
+        document.getElementById('caInputBar').style.display = 'none';
 
         const { data } = await api('/api/user/chats/' + id + '/open');
         if (!data.success) { body.innerHTML += '<div class="ca-day">erro ao abrir</div>'; return; }
-        CUR = { id, chat: data.chat, perm: data.permissions, callSeen: data.call_seen === true };
+        CUR = { id, chat: data.chat, perm: data.permissions, callSeen: data.call_seen === true, awaiting: data.awaiting, lastButtonsAllowInput: false };
 
         document.getElementById('caName').textContent = data.chat.name;
         document.getElementById('caStatus').textContent = data.chat.status_label || 'online';
         document.getElementById('caDot').style.display = data.chat.show_online ? '' : 'none';
         document.getElementById('caAv').style.backgroundImage = data.chat.avatar_url ? 'url("' + data.chat.avatar_url + '")' : 'none';
+        updateInputBar();
 
         if (data.permissions.locked) {
             body.style.display = 'none';
@@ -8802,6 +8805,7 @@ window.ChatApp = (function() {
         for (const m of data.messages || []) {
             if (m.type === 'buttons' && m.meta && Array.isArray(m.meta.buttons) && !m.meta.answered) {
                 lastButtons = m.meta.buttons;
+                if (CUR) CUR.lastButtonsAllowInput = m.meta.allow_input === true;
             }
         }
         for (const m of data.messages || []) {
@@ -8812,7 +8816,27 @@ window.ChatApp = (function() {
             QUEUE.push(m);
         }
         QUEUE._awaiting = data.awaiting;
+        if (CUR) CUR.awaiting = data.awaiting;
         if (!RENDERING) drain();
+    }
+
+    // Decide se a barra de digitar aparece. Modo 'always' = sempre visível
+    // (comportamento antigo). Modo 'gated' (estilo TapBot) = só nos pontos em
+    // que o roteiro libera: bloco "Esperar digitar" (awaiting='input') ou bloco
+    // de botões com "permitir digitar" (awaiting='buttons' + allow_input).
+    function updateInputBar() {
+        const bar = document.getElementById('caInputBar');
+        if (!bar) return;
+        if (!CUR || (CUR.perm && CUR.perm.locked)) { bar.style.display = 'none'; return; }
+        const mode = (CUR.chat && CUR.chat.input_mode) || 'always';
+        if (mode !== 'gated') { bar.style.display = 'flex'; return; }
+        const aw = CUR.awaiting;
+        const show = aw === 'input' || (aw === 'buttons' && CUR.lastButtonsAllowInput);
+        bar.style.display = show ? 'flex' : 'none';
+        if (show) {
+            const input = document.getElementById('caInput');
+            if (input) input.placeholder = (aw === 'buttons') ? 'Digite ou escolha 👆' : 'Digite sua resposta...';
+        }
     }
 
     async function drain() {
@@ -8837,6 +8861,7 @@ window.ChatApp = (function() {
         }
         RENDERING = false;
         renderChoices(QUEUE._awaiting);
+        updateInputBar();
         if (QUEUE._awaiting === 'delay') startPoll(); else stopPoll();
     }
 

@@ -17,6 +17,7 @@ const { logger } = require('../lib/logger');
 
 const STEP_TYPES = ['text', 'audio', 'image', 'view_once_image', 'view_once_video', 'buttons', 'wait_input', 'cta', 'delay', 'call'];
 const REPLY_MODES = ['vip', 'all', 'none'];
+const INPUT_MODES = ['always', 'gated'];
 
 // ── CHATS (personas) ─────────────────────────────────────────────────────────
 
@@ -42,13 +43,13 @@ router.post('/', requireAdmin, async (req, res) => {
     try {
         const { name, avatar_url, section, status_label, show_online, access,
                 product_id, checkout_url, reply_mode, allow_photo, display_order, active,
-                city_fallback, gate_media, call_video_call_id, trigger_product_ids } = req.body || {};
+                city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode } = req.body || {};
         if (!name || !String(name).trim()) return res.status(400).json({ success: false, error: 'Nome obrigatório' });
         const { rows } = await db.query(`
             INSERT INTO chats (name, avatar_url, section, status_label, show_online, access,
                                product_id, checkout_url, reply_mode, allow_photo, display_order, active,
-                               city_fallback, gate_media, call_video_call_id, trigger_product_ids)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *
+                               city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *
         `, [
             String(name).trim().slice(0, 80),
             (avatar_url || '').trim().slice(0, 1000) || null,
@@ -66,6 +67,7 @@ router.post('/', requireAdmin, async (req, res) => {
             gate_media === true,
             call_video_call_id ? parseInt(call_video_call_id, 10) : null,
             cleanTriggerIds(trigger_product_ids),
+            INPUT_MODES.includes(input_mode) ? input_mode : 'always',
         ]);
         return res.json({ success: true, chat: rows[0] });
     } catch (err) {
@@ -97,6 +99,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
         if (b.gate_media !== undefined) set('gate_media', !!b.gate_media);
         if (b.call_video_call_id !== undefined) set('call_video_call_id', b.call_video_call_id ? parseInt(b.call_video_call_id, 10) : null);
         if (b.trigger_product_ids !== undefined) set('trigger_product_ids', cleanTriggerIds(b.trigger_product_ids));
+        if (b.input_mode !== undefined) set('input_mode', INPUT_MODES.includes(b.input_mode) ? b.input_mode : 'always');
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
         values.push(id);
         const { rows } = await db.query(`UPDATE chats SET ${updates.join(', ')} WHERE id = $${p} RETURNING *`, values);
@@ -158,8 +161,8 @@ router.post('/:id/steps', requireAdmin, async (req, res) => {
         const b = req.body || {};
         const type = STEP_TYPES.includes(b.type) ? b.type : 'text';
         const { rows } = await db.query(`
-            INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *
+            INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active, allow_input)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *
         `, [
             chatId,
             parseInt(b.step_order, 10) || 0,
@@ -174,6 +177,7 @@ router.post('/:id/steps', requireAdmin, async (req, res) => {
             (b.goto_key || '').trim().slice(0, 40) || null,
             Math.max(0, Math.min(7 * 24 * 3600, parseInt(b.delay_seconds, 10) || 0)),
             b.active !== false,
+            b.allow_input === true,
         ]);
         return res.json({ success: true, step: rows[0] });
     } catch (err) {
@@ -200,6 +204,7 @@ router.put('/:id/steps/:stepId', requireAdmin, async (req, res) => {
         if (b.typing_ms !== undefined) set('typing_ms', Math.max(0, Math.min(8000, parseInt(b.typing_ms, 10) || 1200)));
         if (b.goto_key !== undefined) set('goto_key', (b.goto_key || '').trim().slice(0, 40) || null);
         if (b.delay_seconds !== undefined) set('delay_seconds', Math.max(0, Math.min(7 * 24 * 3600, parseInt(b.delay_seconds, 10) || 0)));
+        if (b.allow_input !== undefined) set('allow_input', !!b.allow_input);
         if (b.active !== undefined) set('active', !!b.active);
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
         values.push(stepId);
@@ -234,7 +239,7 @@ router.get('/:id/export', requireAdmin, async (req, res) => {
         if (!cr.length) return res.status(404).json({ success: false, error: 'Não encontrado' });
         const c = cr[0];
         const { rows: steps } = await db.query(
-            `SELECT step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active
+            `SELECT step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active, allow_input
              FROM chat_steps WHERE chat_id = $1 ORDER BY step_order, id`, [id]
         );
         const payload = {
@@ -246,6 +251,7 @@ router.get('/:id/export', requireAdmin, async (req, res) => {
                 status_label: c.status_label, show_online: c.show_online,
                 access: c.access, product_id: c.product_id, checkout_url: c.checkout_url,
                 reply_mode: c.reply_mode, allow_photo: c.allow_photo, display_order: c.display_order,
+                input_mode: c.input_mode,
             },
             steps,
         };
@@ -269,8 +275,8 @@ router.post('/import', requireAdmin, async (req, res) => {
         const c = data.chat;
         const { rows: created } = await db.query(`
             INSERT INTO chats (name, avatar_url, section, status_label, show_online, access,
-                               product_id, checkout_url, reply_mode, allow_photo, display_order, active)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,true) RETURNING *
+                               product_id, checkout_url, reply_mode, allow_photo, display_order, active, input_mode)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,true,$12) RETURNING *
         `, [
             String(c.name || 'Chat importado').trim().slice(0, 80),
             (c.avatar_url || '').trim().slice(0, 1000) || null,
@@ -283,14 +289,15 @@ router.post('/import', requireAdmin, async (req, res) => {
             REPLY_MODES.includes(c.reply_mode) ? c.reply_mode : 'vip',
             c.allow_photo === true,
             parseInt(c.display_order, 10) || 0,
+            INPUT_MODES.includes(c.input_mode) ? c.input_mode : 'always',
         ]);
         const chat = created[0];
         let imported = 0;
         for (const s of data.steps.slice(0, 200)) {
             const type = STEP_TYPES.includes(s.type) ? s.type : 'text';
             await db.query(`
-                INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active)
-                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+                INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active, allow_input)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
             `, [
                 chat.id,
                 parseInt(s.step_order, 10) || 0,
@@ -305,6 +312,7 @@ router.post('/import', requireAdmin, async (req, res) => {
                 (s.goto_key || '').trim().slice(0, 40) || null,
                 Math.max(0, Math.min(7 * 24 * 3600, parseInt(s.delay_seconds, 10) || 0)),
                 s.active !== false,
+                s.allow_input === true,
             ]);
             imported++;
         }

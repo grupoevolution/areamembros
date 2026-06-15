@@ -5492,6 +5492,16 @@ a { color: inherit; text-decoration: none; }
                                 <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="cpPhoto" style="width:16px; height:16px;"> VIP pode mandar FOTO</label>
                             </div>
 
+                            <!-- Modo de digitação (TapBot) -->
+                            <div style="background:rgba(37,211,102,.06); border:1px solid rgba(37,211,102,.25); border-radius:10px; padding:12px;">
+                                <label style="display:block; font-size:12px; color:#fff; font-weight:700; margin-bottom:4px;">⌨️ Quando o cliente pode digitar</label>
+                                <select class="form-control" id="cpInputMode" style="width:100%;">
+                                    <option value="always">Sempre — barra de digitar fica sempre visível</option>
+                                    <option value="gated">Só quando o roteiro liberar (estilo TapBot)</option>
+                                </select>
+                                <div class="form-help" style="margin-top:6px;">No modo <b>TapBot</b> a barra fica <b>escondida</b> e só aparece nos blocos "Esperar cliente digitar" ou nos botões com "permitir digitar". O cliente responde, a barra some e a conversa continua — perfeito pra tráfego direto guiado.</div>
+                            </div>
+
                             <!-- Chamada de vídeo vinculada -->
                             <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">📹 Chamada de vídeo (ícone de ligar no topo da conversa)</label>
                                 <select class="form-control" id="cpCall" style="width:100%;"><option value="">— sem chamada —</option></select>
@@ -5601,6 +5611,8 @@ a { color: inherit; text-decoration: none; }
                                 <div id="csButtonRows" style="display:flex; flex-direction:column; gap:6px;"></div>
                                 <button type="button" class="btn-secondary" onclick="addChatBtnRow()" style="margin-top:6px; font-size:11px;">+ Botão</button>
                                 <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">"Pulo" = rótulo do bloco de destino. Vazio = segue pro próximo.</div>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#fff; cursor:pointer; margin-top:8px;"><input type="checkbox" id="csAllowInput" style="width:15px; height:15px;"> ⌨️ Permitir também DIGITAR (cliente escolhe ou digita)</label>
+                                <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:2px;">Ligado: junto dos botões aparece a barra de digitar. O que o cliente digitar conta como resposta e segue o "Pulo pra" do bloco.</div>
                             </div>
                             <div id="csCtaWrap" style="display:none;"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link do botão (checkout/oferta)</label>
                                 <input class="form-control" id="csLink" maxlength="1000" placeholder="https://pay..." style="width:100%;"/>
@@ -14319,6 +14331,7 @@ function editChatPersona(c) {
     document.getElementById('cpAccess').value = c.access || 'free';
     document.getElementById('cpCheckout').value = c.checkout_url || '';
     document.getElementById('cpReply').value = c.reply_mode || 'vip';
+    document.getElementById('cpInputMode').value = c.input_mode === 'gated' ? 'gated' : 'always';
     document.getElementById('cpPhoto').checked = c.allow_photo === true;
     document.getElementById('cpGate').checked = c.gate_media === true;
     document.getElementById('cpCityFallback').value = c.city_fallback || '';
@@ -14344,6 +14357,7 @@ async function saveChatPersona(e) {
         product_id: document.getElementById('cpProduct').value || null,
         checkout_url: document.getElementById('cpCheckout').value.trim() || null,
         reply_mode: document.getElementById('cpReply').value,
+        input_mode: document.getElementById('cpInputMode').value,
         allow_photo: document.getElementById('cpPhoto').checked,
         display_order: parseInt(document.getElementById('cpOrder').value, 10) || 0,
         gate_media: document.getElementById('cpGate').checked,
@@ -14492,6 +14506,7 @@ function renderChatPreview() {
             html += '<div style="display:flex; gap:5px; flex-wrap:wrap; justify-content:center; padding:2px 0;">'
                 + btns.map(b => '<span style="background:#fff; border:1.5px solid #25D366; color:#128C7E; font-size:10.5px; font-weight:600; padding:5px 10px; border-radius:999px;">'+esc(b.label)+(b.goto?' <span style="color:#999;font-size:9px;">→'+esc(b.goto)+'</span>':'')+'</span>').join('')
                 + '</div>';
+            if (s.allow_input) html += '<div style="align-self:center; font-size:9px; color:#128C7E; margin-top:-1px;">⌨️ ou pode digitar a resposta</div>';
         } else if (s.type === 'wait_input') {
             html += '<div style="align-self:center; font-size:9.5px; color:#999; background:#fdfcfa; padding:3px 9px; border-radius:8px;">⌨ espera o cliente digitar</div>';
         } else if (s.type === 'call') {
@@ -14582,6 +14597,7 @@ function editChatStep(s) {
     document.getElementById('csTyping').value = s.typing_ms ?? 1200;
     document.getElementById('csKey').value = s.step_key || '';
     document.getElementById('csGoto').value = s.goto_key || '';
+    document.getElementById('csAllowInput').checked = s.allow_input === true;
     // delay: escolhe a maior unidade exata (h > min > s)
     const ds = parseInt(s.delay_seconds, 10) || 0;
     if (ds && ds % 3600 === 0) { document.getElementById('csDelayValue').value = ds / 3600; document.getElementById('csDelayUnit').value = '3600'; }
@@ -14614,6 +14630,7 @@ async function saveChatStep(e) {
         delay_seconds: type === 'delay'
             ? (Math.max(1, parseInt(document.getElementById('csDelayValue').value, 10) || 0) * parseInt(document.getElementById('csDelayUnit').value, 10))
             : 0,
+        allow_input: type === 'buttons' ? document.getElementById('csAllowInput').checked : false,
     };
     try {
         const url = id ? '/api/admin/chats/'+_curChatId+'/steps/'+id : '/api/admin/chats/'+_curChatId+'/steps';
