@@ -9032,10 +9032,15 @@ window.ChatApp = (function() {
     }
     function closeGate() { const o = document.getElementById('caGate'); if (o) o.style.display = 'none'; }
     function gateEmail(action) {
+        const nome = (CUR && CUR.chat && CUR.chat.name) ? esc(CUR.chat.name) : 'ela';
+        const avt = (CUR && CUR.chat && CUR.chat.avatar_url) ? esc(CUR.chat.avatar_url) : '';
+        const head = avt
+            ? '<div style="width:64px;height:64px;border-radius:50%;margin:0 auto 14px;background:#eee center/cover no-repeat;background-image:url(\'' + avt + '\');box-shadow:0 0 0 3px rgba(229,9,20,.18);"></div>'
+            : '<div style="width:56px;height:56px;border-radius:50%;background:rgba(229,9,20,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"><svg width="26" height="26" fill="none" stroke="#e50914" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>';
         const o = gateOverlay(
-            '<div style="width:56px;height:56px;border-radius:50%;background:rgba(229,9,20,.1);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"><svg width="26" height="26" fill="none" stroke="#e50914" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>'
-            + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">Liberar o conteúdo</div>'
-            + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:16px;">Informe seu e-mail pra desbloquear o acesso a todas as fotos e vídeos.</div>'
+            head
+            + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">Ver o que ' + nome + ' te mandou 👀</div>'
+            + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:16px;">Confirma seu e-mail pra abrir agora e liberar todas as fotos e vídeos da conversa.</div>'
             + '<input id="caGateEmail" type="email" inputmode="email" placeholder="seu@email.com" style="width:100%;border:1.5px solid #e2e2e2;border-radius:12px;padding:13px;font-size:15px;outline:none;margin-bottom:6px;text-align:center;">'
             + '<div id="caGateErr" style="font-size:12px;color:#e50914;min-height:15px;margin-bottom:6px;"></div>'
             + '<button id="caGateBtn" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;">Liberar acesso</button>'
@@ -9069,14 +9074,24 @@ window.ChatApp = (function() {
     function gateInstall(action) {
         if (isStandalone() || _gateInstalled) { closeGate(); action(); return; }
         const dp = window.deferredPrompt;
+        const nome = (CUR && CUR.chat && CUR.chat.name) ? esc(CUR.chat.name) : 'ela';
         gateOverlay(
             '<div style="width:56px;height:56px;border-radius:16px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;font-weight:800;color:#fff;">M</div>'
             + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">Falta um passo</div>'
-            + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:16px;">Adicione o app à tela inicial pra ver o conteúdo e não perder o acesso. É só um toque.</div>'
+            + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:16px;">Adicione o app à tela inicial pra abrir o conteúdo e receber as mensagens de ' + nome + ' aqui no celular. É só um toque.</div>'
             + '<button id="caGateInstall" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;">Adicionar e ver</button>'
             + '<button id="caGateSkip" style="width:100%;background:none;border:none;color:#999;font-size:13px;padding:11px;margin-top:4px;cursor:pointer;">Continuar mesmo assim</button>'
         );
-        const proceed = () => { _gateInstalled = true; closeGate(); action(); };
+        // Ao prosseguir: pede permissão de notificação e registra a subscription,
+        // pra modelo conseguir "chamar de volta" no celular mesmo com o app fechado.
+        const proceed = () => {
+            _gateInstalled = true; closeGate(); action();
+            try {
+                if (window.PUSH && Notification && Notification.permission !== 'denied') {
+                    Promise.resolve(PUSH.askPermission()).then(g => { if (g) PUSH.subscribe(); }).catch(() => {});
+                }
+            } catch (_) {}
+        };
         document.getElementById('caGateInstall').addEventListener('click', () => {
             try {
                 if (dp && dp.prompt) {

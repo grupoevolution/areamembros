@@ -78,7 +78,7 @@ router.post('/send', requireAdmin, async (req, res) => {
     const vapid = await ensureVapid();
     if (!vapid) return res.status(500).json({ success: false, error: 'VAPID não configurado' });
 
-    const { title, body, url, target_emails } = req.body || {};
+    const { title, body, url, target_emails, icon } = req.body || {};
     if (!title || !body) return res.status(400).json({ success: false, error: 'title e body obrigatórios' });
 
     let query = 'SELECT id, endpoint, p256dh, auth FROM push_subscriptions';
@@ -93,6 +93,7 @@ router.post('/send', requireAdmin, async (req, res) => {
         title: String(title).slice(0, 100),
         body: String(body).slice(0, 200),
         url: url || '/',
+        icon: icon ? String(icon).slice(0, 500) : undefined,
     });
 
     let sent = 0, failed = 0;

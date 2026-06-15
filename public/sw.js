@@ -156,9 +156,13 @@ self.addEventListener('push', (event) => {
 
     const options = {
         body: payload.body || '',
-        icon: '/assets/icon.svg',
-        badge: '/assets/icon.svg',
+        // icon = foto redonda (ex: avatar da modelo no push de conversa).
+        // image = imagem grande opcional. badge = ícone monocromático da status bar.
+        icon: payload.icon || '/assets/icon.svg',
+        badge: payload.badge || '/assets/icon.svg',
+        image: payload.image || undefined,
         tag: payload.tag || 'mvip-default',
+        renotify: !!payload.tag, // re-alerta mesmo reusando a mesma tag (msg nova)
         vibrate: [200, 80, 200],
         data: { url: payload.url || '/', type: payload.type },
         actions: payload.actions || [],

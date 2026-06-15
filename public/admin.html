@@ -4780,6 +4780,25 @@ a { color: inherit; text-decoration: none; }
                             <input type="text" class="form-input" id="pushUrl" placeholder="/" value="/">
                         </div>
                     </div>
+                    <div class="form-row-grid-2" style="gap:14px;margin-bottom:14px;">
+                        <div>
+                            <label class="form-label">Destino rápido</label>
+                            <select class="form-input" id="pushDest" onchange="applyPushDest()">
+                                <option value="/">🏠 Tela inicial (catálogo)</option>
+                                <option value="product">📦 Produto específico (ID)…</option>
+                                <option value="chat">💬 Conversa/chat (ID)…</option>
+                                <option value="custom">✏️ URL personalizada</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label" id="pushDestIdLabel" style="opacity:.5;">ID do destino</label>
+                            <input type="number" class="form-input" id="pushDestId" placeholder="ex: 12" oninput="applyPushDest()" disabled>
+                        </div>
+                    </div>
+                    <div class="form-row" style="margin-bottom:14px;">
+                        <label class="form-label">Ícone/foto (URL, opcional — ex: foto da modelo)</label>
+                        <input type="text" class="form-input" id="pushIcon" placeholder="https://... (aparece redondo no push)">
+                    </div>
                     <div class="form-row" style="margin-bottom:14px;">
                         <label class="form-label">Mensagem</label>
                         <textarea class="form-textarea" id="pushBody" style="min-height:60px;" placeholder="Acabou de chegar. Toca pra ver."></textarea>
@@ -11019,11 +11038,28 @@ async function loadGrowth() {
 
 }
 
+// Destino rápido: preenche a URL de clique conforme o preset escolhido
+function applyPushDest() {
+    const dest = document.getElementById('pushDest').value;
+    const idEl = document.getElementById('pushDestId');
+    const lbl = document.getElementById('pushDestIdLabel');
+    const urlEl = document.getElementById('pushUrl');
+    const needsId = (dest === 'product' || dest === 'chat');
+    idEl.disabled = !needsId;
+    lbl.style.opacity = needsId ? '1' : '.5';
+    if (dest === '/') urlEl.value = '/';
+    else if (dest === 'product') urlEl.value = idEl.value ? '/?p=' + parseInt(idEl.value, 10) : '/?p=';
+    else if (dest === 'chat') urlEl.value = idEl.value ? '/?chat=' + parseInt(idEl.value, 10) : '/?chat=';
+    // 'custom' deixa o admin digitar livremente em pushUrl
+}
+window.applyPushDest = applyPushDest;
+
 async function sendPushNotification() {
     const get = id => document.getElementById(id)?.value?.trim() || '';
     const title = get('pushTitle');
     const body = get('pushBody');
     const url = get('pushUrl') || '/';
+    const icon = get('pushIcon') || undefined;
     const targetsRaw = get('pushTargets');
     const target_emails = targetsRaw ? targetsRaw.split('\n').map(e => e.trim()).filter(Boolean) : [];
 
@@ -11038,7 +11074,7 @@ async function sendPushNotification() {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, body, url, target_emails: target_emails.length ? target_emails : undefined }),
+            body: JSON.stringify({ title, body, url, icon, target_emails: target_emails.length ? target_emails : undefined }),
         }).then(r => r.json());
         if (!r.success) {
             _alertModal('pushAlert', r.error || 'Erro', 'error');
