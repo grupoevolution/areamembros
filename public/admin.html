@@ -5526,7 +5526,7 @@ a { color: inherit; text-decoration: none; }
                                     <option value="always">Sempre — barra de digitar fica sempre visível</option>
                                     <option value="gated">Só quando o roteiro liberar (estilo TapBot)</option>
                                 </select>
-                                <div class="form-help" style="margin-top:6px;">No modo <b>TapBot</b> a barra fica <b>escondida</b> e só aparece nos blocos "Esperar cliente digitar" ou nos botões com "permitir digitar". O cliente responde, a barra some e a conversa continua — perfeito pra tráfego direto guiado.</div>
+                                <div class="form-help" style="margin-top:6px;">No modo <b>TapBot</b> a barra de digitar fica <b>escondida</b>. Pra liberar a digitação num ponto da conversa, adicione no roteiro o bloco <b>"⌨️ Liberar resposta"</b> (ou um bloco de botões com "permitir também digitar"). O cliente responde uma vez, a barra some e a conversa continua — perfeito pra tráfego direto guiado.</div>
                             </div>
 
                             <!-- Chamada de vídeo vinculada -->
@@ -5622,7 +5622,7 @@ a { color: inherit; text-decoration: none; }
                                         <option value="view_once_image">👁 Foto 1x (visualização única)</option>
                                         <option value="view_once_video">🎬 Vídeo 1x (visualização única)</option>
                                         <option value="buttons">🔘 Botões de escolha</option>
-                                        <option value="wait_input">⌨️ Esperar cliente digitar</option>
+                                        <option value="wait_input">⌨️ Liberar resposta (cliente digita aqui)</option>
                                         <option value="delay">⏱ Esperar (tempo) — manda depois</option>
                                         <option value="call">📹 Ela liga pra ele (chamada recebida)</option>
                                         <option value="cta">💳 Botão de oferta (link)</option>
@@ -14516,7 +14516,7 @@ async function deleteChatPersona(id) {
 const CHAT_STEP_LABELS = {
     text: '💬 Texto', audio: '🎤 Áudio', image: '📷 Foto',
     view_once_image: '👁 Foto 1x', view_once_video: '🎬 Vídeo 1x',
-    buttons: '🔘 Botões', wait_input: '⌨️ Espera digitar', delay: '⏱ Espera (tempo)', call: '📹 Ela liga', cta: '💳 Oferta',
+    buttons: '🔘 Botões', wait_input: '⌨️ Liberar resposta', delay: '⏱ Espera (tempo)', call: '📹 Ela liga', cta: '💳 Oferta',
 };
 // Formata segundos em "10 min", "2 h", "30 s"
 function fmtDelay(secs) {
@@ -14630,7 +14630,7 @@ function renderChatPreview() {
                 + '</div>';
             if (s.allow_input) html += '<div style="align-self:center; font-size:9px; color:#128C7E; margin-top:-1px;">⌨️ ou pode digitar a resposta</div>';
         } else if (s.type === 'wait_input') {
-            html += '<div style="align-self:center; font-size:9.5px; color:#999; background:#fdfcfa; padding:3px 9px; border-radius:8px;">⌨ espera o cliente digitar</div>';
+            html += '<div style="align-self:center; font-size:9.5px; color:#128C7E; background:#eafaf0; padding:3px 9px; border-radius:8px;">⌨ aqui a barra de digitar é liberada pro cliente responder</div>';
         } else if (s.type === 'call') {
             html += '<div style="align-self:center; font-size:9.5px; color:#1fa855; background:#e7f8ee; padding:3px 10px; border-radius:8px;">📹 ela liga pra ele (chamada recebida)</div>';
         } else if (s.type === 'delay') {
