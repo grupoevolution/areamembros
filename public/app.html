@@ -8147,8 +8147,8 @@ body.is-slowconn .prod-cta-fixed {
 .ca-bub.mine { align-self: flex-end; background: #D9FDD3; border-radius: 10px 0 10px 10px; }
 .ca-bub.wide { width: 94%; max-width: 94%; }
 .ca-bub .tx { font-size: 14px; color: #1b1b1b; line-height: 1.42; word-wrap: break-word; white-space: pre-wrap; }
-.ca-bub .tm2 { font-size: 9.5px; color: #999; text-align: right; margin-top: 2px; }
-.ca-bub .tm2 .ticks { color: #53BDEB; }
+.ca-bub .tm2 { font-size: 9.5px; color: #999; text-align: right; margin-top: 2px; display: flex; align-items: center; justify-content: flex-end; gap: 3px; }
+.ca-bub .tm2 .ticks { display: inline-flex; align-items: center; }
 .ca-bub img.photo { max-width: 100%; border-radius: 8px; display: block; }
 .ca-typing { align-self: flex-start; background: #fff; border-radius: 0 10px 10px 10px; padding: 12px 14px; box-shadow: 0 1px 1px rgba(0,0,0,.08); }
 .ca-typing i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #b5aea8; margin-right: 3px; animation: caTp 1.2s infinite; }
@@ -8263,9 +8263,8 @@ body.is-slowconn .prod-cta-fixed {
     <button onclick="ChatApp.unlock()">Desbloquear VIP →</button>
 </div>
 <div class="ca-viewer" id="caViewer">
-    <div class="top">
-        <span class="lbl"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Visualização única</span>
-        <button onclick="ChatApp.closeVonce()" aria-label="Fechar" style="opacity:.45;font-size:18px;">×</button>
+    <div class="top" style="justify-content:flex-end;">
+        <button onclick="ChatApp.closeVonce()" aria-label="Fechar" style="opacity:.85;font-size:22px;line-height:1;background:rgba(0,0,0,.35);width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;">×</button>
     </div>
     <div class="media" id="caViewerMedia"></div>
 </div>
@@ -9018,7 +9017,7 @@ window.ChatApp = (function() {
         const body = document.getElementById('caBody');
         const mine = m.sender === 'user';
         const d = document.createElement('div');
-        const ticks = mine ? ' <span class="ticks">✓✓</span>' : '';
+        const ticks = mine ? '<span class="ticks"><svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="#53bdeb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.2 5.6l2.4 2.4 4.6-5.6"/><path d="M6 8l4.6-5.6"/></svg></span>' : '';
         const tm = '<div class="tm2">' + hhmm(m.created_at) + ticks + '</div>';
 
         if (m.type === 'text' || m.type === 'buttons') {
@@ -9082,10 +9081,12 @@ window.ChatApp = (function() {
     }
 
     function openedHtml(isVid, at) {
-        return '<div class="ca-vonce opened"><span class="circ">' + ICO.eyeOff + '</span>'
-            + '<div class="mid"><div class="lb">' + (isVid ? 'Aberto' : 'Aberta') + '</div>'
-            + '<div class="sb">Você já viu ' + (isVid ? 'esse vídeo' : 'essa foto') + '</div></div></div>'
-            + '<div class="tm2">' + hhmm(at) + '</div>';
+        // Estilo WhatsApp: círculo tracejado + "Mensagem aberta" em itálico, com a hora.
+        return '<div style="display:flex;align-items:center;gap:9px;padding:1px 2px;">'
+            + '<span style="width:21px;height:21px;border:2px dashed #9aa3ab;border-radius:50%;flex-shrink:0;"></span>'
+            + '<span style="font-style:italic;color:#8a949c;font-size:13.5px;">Mensagem aberta</span>'
+            + '<span style="font-style:italic;color:#aab2b8;font-size:11px;margin-left:2px;">' + hhmm(at) + '</span>'
+            + '</div>';
     }
 
     function renderChoices(awaiting) {
@@ -9258,22 +9259,9 @@ window.ChatApp = (function() {
             : '<img src="' + esc(url) + '" alt="">';
         const viewer = document.getElementById('caViewer');
         viewer.classList.add('show');
-        // Auto-fechar estilo story: a mídia some sozinha depois de N segundos
-        // (configurável por bloco, com padrão global). Barra de progresso no topo.
+        // Auto-fechar (estilo story): some sozinha depois de N segundos, SEM barra
+        // visível — só o X no canto. O tempo é configurado por mídia no painel.
         const secs = Math.max(1, Math.min(120, parseInt(bubble.dataset.viewSeconds, 10) || 7));
-        let bar = document.getElementById('caVonceBar');
-        if (!bar) {
-            bar = document.createElement('div');
-            bar.id = 'caVonceBar';
-            bar.style.cssText = 'position:absolute;top:0;left:0;height:3px;background:#25D366;z-index:5;border-radius:0 2px 2px 0;';
-            viewer.appendChild(bar);
-        }
-        bar.style.transition = 'none';
-        bar.style.width = '100%';
-        // força reflow e anima a largura até 0 no tempo exato
-        void bar.offsetWidth;
-        bar.style.transition = 'width ' + secs + 's linear';
-        bar.style.width = '0%';
         clearTimeout(vonceTimer);
         vonceTimer = setTimeout(() => closeVonce(), secs * 1000);
     }
@@ -9281,7 +9269,6 @@ window.ChatApp = (function() {
         clearTimeout(vonceTimer); vonceTimer = null;
         document.getElementById('caViewer').classList.remove('show');
         document.getElementById('caViewerMedia').innerHTML = '';
-        const bar = document.getElementById('caVonceBar'); if (bar) bar.style.width = '100%';
         if (!vonceCur) return;
         const id = vonceCur.dataset.msgId;
         const isVid = vonceCur.dataset.isVid === '1';
@@ -9423,7 +9410,12 @@ window.ChatApp = (function() {
             } else {
                 CUR.callSeen = true;
                 try { api('/api/user/chats/' + CUR.id + '/call-seen'); } catch (_) {}
-                showCallVipPopup(chat);
+                closeCallScreen();
+                // não atendeu → fica a "chamada perdida" no chat (igual WhatsApp).
+                // O gatilho de ligação (call_goto_key) já roda no onCall e a modelo
+                // "reage" pelo roteiro. O popup VIP entra como nudge logo depois.
+                renderMissedCall();
+                setTimeout(() => showCallVipPopup(chat), 700);
             }
         }, 6200);
     }
@@ -9444,6 +9436,21 @@ window.ChatApp = (function() {
         o.querySelector('#caCallPopVip').onclick = () => { o.style.display = 'none'; const url = chat.checkout_url; if (url) window.open(url, '_blank', 'noopener'); else unlock(); };
         o.querySelector('#caCallPopClose').onclick = () => { o.style.display = 'none'; };
         o.onclick = (ev) => { if (ev.target === o) o.style.display = 'none'; };
+    }
+
+    // Entrada de "Ligação de vídeo · perdida" no chat (estilo WhatsApp)
+    function renderMissedCall() {
+        const body = document.getElementById('caBody');
+        if (!body) return;
+        const d = document.createElement('div');
+        d.style.cssText = 'align-self:center;margin:4px 0;';
+        d.innerHTML = '<div style="display:flex;align-items:center;gap:11px;background:#fff;border-radius:12px;padding:9px 14px;box-shadow:0 1px 1px rgba(0,0,0,.08);">'
+            + '<span style="width:36px;height:36px;border-radius:50%;background:rgba(229,9,20,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+            + '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#e0322d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 10l4.55-2.27A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 6h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"/><line x1="2" y1="2" x2="22" y2="22"/></svg></span>'
+            + '<div><div style="font-size:14px;font-weight:600;color:#1b1b1b;">Ligação de vídeo</div>'
+            + '<div style="font-size:12px;color:#8a949c;">perdida · ' + hhmm(new Date().toISOString()) + '</div></div></div>';
+        body.appendChild(d);
+        body.scrollTop = body.scrollHeight;
     }
 
     // Foto de perfil enquadrada (toque no avatar do topo)
