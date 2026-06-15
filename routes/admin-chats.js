@@ -425,4 +425,96 @@ router.delete('/:id/status/:sid', requireAdmin, async (req, res) => {
     }
 });
 
+// ── ROTINA DE STATUS (agenda semanal) ────────────────────────────────────────
+function cleanWeekdays(raw) {
+    if (!Array.isArray(raw)) return [];
+    const out = [...new Set(raw.map(x => parseInt(x, 10)).filter(x => x >= 0 && x <= 6))].sort();
+    return out;
+}
+function cleanTime(raw) {
+    const m = String(raw || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return '09:00';
+    const h = Math.max(0, Math.min(23, parseInt(m[1], 10)));
+    const mm = Math.max(0, Math.min(59, parseInt(m[2], 10)));
+    return String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+}
+
+// Lista todos os agendamentos (com nome da modelo)
+router.get('/status-schedule', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await db.query(`
+            SELECT s.*, c.name AS chat_name, c.avatar_url
+            FROM chat_status_schedule s JOIN chats c ON c.id = s.chat_id
+            ORDER BY s.post_time, s.id
+        `);
+        return res.json({ success: true, schedule: rows });
+    } catch (err) {
+        logger.error('Erro listando rotina de status:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+router.post('/status-schedule', requireAdmin, async (req, res) => {
+    try {
+        const b = req.body || {};
+        const chatId = parseInt(b.chat_id, 10);
+        if (!chatId) return res.status(400).json({ success: false, error: 'Escolha a modelo' });
+        const type = STATUS_TYPES.includes(b.type) ? b.type : 'image';
+        const mediaUrl = (b.media_url || '').trim().slice(0, 1000) || null;
+        if ((type === 'image' || type === 'video') && !mediaUrl) {
+            return res.status(400).json({ success: false, error: 'Mídia obrigatória pra foto/vídeo' });
+        }
+        const weekdays = cleanWeekdays(b.weekdays);
+        if (!weekdays.length) return res.status(400).json({ success: false, error: 'Escolha pelo menos 1 dia da semana' });
+        const { rows } = await db.query(`
+            INSERT INTO chat_status_schedule (chat_id, weekdays, post_time, type, media_url, caption, bg_color, reply_goto_key, expires_hours, active)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *
+        `, [
+            chatId, JSON.stringify(weekdays), cleanTime(b.post_time), type, mediaUrl,
+            (b.caption || '').trim().slice(0, 300) || null,
+            (b.bg_color || '').trim().slice(0, 20) || null,
+            (b.reply_goto_key || '').trim().slice(0, 40) || null,
+            Math.max(1, Math.min(168, parseInt(b.expires_hours, 10) || 24)),
+            b.active !== false,
+        ]);
+        return res.json({ success: true, schedule: rows[0] });
+    } catch (err) {
+        logger.error('Erro criando rotina de status:', err);
+        return res.status(500).json({ success: false, error: err.message || 'Erro interno' });
+    }
+});
+
+router.put('/status-schedule/:sid', requireAdmin, async (req, res) => {
+    const sid = parseInt(req.params.sid, 10);
+    if (!sid) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const b = req.body || {};
+        const updates = []; const values = []; let p = 1;
+        const set = (col, val) => { updates.push(`${col} = $${p++}`); values.push(val); };
+        if (b.weekdays !== undefined) set('weekdays', JSON.stringify(cleanWeekdays(b.weekdays)));
+        if (b.post_time !== undefined) set('post_time', cleanTime(b.post_time));
+        if (b.caption !== undefined) set('caption', (b.caption || '').trim().slice(0, 300) || null);
+        if (b.active !== undefined) set('active', !!b.active);
+        if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
+        values.push(sid);
+        const { rows } = await db.query(`UPDATE chat_status_schedule SET ${updates.join(', ')} WHERE id = $${p} RETURNING *`, values);
+        if (!rows.length) return res.status(404).json({ success: false, error: 'Não encontrado' });
+        return res.json({ success: true, schedule: rows[0] });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+router.delete('/status-schedule/:sid', requireAdmin, async (req, res) => {
+    const sid = parseInt(req.params.sid, 10);
+    if (!sid) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const { rowCount } = await db.query(`DELETE FROM chat_status_schedule WHERE id = $1`, [sid]);
+        if (!rowCount) return res.status(404).json({ success: false, error: 'Não encontrado' });
+        return res.json({ success: true, deleted: true });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
 module.exports = router;

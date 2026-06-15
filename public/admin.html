@@ -3129,6 +3129,10 @@ a { color: inherit; text-decoration: none; }
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><path d="M10 6.5h4a2 2 0 012 2V14"/></svg>
                     Construtor de Funil
                 </div>
+                <div class="nav-item" data-screen="status-routine" onclick="switchAdminScreen(this, 'status-routine', 'Rotina de Status'); loadStatusRoutine();">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><path d="M12 8v4l3 2"/></svg>
+                    Rotina de Status
+                </div>
             </div>
 
             <div class="nav-section">
@@ -5533,6 +5537,57 @@ a { color: inherit; text-decoration: none; }
                     <div class="cb-main">
                         <div class="cb-palette" id="cbPalette"></div>
                         <div class="cb-canvas" id="cbCanvas"><div class="cb-stage" id="cbStage"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tela ROTINA DE STATUS (agenda semanal) -->
+            <div class="screen-content" id="screen-status-routine">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Rotina de Status</h1>
+                        <p class="page-subtitle">Monte a semana: dia + horário e o status é postado sozinho (expira em 24h). Vincule a modelo em cada agendamento. Horário de Brasília.</p>
+                    </div>
+                </div>
+                <div style="display:flex; gap:18px; flex-wrap:wrap; margin-top:18px; align-items:flex-start;">
+                    <!-- Form -->
+                    <div style="flex:1 1 360px; min-width:320px; background:var(--card,#1a1a1a); border:1px solid var(--border,rgba(255,255,255,.08)); border-radius:14px; padding:18px;">
+                        <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:14px;">+ Novo agendamento</div>
+                        <div style="display:flex; flex-direction:column; gap:13px;">
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Modelo (chat)</label>
+                                <select class="form-control" id="srChat" style="width:100%;"><option value="">— escolher —</option></select>
+                            </div>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:6px;">Dias da semana</label>
+                                <div id="srDays" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+                                <div style="margin-top:6px;"><button type="button" class="btn-secondary" style="font-size:11px;padding:4px 9px;" onclick="srToggleAllDays()">Todos os dias</button></div>
+                            </div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Horário</label><input class="form-control" type="time" id="srTime" value="09:00" style="width:100%;"/></div>
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Expira em (h)</label><input class="form-control" type="number" id="srHours" min="1" max="168" value="24" style="width:100%;"/></div>
+                            </div>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Tipo</label>
+                                <select class="form-control" id="srType" style="width:100%;" onchange="updateStatusRoutineFields()">
+                                    <option value="image">📷 Foto</option>
+                                    <option value="video">🎬 Vídeo</option>
+                                    <option value="text">📝 Texto</option>
+                                </select>
+                            </div>
+                            <div id="srMediaWrap"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">URL da mídia</label>
+                                <div style="display:flex; gap:8px;">
+                                    <input class="form-control" id="srMedia" maxlength="1000" placeholder="https://..." style="flex:1;"/>
+                                    <button type="button" class="btn-secondary" onclick="UploadHelper.openPicker('srMedia', 'banner-produto', () => {})" style="white-space:nowrap; font-size:12px;">📤</button>
+                                </div>
+                            </div>
+                            <div id="srBgWrap" style="display:none;"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Cor de fundo</label><input class="form-control" type="text" id="srBg" placeholder="#e50914" style="width:140px;"/></div>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Legenda / texto</label><input class="form-control" id="srCaption" maxlength="300" placeholder="bom dia amor 💋" style="width:100%;"/></div>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Gatilho ao responder (rótulo do bloco) — opcional</label><input class="form-control" id="srReplyGoto" maxlength="40" placeholder="ex: reacao_story" style="width:100%;"/></div>
+                            <button type="button" class="btn-primary" onclick="saveStatusSchedule()">Agendar status</button>
+                        </div>
+                    </div>
+                    <!-- Lista -->
+                    <div style="flex:2 1 420px; min-width:340px;">
+                        <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:12px;">Agendamentos</div>
+                        <div id="statusScheduleList" style="display:flex; flex-direction:column; gap:10px;"><div style="color:rgba(255,255,255,.4); font-size:12px;">Carregando...</div></div>
                     </div>
                 </div>
             </div>
@@ -14915,6 +14970,94 @@ async function deleteChatStatus(id) {
     if (!confirm('Excluir este status?')) return;
     await fetch('/api/admin/chats/'+_curChatId+'/status/'+id, { method:'DELETE', credentials:'include' });
     loadChatStatus();
+}
+
+// ── Rotina de Status (agenda semanal) ──
+const SR_WEEKDAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+function updateStatusRoutineFields() {
+    const t = document.getElementById('srType').value;
+    document.getElementById('srMediaWrap').style.display = (t === 'image' || t === 'video') ? 'block' : 'none';
+    document.getElementById('srBgWrap').style.display = (t === 'text') ? 'block' : 'none';
+}
+function renderSrDays() {
+    const box = document.getElementById('srDays');
+    box.innerHTML = SR_WEEKDAYS.map((d, i) =>
+        '<button type="button" class="sr-day" data-day="' + i + '" onclick="this.classList.toggle(\'on\'); this.style.background=this.classList.contains(\'on\')?\'#e50914\':\'rgba(255,255,255,.06)\'; this.style.color=this.classList.contains(\'on\')?\'#fff\':\'rgba(255,255,255,.7)\';" style="background:rgba(255,255,255,.06); color:rgba(255,255,255,.7); border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:7px 11px; font-size:12px; font-weight:600; cursor:pointer;">' + d + '</button>'
+    ).join('');
+}
+function srToggleAllDays() {
+    const btns = document.querySelectorAll('#srDays .sr-day');
+    const allOn = [...btns].every(b => b.classList.contains('on'));
+    btns.forEach(b => { b.classList.toggle('on', !allOn); b.style.background = !allOn ? '#e50914' : 'rgba(255,255,255,.06)'; b.style.color = !allOn ? '#fff' : 'rgba(255,255,255,.7)'; });
+}
+function getSrDays() { return [...document.querySelectorAll('#srDays .sr-day.on')].map(b => parseInt(b.dataset.day, 10)); }
+async function loadStatusRoutine() {
+    renderSrDays();
+    updateStatusRoutineFields();
+    try {
+        const r = await fetch('/api/admin/chats', { credentials: 'include' });
+        const d = await r.json();
+        const sel = document.getElementById('srChat');
+        sel.innerHTML = '<option value="">— escolher —</option>' + (d.success ? d.chats : []).map(c => '<option value="' + c.id + '">' + escHtmlAdmin(c.name) + '</option>').join('');
+    } catch (_) {}
+    loadStatusScheduleList();
+}
+async function loadStatusScheduleList() {
+    const list = document.getElementById('statusScheduleList');
+    list.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:12px;">Carregando...</div>';
+    try {
+        const r = await fetch('/api/admin/chats/status-schedule', { credentials: 'include' });
+        const d = await r.json();
+        if (!d.success || !d.schedule.length) { list.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:12px; padding:20px; text-align:center; background:rgba(0,0,0,.2); border-radius:10px;">Nenhum agendamento ainda.</div>'; return; }
+        list.innerHTML = d.schedule.map(s => {
+            let wd = []; try { wd = Array.isArray(s.weekdays) ? s.weekdays : JSON.parse(s.weekdays || '[]'); } catch (_) {}
+            const days = wd.length === 7 ? 'Todos os dias' : wd.map(i => SR_WEEKDAYS[i]).join(', ');
+            const icon = s.type === 'video' ? '🎬' : s.type === 'text' ? '📝' : '📷';
+            const av = s.avatar_url ? 'background-image:url(\'' + escHtmlAdmin(s.avatar_url) + '\');background-size:cover;background-position:center;' : '';
+            const dim = s.active ? '' : 'opacity:.5;';
+            return '<div style="display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--card,#1a1a1a); border:1px solid var(--border,rgba(255,255,255,.08)); border-radius:12px;' + dim + '">'
+                + '<div style="width:40px;height:40px;border-radius:50%;background:#3a2a2c;' + av + 'flex-shrink:0;"></div>'
+                + '<div style="flex:1; min-width:0;"><div style="font-size:13.5px; font-weight:700; color:#fff;">' + escHtmlAdmin(s.chat_name) + ' · <span style="color:#e50914;">' + s.post_time + '</span></div>'
+                + '<div style="font-size:11.5px; color:rgba(255,255,255,.55);">' + days + ' · ' + icon + ' ' + escHtmlAdmin((s.caption || s.media_url || '').slice(0, 40)) + '</div></div>'
+                + '<button onclick="toggleStatusSchedule(' + s.id + ',' + (!s.active) + ')" class="btn-secondary" style="font-size:11px;padding:5px 10px;">' + (s.active ? 'Pausar' : 'Ativar') + '</button>'
+                + '<button onclick="deleteStatusSchedule(' + s.id + ')" class="btn-danger" style="font-size:11px;padding:5px 10px;">×</button>'
+                + '</div>';
+        }).join('');
+    } catch (e) { list.innerHTML = '<div style="color:#f55">Erro: ' + e.message + '</div>'; }
+}
+async function saveStatusSchedule() {
+    const type = document.getElementById('srType').value;
+    const payload = {
+        chat_id: document.getElementById('srChat').value,
+        weekdays: getSrDays(),
+        post_time: document.getElementById('srTime').value,
+        type,
+        media_url: document.getElementById('srMedia').value.trim() || null,
+        bg_color: document.getElementById('srBg').value.trim() || null,
+        caption: document.getElementById('srCaption').value.trim() || null,
+        reply_goto_key: document.getElementById('srReplyGoto').value.trim() || null,
+        expires_hours: parseInt(document.getElementById('srHours').value, 10) || 24,
+    };
+    if (!payload.chat_id) { alert('Escolha a modelo.'); return; }
+    if (!payload.weekdays.length) { alert('Escolha pelo menos 1 dia.'); return; }
+    if ((type === 'image' || type === 'video') && !payload.media_url) { alert('Informe a URL da mídia.'); return; }
+    try {
+        const r = await fetch('/api/admin/chats/status-schedule', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) });
+        const d = await r.json();
+        if (!d.success) { alert('Erro: ' + (d.error || '')); return; }
+        document.getElementById('srMedia').value = '';
+        document.getElementById('srCaption').value = '';
+        loadStatusScheduleList();
+    } catch (e) { alert('Erro: ' + e.message); }
+}
+async function toggleStatusSchedule(id, active) {
+    await fetch('/api/admin/chats/status-schedule/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ active }) });
+    loadStatusScheduleList();
+}
+async function deleteStatusSchedule(id) {
+    if (!confirm('Excluir este agendamento?')) return;
+    await fetch('/api/admin/chats/status-schedule/' + id, { method: 'DELETE', credentials: 'include' });
+    loadStatusScheduleList();
 }
 
 // ═══════════════ CONSTRUTOR DE FUNIL (canvas visual) ═══════════════

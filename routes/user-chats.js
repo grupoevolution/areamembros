@@ -810,6 +810,41 @@ router.post('/chats/:id/call-trigger', optionalUser, async (req, res) => {
     }
 });
 
+// ── Rotina de status: posta os agendamentos cujo horário (Brasília) venceu ───
+// Chamado pelo worker. Cria um chat_status (story) por agendamento devido, 1x/dia.
+async function postDueStatusSchedules() {
+    const bz = new Date(Date.now() - 3 * 3600 * 1000); // Brasília UTC-3
+    const weekday = bz.getUTCDay(); // 0=Dom .. 6=Sáb
+    const nowHM = String(bz.getUTCHours()).padStart(2, '0') + ':' + String(bz.getUTCMinutes()).padStart(2, '0');
+    const today = bz.getUTCFullYear() + '-' + String(bz.getUTCMonth() + 1).padStart(2, '0') + '-' + String(bz.getUTCDate()).padStart(2, '0');
+    let rows;
+    try {
+        const r = await db.query(
+            `SELECT * FROM chat_status_schedule WHERE active = true AND (last_posted_date IS NULL OR last_posted_date <> $1::date)`,
+            [today]
+        );
+        rows = r.rows;
+    } catch (_) { return 0; }
+    let posted = 0;
+    for (const s of rows) {
+        let wd = [];
+        try { wd = Array.isArray(s.weekdays) ? s.weekdays : JSON.parse(s.weekdays || '[]'); } catch (_) {}
+        if (!wd.map(Number).includes(weekday)) continue;
+        if (String(s.post_time) > nowHM) continue; // ainda não deu o horário
+        try {
+            await db.query(
+                `INSERT INTO chat_status (chat_id, type, media_url, caption, bg_color, reply_goto_key, expires_at)
+                 VALUES ($1,$2,$3,$4,$5,$6, NOW() + make_interval(hours => $7))`,
+                [s.chat_id, s.type, s.media_url, s.caption, s.bg_color, s.reply_goto_key, Math.max(1, Math.min(168, s.expires_hours || 24))]
+            );
+            await db.query(`UPDATE chat_status_schedule SET last_posted_date = $2::date WHERE id = $1`, [s.id, today]);
+            posted++;
+        } catch (err) { logger.warn('[status-schedule] falhou id ' + s.id + ': ' + err.message); }
+    }
+    return posted;
+}
+
 module.exports = router;
 module.exports.resumeDelayed = resumeDelayed;
 module.exports.triggerPostPurchaseChats = triggerPostPurchaseChats;
+module.exports.postDueStatusSchedules = postDueStatusSchedules;
