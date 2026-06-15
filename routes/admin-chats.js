@@ -67,7 +67,7 @@ router.post('/', requireAdmin, async (req, res) => {
             gate_media === true,
             call_video_call_id ? parseInt(call_video_call_id, 10) : null,
             cleanTriggerIds(trigger_product_ids),
-            INPUT_MODES.includes(input_mode) ? input_mode : 'always',
+            INPUT_MODES.includes(input_mode) ? input_mode : 'gated',
             (call_goto_key || '').trim().slice(0, 40) || null,
         ]);
         return res.json({ success: true, chat: rows[0] });

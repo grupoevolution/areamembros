@@ -767,7 +767,19 @@ router.post('/chats/status/:sid/reply', optionalUser, async (req, res) => {
         ident.city = session.city; ident.cityFallback = chat.city_fallback;
         await markStatusViewed(sid, ident);
         if (text) {
-            await insertMsg(session.id, 'user', 'text', text, null, { status_reply: sid }, null);
+            // guarda a referência do status pra mostrar o "respondeu status"
+            // (estilo WhatsApp: miniatura + nome) acima da resposta.
+            const ref = {
+                status_reply: sid,
+                ref: {
+                    type: st.type,
+                    media_url: (st.type === 'image' || st.type === 'video') ? st.media_url : null,
+                    caption: st.caption || null,
+                    bg_color: st.bg_color || null,
+                    name: chat.name,
+                },
+            };
+            await insertMsg(session.id, 'user', 'text', text, null, ref, null);
         }
         // gatilho: pula o roteiro pro bloco configurado (a modelo reage ao status)
         if (st.reply_goto_key) {

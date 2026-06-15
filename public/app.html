@@ -8828,16 +8828,7 @@ window.ChatApp = (function() {
             }
             const chats = data.chats;
             let html = storiesStripHtml();
-            const online = chats.filter(c => c.show_online);
-            if (online.length) {
-                html += '<div class="ca-online-row"><div class="ca-sec-label">Online agora</div><div class="ca-online-avatars">'
-                    + online.map(c => {
-                        const bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
-                        if (c.locked) return '<div class="ca-online-item" onclick="ChatApp.open(' + c.id + ')"><div class="av locked">' + ICO.lock(17, '#a09890') + '</div><div class="nm">VIP</div></div>';
-                        return '<div class="ca-online-item" onclick="ChatApp.open(' + c.id + ')"><div class="av"' + bg + '><span class="dot"></span></div><div class="nm">' + esc(c.name) + '</div></div>';
-                    }).join('')
-                    + '</div></div>';
-            }
+            // "Online agora" removido — virou redundante com a fileira de Status.
             const sections = {};
             for (const c of chats) {
                 const sec = c.locked ? 'Só no VIP' : (c.section || 'Minhas conversas');
@@ -9023,7 +9014,7 @@ window.ChatApp = (function() {
         if (m.type === 'text' || m.type === 'buttons') {
             if (!m.content && m.type === 'buttons') return;
             d.className = 'ca-bub' + (mine ? ' mine' : '');
-            d.innerHTML = '<div class="tx">' + esc(m.content) + '</div>' + tm;
+            d.innerHTML = statusReplyQuote(m) + '<div class="tx">' + esc(m.content) + '</div>' + tm;
         } else if (m.type === 'audio') {
             d.className = 'ca-bub wide';
             let bars = '';
@@ -9078,6 +9069,20 @@ window.ChatApp = (function() {
             return;
         }
         body.appendChild(d);
+    }
+
+    // "Respondeu o status" estilo WhatsApp: miniatura + referência acima do texto
+    function statusReplyQuote(m) {
+        const ref = m && m.meta && m.meta.ref;
+        if (!ref) return '';
+        const thumb = ref.media_url
+            ? '<div style="width:38px;height:38px;border-radius:6px;flex-shrink:0;background:#ccc center/cover no-repeat;background-image:url(\'' + esc(ref.media_url) + '\');"></div>'
+            : '<div style="width:38px;height:38px;border-radius:6px;flex-shrink:0;background:' + (ref.bg_color ? esc(ref.bg_color) : '#128C7E') + ';"></div>';
+        const sub = ref.caption ? esc(ref.caption) : (ref.type === 'video' ? 'Vídeo' : ref.type === 'text' ? 'Status' : 'Foto');
+        return '<div style="display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.05);border-left:3px solid #25D366;border-radius:7px;padding:5px 8px;margin-bottom:5px;">'
+            + '<div style="flex:1;min-width:0;"><div style="font-size:11px;font-weight:700;color:#128C7E;">Você respondeu ao status</div>'
+            + '<div style="font-size:11.5px;color:#5b6b73;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + sub + '</div></div>'
+            + thumb + '</div>';
     }
 
     function openedHtml(isVid, at) {
@@ -9183,7 +9188,8 @@ window.ChatApp = (function() {
             head
             + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">Ver o que ' + nome + ' te mandou 👀</div>'
             + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:16px;">Confirma seu e-mail pra abrir agora e liberar todas as fotos e vídeos da conversa.</div>'
-            + '<input id="caGateEmail" type="email" inputmode="email" placeholder="seu@email.com" style="width:100%;border:1.5px solid #e2e2e2;border-radius:12px;padding:13px;font-size:15px;outline:none;margin-bottom:6px;text-align:center;">'
+            + '<input id="caGateEmail" type="email" inputmode="email" autocapitalize="none" autocorrect="off" placeholder="seu@email.com" style="width:100%;border:1.5px solid #e2e2e2;border-radius:12px;padding:13px;font-size:15px;outline:none;margin-bottom:6px;text-align:center;">'
+            + '<div id="caGateSug" style="display:none;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:8px;"></div>'
             + '<div id="caGateErr" style="font-size:12px;color:#e50914;min-height:15px;margin-bottom:6px;"></div>'
             + '<button id="caGateBtn" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;">Liberar acesso</button>'
             + '<div style="font-size:11px;color:#999;margin-top:10px;">Acesso gratuito · sem cartão</div>'
@@ -9191,7 +9197,25 @@ window.ChatApp = (function() {
         const inp = o.querySelector('#caGateEmail');
         const btn = o.querySelector('#caGateBtn');
         const err = o.querySelector('#caGateErr');
+        const sug = o.querySelector('#caGateSug');
         setTimeout(() => inp && inp.focus(), 150);
+        // Autocompletar domínio: gmail (mais comum) no topo, hotmail, outlook.
+        const DOMAINS = ['gmail.com', 'hotmail.com', 'outlook.com'];
+        function renderSug() {
+            const v = (inp.value || '').trim();
+            const at = v.indexOf('@');
+            const base = at === -1 ? v : v.slice(0, at);
+            const partial = at === -1 ? '' : v.slice(at + 1).toLowerCase();
+            if (!base || DOMAINS.includes(partial)) { sug.style.display = 'none'; sug.innerHTML = ''; return; }
+            const list = DOMAINS.filter(dm => dm.startsWith(partial));
+            if (!list.length) { sug.style.display = 'none'; sug.innerHTML = ''; return; }
+            sug.innerHTML = list.map(dm => '<button type="button" data-full="' + esc(base) + '@' + dm + '" style="background:#f1f3f5;border:1px solid #e2e2e2;border-radius:999px;padding:7px 13px;font-size:13px;color:#333;cursor:pointer;">' + esc(base) + '@' + dm + '</button>').join('');
+            sug.style.display = 'flex';
+            sug.querySelectorAll('button').forEach(b => b.addEventListener('click', () => {
+                inp.value = b.dataset.full; sug.style.display = 'none'; sug.innerHTML = ''; inp.focus();
+            }));
+        }
+        inp.addEventListener('input', renderSug);
         const submit = async () => {
             const email = (inp.value || '').trim();
             if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { err.textContent = 'Digite um e-mail válido.'; return; }
