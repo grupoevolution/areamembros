@@ -1366,6 +1366,9 @@ body.is-slowconn .prod-cta-fixed {
     background: linear-gradient(90deg, var(--red), var(--red-bright));
     border-radius: 2px;
 }
+/* Item central destacado (Conteúdos) — igual aos outros, só na cor vermelha */
+.nav-item-hi, .nav-item-hi .nav-label { color: var(--red-bright); }
+.nav-item-hi .nav-icon { width: 24px; height: 24px; }
 .nav-icon { width: 20px; height: 20px; }
 .nav-label { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
 .nav-dot {
@@ -8209,7 +8212,7 @@ body.is-slowconn .prod-cta-fixed {
         <button class="ca-cta" onclick="ChatApp.unlock()">Desbloquear VIP →</button>
     </div>
     <div class="ca-choices" id="caChoices" style="display:none;"></div>
-    <div class="ca-input-bar" id="caInputBar" style="padding-bottom: calc(74px + env(safe-area-inset-bottom));">
+    <div class="ca-input-bar" id="caInputBar">
         <div class="ca-input-pill">
             <input type="text" id="caInput" placeholder="Mensagem" autocomplete="off"/>
             <button class="ico" onclick="ChatApp.photo()" aria-label="Enviar foto">
@@ -8253,12 +8256,10 @@ body.is-slowconn .prod-cta-fixed {
         <div class="nav-label">Conversas</div>
         <span class="nav-dot" id="chatNavDot" style="display:none;"></span>
     </button>
-    <div class="fab-wrap" onclick="switchScreen('library')">
-        <button class="fab" aria-label="Meus conteúdos">
-            <svg fill="#fff" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        </button>
-        <div class="fab-label">Conteúdos</div>
-    </div>
+    <button class="nav-item nav-item-hi" onclick="switchScreen('library')" aria-label="Meus conteúdos">
+        <svg class="nav-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <div class="nav-label">Conteúdos</div>
+    </button>
     <button class="nav-item" id="navSoon" style="opacity:.45;" onclick="showSoonToast()">
         <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8-5-3.6-5 3.6 1.9-5.8L4 8.8h6.1L12 3z"/></svg>
         <div class="nav-label">Surpresa</div>
@@ -8759,6 +8760,7 @@ window.ChatApp = (function() {
 
     function back() {
         stopPoll();
+        const nav = document.getElementById('bottomNav'); if (nav) nav.style.display = 'flex';
         switchScreen('chat');
         CUR = null; QUEUE = []; RENDERING = false;
         loadList();
@@ -8767,6 +8769,8 @@ window.ChatApp = (function() {
     async function open(id) {
         stopPoll();
         switchScreen('chatconv');
+        // dentro da conversa a barra inferior some (igual WhatsApp)
+        const nav = document.getElementById('bottomNav'); if (nav) nav.style.display = 'none';
         const body = document.getElementById('caBody');
         body.innerHTML = '<div class="ca-day">HOJE</div><div class="ca-crypt">' + ICO.lock(11, '#b08a4a') + ' Suas mensagens são protegidas</div>';
         SEEN = new Set(); QUEUE = []; RENDERING = false; lastButtons = null; LAST_ID = 0;
@@ -8967,7 +8971,10 @@ window.ChatApp = (function() {
         const u = CUR && CUR.perm && CUR.perm.unlock;
         const url = (u && u.checkout_url) || null;
         const pid = (u && u.product_id) || null;
-        if (pid && typeof openProductPage === 'function') { switchScreen('home'); openProductPage(pid); return; }
+        if (pid && typeof openProductPage === 'function') {
+            const nav = document.getElementById('bottomNav'); if (nav) nav.style.display = 'flex';
+            switchScreen('home'); openProductPage(pid); return;
+        }
         if (url) window.open(url, '_blank', 'noopener');
     }
 
