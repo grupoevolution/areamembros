@@ -32,6 +32,23 @@ const { parseBunnyUrl, bunnyHlsUrl } = require('../lib/bunny');
 
 const MAX_STEPS_PER_RUN = 25;
 
+// Padrão global (segundos) que a mídia de visualização única fica aberta antes
+// de fechar sozinha. Configurável no painel (gamification_config.chat_config).
+// Cacheado 60s pra não bater no banco a cada mensagem.
+let _viewSecCache = { val: 7, at: 0 };
+async function getDefaultViewSeconds() {
+    if (Date.now() - _viewSecCache.at < 60000) return _viewSecCache.val;
+    let v = 7;
+    try {
+        const { rows } = await db.query(`SELECT value FROM gamification_config WHERE key = 'chat_config' LIMIT 1`);
+        const cfg = rows[0] && rows[0].value;
+        const n = cfg && parseInt(cfg.view_once_seconds, 10);
+        if (n && n > 0) v = Math.min(120, n);
+    } catch (_) {}
+    _viewSecCache = { val: v, at: Date.now() };
+    return v;
+}
+
 // Carrega + enriquece a chamada vinculada ao chat (pro VideoCall do app)
 async function loadChatCall(callId) {
     if (!callId) return null;
@@ -227,7 +244,11 @@ async function runScript(session, chat, steps, idx, ident) {
         if (s.type === 'text') content = await fillVars(s.content, ident);
         else if (s.type === 'audio') { media = s.media_url; }
         else if (s.type === 'image') { media = s.media_url; content = await fillVars(s.content, ident); }
-        else if (s.type === 'view_once_image' || s.type === 'view_once_video') { media = s.media_url; }
+        else if (s.type === 'view_once_image' || s.type === 'view_once_video') {
+            media = s.media_url;
+            const vs = parseInt(s.view_seconds, 10) || 0;
+            meta.view_seconds = vs > 0 ? vs : await getDefaultViewSeconds();
+        }
         else if (s.type === 'cta') {
             content = await fillVars(s.content, ident) || 'Ver oferta';
             meta.link_url = s.link_url || null;

@@ -8126,6 +8126,10 @@ body.is-slowconn .prod-cta-fixed {
 .ca-typing i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #b5aea8; margin-right: 3px; animation: caTp 1.2s infinite; }
 .ca-typing i:nth-child(2) { animation-delay: .2s; } .ca-typing i:nth-child(3) { animation-delay: .4s; margin-right: 0; }
 @keyframes caTp { 0%,60%,100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
+.ca-typing .ca-rec { display: inline-flex; align-items: center; vertical-align: middle; }
+.ca-typing .ca-rec .dot { width: 9px; height: 9px; border-radius: 50%; background: #e0322d; animation: caRec 1s infinite; }
+.ca-typing .ca-rec-txt { font-size: 12px; color: #8a8a8a; vertical-align: middle; }
+@keyframes caRec { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
 .ca-audio { display: flex; align-items: center; gap: 8px; }
 .ca-audio .face { width: 42px; height: 42px; border-radius: 50%; background: #c4a09a center/cover no-repeat; flex-shrink: 0; position: relative; }
 .ca-audio .face .mic { position: absolute; bottom: -3px; right: -6px; color: #25D366; display: flex; }
@@ -8233,7 +8237,7 @@ body.is-slowconn .prod-cta-fixed {
 <div class="ca-viewer" id="caViewer">
     <div class="top">
         <span class="lbl"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Visualização única</span>
-        <button onclick="ChatApp.closeVonce()" aria-label="Fechar">×</button>
+        <button onclick="ChatApp.closeVonce()" aria-label="Fechar" style="opacity:.45;font-size:18px;">×</button>
     </div>
     <div class="media" id="caViewerMedia"></div>
 </div>
@@ -8846,11 +8850,15 @@ window.ChatApp = (function() {
             const m = QUEUE.shift();
             const typing = (m.sender === 'bot' && m.meta && m.meta.typing_ms) ? m.meta.typing_ms : 0;
             if (typing > 0) {
+                // áudio → "gravando áudio..."; resto → "digitando..." (igual WhatsApp)
+                const isAudio = m.type === 'audio';
                 const t = document.createElement('div');
                 t.className = 'ca-typing';
-                t.innerHTML = '<i></i><i></i><i></i>';
+                t.innerHTML = isAudio
+                    ? '<span class="ca-rec"><span class="dot"></span></span> <span class="ca-rec-txt">gravando áudio</span>'
+                    : '<i></i><i></i><i></i>';
                 body.appendChild(t);
-                document.getElementById('caStatus').textContent = 'digitando...';
+                document.getElementById('caStatus').textContent = isAudio ? 'gravando áudio...' : 'digitando...';
                 body.scrollTop = body.scrollHeight;
                 await new Promise(r => setTimeout(r, Math.min(typing, 6000)));
                 t.remove();
@@ -8903,6 +8911,7 @@ window.ChatApp = (function() {
                 d.dataset.msgId = m.id;
                 d.dataset.mediaUrl = m.media_url || '';
                 d.dataset.isVid = isVid ? '1' : '';
+                d.dataset.viewSeconds = (m.meta && m.meta.view_seconds) ? m.meta.view_seconds : '';
                 d.innerHTML = '<div class="ca-vonce">'
                     + '<span class="circ">' + (isVid ? ICO.playSm : '1') + '</span>'
                     + '<div class="mid"><div class="lb">' + (isVid ? 'Vídeo' : 'Foto') + '</div>'
@@ -9081,6 +9090,7 @@ window.ChatApp = (function() {
     }
 
     let vonceCur = null;
+    let vonceTimer = null;
     function openVonce(bubble) { gateThen(() => doOpenVonce(bubble)); }
     function doOpenVonce(bubble) {
         const url = bubble.dataset.mediaUrl;
@@ -9088,13 +9098,34 @@ window.ChatApp = (function() {
         vonceCur = bubble;
         const isVid = bubble.dataset.isVid === '1';
         document.getElementById('caViewerMedia').innerHTML = isVid
-            ? '<video src="' + esc(url) + '" controls autoplay playsinline></video>'
+            ? '<video src="' + esc(url) + '" autoplay playsinline></video>'
             : '<img src="' + esc(url) + '" alt="">';
-        document.getElementById('caViewer').classList.add('show');
+        const viewer = document.getElementById('caViewer');
+        viewer.classList.add('show');
+        // Auto-fechar estilo story: a mídia some sozinha depois de N segundos
+        // (configurável por bloco, com padrão global). Barra de progresso no topo.
+        const secs = Math.max(1, Math.min(120, parseInt(bubble.dataset.viewSeconds, 10) || 7));
+        let bar = document.getElementById('caVonceBar');
+        if (!bar) {
+            bar = document.createElement('div');
+            bar.id = 'caVonceBar';
+            bar.style.cssText = 'position:absolute;top:0;left:0;height:3px;background:#25D366;z-index:5;border-radius:0 2px 2px 0;';
+            viewer.appendChild(bar);
+        }
+        bar.style.transition = 'none';
+        bar.style.width = '100%';
+        // força reflow e anima a largura até 0 no tempo exato
+        void bar.offsetWidth;
+        bar.style.transition = 'width ' + secs + 's linear';
+        bar.style.width = '0%';
+        clearTimeout(vonceTimer);
+        vonceTimer = setTimeout(() => closeVonce(), secs * 1000);
     }
     async function closeVonce() {
+        clearTimeout(vonceTimer); vonceTimer = null;
         document.getElementById('caViewer').classList.remove('show');
         document.getElementById('caViewerMedia').innerHTML = '';
+        const bar = document.getElementById('caVonceBar'); if (bar) bar.style.width = '100%';
         if (!vonceCur) return;
         const id = vonceCur.dataset.msgId;
         const isVid = vonceCur.dataset.isVid === '1';

@@ -30,6 +30,7 @@ const VALID_KEYS = [
     'app_config',
     'home_layout',
     'live_notifications',
+    'chat_config',
 ];
 
 // =============================================================================
