@@ -3125,6 +3125,10 @@ a { color: inherit; text-decoration: none; }
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
                     Modelos &amp; Roteiros
                 </div>
+                <div class="nav-item" data-screen="chat-builder" onclick="switchAdminScreen(this, 'chat-builder', 'Construtor de Funil'); loadChatBuilder();">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><path d="M10 6.5h4a2 2 0 012 2V14"/></svg>
+                    Construtor de Funil
+                </div>
             </div>
 
             <div class="nav-section">
@@ -5465,6 +5469,71 @@ a { color: inherit; text-decoration: none; }
                 </div>
                 <div id="adminChatsList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:24px;">
                     <div style="color:rgba(255,255,255,.5)">Carregando...</div>
+                </div>
+            </div>
+
+            <!-- Tela CONSTRUTOR DE FUNIL (canvas visual) -->
+            <div class="screen-content" id="screen-chat-builder" style="padding:0;">
+                <style>
+                #screen-chat-builder { height: calc(100vh - 0px); }
+                .cb-wrap { display:flex; flex-direction:column; height: calc(100vh - 70px); }
+                .cb-toolbar { display:flex; align-items:center; gap:10px; padding:12px 18px; border-bottom:1px solid var(--border,rgba(255,255,255,.08)); flex-wrap:wrap; }
+                .cb-toolbar select { background:rgba(255,255,255,.06); color:#fff; border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:7px 10px; font-size:13px; min-width:160px; }
+                .cb-toggle { display:flex; align-items:center; gap:7px; font-size:12.5px; color:#fff; cursor:pointer; background:rgba(255,255,255,.05); padding:6px 11px; border-radius:8px; }
+                .cb-trigs { display:flex; gap:7px; flex-wrap:wrap; }
+                .cb-trig { display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600; color:rgba(255,255,255,.7); background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:999px; padding:5px 11px; white-space:nowrap; }
+                .cb-trig.on { color:#fff; background:rgba(229,9,20,.18); border-color:rgba(229,9,20,.5); }
+                .cb-trig.soon { opacity:.45; }
+                .cb-spacer { flex:1; }
+                .cb-zoom { display:flex; align-items:center; gap:6px; }
+                .cb-zoom button { width:30px; height:30px; border-radius:7px; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); color:#fff; font-size:16px; cursor:pointer; }
+                .cb-main { display:flex; flex:1; min-height:0; }
+                .cb-palette { width:180px; flex-shrink:0; border-right:1px solid var(--border,rgba(255,255,255,.08)); padding:14px 12px; overflow-y:auto; }
+                .cb-palette .ttl { font-size:10px; letter-spacing:1px; text-transform:uppercase; color:rgba(255,255,255,.4); margin:6px 0 8px; }
+                .cb-pal-item { display:flex; align-items:center; gap:9px; padding:9px 10px; border-radius:9px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); margin-bottom:7px; cursor:pointer; transition:.15s; }
+                .cb-pal-item:hover { background:rgba(229,9,20,.12); border-color:rgba(229,9,20,.4); }
+                .cb-pal-item .ic { width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+                .cb-pal-item .nm { font-size:12px; color:#fff; font-weight:600; }
+                .cb-pal-item .ds { font-size:9.5px; color:rgba(255,255,255,.4); }
+                .cb-canvas { flex:1; position:relative; overflow:hidden; cursor:grab; background-color:#0e0e10; background-image:radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px); background-size:22px 22px; }
+                .cb-canvas.grab { cursor:grabbing; }
+                .cb-stage { position:absolute; top:0; left:0; transform-origin:0 0; }
+                .cb-node { position:absolute; }
+                .cb-trigger { width:260px; background:rgba(229,9,20,.12); border:1.5px solid rgba(229,9,20,.6); border-radius:14px; padding:14px 16px; color:#fff; box-shadow:0 8px 30px rgba(0,0,0,.4); }
+                .cb-trigger .t1 { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; }
+                .cb-trigger .t2 { font-size:11px; color:rgba(255,255,255,.55); margin-top:3px; }
+                .cb-group { width:330px; background:#1c1c1f; border:1.5px solid rgba(229,9,20,.5); border-radius:16px; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,.5); }
+                .cb-group .ghead { display:flex; align-items:center; gap:8px; padding:11px 14px; background:rgba(229,9,20,.1); border-bottom:1px solid rgba(255,255,255,.06); }
+                .cb-group .ghead .tag { font-size:8.5px; font-weight:800; letter-spacing:.5px; background:#e50914; color:#fff; padding:2px 7px; border-radius:5px; }
+                .cb-group .ghead .gt { font-size:13.5px; font-weight:700; color:#fff; flex:1; }
+                .cb-bubbles { padding:10px; display:flex; flex-direction:column; gap:8px; }
+                .cb-bub { display:flex; align-items:center; gap:10px; padding:9px 10px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); border-radius:10px; cursor:pointer; transition:.12s; }
+                .cb-bub:hover { background:rgba(255,255,255,.08); border-color:rgba(229,9,20,.4); }
+                .cb-bub .ic { width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; }
+                .cb-bub .mid { flex:1; min-width:0; }
+                .cb-bub .l1 { font-size:8.5px; letter-spacing:.5px; text-transform:uppercase; color:rgba(255,255,255,.45); font-weight:700; display:flex; align-items:center; gap:6px; }
+                .cb-bub .l1 .live { color:#25D366; }
+                .cb-bub .l2 { font-size:12px; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+                .cb-bub .keytag { font-size:8px; background:rgba(229,9,20,.25); color:#ff6b73; padding:1px 6px; border-radius:999px; }
+                .cb-bub .del { background:none; border:none; color:rgba(255,255,255,.35); font-size:16px; cursor:pointer; flex-shrink:0; }
+                .cb-bub .del:hover { color:#FF3B30; }
+                .cb-addbtn { margin:0 10px 10px; padding:9px; text-align:center; font-size:12px; color:rgba(255,255,255,.5); border:1.5px dashed rgba(255,255,255,.15); border-radius:10px; cursor:pointer; }
+                .cb-addbtn:hover { color:#fff; border-color:rgba(229,9,20,.5); }
+                .cb-empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,.4); font-size:14px; text-align:center; padding:30px; }
+                </style>
+                <div class="cb-wrap">
+                    <div class="cb-toolbar">
+                        <select id="cbModel" onchange="selectBuilderModel(this.value)"></select>
+                        <label class="cb-toggle"><input type="checkbox" id="cbActive" onchange="toggleBuilderActive()"> Funil ativo</label>
+                        <div class="cb-trigs" id="cbTriggers"></div>
+                        <div class="cb-spacer"></div>
+                        <div class="cb-zoom"><button onclick="cbZoom(-0.1)">−</button><span id="cbZoomLabel" style="font-size:12px;color:rgba(255,255,255,.6);min-width:38px;text-align:center;">100%</span><button onclick="cbZoom(0.1)">+</button></div>
+                        <button class="btn-primary" onclick="saveBuilder()">Salvar funil</button>
+                    </div>
+                    <div class="cb-main">
+                        <div class="cb-palette" id="cbPalette"></div>
+                        <div class="cb-canvas" id="cbCanvas"><div class="cb-stage" id="cbStage"></div></div>
+                    </div>
                 </div>
             </div>
 
@@ -14737,6 +14806,7 @@ async function saveChatStep(e) {
         if (!data.success) { alert('Erro: '+(data.error||'')); return false; }
         closeChatStepModal();
         loadChatSteps(_curChatId);
+        if (typeof refreshBuilderIfOpen === 'function') refreshBuilderIfOpen();
     } catch(e) { alert('Erro: '+e.message); }
     return false;
 }
@@ -14845,6 +14915,167 @@ async function deleteChatStatus(id) {
     if (!confirm('Excluir este status?')) return;
     await fetch('/api/admin/chats/'+_curChatId+'/status/'+id, { method:'DELETE', credentials:'include' });
     loadChatStatus();
+}
+
+// ═══════════════ CONSTRUTOR DE FUNIL (canvas visual) ═══════════════
+const CB = { chatId: null, steps: [], chats: [], pan: { x: 60, y: 40 }, scale: 1, dragging: false, start: null };
+const CB_PALETTE = [
+    { grp: 'Bolhas', items: [
+        { type: 'text', ic: '💬', c: '#3b82f6', nm: 'Texto', ds: 'mensagem escrita' },
+        { type: 'image', ic: '📷', c: '#a855f7', nm: 'Imagem', ds: 'foto por URL' },
+        { type: 'audio', ic: '🎤', c: '#22c55e', nm: 'Áudio', ds: 'ela grava áudio' },
+        { type: 'view_once_image', ic: '👁', c: '#e50914', nm: 'Foto 1x', ds: 'some depois' },
+        { type: 'view_once_video', ic: '🎬', c: '#e50914', nm: 'Vídeo 1x', ds: 'some depois' },
+    ]},
+    { grp: 'Ações', items: [
+        { type: 'buttons', ic: '🔘', c: '#f59e0b', nm: 'Botões', ds: 'opções (ramifica)' },
+        { type: 'wait_input', ic: '⌨️', c: '#06b6d4', nm: 'Liberar resposta', ds: 'cliente digita' },
+        { type: 'delay', ic: '⏱', c: '#b08a4a', nm: 'Esperar', ds: 'manda depois' },
+        { type: 'call', ic: '📹', c: '#1fa855', nm: 'Ela liga', ds: 'chamada recebida' },
+        { type: 'cta', ic: '💳', c: '#e50914', nm: 'Oferta', ds: 'botão de link' },
+    ]},
+];
+function cbApply() {
+    const st = document.getElementById('cbStage'); if (!st) return;
+    st.style.transform = 'translate(' + CB.pan.x + 'px,' + CB.pan.y + 'px) scale(' + CB.scale + ')';
+    const zl = document.getElementById('cbZoomLabel'); if (zl) zl.textContent = Math.round(CB.scale * 100) + '%';
+}
+function cbZoom(d) { CB.scale = Math.max(0.4, Math.min(1.6, Math.round((CB.scale + d) * 10) / 10)); cbApply(); }
+function cbSetupCanvas() {
+    const c = document.getElementById('cbCanvas'); if (!c || c._cbInit) return; c._cbInit = true;
+    c.addEventListener('mousedown', e => { if (e.target.closest('.cb-node') || e.target.closest('.cb-bub') || e.target.closest('.cb-addbtn')) return; CB.dragging = true; c.classList.add('grab'); CB.start = { x: e.clientX - CB.pan.x, y: e.clientY - CB.pan.y }; });
+    window.addEventListener('mousemove', e => { if (!CB.dragging) return; CB.pan.x = e.clientX - CB.start.x; CB.pan.y = e.clientY - CB.start.y; cbApply(); });
+    window.addEventListener('mouseup', () => { CB.dragging = false; c.classList.remove('grab'); });
+    c.addEventListener('wheel', e => { if (e.ctrlKey) { e.preventDefault(); cbZoom(e.deltaY < 0 ? 0.1 : -0.1); } }, { passive: false });
+}
+async function loadChatBuilder() {
+    cbSetupCanvas();
+    renderPalette();
+    const sel = document.getElementById('cbModel');
+    try {
+        const r = await fetch('/api/admin/chats', { credentials: 'include' });
+        const d = await r.json();
+        CB.chats = d.success ? d.chats : [];
+        if (!CB.chats.length) { sel.innerHTML = '<option value="">— nenhum chat —</option>'; document.getElementById('cbStage').innerHTML = '<div class="cb-empty">Crie um chat em "Modelos & Roteiros" primeiro.</div>'; return; }
+        sel.innerHTML = CB.chats.map(c => '<option value="' + c.id + '">' + escHtmlAdmin(c.name) + '</option>').join('');
+        sel.value = (CB.chatId && CB.chats.find(c => c.id === CB.chatId)) ? CB.chatId : CB.chats[0].id;
+        selectBuilderModel(sel.value);
+    } catch (e) {}
+}
+function renderPalette() {
+    const p = document.getElementById('cbPalette'); if (!p) return;
+    p.innerHTML = CB_PALETTE.map(g => '<div class="ttl">' + g.grp + '</div>' + g.items.map(it =>
+        '<div class="cb-pal-item" onclick="addBuilderBlock(\'' + it.type + '\')"><div class="ic" style="background:' + it.c + '22;color:' + it.c + '">' + it.ic + '</div>'
+        + '<div><div class="nm">' + it.nm + '</div><div class="ds">' + it.ds + '</div></div></div>').join('')).join('');
+}
+async function selectBuilderModel(id) {
+    id = parseInt(id, 10); if (!id) return;
+    CB.chatId = id; _curChatId = id;
+    const chat = CB.chats.find(c => c.id === id);
+    _curChatPersona = chat || null;
+    document.getElementById('cbActive').checked = chat ? chat.active !== false : false;
+    await reloadBuilderSteps();
+    renderTriggers(chat);
+}
+async function reloadBuilderSteps() {
+    try {
+        const r = await fetch('/api/admin/chats/' + CB.chatId + '/steps', { credentials: 'include' });
+        const d = await r.json();
+        CB.steps = (d.success ? d.steps : []).filter(s => s.active !== false);
+        _curChatSteps = d.success ? d.steps : [];
+        renderBuilderStage();
+    } catch (e) {}
+}
+function renderTriggers(chat) {
+    const box = document.getElementById('cbTriggers'); if (!box) return;
+    const trigs = [
+        { nm: '▶ Abre conversa', on: true },
+        { nm: '📞 Tentou ligar', on: !!(chat && chat.call_goto_key) },
+        { nm: '💬 Respondeu status', on: true },
+        { nm: '💤 Inativo', soon: true },
+        { nm: '🛒 PIX gerado', soon: true },
+        { nm: '✅ PIX pago', soon: true },
+    ];
+    box.innerHTML = trigs.map(t => '<span class="cb-trig' + (t.on ? ' on' : '') + (t.soon ? ' soon' : '') + '">' + t.nm + (t.soon ? ' · em breve' : '') + '</span>').join('');
+}
+// metadados visuais de cada bolha (rótulo, "ao vivo", preview)
+function cbBubbleMeta(s) {
+    const live = (s.typing_ms > 0);
+    const m = {
+        text: { ic: '💬', c: '#3b82f6', l1: 'Texto', live: live ? 'digitando…' : '', l2: s.content || '' },
+        image: { ic: '📷', c: '#a855f7', l1: 'Imagem', l2: s.content || s.media_url || '' },
+        audio: { ic: '🎤', c: '#22c55e', l1: 'Áudio', live: live ? 'gravando…' : '', l2: s.media_url || '' },
+        view_once_image: { ic: '👁', c: '#e50914', l1: 'Foto 1x', l2: 'fecha em ' + (s.view_seconds || 7) + 's' },
+        view_once_video: { ic: '🎬', c: '#e50914', l1: 'Vídeo 1x', l2: 'fecha em ' + (s.view_seconds || 7) + 's' },
+        buttons: { ic: '🔘', c: '#f59e0b', l1: 'Botões' + (s.allow_input ? ' + digitar' : ''), l2: (Array.isArray(s.buttons) ? s.buttons.map(b => b.label).join(' · ') : '') },
+        wait_input: { ic: '⌨️', c: '#06b6d4', l1: 'Liberar resposta', l2: 'cliente digita aqui' },
+        delay: { ic: '⏱', c: '#b08a4a', l1: 'Aguardar ' + fmtDelay(s.delay_seconds), l2: 'manda o próximo depois' },
+        call: { ic: '📹', c: '#1fa855', l1: 'Ela liga', l2: s.content || 'chamada recebida' },
+        cta: { ic: '💳', c: '#e50914', l1: 'Oferta', l2: s.content || s.link_url || '' },
+    }[s.type] || { ic: '•', c: '#888', l1: s.type, l2: s.content || '' };
+    return m;
+}
+function renderBuilderStage() {
+    const st = document.getElementById('cbStage'); if (!st) return;
+    const TRIG_W = 260, GROUP_X = 330, GROUP_Y = 90;
+    const bubbles = CB.steps.map((s, idx) => {
+        const m = cbBubbleMeta(s);
+        const key = s.step_key ? '<span class="keytag">' + escHtmlAdmin(s.step_key) + '</span>' : '';
+        const liveTag = m.live ? '<span class="live">● ' + m.live + '</span>' : '';
+        return '<div class="cb-bub" onclick="builderEditStep(' + s.id + ')"><div class="ic" style="background:' + m.c + '22;color:' + m.c + '">' + m.ic + '</div>'
+            + '<div class="mid"><div class="l1">' + escHtmlAdmin(m.l1) + ' ' + liveTag + ' ' + key + '</div>'
+            + '<div class="l2">' + escHtmlAdmin(String(m.l2).slice(0, 42)) + '</div></div>'
+            + '<button class="del" onclick="event.stopPropagation(); builderDeleteStep(' + s.id + ')">×</button></div>';
+    }).join('');
+    const groupInner = bubbles || '<div style="padding:14px; text-align:center; color:rgba(255,255,255,.4); font-size:12px;">Vazio — arraste/clique um bloco da paleta →</div>';
+    // SVG conector trigger → grupo
+    const edge = '<svg style="position:absolute; left:0; top:0; overflow:visible; pointer-events:none;" width="1" height="1">'
+        + '<path d="M ' + TRIG_W + ' 46 C ' + (TRIG_W + 40) + ' 46, ' + (GROUP_X - 40) + ' ' + (GROUP_Y + 26) + ', ' + GROUP_X + ' ' + (GROUP_Y + 26) + '" stroke="#e50914" stroke-width="2" fill="none" opacity=".7"/></svg>';
+    st.innerHTML = edge
+        + '<div class="cb-node cb-trigger" style="left:0; top:20px;"><div class="t1">▶ Lead abre a conversa</div><div class="t2">Gatilho de início padrão</div></div>'
+        + '<div class="cb-node cb-group" style="left:' + GROUP_X + 'px; top:' + GROUP_Y + 'px;">'
+        + '<div class="ghead"><span class="tag">ENTRADA</span><span class="gt">Abertura</span></div>'
+        + '<div class="cb-bubbles">' + groupInner + '</div>'
+        + '<div class="cb-addbtn" onclick="addBuilderBlock(\'text\')">+ adicionar bloco</div>'
+        + '</div>';
+    cbApply();
+}
+function addBuilderBlock(type) {
+    if (!CB.chatId) { alert('Selecione um chat.'); return; }
+    _curChatId = CB.chatId;
+    openChatStepModal();
+    // pré-seleciona o tipo e ajusta a ordem pro fim
+    document.getElementById('csType').value = type;
+    document.getElementById('csOrder').value = (CB.steps.length + 1) * 10;
+    updateChatStepFields();
+}
+function builderEditStep(id) {
+    const s = (_curChatSteps || CB.steps).find(x => x.id === id);
+    if (s) editChatStep(s);
+}
+async function builderDeleteStep(id) {
+    if (!confirm('Excluir este bloco?')) return;
+    await fetch('/api/admin/chats/' + CB.chatId + '/steps/' + id, { method: 'DELETE', credentials: 'include' });
+    reloadBuilderSteps();
+}
+async function toggleBuilderActive() {
+    if (!CB.chatId) return;
+    const active = document.getElementById('cbActive').checked;
+    await fetch('/api/admin/chats/' + CB.chatId, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ active }) });
+    const chat = CB.chats.find(c => c.id === CB.chatId); if (chat) chat.active = active;
+}
+async function saveBuilder() {
+    if (!CB.chatId) return;
+    // v1: o roteiro já é salvo bloco a bloco; "Salvar funil" persiste o layout/zoom.
+    const graph = { v: 1, pan: CB.pan, scale: CB.scale };
+    try {
+        await fetch('/api/admin/chats/' + CB.chatId, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ graph }) });
+        const btn = event && event.target; if (btn) { const t = btn.textContent; btn.textContent = '✓ Salvo'; setTimeout(() => btn.textContent = t, 1400); }
+    } catch (e) { alert('Erro ao salvar: ' + e.message); }
+}
+// refresh do canvas quando um bloco é salvo/excluído pelo modal compartilhado
+function refreshBuilderIfOpen() {
+    try { const s = document.getElementById('screen-chat-builder'); if (s && s.offsetParent !== null && CB.chatId) reloadBuilderSteps(); } catch (_) {}
 }
 
 // ═══════════════ TOGGLES DE GAMIFICAÇÃO (roleta, cofre, etc.) ═══════════════

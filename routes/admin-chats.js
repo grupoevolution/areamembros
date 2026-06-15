@@ -102,6 +102,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
         if (b.trigger_product_ids !== undefined) set('trigger_product_ids', cleanTriggerIds(b.trigger_product_ids));
         if (b.input_mode !== undefined) set('input_mode', INPUT_MODES.includes(b.input_mode) ? b.input_mode : 'always');
         if (b.call_goto_key !== undefined) set('call_goto_key', (b.call_goto_key || '').trim().slice(0, 40) || null);
+        if (b.graph !== undefined) set('graph', b.graph ? JSON.stringify(b.graph) : null);
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
         values.push(id);
         const { rows } = await db.query(`UPDATE chats SET ${updates.join(', ')} WHERE id = $${p} RETURNING *`, values);
