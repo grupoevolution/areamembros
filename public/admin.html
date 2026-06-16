@@ -3211,6 +3211,10 @@ a { color: inherit; text-decoration: none; }
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>
                     Funís de Tráfego
                 </div>
+                <div class="nav-item" data-screen="funnel-analytics" onclick="switchAdminScreen(this, 'funnel-analytics', 'Análise de Funis'); loadFunnelAnalytics();">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/></svg>
+                    Análise de Funis
+                </div>
             </div>
 
             <div class="nav-section">
@@ -5589,6 +5593,42 @@ a { color: inherit; text-decoration: none; }
                         <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:12px;">Agendamentos</div>
                         <div id="statusScheduleList" style="display:flex; flex-direction:column; gap:10px;"><div style="color:rgba(255,255,255,.4); font-size:12px;">Carregando...</div></div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Tela ANÁLISE DE FUNIS -->
+            <div class="screen-content" id="screen-funnel-analytics">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Análise de Funis</h1>
+                        <p class="page-subtitle">Cliques, e-mails capturados, instalações reais do PWA e compras — por dia, por horário e por funil. Horário de Brasília.</p>
+                    </div>
+                    <div class="page-actions" style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+                        <div><label style="display:block; font-size:11px; color:rgba(255,255,255,.6); margin-bottom:3px;">De</label><input class="form-input" type="date" id="faFrom" style="height:36px;"></div>
+                        <div><label style="display:block; font-size:11px; color:rgba(255,255,255,.6); margin-bottom:3px;">Até</label><input class="form-input" type="date" id="faTo" style="height:36px;"></div>
+                        <button class="btn-secondary" onclick="faQuick(7)" style="height:36px;">7d</button>
+                        <button class="btn-secondary" onclick="faQuick(30)" style="height:36px;">30d</button>
+                        <button class="btn-primary" onclick="loadFunnelAnalytics()" style="height:36px;">Aplicar</button>
+                    </div>
+                </div>
+                <div id="faKpis" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-top:18px;"></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:18px;">
+                    <div style="background:var(--card,#1a1a1a); border:1px solid var(--border,rgba(255,255,255,.08)); border-radius:14px; padding:16px;">
+                        <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:12px;">Funil de etapas (queda)</div>
+                        <div id="faSteps"></div>
+                    </div>
+                    <div style="background:var(--card,#1a1a1a); border:1px solid var(--border,rgba(255,255,255,.08)); border-radius:14px; padding:16px;">
+                        <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:12px;">Cliques por horário (0–23h)</div>
+                        <div id="faByHour"></div>
+                    </div>
+                </div>
+                <div style="background:var(--card,#1a1a1a); border:1px solid var(--border,rgba(255,255,255,.08)); border-radius:14px; padding:16px; margin-top:16px;">
+                    <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:12px;">Cliques por dia</div>
+                    <div id="faByDay"></div>
+                </div>
+                <div style="background:var(--card,#1a1a1a); border:1px solid var(--border,rgba(255,255,255,.08)); border-radius:14px; padding:16px; margin-top:16px;">
+                    <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:12px;">Por funil</div>
+                    <div id="faByFunnel" style="overflow-x:auto;"></div>
                 </div>
             </div>
 
@@ -15104,6 +15144,85 @@ async function deleteStatusSchedule(id) {
     if (!confirm('Excluir este agendamento?')) return;
     await fetch('/api/admin/chats/status-schedule/' + id, { method: 'DELETE', credentials: 'include' });
     loadStatusScheduleList();
+}
+
+// ═══════════════ ANÁLISE DE FUNIS ═══════════════
+function faQuick(days) {
+    const t = new Date(Date.now() - 3 * 3600 * 1000);
+    const iso = (d) => d.toISOString().slice(0, 10);
+    document.getElementById('faTo').value = iso(t);
+    document.getElementById('faFrom').value = iso(new Date(t.getTime() - (days - 1) * 86400000));
+    loadFunnelAnalytics();
+}
+function faNum(n) { return (n || 0).toLocaleString('pt-BR'); }
+async function loadFunnelAnalytics() {
+    const fromEl = document.getElementById('faFrom'), toEl = document.getElementById('faTo');
+    if (!fromEl.value || !toEl.value) { faQuick(7); return; }
+    const kpis = document.getElementById('faKpis');
+    kpis.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:12px;">Carregando...</div>';
+    try {
+        const r = await fetch('/api/admin/tracking/funnel-analytics?from=' + fromEl.value + '&to=' + toEl.value, { credentials: 'include' });
+        const d = await r.json();
+        if (!d.success) { kpis.innerHTML = '<div style="color:#f55">'+(d.error||'erro')+'</div>'; return; }
+        const t = d.totals || {};
+        const card = (label, val, color) => '<div style="background:var(--card,#1a1a1a); border:1px solid var(--border,rgba(255,255,255,.08)); border-radius:12px; padding:14px 16px;">'
+            + '<div style="font-size:24px; font-weight:800; color:'+(color||'#fff')+';">'+faNum(val)+'</div>'
+            + '<div style="font-size:11.5px; color:rgba(255,255,255,.55); margin-top:2px;">'+label+'</div></div>';
+        kpis.innerHTML = card('Cliques no funil', t.clicks, '#3b82f6')
+            + card('E-mails capturados', t.emails, '#facc15')
+            + card('Instalações do PWA', t.pwa_installs, '#25D366')
+            + card('Abriram instalado', t.pwa_opened, '#a855f7')
+            + card('Compras', t.purchases, '#e50914');
+
+        // Funil de etapas (drop-off) — base = cliques
+        const s = d.steps || {};
+        const base = Math.max(1, s.clicks || 0);
+        const stepRow = (label, val, color) => {
+            const pct = Math.round(((val || 0) / base) * 100);
+            return '<div style="margin-bottom:10px;"><div style="display:flex; justify-content:space-between; font-size:12px; color:#fff; margin-bottom:3px;"><span>'+label+'</span><span style="color:rgba(255,255,255,.6);">'+faNum(val)+' · '+pct+'%</span></div>'
+                + '<div style="height:10px; background:rgba(255,255,255,.07); border-radius:6px; overflow:hidden;"><div style="height:100%; width:'+pct+'%; background:'+color+';"></div></div></div>';
+        };
+        document.getElementById('faSteps').innerHTML =
+            stepRow('Cliques', s.clicks, '#3b82f6')
+            + stepRow('Deram e-mail', s.emails, '#facc15')
+            + stepRow('Instalaram o app', s.installs, '#25D366')
+            + stepRow('Compraram', s.purchases, '#e50914');
+
+        // Por horário (0-23)
+        const hourMap = {}; (d.by_hour || []).forEach(h => hourMap[h.hour] = h.clicks);
+        const maxH = Math.max(1, ...Object.values(hourMap), 1);
+        let hh = '<div style="display:flex; align-items:flex-end; gap:2px; height:120px;">';
+        for (let i = 0; i < 24; i++) {
+            const v = hourMap[i] || 0; const ph = Math.round((v / maxH) * 100);
+            hh += '<div title="'+i+'h: '+v+'" style="flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%;">'
+                + '<div style="width:100%; height:'+ph+'%; min-height:'+(v>0?'3px':'0')+'; background:#3b82f6; border-radius:3px 3px 0 0;"></div></div>';
+        }
+        hh += '</div><div style="display:flex; justify-content:space-between; font-size:9px; color:rgba(255,255,255,.4); margin-top:4px;"><span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span></div>';
+        document.getElementById('faByHour').innerHTML = hh;
+
+        // Por dia
+        const days = d.by_day || [];
+        const maxD = Math.max(1, ...days.map(x => x.clicks), 1);
+        document.getElementById('faByDay').innerHTML = days.length
+            ? '<div style="display:flex; align-items:flex-end; gap:6px; height:140px;">' + days.map(x => {
+                const ph = Math.round((x.clicks / maxD) * 100);
+                const lbl = x.day.slice(8) + '/' + x.day.slice(5,7);
+                return '<div title="'+x.day+': '+x.clicks+' cliques, '+x.emails+' e-mails" style="flex:1; min-width:18px; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%;">'
+                    + '<div style="font-size:10px; color:rgba(255,255,255,.6); margin-bottom:2px;">'+x.clicks+'</div>'
+                    + '<div style="width:100%; height:'+ph+'%; min-height:3px; background:linear-gradient(180deg,#3b82f6,#1e40af); border-radius:4px 4px 0 0;"></div>'
+                    + '<div style="font-size:9px; color:rgba(255,255,255,.4); margin-top:3px;">'+lbl+'</div></div>';
+            }).join('') + '</div>'
+            : '<div style="color:rgba(255,255,255,.4); font-size:12px;">Sem cliques no período.</div>';
+
+        // Por funil
+        const bf = d.by_funnel || [];
+        document.getElementById('faByFunnel').innerHTML = bf.length
+            ? '<table style="width:100%; border-collapse:collapse; font-size:12.5px;"><thead><tr style="color:rgba(255,255,255,.5); text-align:left;"><th style="padding:6px 8px;">Funil</th><th style="padding:6px 8px;">Cliques</th><th style="padding:6px 8px;">E-mails</th><th style="padding:6px 8px;">Conversão</th></tr></thead><tbody>'
+                + bf.map(f => { const conv = f.clicks ? Math.round((f.emails/f.clicks)*100) : 0;
+                    return '<tr style="border-top:1px solid rgba(255,255,255,.06); color:#fff;"><td style="padding:7px 8px; font-weight:600;">'+escHtmlAdmin(f.name)+'</td><td style="padding:7px 8px;">'+faNum(f.clicks)+'</td><td style="padding:7px 8px;">'+faNum(f.emails)+'</td><td style="padding:7px 8px; color:#25D366;">'+conv+'%</td></tr>';
+                }).join('') + '</tbody></table>'
+            : '<div style="color:rgba(255,255,255,.4); font-size:12px;">Nenhum funil com cliques no período.</div>';
+    } catch (e) { kpis.innerHTML = '<div style="color:#f55">Erro: '+e.message+'</div>'; }
 }
 
 // ═══════════════ CONSTRUTOR DE FUNIL (canvas visual) ═══════════════
