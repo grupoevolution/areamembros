@@ -5767,6 +5767,8 @@ a { color: inherit; text-decoration: none; }
                                 <label style="display:block; font-size:12px; color:#fff; font-weight:700; margin-bottom:4px;">👁 Fecha sozinha após (segundos)</label>
                                 <input class="form-control" type="number" id="csViewSeconds" min="1" max="120" value="7" style="width:120px;"/>
                                 <div style="font-size:11px; color:rgba(255,255,255,.5); margin-top:6px;">A mídia abre tipo story e fecha sozinha nesse tempo — depois não vê de novo.</div>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#fff; cursor:pointer; margin-top:10px;"><input type="checkbox" id="csGate" style="width:15px; height:15px;"> 🔒 Pra abrir ESTA, pedir e-mail + instalar o app</label>
+                                <div style="font-size:11px; color:rgba(255,255,255,.45); margin-top:2px;">A "isca" do funil: ao tocar pra abrir, pede o e-mail e a instalação antes de liberar. Use na foto/vídeo mais quente.</div>
                             </div>
                             <div id="csButtonsWrap" style="display:none;">
                                 <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Botões (até 4) — rótulo + pulo opcional</label>
@@ -14830,6 +14832,7 @@ function openChatStepModal() {
     document.getElementById('csDelayValue').value = 10;
     document.getElementById('csDelayUnit').value = '60';
     document.getElementById('csViewSeconds').value = 7;
+    document.getElementById('csGate').checked = false;
     document.getElementById('csButtonRows').innerHTML = '';
     addChatBtnRow();
     updateChatStepFields();
@@ -14850,6 +14853,7 @@ function editChatStep(s) {
     document.getElementById('csGoto').value = s.goto_key || '';
     document.getElementById('csAllowInput').checked = s.allow_input === true;
     document.getElementById('csViewSeconds').value = s.view_seconds || 7;
+    document.getElementById('csGate').checked = s.gate === true;
     // delay: escolhe a maior unidade exata (h > min > s)
     const ds = parseInt(s.delay_seconds, 10) || 0;
     if (ds && ds % 3600 === 0) { document.getElementById('csDelayValue').value = ds / 3600; document.getElementById('csDelayUnit').value = '3600'; }
@@ -14884,6 +14888,7 @@ async function saveChatStep(e) {
             : 0,
         allow_input: type === 'buttons' ? document.getElementById('csAllowInput').checked : false,
         view_seconds: (type === 'view_once_image' || type === 'view_once_video') ? (parseInt(document.getElementById('csViewSeconds').value, 10) || 0) : 0,
+        gate: (type === 'view_once_image' || type === 'view_once_video') ? document.getElementById('csGate').checked : false,
         flow: _curChatFlow,
     };
     try {

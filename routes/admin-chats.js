@@ -169,8 +169,8 @@ router.post('/:id/steps', requireAdmin, async (req, res) => {
         const b = req.body || {};
         const type = STEP_TYPES.includes(b.type) ? b.type : 'text';
         const { rows } = await db.query(`
-            INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active, allow_input, view_seconds, flow)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *
+            INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active, allow_input, view_seconds, flow, gate)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *
         `, [
             chatId,
             parseInt(b.step_order, 10) || 0,
@@ -188,6 +188,7 @@ router.post('/:id/steps', requireAdmin, async (req, res) => {
             b.allow_input === true,
             Math.max(0, Math.min(120, parseInt(b.view_seconds, 10) || 0)),
             cleanFlow(b.flow),
+            b.gate === true,
         ]);
         return res.json({ success: true, step: rows[0] });
     } catch (err) {
@@ -217,6 +218,7 @@ router.put('/:id/steps/:stepId', requireAdmin, async (req, res) => {
         if (b.allow_input !== undefined) set('allow_input', !!b.allow_input);
         if (b.view_seconds !== undefined) set('view_seconds', Math.max(0, Math.min(120, parseInt(b.view_seconds, 10) || 0)));
         if (b.flow !== undefined) set('flow', cleanFlow(b.flow));
+        if (b.gate !== undefined) set('gate', !!b.gate);
         if (b.active !== undefined) set('active', !!b.active);
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
         values.push(stepId);
@@ -251,7 +253,7 @@ router.get('/:id/export', requireAdmin, async (req, res) => {
         if (!cr.length) return res.status(404).json({ success: false, error: 'Não encontrado' });
         const c = cr[0];
         const { rows: steps } = await db.query(
-            `SELECT step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active, allow_input, view_seconds, flow
+            `SELECT step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active, allow_input, view_seconds, flow, gate
              FROM chat_steps WHERE chat_id = $1 ORDER BY flow, step_order, id`, [id]
         );
         const payload = {
@@ -308,8 +310,8 @@ router.post('/import', requireAdmin, async (req, res) => {
         for (const s of data.steps.slice(0, 200)) {
             const type = STEP_TYPES.includes(s.type) ? s.type : 'text';
             await db.query(`
-                INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active, allow_input, view_seconds, flow)
-                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+                INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active, allow_input, view_seconds, flow, gate)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
             `, [
                 chat.id,
                 parseInt(s.step_order, 10) || 0,
@@ -327,6 +329,7 @@ router.post('/import', requireAdmin, async (req, res) => {
                 s.allow_input === true,
                 Math.max(0, Math.min(120, parseInt(s.view_seconds, 10) || 0)),
                 cleanFlow(s.flow),
+                s.gate === true,
             ]);
             imported++;
         }

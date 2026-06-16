@@ -235,6 +235,9 @@ async function runScript(session, chat, steps, idx, ident) {
             media = s.media_url;
             const vs = parseInt(s.view_seconds, 10) || 0;
             meta.view_seconds = vs > 0 ? vs : DEFAULT_VIEW_SECONDS;
+            // gate: pede e-mail+instalar pra abrir, se o bloco pedir OU a persona
+            // estiver com o gate global (gate_media) ligado.
+            meta.gate = (s.gate === true) || (chat.gate_media === true);
         }
         else if (s.type === 'cta') {
             content = await fillVars(s.content, ident) || 'Ver oferta';

@@ -9066,6 +9066,7 @@ window.ChatApp = (function() {
                 d.dataset.mediaUrl = m.media_url || '';
                 d.dataset.isVid = isVid ? '1' : '';
                 d.dataset.viewSeconds = (m.meta && m.meta.view_seconds) ? m.meta.view_seconds : '';
+                d.dataset.gate = (m.meta && m.meta.gate) ? '1' : '';
                 // simples igual WhatsApp: círculo "1" + Foto/Vídeo + hora
                 d.innerHTML = '<div class="ca-vonce">'
                     + '<span class="circ">' + (isVid ? '▶' : '1') + '</span>'
@@ -9189,8 +9190,8 @@ window.ChatApp = (function() {
     }
     function identified() { return !!(window.currentUserEmail && window.MV_ANONYMOUS !== true && !String(window.currentUserEmail).endsWith('@preview.local')); }
     let _gateInstalled = false;
-    function gateThen(action) {
-        if (!CUR || !CUR.chat.gate_media || identified()) { action(); return; }
+    function gateThen(needsGate, action) {
+        if (!needsGate || identified()) { action(); return; }
         gateEmail(action);
     }
     function gateOverlay(inner) {
@@ -9316,7 +9317,7 @@ window.ChatApp = (function() {
 
     let vonceCur = null;
     let vonceTimer = null;
-    function openVonce(bubble) { gateThen(() => doOpenVonce(bubble)); }
+    function openVonce(bubble) { gateThen(bubble.dataset.gate === '1', () => doOpenVonce(bubble)); }
     function doOpenVonce(bubble) {
         const url = bubble.dataset.mediaUrl;
         if (!url) return;
