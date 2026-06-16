@@ -5615,6 +5615,7 @@ a { color: inherit; text-decoration: none; }
                                 <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Seção na lista</label><input class="form-control" id="cpSection" maxlength="60" placeholder="Minhas conversas" style="width:100%;"/></div>
                                 <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Status exibido</label><input class="form-control" id="cpStatus" maxlength="40" placeholder="online" style="width:100%;"/></div>
                             </div>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">🏷 Etiqueta ao lado do nome (opcional)</label><input class="form-control" id="cpTag" maxlength="30" placeholder="ex: morena, 28 anos, sua região..." style="width:100%;"/></div>
                             <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="cpOnline" checked style="width:16px; height:16px;"> Mostrar bolinha verde "online"</label>
                             <div style="background:rgba(229,9,20,.06); border:1px solid rgba(229,9,20,.25); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;">
                                 <div><label style="display:block; font-size:12px; color:#fff; font-weight:700; margin-bottom:4px;">💎 Acesso</label>
@@ -14542,6 +14543,7 @@ function editChatPersona(c) {
     document.getElementById('cpAvatar').value = c.avatar_url || '';
     document.getElementById('cpSection').value = c.section || '';
     document.getElementById('cpStatus').value = c.status_label || 'online';
+    document.getElementById('cpTag').value = c.tag || '';
     document.getElementById('cpOnline').checked = c.show_online !== false;
     document.getElementById('cpAccess').value = c.access || 'free';
     document.getElementById('cpCheckout').value = c.checkout_url || '';
@@ -14568,6 +14570,7 @@ async function saveChatPersona(e) {
         avatar_url: document.getElementById('cpAvatar').value.trim() || null,
         section: document.getElementById('cpSection').value.trim() || 'Minhas conversas',
         status_label: document.getElementById('cpStatus').value.trim() || 'online',
+        tag: document.getElementById('cpTag').value.trim() || null,
         show_online: document.getElementById('cpOnline').checked,
         access: document.getElementById('cpAccess').value,
         product_id: document.getElementById('cpProduct').value || null,

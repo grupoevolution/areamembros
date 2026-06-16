@@ -8175,8 +8175,9 @@ body.is-slowconn .prod-cta-fixed {
 .ca-vonce.opened .circ { border-color: #b5aea8; color: #b5aea8; }
 .ca-vonce.opened .lb { color: #999; }
 .ca-cta { background: #e50914; border: none; color: #fff; font-size: 13.5px; font-weight: 700; padding: 11px 18px; border-radius: 999px; cursor: pointer; box-shadow: 0 2px 6px rgba(229,9,20,.35); }
-.ca-choices { padding: 6px 10px; display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; background: #ECE5DD; }
-.ca-choices button { background: #fff; border: 1.5px solid #25D366; color: #128C7E; font-size: 13px; font-weight: 600; padding: 9px 16px; border-radius: 999px; cursor: pointer; }
+.ca-choices { padding: 10px 12px 14px; display: flex; gap: 9px; flex-wrap: wrap; justify-content: center; background: #ECE5DD; }
+.ca-choices button { background: #25D366; border: none; color: #fff; font-size: 15px; font-weight: 700; padding: 13px 24px; border-radius: 999px; cursor: pointer; box-shadow: 0 3px 10px rgba(37,211,102,.35); transition: transform .12s, filter .12s; }
+.ca-choices button:active { transform: scale(.96); filter: brightness(.95); }
 .ca-input-bar { display: flex; align-items: center; gap: 7px; padding: 8px 10px calc(12px + env(safe-area-inset-bottom)); background: #f0ece8; }
 .ca-input-pill { flex: 1; display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 999px; padding: 9px 13px; }
 .ca-input-pill input { flex: 1; min-width: 0; border: none; outline: none; font-size: 14.5px; color: #111; background: transparent; }
@@ -8229,7 +8230,7 @@ body.is-slowconn .prod-cta-fixed {
         <button class="back" onclick="ChatApp.back()">‹</button>
         <div class="av" id="caAv" onclick="ChatApp.openProfile()" style="cursor:pointer;"><span class="dot" id="caDot"></span></div>
         <div class="mid">
-            <div class="nm" id="caName">—</div>
+            <div class="nm" id="caName" style="display:flex;align-items:center;gap:7px;">—</div>
             <div class="st" id="caStatus">online</div>
         </div>
         <button class="call" onclick="ChatApp.onCall()" aria-label="Chamada de vídeo">
@@ -8920,7 +8921,8 @@ window.ChatApp = (function() {
         if (!data.success) { body.innerHTML += '<div class="ca-day">erro ao abrir</div>'; return; }
         CUR = { id, chat: data.chat, perm: data.permissions, callSeen: data.call_seen === true, awaiting: data.awaiting, lastButtonsAllowInput: false };
 
-        document.getElementById('caName').textContent = data.chat.name;
+        document.getElementById('caName').innerHTML = '<span>' + esc(data.chat.name) + '</span>'
+            + (data.chat.tag ? '<span style="font-size:11px;font-weight:600;color:#5b6b73;background:rgba(0,0,0,.07);padding:2px 9px;border-radius:999px;">' + esc(data.chat.tag) + '</span>' : '');
         document.getElementById('caStatus').textContent = data.chat.status_label || 'online';
         document.getElementById('caDot').style.display = data.chat.show_online ? '' : 'none';
         document.getElementById('caAv').style.backgroundImage = data.chat.avatar_url ? 'url("' + data.chat.avatar_url + '")' : 'none';
@@ -8963,9 +8965,13 @@ window.ChatApp = (function() {
         const bar = document.getElementById('caInputBar');
         if (!bar) return;
         if (!CUR || (CUR.perm && CUR.perm.locked)) { bar.style.display = 'none'; return; }
+        const aw = CUR.awaiting;
+        // Em QUALQUER modo: durante botões SEM digitar liberado, a barra some
+        // (ponto de decisão — o cliente escolhe, não digita). Igual bot do WhatsApp.
+        if (aw === 'buttons' && !CUR.lastButtonsAllowInput) { bar.style.display = 'none'; return; }
         const mode = (CUR.chat && CUR.chat.input_mode) || 'always';
         if (mode !== 'gated') { bar.style.display = 'flex'; return; }
-        const aw = CUR.awaiting;
+        // modo "gated" (TapBot): só aparece em "Liberar resposta" ou botões+digitar
         const show = aw === 'input' || (aw === 'buttons' && CUR.lastButtonsAllowInput);
         bar.style.display = show ? 'flex' : 'none';
         if (show) {

@@ -358,6 +358,7 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         const persona = {
             id: chat.id, name: chat.name, avatar_url: chat.avatar_url,
             status_label: chat.status_label, show_online: chat.show_online,
+            tag: chat.tag || null,
             gate_media: chat.gate_media === true,
             input_mode: chat.input_mode === 'gated' ? 'gated' : 'always',
             checkout_url: chat.checkout_url || null,

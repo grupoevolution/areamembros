@@ -43,13 +43,13 @@ router.post('/', requireAdmin, async (req, res) => {
     try {
         const { name, avatar_url, section, status_label, show_online, access,
                 product_id, checkout_url, reply_mode, allow_photo, display_order, active,
-                city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key } = req.body || {};
+                city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key, tag } = req.body || {};
         if (!name || !String(name).trim()) return res.status(400).json({ success: false, error: 'Nome obrigatório' });
         const { rows } = await db.query(`
             INSERT INTO chats (name, avatar_url, section, status_label, show_online, access,
                                product_id, checkout_url, reply_mode, allow_photo, display_order, active,
-                               city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *
+                               city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key, tag)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *
         `, [
             String(name).trim().slice(0, 80),
             (avatar_url || '').trim().slice(0, 1000) || null,
@@ -69,6 +69,7 @@ router.post('/', requireAdmin, async (req, res) => {
             cleanTriggerIds(trigger_product_ids),
             INPUT_MODES.includes(input_mode) ? input_mode : 'gated',
             (call_goto_key || '').trim().slice(0, 40) || null,
+            (tag || '').trim().slice(0, 30) || null,
         ]);
         return res.json({ success: true, chat: rows[0] });
     } catch (err) {
@@ -102,6 +103,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
         if (b.trigger_product_ids !== undefined) set('trigger_product_ids', cleanTriggerIds(b.trigger_product_ids));
         if (b.input_mode !== undefined) set('input_mode', INPUT_MODES.includes(b.input_mode) ? b.input_mode : 'always');
         if (b.call_goto_key !== undefined) set('call_goto_key', (b.call_goto_key || '').trim().slice(0, 40) || null);
+        if (b.tag !== undefined) set('tag', (b.tag || '').trim().slice(0, 30) || null);
         if (b.graph !== undefined) set('graph', b.graph ? JSON.stringify(b.graph) : null);
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
         values.push(id);
