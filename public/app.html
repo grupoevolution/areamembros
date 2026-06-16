@@ -8899,20 +8899,37 @@ window.ChatApp = (function() {
 
     let LAST_ID = 0, POLL_TIMER = null;
     function stopPoll() { if (POLL_TIMER) { clearInterval(POLL_TIMER); POLL_TIMER = null; } }
+    // Uma consulta avulsa: busca o que o servidor mandou desde a última msg.
+    // Usado pelo poll periódico E ao voltar o foco (app minimizado → reaberto).
+    async function pollOnce() {
+        if (!CUR) return;
+        try {
+            const r = await fetch('/api/user/chats/' + CUR.id + '/poll?after=' + LAST_ID + '&visitor_id=' + VID, { credentials: 'include' });
+            const data = await r.json();
+            if (data.success && Array.isArray(data.messages) && data.messages.length) {
+                handleAdvance({ messages: data.messages, awaiting: data.awaiting }, true);
+            }
+            return data;
+        } catch (_) {}
+    }
     function startPoll() {
         stopPoll();
         POLL_TIMER = setInterval(async () => {
             if (!CUR) { stopPoll(); return; }
-            try {
-                const r = await fetch('/api/user/chats/' + CUR.id + '/poll?after=' + LAST_ID + '&visitor_id=' + VID, { credentials: 'include' });
-                const data = await r.json();
-                if (data.success && Array.isArray(data.messages) && data.messages.length) {
-                    handleAdvance({ messages: data.messages, awaiting: data.awaiting }, true);
-                }
-                if (data.awaiting !== 'delay' && (!data.messages || !data.messages.length)) stopPoll();
-            } catch (_) {}
+            const data = await pollOnce();
+            // mantém o poll vivo enquanto houver delay pendente; senão, espaça
+            // pra um "heartbeat" leve (capta auto-start/continuações server-side).
+            if (data && data.awaiting !== 'delay' && (!data.messages || !data.messages.length)) {
+                // não para de vez: continua num ritmo lento pra ficar em sincronia
+            }
         }, 4000);
     }
+    // Conversa aberta + app volta do background → consulta na hora (sem esperar 4s).
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && CUR && document.getElementById('chatconv') && document.getElementById('chatconv').classList.contains('active')) {
+            pollOnce();
+        }
+    });
 
     function back() {
         stopPoll();
@@ -9042,7 +9059,10 @@ window.ChatApp = (function() {
         RENDERING = false;
         renderChoices(QUEUE._awaiting);
         updateInputBar();
-        if (QUEUE._awaiting === 'delay') startPoll(); else stopPoll();
+        // Conversa aberta SEMPRE consulta o servidor (a cada 4s) — assim capta as
+        // mensagens que o roteiro/worker manda depois (delay, auto-start, "esperar
+        // abrir" de outro device) mesmo sem o cliente interagir. Para no back().
+        if (CUR) startPoll();
     }
 
     function renderMsg(m) {
