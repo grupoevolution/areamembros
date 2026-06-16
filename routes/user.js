@@ -1870,7 +1870,7 @@ async function scheduleFunnelPushes(slug, email) {
 // Body: { email, skipSuggestion?, funnel_slug? }
 // Igual ao /login normal, mas registra origem do funíl pra tracking.
 router.post('/login/promote', async (req, res) => {
-    const { email, skipSuggestion, funnel_slug, campanha } = req.body || {};
+    const { email, skipSuggestion, funnel_slug, campanha, visitor_id } = req.body || {};
     if (!email) return res.status(400).json({ success: false, error: 'Email obrigatório' });
     try {
         let result;
@@ -1881,6 +1881,19 @@ router.post('/login/promote', async (req, res) => {
         }
         if (!result.success) {
             return res.json(result);
+        }
+        // Vincula a conversa ANÔNIMA (visitor_id) ao e-mail agora — assim, mesmo
+        // que o cliente instale o PWA (storage novo), logado com o mesmo e-mail a
+        // conversa é encontrada e CONTINUA de onde parou (não reseta do zero).
+        const vid = String(visitor_id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
+        if (vid) {
+            try {
+                await db.query(
+                    `UPDATE chat_sessions SET customer_email = $1, updated_at = NOW()
+                     WHERE visitor_id = $2 AND customer_email IS NULL`,
+                    [String(result.email).toLowerCase(), vid]
+                );
+            } catch (_) { /* tabela de chat pode não existir em banco antigo */ }
         }
         // Login OK — registra origem do funíl
         if (funnel_slug) {

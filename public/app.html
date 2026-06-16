@@ -8166,18 +8166,19 @@ body.is-slowconn .prod-cta-fixed {
 .ca-audio .wave i { flex: 1; min-width: 2px; max-width: 4px; background: #c5c1bd; border-radius: 2px; }
 .ca-audio .wave i.on { background: #25D366; }
 .ca-audio-meta { display: flex; justify-content: space-between; font-size: 9.5px; color: #999; margin-top: 3px; padding-left: 50px; }
-.ca-vonce { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-.ca-vonce .circ { width: 38px; height: 38px; border-radius: 50%; border: 2px solid #25D366; display: flex; align-items: center; justify-content: center; color: #25D366; font-size: 16px; font-weight: 600; flex-shrink: 0; }
+.ca-vonce { display: flex; align-items: center; gap: 11px; cursor: pointer; }
+.ca-vonce .circ { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #25D366; display: flex; align-items: center; justify-content: center; color: #25D366; font-size: 14px; font-weight: 700; flex-shrink: 0; }
 .ca-vonce .mid { flex: 1; min-width: 0; }
-.ca-vonce .lb { font-size: 14px; color: #1b1b1b; font-weight: 600; }
+.ca-vonce .lb { font-size: 14.5px; color: #1b1b1b; font-weight: 600; }
+.ca-vonce .vtime { font-size: 10px; color: #9aa3ab; margin-left: auto; align-self: flex-end; }
 .ca-vonce .sb { font-size: 11.5px; color: #999; margin-top: 1px; }
 .ca-vonce.opened { cursor: default; }
 .ca-vonce.opened .circ { border-color: #b5aea8; color: #b5aea8; }
 .ca-vonce.opened .lb { color: #999; }
 .ca-cta { background: #e50914; border: none; color: #fff; font-size: 13.5px; font-weight: 700; padding: 11px 18px; border-radius: 999px; cursor: pointer; box-shadow: 0 2px 6px rgba(229,9,20,.35); }
-.ca-choices { padding: 10px 12px 14px; display: flex; gap: 9px; flex-wrap: wrap; justify-content: center; background: #ECE5DD; }
-.ca-choices button { background: #25D366; border: none; color: #fff; font-size: 15px; font-weight: 700; padding: 13px 24px; border-radius: 999px; cursor: pointer; box-shadow: 0 3px 10px rgba(37,211,102,.35); transition: transform .12s, filter .12s; }
-.ca-choices button:active { transform: scale(.96); filter: brightness(.95); }
+.ca-choices { padding: 8px 12px calc(12px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 9px; background: #ECE5DD; }
+.ca-choices button { width: 100%; background: #25D366; border: none; color: #fff; font-size: 16px; font-weight: 700; padding: 16px; border-radius: 14px; cursor: pointer; box-shadow: 0 3px 12px rgba(37,211,102,.32); transition: transform .12s, filter .12s; }
+.ca-choices button:active { transform: scale(.98); filter: brightness(.95); }
 .ca-input-bar { display: flex; align-items: center; gap: 7px; padding: 8px 10px calc(12px + env(safe-area-inset-bottom)); background: #f0ece8; }
 .ca-input-pill { flex: 1; display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 999px; padding: 9px 13px; }
 .ca-input-pill input { flex: 1; min-width: 0; border: none; outline: none; font-size: 14.5px; color: #111; background: transparent; }
@@ -8244,6 +8245,7 @@ body.is-slowconn .prod-cta-fixed {
         <p>Essa conversa é só pra assinantes VIP. Desbloqueie agora e tenha acesso total.</p>
         <button class="ca-cta" onclick="ChatApp.unlock()">Desbloquear VIP →</button>
     </div>
+    <div id="caStatusBar" style="display:none; padding:15px 14px calc(15px + env(safe-area-inset-bottom)); text-align:center; font-size:13.5px; color:#8a949c; font-style:italic; background:#ECE5DD; border-top:1px solid #e0dad4;">—</div>
     <div class="ca-choices" id="caChoices" style="display:none;"></div>
     <div class="ca-input-bar" id="caInputBar">
         <div class="ca-input-pill">
@@ -8264,8 +8266,9 @@ body.is-slowconn .prod-cta-fixed {
     <button onclick="ChatApp.unlock()">Desbloquear VIP →</button>
 </div>
 <div class="ca-viewer" id="caViewer">
+    <div id="caVonceBar" style="position:absolute;top:0;left:0;height:3px;width:100%;background:#fff;z-index:6;border-radius:0 2px 2px 0;"></div>
     <div class="top" style="justify-content:flex-end;">
-        <button onclick="ChatApp.closeVonce()" aria-label="Fechar" style="opacity:.85;font-size:22px;line-height:1;background:rgba(0,0,0,.35);width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;">×</button>
+        <button onclick="ChatApp.closeVonce()" aria-label="Fechar" style="font-size:30px;line-height:1;color:#fff;background:none;font-weight:300;">×</button>
     </div>
     <div class="media" id="caViewerMedia"></div>
 </div>
@@ -8961,9 +8964,22 @@ window.ChatApp = (function() {
     // (comportamento antigo). Modo 'gated' (estilo TapBot) = só nos pontos em
     // que o roteiro libera: bloco "Esperar digitar" (awaiting='input') ou bloco
     // de botões com "permitir digitar" (awaiting='buttons' + allow_input).
+    // Barra de baixo mostrando o que a modelo está fazendo ("X está respondendo…").
+    // Enquanto aparece, esconde os botões e o input (eles voltam ao fim do drain).
+    function showBottomStatus(txt) {
+        const sb = document.getElementById('caStatusBar');
+        if (sb) { sb.textContent = txt; sb.style.display = 'block'; }
+        const ch = document.getElementById('caChoices'); if (ch) ch.style.display = 'none';
+        const ib = document.getElementById('caInputBar'); if (ib) ib.style.display = 'none';
+    }
+    function hideBottomStatus() {
+        const sb = document.getElementById('caStatusBar'); if (sb) sb.style.display = 'none';
+    }
+
     function updateInputBar() {
         const bar = document.getElementById('caInputBar');
         if (!bar) return;
+        hideBottomStatus();
         if (!CUR || (CUR.perm && CUR.perm.locked)) { bar.style.display = 'none'; return; }
         const aw = CUR.awaiting;
         // Em QUALQUER modo: durante botões SEM digitar liberado, a barra some
@@ -8987,7 +9003,8 @@ window.ChatApp = (function() {
             const m = QUEUE.shift();
             const typing = (m.sender === 'bot' && m.meta && m.meta.typing_ms) ? m.meta.typing_ms : 0;
             if (typing > 0) {
-                // áudio → "gravando áudio..."; resto → "digitando..." (igual WhatsApp)
+                // áudio → "gravando áudio..."; resto → "respondendo..." (igual WhatsApp).
+                // O que tá acontecendo aparece na BARRA DE BAIXO (não no topo).
                 const isAudio = m.type === 'audio';
                 const t = document.createElement('div');
                 t.className = 'ca-typing';
@@ -8995,11 +9012,12 @@ window.ChatApp = (function() {
                     ? '<span class="ca-rec"><span class="dot"></span></span> <span class="ca-rec-txt">gravando áudio</span>'
                     : '<i></i><i></i><i></i>';
                 body.appendChild(t);
-                document.getElementById('caStatus').textContent = isAudio ? 'gravando áudio...' : 'digitando...';
+                const nm = (CUR && CUR.chat && CUR.chat.name) || 'Ela';
+                showBottomStatus(nm + (isAudio ? ' está gravando áudio…' : ' está respondendo…'));
                 body.scrollTop = body.scrollHeight;
                 await new Promise(r => setTimeout(r, Math.min(typing, 6000)));
                 t.remove();
-                document.getElementById('caStatus').textContent = (CUR && CUR.chat.status_label) || 'online';
+                hideBottomStatus();
             }
             renderMsg(m);
             body.scrollTop = body.scrollHeight;
@@ -9041,7 +9059,7 @@ window.ChatApp = (function() {
                 + (m.content ? '<div class="tx" style="margin-top:5px;">' + esc(m.content) + '</div>' : '') + tm;
         } else if (m.type === 'view_once_image' || m.type === 'view_once_video') {
             const isVid = m.type === 'view_once_video';
-            d.className = 'ca-bub wide';
+            d.className = 'ca-bub';
             if (m.viewed) {
                 d.innerHTML = openedHtml(isVid, m.created_at);
             } else {
@@ -9049,12 +9067,12 @@ window.ChatApp = (function() {
                 d.dataset.mediaUrl = m.media_url || '';
                 d.dataset.isVid = isVid ? '1' : '';
                 d.dataset.viewSeconds = (m.meta && m.meta.view_seconds) ? m.meta.view_seconds : '';
+                // simples igual WhatsApp: círculo "1" + Foto/Vídeo + hora
                 d.innerHTML = '<div class="ca-vonce">'
-                    + '<span class="circ">' + (isVid ? ICO.playSm : '1') + '</span>'
-                    + '<div class="mid"><div class="lb">' + (isVid ? 'Vídeo' : 'Foto') + '</div>'
-                    + '<div class="sb">Visualização única · toque pra abrir</div></div>'
-                    + '<span style="display:flex;">' + (isVid ? ICO.video : ICO.camera) + '</span></div>'
-                    + '<div class="tm2">' + hhmm(m.created_at) + '</div>';
+                    + '<span class="circ">' + (isVid ? '▶' : '1') + '</span>'
+                    + '<span class="lb">' + (isVid ? 'Vídeo' : 'Foto') + '</span>'
+                    + '<span class="vtime">' + hhmm(m.created_at) + '</span>'
+                    + '</div>';
                 d.querySelector('.ca-vonce').addEventListener('click', () => openVonce(d));
             }
         } else if (m.type === 'cta') {
@@ -9229,7 +9247,7 @@ window.ChatApp = (function() {
             try {
                 const r = await fetch('/api/user/login/promote', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-                    body: JSON.stringify({ email, skipSuggestion: true, funnel_slug: window.MV_FUNNEL_SLUG || '' }),
+                    body: JSON.stringify({ email, skipSuggestion: true, funnel_slug: window.MV_FUNNEL_SLUG || '', visitor_id: VID }),
                 });
                 const d = await r.json();
                 if (d.success) {
@@ -9264,14 +9282,35 @@ window.ChatApp = (function() {
                 }
             } catch (_) {}
         };
+        // Instrução manual (iOS sempre; Android quando o prompt automático não
+        // está disponível — critério não atendido, já dispensado, ou in-app browser).
+        function showManualInstall() {
+            const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            const steps = isIOS
+                ? 'Toque no botão <b>Compartilhar</b> <span style="font-size:16px;">⬆️</span> do navegador e depois em <b>"Adicionar à Tela de Início"</b>.'
+                : 'Toque no menu <b>⋮</b> do navegador (canto superior) e depois em <b>"Adicionar à tela inicial"</b> ou <b>"Instalar app"</b>.';
+            gateOverlay(
+                '<div style="width:56px;height:56px;border-radius:16px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;font-weight:800;color:#fff;">M</div>'
+                + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">Adicionar à tela inicial</div>'
+                + '<div style="font-size:13px;color:#777;line-height:1.6;margin-bottom:16px;">' + steps + '</div>'
+                + '<button id="caManualDone" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;">Já adicionei — continuar</button>'
+            );
+            document.getElementById('caManualDone').addEventListener('click', proceed);
+        }
         document.getElementById('caGateInstall').addEventListener('click', () => {
-            try {
-                if (dp && dp.prompt) {
-                    dp.prompt();
-                    dp.userChoice.then(res => { if (res.outcome === 'accepted') { try { localStorage.setItem('mv_pwa_installed','1'); } catch(_) {} } window.deferredPrompt = null; proceed(); }).catch(proceed);
-                } else if (window.PWA && typeof PWA.install === 'function') { PWA.install(); proceed(); }
-                else proceed();
-            } catch (_) { proceed(); }
+            const dp2 = window.deferredPrompt; // relê na hora do clique (pode ter chegado depois)
+            if (dp2 && dp2.prompt) {
+                try {
+                    dp2.prompt();
+                    dp2.userChoice.then(res => {
+                        window.deferredPrompt = null;
+                        if (res && res.outcome === 'accepted') { try { localStorage.setItem('mv_pwa_installed', '1'); } catch (_) {} proceed(); }
+                        else showManualInstall(); // recusou o prompt → mostra como fazer manual
+                    }).catch(() => showManualInstall());
+                } catch (_) { showManualInstall(); }
+            } else {
+                showManualInstall(); // sem prompt automático → instrução manual
+            }
         });
         document.getElementById('caGateSkip').addEventListener('click', proceed);
     }
@@ -9289,9 +9328,17 @@ window.ChatApp = (function() {
             : '<img src="' + esc(url) + '" alt="">';
         const viewer = document.getElementById('caViewer');
         viewer.classList.add('show');
-        // Auto-fechar (estilo story): some sozinha depois de N segundos, SEM barra
-        // visível — só o X no canto. O tempo é configurado por mídia no painel.
+        // Auto-fechar estilo story: barra branca no topo escoa e a mídia fecha
+        // sozinha em N segundos (configurável por mídia no painel). Depois não vê.
         const secs = Math.max(1, Math.min(120, parseInt(bubble.dataset.viewSeconds, 10) || 7));
+        const bar = document.getElementById('caVonceBar');
+        if (bar) {
+            bar.style.transition = 'none';
+            bar.style.width = '100%';
+            void bar.offsetWidth; // reflow
+            bar.style.transition = 'width ' + secs + 's linear';
+            bar.style.width = '0%';
+        }
         clearTimeout(vonceTimer);
         vonceTimer = setTimeout(() => closeVonce(), secs * 1000);
     }
@@ -9299,6 +9346,7 @@ window.ChatApp = (function() {
         clearTimeout(vonceTimer); vonceTimer = null;
         document.getElementById('caViewer').classList.remove('show');
         document.getElementById('caViewerMedia').innerHTML = '';
+        const bar = document.getElementById('caVonceBar'); if (bar) { bar.style.transition = 'none'; bar.style.width = '100%'; }
         if (!vonceCur) return;
         const id = vonceCur.dataset.msgId;
         const isVid = vonceCur.dataset.isVid === '1';
