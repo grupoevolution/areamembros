@@ -4824,7 +4824,11 @@ a { color: inherit; text-decoration: none; }
                         <textarea class="form-textarea" id="pushTargets" style="min-height:60px;font-family:monospace;font-size:11px;" placeholder="Deixe vazio pra todos os subscribers"></textarea>
                     </div>
                     <div id="pushAlert" style="display:none;padding:10px;border-radius:8px;font-size:13px;margin-bottom:10px;"></div>
-                    <button class="btn-primary" id="pushSendBtn" onclick="sendPushNotification()">Disparar push</button>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn-primary" id="pushSendBtn" onclick="sendPushNotification()">Disparar push</button>
+                        <button class="btn-secondary" id="pushBroadcastBtn" onclick="sendPushBroadcast()" style="font-weight:700;">📢 Broadcast — TODOS os PWAs</button>
+                    </div>
+                    <div style="font-size:11.5px; color:rgba(255,255,255,.45); margin-top:8px;">"Broadcast" ignora os e-mails específicos e manda pra <b>todos os celulares com o app instalado</b>. "Disparar push" respeita os e-mails (vazio = todos também).</div>
                 </div>
 
                 <!-- ===== QR PREVIEW MODAL ===== -->
@@ -11257,7 +11261,8 @@ async function loadGrowth() {
         const r = await fetch('/api/admin/push/status', { credentials: 'include' }).then(r => r.json());
         const el = document.getElementById('growthPushStatus');
         if (r.success && r.ready) {
-            el.innerHTML = `✅ Pronto · <strong>${r.subscribers}</strong> subscribers ativos`;
+            window.__pushSubscribers = r.subscribers || 0;
+            el.innerHTML = `✅ Pronto · 📱 <strong>${r.subscribers}</strong> celular(es) com o app instalado`;
             el.style.color = 'var(--success)';
         } else {
             el.innerHTML = '⚠️ ' + escapeHtml(r.reason || 'Push não configurado. Salve uma vez pra gerar VAPID keys.');
@@ -11317,6 +11322,27 @@ async function sendPushNotification() {
     }
     btn.disabled = false; btn.textContent = 'Disparar push';
 }
+
+// Broadcast: ignora os e-mails específicos e manda pra TODOS os PWAs instalados.
+async function sendPushBroadcast() {
+    const get = id => document.getElementById(id)?.value?.trim() || '';
+    const title = get('pushTitle'), body = get('pushBody'), url = get('pushUrl') || '/', icon = get('pushIcon') || undefined;
+    if (!title || !body) return _alertModal('pushAlert', 'Título e mensagem obrigatórios', 'error');
+    const n = window.__pushSubscribers || 0;
+    if (!confirm('Enviar BROADCAST pra TODOS os ' + n + ' celular(es) com o app instalado?')) return;
+    const btn = document.getElementById('pushBroadcastBtn');
+    btn.disabled = true; const t0 = btn.textContent; btn.textContent = 'Enviando...';
+    try {
+        const r = await fetch('/api/admin/push/send', {
+            method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, body, url, icon }), // sem target_emails = todos
+        }).then(r => r.json());
+        if (!r.success) _alertModal('pushAlert', r.error || 'Erro', 'error');
+        else _alertModal('pushAlert', `📢 Broadcast: ${r.sent} entregue(s), ${r.failed} falha (de ${r.total})`, 'success');
+    } catch (err) { _alertModal('pushAlert', err.message || 'Erro de rede', 'error'); }
+    btn.disabled = false; btn.textContent = t0;
+}
+window.sendPushBroadcast = sendPushBroadcast;
 
 // QR code preview "Ver no celular"
 async function showPreviewQR() {

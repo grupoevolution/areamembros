@@ -7053,7 +7053,7 @@ body.is-slowconn .prod-cta-fixed {
     <div class="toast-container" id="toast-library"></div>
     <div class="screen-scroll">
         <div class="topbar-simple">
-            <div class="topbar-title">Seu <em>acervo</em></div>
+            <div class="topbar-title">Minhas <em>compras</em></div>
         </div>
         <div class="acervo-stat">
             <div class="acervo-stat-icon">
@@ -8290,9 +8290,9 @@ body.is-slowconn .prod-cta-fixed {
         <div class="nav-label">Conversas</div>
         <span class="nav-dot" id="chatNavDot" style="display:none;"></span>
     </button>
-    <button class="nav-item nav-item-hi" onclick="switchScreen('library')" aria-label="Meus conteúdos">
-        <svg class="nav-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-        <div class="nav-label">Conteúdos</div>
+    <button class="nav-item nav-item-hi" onclick="switchScreen('library')" aria-label="Minhas compras">
+        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v13a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path stroke-linecap="round" d="M3 6h18"/><path stroke-linecap="round" d="M16 10a4 4 0 01-8 0"/></svg>
+        <div class="nav-label">Minhas Compras</div>
     </button>
     <button class="nav-item" id="navSoon" style="opacity:.45;" onclick="showSoonToast()">
         <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8-5-3.6-5 3.6 1.9-5.8L4 8.8h6.1L12 3z"/></svg>
@@ -15989,9 +15989,12 @@ window.MV_BOOT_PROMISE = (function bootFunnel() {
 // ═══════════════ PLANS SHEET CONTROLLER ═══════════════
 function onProductBuyClick() {
     const plans = window.__currentProductPlans || [];
-    // Sem planos cadastrados → checkout antigo (compatibilidade)
+    // Sem planos cadastrados → vai DIRETO pro checkout do gateway (sem a página
+    // intermediária de "Confirmar compra").
     if (!plans.length) {
-        if (typeof switchScreen === 'function') switchScreen('checkout');
+        const pid = window.__currentProductInfo && window.__currentProductInfo.id;
+        if (pid && typeof buyProduct === 'function') { buyProduct(pid); return; }
+        if (typeof switchScreen === 'function') switchScreen('checkout'); // último fallback
         return;
     }
     // Vai DIRETO pro checkout do plano SELECIONADO (inline). Sem página intermediária.
