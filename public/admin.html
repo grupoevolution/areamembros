@@ -5820,6 +5820,8 @@ a { color: inherit; text-decoration: none; }
                                 <div style="font-size:11px; color:rgba(255,255,255,.5); margin-top:6px;">A mídia abre tipo story e fecha sozinha nesse tempo — depois não vê de novo.</div>
                                 <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#fff; cursor:pointer; margin-top:10px;"><input type="checkbox" id="csGate" style="width:15px; height:15px;"> 🔒 Pra abrir ESTA, pedir e-mail + instalar o app</label>
                                 <div style="font-size:11px; color:rgba(255,255,255,.45); margin-top:2px;">A "isca" do funil: ao tocar pra abrir, pede o e-mail e a instalação antes de liberar. Use na foto/vídeo mais quente.</div>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#fff; cursor:pointer; margin-top:10px;"><input type="checkbox" id="csWaitOpen" style="width:15px; height:15px;"> ⏸ Só continuar o roteiro DEPOIS que o cliente abrir esta mídia</label>
+                                <div style="font-size:11px; color:rgba(255,255,255,.45); margin-top:2px;">A conversa pausa aqui até ele tocar pra ver. Aí o próximo bloco é enviado.</div>
                             </div>
                             <div id="csButtonsWrap" style="display:none;">
                                 <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Botões (até 4) — rótulo + pulo opcional</label>
@@ -5829,8 +5831,19 @@ a { color: inherit; text-decoration: none; }
                                 <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#fff; cursor:pointer; margin-top:8px;"><input type="checkbox" id="csAllowInput" style="width:15px; height:15px;"> ⌨️ Permitir também DIGITAR (cliente escolhe ou digita)</label>
                                 <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:2px;">Ligado: junto dos botões aparece a barra de digitar. O que o cliente digitar conta como resposta e segue o "Pulo pra" do bloco.</div>
                             </div>
-                            <div id="csCtaWrap" style="display:none;"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link do botão (checkout/oferta)</label>
+                            <div id="csCtaWrap" style="display:none;">
+                                <div style="font-size:11px; color:rgba(255,255,255,.45); margin-bottom:8px;">O <b>texto do botão</b> (o que aparece pro cliente) é o campo "Texto" lá em cima.</div>
+                                <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link do botão (checkout/oferta)</label>
                                 <input class="form-control" id="csLink" maxlength="1000" placeholder="https://pay..." style="width:100%;"/>
+                                <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin:10px 0 4px;">Cor do botão</label>
+                                <select class="form-control" id="csCtaColor" style="width:100%;">
+                                    <option value="#25D366">🟢 Verde</option>
+                                    <option value="#e50914">🔴 Vermelho</option>
+                                    <option value="#a855f7">🟣 Roxo</option>
+                                    <option value="#3b82f6">🔵 Azul</option>
+                                    <option value="#ec4899">🌸 Rosa</option>
+                                    <option value="#f59e0b">🟠 Laranja</option>
+                                </select>
                             </div>
                             <div id="csDelayWrap" style="display:none; background:rgba(229,9,20,.06); border:1px solid rgba(229,9,20,.2); border-radius:10px; padding:12px;">
                                 <label style="display:block; font-size:12px; color:#fff; font-weight:700; margin-bottom:4px;">⏱ Esperar quanto tempo antes de mandar o próximo bloco?</label>
@@ -5845,7 +5858,7 @@ a { color: inherit; text-decoration: none; }
                                 <div style="font-size:11px; color:rgba(255,255,255,.5); margin-top:6px;">A conversa PAUSA aqui e continua sozinha depois — mesmo com o app fechado, manda push no celular. Máx 7 dias. Ótimo pra "sumiço": ofereça → espere 10min → "amor cadê você? 🥺".</div>
                             </div>
                             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
-                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Digitando (ms)</label><input class="form-control" type="number" id="csTyping" min="0" max="8000" value="1200" style="width:100%;"/></div>
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Digitando (segundos)</label><input class="form-control" type="number" id="csTyping" min="0" max="10" step="1" value="3" style="width:100%;"/></div>
                                 <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Rótulo do bloco</label><input class="form-control" id="csKey" maxlength="40" placeholder="ex: oferta" style="width:100%;"/></div>
                                 <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Pular pra</label><input class="form-control" id="csGoto" maxlength="40" placeholder="rótulo" style="width:100%;"/></div>
                             </div>
@@ -14916,11 +14929,13 @@ function openChatStepModal() {
     document.getElementById('chatStepForm').reset();
     document.getElementById('csId').value = '';
     document.getElementById('csType').value = 'text';
-    document.getElementById('csTyping').value = 1200;
+    document.getElementById('csTyping').value = 3;
     document.getElementById('csDelayValue').value = 10;
     document.getElementById('csDelayUnit').value = '60';
     document.getElementById('csViewSeconds').value = 7;
     document.getElementById('csGate').checked = false;
+    document.getElementById('csWaitOpen').checked = false;
+    document.getElementById('csCtaColor').value = '#25D366';
     document.getElementById('csButtonRows').innerHTML = '';
     addChatBtnRow();
     updateChatStepFields();
@@ -14936,12 +14951,14 @@ function editChatStep(s) {
     document.getElementById('csContent').value = s.content || '';
     document.getElementById('csMedia').value = s.media_url || '';
     document.getElementById('csLink').value = s.link_url || '';
-    document.getElementById('csTyping').value = s.typing_ms ?? 1200;
+    document.getElementById('csTyping').value = Math.round((s.typing_ms ?? 3000) / 1000);
     document.getElementById('csKey').value = s.step_key || '';
     document.getElementById('csGoto').value = s.goto_key || '';
     document.getElementById('csAllowInput').checked = s.allow_input === true;
     document.getElementById('csViewSeconds').value = s.view_seconds || 7;
     document.getElementById('csGate').checked = s.gate === true;
+    document.getElementById('csWaitOpen').checked = s.wait_open === true;
+    document.getElementById('csCtaColor').value = s.cta_color || '#25D366';
     // delay: escolhe a maior unidade exata (h > min > s)
     const ds = parseInt(s.delay_seconds, 10) || 0;
     if (ds && ds % 3600 === 0) { document.getElementById('csDelayValue').value = ds / 3600; document.getElementById('csDelayUnit').value = '3600'; }
@@ -14968,7 +14985,7 @@ async function saveChatStep(e) {
         media_url: document.getElementById('csMedia').value.trim() || null,
         buttons: type === 'buttons' ? collectChatBtns() : null,
         link_url: document.getElementById('csLink').value.trim() || null,
-        typing_ms: parseInt(document.getElementById('csTyping').value, 10) || 1200,
+        typing_ms: (parseInt(document.getElementById('csTyping').value, 10) || 3) * 1000,
         step_key: document.getElementById('csKey').value.trim() || null,
         goto_key: document.getElementById('csGoto').value.trim() || null,
         delay_seconds: type === 'delay'
@@ -14977,6 +14994,8 @@ async function saveChatStep(e) {
         allow_input: type === 'buttons' ? document.getElementById('csAllowInput').checked : false,
         view_seconds: (type === 'view_once_image' || type === 'view_once_video') ? (parseInt(document.getElementById('csViewSeconds').value, 10) || 0) : 0,
         gate: (type === 'view_once_image' || type === 'view_once_video') ? document.getElementById('csGate').checked : false,
+        wait_open: (type === 'view_once_image' || type === 'view_once_video') ? document.getElementById('csWaitOpen').checked : false,
+        cta_color: type === 'cta' ? document.getElementById('csCtaColor').value : null,
         flow: _curChatFlow,
     };
     try {

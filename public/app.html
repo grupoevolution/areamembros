@@ -8184,6 +8184,8 @@ body.is-slowconn .prod-cta-fixed {
 .ca-vonce.opened .circ { border-color: #b5aea8; color: #b5aea8; }
 .ca-vonce.opened .lb { color: #999; }
 .ca-cta { background: #e50914; border: none; color: #fff; font-size: 13.5px; font-weight: 700; padding: 11px 18px; border-radius: 999px; cursor: pointer; box-shadow: 0 2px 6px rgba(229,9,20,.35); }
+.ca-cta-btn { width: 100%; border: none; color: #fff; font-size: 16px; font-weight: 700; padding: 15px; border-radius: 14px; cursor: pointer; box-shadow: 0 3px 12px rgba(0,0,0,.2); }
+.ca-cta-btn:active { transform: scale(.98); filter: brightness(.95); }
 .ca-choices { padding: 8px 12px calc(12px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 9px; background: #ECE5DD; }
 .ca-choices button { width: 100%; background: #25D366; border: none; color: #fff; font-size: 16px; font-weight: 700; padding: 16px; border-radius: 14px; cursor: pointer; box-shadow: 0 3px 12px rgba(37,211,102,.32); transition: transform .12s, filter .12s; }
 .ca-choices button:active { transform: scale(.98); filter: brightness(.95); }
@@ -9030,7 +9032,7 @@ window.ChatApp = (function() {
                 const nm = (CUR && CUR.chat && CUR.chat.name) || 'Ela';
                 showBottomStatus(nm + (isAudio ? ' está gravando áudio…' : ' está respondendo…'));
                 body.scrollTop = body.scrollHeight;
-                await new Promise(r => setTimeout(r, Math.min(typing, 6000)));
+                await new Promise(r => setTimeout(r, Math.min(typing, 10000)));
                 t.remove();
                 hideBottomStatus();
             }
@@ -9092,10 +9094,12 @@ window.ChatApp = (function() {
                 d.querySelector('.ca-vonce').addEventListener('click', () => openVonce(d));
             }
         } else if (m.type === 'cta') {
-            d.style.alignSelf = 'flex-start';
-            d.style.maxWidth = '82%';
+            // botão full-width igual aos botões de ação, com a cor configurada.
+            d.style.alignSelf = 'stretch';
+            d.style.width = '100%';
             const link = (m.meta && m.meta.link_url) || '';
-            d.innerHTML = '<button class="ca-cta">' + esc(m.content || 'Ver oferta') + '</button>';
+            const color = (m.meta && m.meta.cta_color) || '#25D366';
+            d.innerHTML = '<button class="ca-cta-btn" style="background:' + esc(color) + ';">' + esc(m.content || 'Ver oferta') + '</button>';
             d.querySelector('button').addEventListener('click', () => { if (link) window.open(link, '_blank', 'noopener'); });
         } else if (m.type === 'call') {
             // "Ela liga": pílula no chat + dispara a chamada recebida (VideoCall)
@@ -9369,7 +9373,11 @@ window.ChatApp = (function() {
         vonceCur.innerHTML = openedHtml(isVid, new Date().toISOString());
         vonceCur.dataset.mediaUrl = '';
         vonceCur = null;
-        await api('/api/user/chats/messages/' + id + '/viewed');
+        const { data } = await api('/api/user/chats/messages/' + id + '/viewed');
+        // "Esperar abrir": o fluxo continua depois que o cliente abriu — renderiza.
+        if (data && Array.isArray(data.messages) && data.messages.length) {
+            handleAdvance({ messages: data.messages, awaiting: null }, true);
+        }
     }
 
     // Áudio via <audio> no DOM (confiável no iOS). Um por vez.

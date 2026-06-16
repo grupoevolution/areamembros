@@ -217,7 +217,7 @@ async function runScript(session, chat, steps, idx, ident) {
     let awaiting = null;
     while (idx >= 0 && idx < steps.length && guard-- > 0) {
         const s = steps[idx];
-        const typing = Math.max(0, Math.min(8000, parseInt(s.typing_ms, 10) || 1200));
+        const typing = Math.max(0, Math.min(10000, parseInt(s.typing_ms, 10) || 3000));
         if (s.type === 'buttons') {
             const btns = Array.isArray(s.buttons) ? s.buttons : [];
             const msg = await insertMsg(session.id, 'bot', 'buttons',
@@ -265,6 +265,7 @@ async function runScript(session, chat, steps, idx, ident) {
             content = await fillVars(s.content, ident) || 'Ver oferta';
             meta.link_url = s.link_url || null;
             meta.product_id = s.product_id || null;
+            meta.cta_color = s.cta_color || null;
         } else if (s.type === 'call') {
             // "Ela liga": o app dispara a chamada recebida (VideoCall). A mensagem
             // carrega só uma marca + texto; o payload da chamada vem do chat.
@@ -279,6 +280,12 @@ async function runScript(session, chat, steps, idx, ident) {
         out.push(msg);
         const j = keyIndex(steps, s.goto_key);
         idx = j >= 0 ? j : idx + 1;
+        // "Esperar abrir": mídia 1x com wait_open PAUSA o fluxo aqui. Só continua
+        // (do próximo bloco = idx atual) quando o cliente ABRIR a mídia (/viewed).
+        if ((s.type === 'view_once_image' || s.type === 'view_once_video') && s.wait_open === true) {
+            awaiting = 'view_once';
+            break;
+        }
     }
     if (awaiting === null) idx = steps.length; // roteiro acabou
     await db.query(
@@ -589,7 +596,32 @@ router.post('/chats/messages/:id/viewed', optionalUser, async (req, res) => {
                   ($3::text IS NOT NULL AND s.visitor_id = $3 AND s.customer_email IS NULL)
               )
         `, [msgId, ident.email, ident.visitor]);
-        return res.json({ success: true, consumed: rowCount > 0 });
+
+        // "Esperar abrir": se o fluxo estava PAUSADO esperando o cliente abrir
+        // esta mídia 1x, CONTINUA agora do próximo bloco e devolve as mensagens.
+        let newMessages = [];
+        try {
+            const { rows: sr } = await db.query(
+                `SELECT s.* FROM chat_messages m JOIN chat_sessions s ON s.id = m.session_id WHERE m.id = $1 LIMIT 1`, [msgId]
+            );
+            const session = sr[0];
+            if (session && session.awaiting === 'view_once') {
+                const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [session.chat_id]);
+                if (cr.length) {
+                    const chat = cr[0];
+                    const ident2 = {
+                        email: session.customer_email && !String(session.customer_email).endsWith('@preview.local') ? String(session.customer_email).toLowerCase() : null,
+                        visitor: session.visitor_id || null,
+                        city: session.city || null,
+                        cityFallback: chat.city_fallback,
+                    };
+                    const steps = await loadSteps(session.chat_id, session.current_flow || 'open');
+                    const fresh = await runScript(session, chat, steps, session.current_order, ident2);
+                    newMessages = fresh.map(publicMsg);
+                }
+            }
+        } catch (_) {}
+        return res.json({ success: true, consumed: rowCount > 0, messages: newMessages });
     } catch (err) {
         return res.json({ success: false });
     }

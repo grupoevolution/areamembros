@@ -171,8 +171,8 @@ router.post('/:id/steps', requireAdmin, async (req, res) => {
         const b = req.body || {};
         const type = STEP_TYPES.includes(b.type) ? b.type : 'text';
         const { rows } = await db.query(`
-            INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active, allow_input, view_seconds, flow, gate)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *
+            INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active, allow_input, view_seconds, flow, gate, cta_color, wait_open)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *
         `, [
             chatId,
             parseInt(b.step_order, 10) || 0,
@@ -183,7 +183,7 @@ router.post('/:id/steps', requireAdmin, async (req, res) => {
             parseButtons(b.buttons),
             (b.link_url || '').trim().slice(0, 1000) || null,
             b.product_id ? parseInt(b.product_id, 10) : null,
-            Math.max(0, Math.min(8000, parseInt(b.typing_ms, 10) || 1200)),
+            Math.max(0, Math.min(10000, parseInt(b.typing_ms, 10) || 3000)),
             (b.goto_key || '').trim().slice(0, 40) || null,
             Math.max(0, Math.min(7 * 24 * 3600, parseInt(b.delay_seconds, 10) || 0)),
             b.active !== false,
@@ -191,6 +191,8 @@ router.post('/:id/steps', requireAdmin, async (req, res) => {
             Math.max(0, Math.min(120, parseInt(b.view_seconds, 10) || 0)),
             cleanFlow(b.flow),
             b.gate === true,
+            (b.cta_color || '').trim().slice(0, 20) || null,
+            b.wait_open === true,
         ]);
         return res.json({ success: true, step: rows[0] });
     } catch (err) {
@@ -214,13 +216,15 @@ router.put('/:id/steps/:stepId', requireAdmin, async (req, res) => {
         if (b.buttons !== undefined) set('buttons', parseButtons(b.buttons));
         if (b.link_url !== undefined) set('link_url', (b.link_url || '').trim().slice(0, 1000) || null);
         if (b.product_id !== undefined) set('product_id', b.product_id ? parseInt(b.product_id, 10) : null);
-        if (b.typing_ms !== undefined) set('typing_ms', Math.max(0, Math.min(8000, parseInt(b.typing_ms, 10) || 1200)));
+        if (b.typing_ms !== undefined) set('typing_ms', Math.max(0, Math.min(10000, parseInt(b.typing_ms, 10) || 3000)));
         if (b.goto_key !== undefined) set('goto_key', (b.goto_key || '').trim().slice(0, 40) || null);
         if (b.delay_seconds !== undefined) set('delay_seconds', Math.max(0, Math.min(7 * 24 * 3600, parseInt(b.delay_seconds, 10) || 0)));
         if (b.allow_input !== undefined) set('allow_input', !!b.allow_input);
         if (b.view_seconds !== undefined) set('view_seconds', Math.max(0, Math.min(120, parseInt(b.view_seconds, 10) || 0)));
         if (b.flow !== undefined) set('flow', cleanFlow(b.flow));
         if (b.gate !== undefined) set('gate', !!b.gate);
+        if (b.cta_color !== undefined) set('cta_color', (b.cta_color || '').trim().slice(0, 20) || null);
+        if (b.wait_open !== undefined) set('wait_open', !!b.wait_open);
         if (b.active !== undefined) set('active', !!b.active);
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
         values.push(stepId);
@@ -255,7 +259,7 @@ router.get('/:id/export', requireAdmin, async (req, res) => {
         if (!cr.length) return res.status(404).json({ success: false, error: 'Não encontrado' });
         const c = cr[0];
         const { rows: steps } = await db.query(
-            `SELECT step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active, allow_input, view_seconds, flow, gate
+            `SELECT step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active, allow_input, view_seconds, flow, gate, cta_color, wait_open
              FROM chat_steps WHERE chat_id = $1 ORDER BY flow, step_order, id`, [id]
         );
         const payload = {
@@ -312,8 +316,8 @@ router.post('/import', requireAdmin, async (req, res) => {
         for (const s of data.steps.slice(0, 200)) {
             const type = STEP_TYPES.includes(s.type) ? s.type : 'text';
             await db.query(`
-                INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active, allow_input, view_seconds, flow, gate)
-                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+                INSERT INTO chat_steps (chat_id, step_order, step_key, type, content, media_url, buttons, link_url, product_id, typing_ms, goto_key, delay_seconds, active, allow_input, view_seconds, flow, gate, cta_color, wait_open)
+                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
             `, [
                 chat.id,
                 parseInt(s.step_order, 10) || 0,
@@ -324,7 +328,7 @@ router.post('/import', requireAdmin, async (req, res) => {
                 parseButtons(s.buttons),
                 (s.link_url || '').trim().slice(0, 1000) || null,
                 s.product_id ? parseInt(s.product_id, 10) : null,
-                Math.max(0, Math.min(8000, parseInt(s.typing_ms, 10) || 1200)),
+                Math.max(0, Math.min(10000, parseInt(s.typing_ms, 10) || 3000)),
                 (s.goto_key || '').trim().slice(0, 40) || null,
                 Math.max(0, Math.min(7 * 24 * 3600, parseInt(s.delay_seconds, 10) || 0)),
                 s.active !== false,
@@ -332,6 +336,8 @@ router.post('/import', requireAdmin, async (req, res) => {
                 Math.max(0, Math.min(120, parseInt(s.view_seconds, 10) || 0)),
                 cleanFlow(s.flow),
                 s.gate === true,
+                (s.cta_color || '').trim().slice(0, 20) || null,
+                s.wait_open === true,
             ]);
             imported++;
         }
