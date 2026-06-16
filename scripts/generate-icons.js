@@ -79,10 +79,12 @@ async function makeIcon(srcBuilder, size, outName, opts = {}) {
 (async () => {
     try {
         const builder = () => getSource();
-        await makeIcon(builder, 192, 'icon-192.png');
-        await makeIcon(builder, 512, 'icon-512.png');
-        await makeIcon(builder, 512, 'icon-maskable-512.png', { padding: true });
-        await makeIcon(builder, 180, 'apple-touch-icon.png');
+        // Fundo PRETO (combina com o ícone — M vermelho em fundo preto).
+        const BG = { r: 0, g: 0, b: 0, alpha: 1 };
+        await makeIcon(builder, 192, 'icon-192.png', { bg: BG });
+        await makeIcon(builder, 512, 'icon-512.png', { bg: BG });
+        await makeIcon(builder, 512, 'icon-maskable-512.png', { padding: true, bg: BG });
+        await makeIcon(builder, 180, 'apple-touch-icon.png', { bg: BG });
         console.log('[icons] OK — todos os ícones gerados em public/assets/');
     } catch (err) {
         console.error('[icons] FALHA:', err);
