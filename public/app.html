@@ -12244,11 +12244,13 @@ function populateProductScreen(p) {
     const priceBy = document.querySelector('#product .prod-cta-price-by');
     const finalPrice = parseFloat(p.checkout?.price || p.price || 0);
     const anchor = parseFloat(p.checkout?.original_price || p.anchor_price || 0);
-    if (priceNew) priceNew.textContent = `R$ ${finalPrice.toFixed(0)}`;
+    // valor EXATO (sem arredondar): 49,90 fica "R$ 49,90"; 50,00 fica "R$ 50".
+    const fmtBRL = (v) => 'R$ ' + (Math.round(v) === v ? v.toFixed(0) : v.toFixed(2).replace('.', ','));
+    if (priceNew) priceNew.textContent = fmtBRL(finalPrice);
     const hasAnchor = anchor && anchor > finalPrice;
     if (priceOld) {
         if (hasAnchor) {
-            priceOld.textContent = `R$ ${anchor.toFixed(0)}`;
+            priceOld.textContent = fmtBRL(anchor);
             priceOld.style.display = '';
         } else {
             priceOld.style.display = 'none';
@@ -15986,18 +15988,21 @@ window.MV_BOOT_PROMISE = (function bootFunnel() {
 <script>
 // ═══════════════ PLANS SHEET CONTROLLER ═══════════════
 function onProductBuyClick() {
-    const plans = (window.__currentProductPlans || []).slice().sort((a,b) => {
-        // Recomendados primeiro, depois por display_order
-        if (a.is_recommended !== b.is_recommended) return a.is_recommended ? -1 : 1;
-        return (a.display_order || 0) - (b.display_order || 0);
-    });
-    console.log('[planos] produto atual tem', plans.length, 'planos:', plans);
-    // Se não tem planos cadastrados, vai pro checkout antigo (compatibilidade)
+    const plans = window.__currentProductPlans || [];
+    // Sem planos cadastrados → checkout antigo (compatibilidade)
     if (!plans.length) {
-        console.warn('[planos] Nenhum plano cadastrado pra este produto. Crie planos no admin → editar produto → "💰 Planos / Checkouts".');
         if (typeof switchScreen === 'function') switchScreen('checkout');
         return;
     }
+    // Vai DIRETO pro checkout do plano SELECIONADO (inline). Sem página intermediária.
+    const sel = (typeof getSelectedProdPlan === 'function' && getSelectedProdPlan()) || plans[0];
+    const url = sel && sel.checkout_url;
+    if (url) {
+        try { if (typeof onPlanCheckout === 'function') onPlanCheckout(sel.id, encodeURIComponent(sel.name || '')); } catch(_) {}
+        window.open(url, '_blank', 'noopener');
+        return;
+    }
+    // Plano selecionado sem link de checkout → cai no sheet pra escolher (fallback)
     openPlansSheet(plans);
 }
 

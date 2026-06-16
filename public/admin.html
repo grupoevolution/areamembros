@@ -4189,8 +4189,8 @@ a { color: inherit; text-decoration: none; }
                                 </div>
                                 <div class="form-row-grid-2" style="margin-bottom: 10px;">
                                     <div>
-                                        <label class="form-label">Offer ID Kirvano</label>
-                                        <input type="text" class="form-input" id="pKirvanoOfferId" placeholder="06539c76-40ee-4811-..." value="">
+                                        <label class="form-label">Offer ID Kirvano <span style="font-weight:400;opacity:.6;">(vários: separe por vírgula)</span></label>
+                                        <input type="text" class="form-input" id="pKirvanoOfferId" placeholder="cod1, cod2, cod3…" value="">
                                     </div>
                                     <div>
                                         <label class="form-label">Nome interno (opcional)</label>
@@ -4230,8 +4230,8 @@ a { color: inherit; text-decoration: none; }
                                 </div>
                                 <div class="form-row-grid-2" style="margin-bottom: 10px;">
                                     <div>
-                                        <label class="form-label">Offer ID PerfectPay</label>
-                                        <input type="text" class="form-input" id="pPerfectPayOfferId" placeholder="PPCBxxxxxx">
+                                        <label class="form-label">Offer ID PerfectPay <span style="font-weight:400;opacity:.6;">(vários: separe por vírgula)</span></label>
+                                        <input type="text" class="form-input" id="pPerfectPayOfferId" placeholder="PPCB1, PPCB2…">
                                     </div>
                                     <div>
                                         <label class="form-label">Nome interno (opcional)</label>
@@ -7865,13 +7865,17 @@ async function editProduct(id) {
     set('pReviewsText', reviewsText);
 
     const offers = p.offers || [];
-    const ko = offers.find(o => o.gateway === 'kirvano');
-    const ppo = offers.find(o => o.gateway === 'perfectpay');
-    
-    set('pKirvanoOfferId', ko?.offer_id || '');
+    // Pode ter VÁRIOS códigos por gateway (planos diferentes que entregam o mesmo
+    // produto). Mostra todos separados por vírgula; nome/checkout vêm do 1º.
+    const kOffers = offers.filter(o => o.gateway === 'kirvano');
+    const ppOffers = offers.filter(o => o.gateway === 'perfectpay');
+    const ko = kOffers[0];
+    const ppo = ppOffers[0];
+
+    set('pKirvanoOfferId', kOffers.map(o => o.offer_id).filter(Boolean).join(', '));
     set('pKirvanoOfferName', ko?.offer_name || '');
     set('pKirvanoCheckout', ko?.checkout_url || '');
-    set('pPerfectPayOfferId', ppo?.offer_id || '');
+    set('pPerfectPayOfferId', ppOffers.map(o => o.offer_id).filter(Boolean).join(', '));
     set('pPerfectPayOfferName', ppo?.offer_name || '');
     set('pPerfectPayCheckout', ppo?.checkout_url || '');
 
@@ -8023,29 +8027,38 @@ async function saveProduct() {
     if (!price || isNaN(price) || price <= 0) return alertProduct('Preço inválido', 'error');
 
     const offers = [];
-    const kId = get('pKirvanoOfferId');
-    if (kId) {
+    // Vários códigos por gateway, separados por vírgula → uma oferta por código
+    // (todos liberam o MESMO produto). Ótimo p/ planos diferentes do mesmo conteúdo.
+    const splitCodes = (s) => (s || '').split(',').map(x => x.trim()).filter(Boolean);
+    const kIds = splitCodes(get('pKirvanoOfferId'));
+    if (kIds.length) {
         const kIsAcq = document.getElementById('pKirvanoIsAcquisition')?.checked || false;
-        offers.push({
-            gateway: 'kirvano',
-            offer_id: kId,
-            offer_name: get('pKirvanoOfferName') || null,
-            checkout_url: get('pKirvanoCheckout') || null,
-            is_acquisition: kIsAcq,
-            acquisition_role: kIsAcq ? (document.getElementById('pKirvanoAcquisitionRole')?.value || 'frontend') : null,
-        });
+        const kRole = kIsAcq ? (document.getElementById('pKirvanoAcquisitionRole')?.value || 'frontend') : null;
+        for (const code of kIds) {
+            offers.push({
+                gateway: 'kirvano',
+                offer_id: code,
+                offer_name: get('pKirvanoOfferName') || null,
+                checkout_url: get('pKirvanoCheckout') || null,
+                is_acquisition: kIsAcq,
+                acquisition_role: kRole,
+            });
+        }
     }
-    const ppId = get('pPerfectPayOfferId');
-    if (ppId) {
+    const ppIds = splitCodes(get('pPerfectPayOfferId'));
+    if (ppIds.length) {
         const ppIsAcq = document.getElementById('pPerfectPayIsAcquisition')?.checked || false;
-        offers.push({
-            gateway: 'perfectpay',
-            offer_id: ppId,
-            offer_name: get('pPerfectPayOfferName') || null,
-            checkout_url: get('pPerfectPayCheckout') || null,
-            is_acquisition: ppIsAcq,
-            acquisition_role: ppIsAcq ? (document.getElementById('pPerfectPayAcquisitionRole')?.value || 'frontend') : null,
-        });
+        const ppRole = ppIsAcq ? (document.getElementById('pPerfectPayAcquisitionRole')?.value || 'frontend') : null;
+        for (const code of ppIds) {
+            offers.push({
+                gateway: 'perfectpay',
+                offer_id: code,
+                offer_name: get('pPerfectPayOfferName') || null,
+                checkout_url: get('pPerfectPayCheckout') || null,
+                is_acquisition: ppIsAcq,
+                acquisition_role: ppRole,
+            });
+        }
     }
 
     // RASCUNHO: produto pode ser salvo sem nenhum gateway (vai pra rascunho
