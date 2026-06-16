@@ -1365,9 +1365,18 @@ body.is-slowconn .prod-cta-fixed {
     background: linear-gradient(90deg, var(--red), var(--red-bright));
     border-radius: 2px;
 }
-/* Item central destacado (Conteúdos) — igual aos outros, só na cor vermelha */
-.nav-item-hi, .nav-item-hi .nav-label { color: var(--red-bright); }
-.nav-item-hi .nav-icon { width: 24px; height: 24px; }
+/* Item central destacado (Minhas Compras) — círculo vermelho elevado (FAB) */
+.nav-item-hi .nav-label { color: var(--red-bright); font-weight: 700; }
+.nav-fab {
+    width: 50px; height: 50px; border-radius: 50%;
+    background: linear-gradient(160deg, #ff2b38, #e50914);
+    display: flex; align-items: center; justify-content: center;
+    margin-top: -22px; margin-bottom: 3px;
+    box-shadow: 0 7px 20px rgba(229,9,20,.55);
+    border: 3px solid #0b0b0c;
+}
+.nav-fab .nav-icon { width: 25px; height: 25px; color: #fff; }
+.nav-item-hi:active .nav-fab { transform: scale(.94); }
 .nav-icon { width: 20px; height: 20px; }
 .nav-label { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
 .nav-dot {
@@ -8291,7 +8300,9 @@ body.is-slowconn .prod-cta-fixed {
         <span class="nav-dot" id="chatNavDot" style="display:none;"></span>
     </button>
     <button class="nav-item nav-item-hi" onclick="switchScreen('library')" aria-label="Minhas compras">
-        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v13a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path stroke-linecap="round" d="M3 6h18"/><path stroke-linecap="round" d="M16 10a4 4 0 01-8 0"/></svg>
+        <span class="nav-fab">
+            <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v13a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path stroke-linecap="round" d="M3 6h18"/><path stroke-linecap="round" d="M16 10a4 4 0 01-8 0"/></svg>
+        </span>
         <div class="nav-label">Minhas Compras</div>
     </button>
     <button class="nav-item" id="navSoon" style="opacity:.45;" onclick="showSoonToast()">
@@ -12271,28 +12282,17 @@ function populateProductScreen(p) {
                 ${escapeHtmlData(ctaLabel)}
             `;
             ctaBtn.onclick = () => {
-                // Com planos: vai DIRETO pro checkout do plano selecionado (sem modal).
+                // SEMPRE vai DIRETO pro checkout do gateway (sem a página de
+                // "Confirmar compra"): plano selecionado tem prioridade, senão o
+                // checkout do produto.
                 const plan = (typeof getSelectedProdPlan === 'function') ? getSelectedProdPlan() : null;
-                if (plan) {
-                    if (typeof TRACK !== 'undefined') TRACK.event('cta_buy_click', { product_id: p.id, plan_id: plan.id, plan_name: plan.name });
-                    if (plan.checkout_url) {
-                        window.open(plan.checkout_url, '_blank', 'noopener,noreferrer');
-                    } else if (p.checkout?.checkout_url) {
-                        if (typeof populateCheckoutScreen === 'function') populateCheckoutScreen(p);
-                        switchScreen('checkout');
-                    } else {
-                        showToast('product', '⚠️', 'Checkout indisponível. Tente em instantes.');
-                    }
-                    return;
-                }
-                if (typeof TRACK !== 'undefined') TRACK.event('cta_buy_click', { product_id: p.id });
-                if (!p.checkout?.checkout_url) {
+                const url = (plan && plan.checkout_url) || p.checkout?.checkout_url || null;
+                if (typeof TRACK !== 'undefined') TRACK.event('cta_buy_click', plan ? { product_id: p.id, plan_id: plan.id, plan_name: plan.name } : { product_id: p.id });
+                if (url) {
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                } else {
                     showToast('product', '⚠️', 'Checkout indisponível. Tente em instantes.');
-                    return;
                 }
-                // Navega pra tela de checkout INTERNA (dentro do app)
-                if (typeof populateCheckoutScreen === 'function') populateCheckoutScreen(p);
-                switchScreen('checkout');
             };
         }
     }

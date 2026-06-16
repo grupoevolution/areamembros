@@ -40,21 +40,22 @@ function burst(samples, startSec, durSec, freqs, amp, tremHz) {
     }
 }
 
-// RINGBACK (chamando) — 425 Hz, 1s ligado / 4s desligado (padrão BR). 5s, faz loop.
+// RINGBACK (chamando) — 425 Hz, 1s ligado / 1.4s desligado (ritmo mais rápido).
+// 2.4s, faz loop.
 (function () {
-    const total = Math.floor(5 * SR);
+    const total = Math.floor(2.4 * SR);
     const s = new Float32Array(total);
     burst(s, 0, 1.0, [425], 0.33, 0);
     writeWav(path.join(ASSETS, 'ringback.wav'), s);
 })();
 
 // RINGTONE (telefone tocando) — "briiing briiing" (440+480 c/ warble 22Hz),
-// 0.4s on / 0.2s gap / 0.4s on, depois 2.4s de silêncio. ~4s, faz loop.
+// 0.4s on / 0.15s gap / 0.4s on, depois ~1.05s de silêncio (mais rápido). ~2s loop.
 (function () {
-    const total = Math.floor(4 * SR);
+    const total = Math.floor(2.0 * SR);
     const s = new Float32Array(total);
     burst(s, 0.0, 0.4, [440, 480], 0.34, 22);
-    burst(s, 0.6, 0.4, [440, 480], 0.34, 22);
+    burst(s, 0.55, 0.4, [440, 480], 0.34, 22);
     writeWav(path.join(ASSETS, 'ringtone.wav'), s);
 })();
 
