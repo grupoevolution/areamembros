@@ -15805,6 +15805,17 @@ function showFunnelNotification(title, message, action) {
             const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
             return m ? decodeURIComponent(m[1]) : null;
         }
+        // PWA INSTALADO (aberto pela tela de início): NÃO entra no modo funil.
+        // O funil é só pra primeira visita no navegador. Depois de instalado o
+        // app abre a HOME logada (não o chat, não pede e-mail de novo). Limpa o
+        // cookie do funil pra ele não re-disparar login/chat a cada abertura.
+        const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+            || window.navigator.standalone === true;
+        if (standalone) {
+            try { document.cookie = 'mv_funnel=; path=/; max-age=0; SameSite=Lax'; } catch(_) {}
+            window.MV_FUNNEL_MODE = false;
+            return;
+        }
         const slug = getCookie('mv_funnel');
         if (slug) {
             window.MV_FUNNEL_SLUG = slug.toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 80);
