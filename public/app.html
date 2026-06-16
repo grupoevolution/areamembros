@@ -9421,33 +9421,19 @@ window.ChatApp = (function() {
         outgoingCall(chat, isVip);
     }
 
-    // Tela de "chamando..." (ELE liga PRA ela) — anel pulsando + toque
-    let _ringTimer = null, _ringCtx = null;
+    // Tela de "chamando..." (ELE liga PRA ela) — toca o som de CHAMANDO (ringback).
+    let _ringAudio = null;
     function startRingback() {
         try {
-            const AC = window.AudioContext || window.webkitAudioContext;
-            if (!AC) return;
-            _ringCtx = new AC();
-            if (_ringCtx.resume) _ringCtx.resume();
-            const beep = () => {
-                if (!_ringCtx) return;
-                const o = _ringCtx.createOscillator(), g = _ringCtx.createGain();
-                o.frequency.value = 425; o.connect(g); g.connect(_ringCtx.destination);
-                const t = _ringCtx.currentTime;
-                g.gain.setValueAtTime(0.0001, t);
-                g.gain.exponentialRampToValueAtTime(0.18, t + 0.06);
-                g.gain.exponentialRampToValueAtTime(0.0001, t + 1.0);
-                o.start(t); o.stop(t + 1.05);
-            };
-            beep();
-            _ringTimer = setInterval(beep, 5000); // padrão Brasil: ~1s toque / 4s silêncio
+            if (!_ringAudio) { _ringAudio = new Audio('/assets/ringback.wav'); _ringAudio.loop = true; _ringAudio.volume = 0.9; }
+            _ringAudio.currentTime = 0;
+            const p = _ringAudio.play();
+            if (p && p.catch) p.catch(() => {});
         } catch (_) {}
         try { if (navigator.vibrate) navigator.vibrate([400, 200, 400, 1200]); } catch (_) {}
     }
     function stopRingback() {
-        try { if (_ringTimer) clearInterval(_ringTimer); } catch (_) {}
-        try { if (_ringCtx && _ringCtx.close) _ringCtx.close(); } catch (_) {}
-        _ringTimer = null; _ringCtx = null;
+        try { if (_ringAudio) { _ringAudio.pause(); _ringAudio.currentTime = 0; } } catch (_) {}
         try { if (navigator.vibrate) navigator.vibrate(0); } catch (_) {}
     }
     function closeCallScreen() {
@@ -15212,7 +15198,8 @@ body.is-logged #pwaLandingBanner, body.pwa-installed #pwaLandingBanner { display
     // o play() em try/catch silencioso (Safari iOS bloqueia se contexto rolar).
     let ringAudio = null;
     function tocarRingtone(url) {
-        if (!url) return;
+        // sem URL configurada → usa o som padrão de "telefone tocando".
+        url = url || '/assets/ringtone.wav';
         try {
             if (!ringAudio) {
                 ringAudio = new Audio();
@@ -15386,8 +15373,9 @@ body.is-logged #pwaLandingBanner, body.pwa-installed #pwaLandingBanner { display
         loadCallVideo(call);
         $('videoCallOverlay').classList.add('is-open');
         show('ringing');
-        // Fase F: dispara ringtone (loop). Cleanup em answer/decline/closeOverlay.
-        if (call && call.ringtone_url) tocarRingtone(call.ringtone_url);
+        // dispara o ringtone (loop): URL configurada na chamada OU o som padrão
+        // de "telefone tocando". Cleanup em answer/decline/closeOverlay.
+        tocarRingtone(call && call.ringtone_url);
     }
     function answer() {
         // Fase F: cliente atendeu — para o toque.
