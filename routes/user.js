@@ -523,10 +523,12 @@ router.get('/catalog', optionalUser, async (req, res) => {
         
         // Se logado, marca quais produtos o cliente já tem
         let ownedIds = new Set();
+        let isMaster = false; // e-mail Premium (preview) → libera TODO o catálogo
         if (req.user?.email) {
+            try { isMaster = await isPreviewEmail(req.user.email); } catch (_) {}
             const { rows: owned } = await db.query(`
-                SELECT DISTINCT product_id 
-                FROM user_access 
+                SELECT DISTINCT product_id
+                FROM user_access
                 WHERE LOWER(email) = $1 AND status = 'active'
             `, [req.user.email]);
             ownedIds = new Set(owned.map(r => r.product_id));
@@ -564,7 +566,7 @@ router.get('/catalog', optionalUser, async (req, res) => {
         const fillThumbs = (arr) => (Array.isArray(arr) ? arr.map(fillVideoThumb) : arr);
 
         const catalogEnriched = await Promise.all(catalog.map(async (p) => {
-            const owns = ownedIds.has(p.id);
+            const owns = isMaster || ownedIds.has(p.id);
             const previewOn = p.preview_enabled === true;
             const extra = (p.extra_data && typeof p.extra_data === 'object') ? p.extra_data : {};
             if (Array.isArray(extra.gallery)) extra.gallery = fillThumbs(extra.gallery);

@@ -62,6 +62,8 @@ function getIdentity(req) {
 
 async function ownsProduct(email, productId) {
     if (!email || !productId) return false;
+    // E-mail Premium (preview) destrava tudo, inclusive chat VIP.
+    try { if (await require('../lib/preview').isPreviewEmail(email)) return true; } catch (_) {}
     try {
         const { rows } = await db.query(
             `SELECT 1 FROM user_access WHERE LOWER(email) = $1 AND product_id = $2 AND status = 'active' LIMIT 1`,
