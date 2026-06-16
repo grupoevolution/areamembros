@@ -270,7 +270,9 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
 // PWA: manifest e service worker (servidos da raiz)
 app.get('/manifest.json', (req, res) => {
     res.setHeader('Content-Type', 'application/manifest+json');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    // no-cache (revalida sempre): mudanças de ícone/manifest propagam na hora,
+    // sem ficar preso 1h no cache do navegador/CDN.
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     res.sendFile(path.join(__dirname, 'public/manifest.json'));
 });
 
