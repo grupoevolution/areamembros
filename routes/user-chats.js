@@ -164,10 +164,10 @@ async function ensureSessionGeo(session, req) {
 }
 
 // ── Motor do roteiro ─────────────────────────────────────────────────────────
-async function loadSteps(chatId) {
+async function loadSteps(chatId, flow) {
     const { rows } = await db.query(
-        `SELECT * FROM chat_steps WHERE chat_id = $1 AND active = true ORDER BY step_order, id`,
-        [chatId]
+        `SELECT * FROM chat_steps WHERE chat_id = $1 AND active = true AND flow = $2 ORDER BY step_order, id`,
+        [chatId, flow || 'open']
     );
     return rows;
 }
@@ -217,10 +217,10 @@ async function runScript(session, chat, steps, idx, ident) {
             const resumeIdx = j >= 0 ? j : idx + 1;
             awaiting = 'delay';
             const { rows: rr } = await db.query(
-                `UPDATE chat_sessions SET current_order = $2, awaiting = 'delay',
+                `UPDATE chat_sessions SET current_order = $2, awaiting = 'delay', current_flow = $4,
                  resume_at = NOW() + make_interval(secs => $3), updated_at = NOW() WHERE id = $1
                  RETURNING resume_at`,
-                [session.id, resumeIdx, secs]
+                [session.id, resumeIdx, secs, session.current_flow || 'open']
             );
             session.current_order = resumeIdx;
             session.awaiting = 'delay';
@@ -257,8 +257,8 @@ async function runScript(session, chat, steps, idx, ident) {
     }
     if (awaiting === null) idx = steps.length; // roteiro acabou
     await db.query(
-        `UPDATE chat_sessions SET current_order = $2, awaiting = $3, updated_at = NOW() WHERE id = $1`,
-        [session.id, idx, awaiting]
+        `UPDATE chat_sessions SET current_order = $2, awaiting = $3, current_flow = $4, updated_at = NOW() WHERE id = $1`,
+        [session.id, idx, awaiting, session.current_flow || 'open']
     );
     session.current_order = idx;
     session.awaiting = awaiting;
@@ -379,16 +379,19 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         await ensureSessionGeo(session, req);
         ident.city = session.city;
         ident.cityFallback = chat.city_fallback;
-        const steps = await loadSteps(chatId);
 
         const { rows: history } = await db.query(
             `SELECT * FROM chat_messages WHERE session_id = $1 ORDER BY id`, [session.id]
         );
         let fresh = [];
-        if (history.length === 0 && steps.length > 0) {
-            fresh = await runScript(session, chat, steps, 0, ident);
+        if (history.length === 0) {
+            // conversa nova → roda o fluxo "Abre conversa"
+            session.current_flow = 'open';
+            const steps = await loadSteps(chatId, 'open');
+            if (steps.length > 0) fresh = await runScript(session, chat, steps, 0, ident);
         } else if (session.awaiting === 'delay' && session.resume_at && new Date(session.resume_at) <= new Date()) {
-            // Delay já venceu e o cliente abriu a conversa: retoma na hora
+            // Delay já venceu e o cliente abriu a conversa: retoma no fluxo atual
+            const steps = await loadSteps(chatId, session.current_flow || 'open');
             fresh = await runScript(session, chat, steps, session.current_order, ident);
         }
         const all = history.concat(fresh).map(publicMsg);
@@ -432,7 +435,7 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
         await ensureSessionGeo(session, req);
         ident.city = session.city;
         ident.cityFallback = chat.city_fallback;
-        const steps = await loadSteps(chatId);
+        const steps = await loadSteps(chatId, session.current_flow || 'open');
 
         const choice = req.body?.choice;
         const text = (req.body?.text || '').toString().trim().slice(0, 1000);
@@ -525,7 +528,7 @@ router.get('/chats/:id/poll', optionalUser, async (req, res) => {
             if (cr.length) {
                 ident.city = session.city;
                 ident.cityFallback = cr[0].city_fallback;
-                const steps = await loadSteps(chatId);
+                const steps = await loadSteps(chatId, session.current_flow || 'open');
                 await runScript(session, cr[0], steps, session.current_order, ident);
             }
         }
@@ -645,7 +648,7 @@ async function resumeDelayed(limit) {
                 city: session.city || null,
                 cityFallback: chat.city_fallback,
             };
-            const steps = await loadSteps(session.chat_id);
+            const steps = await loadSteps(session.chat_id, session.current_flow || 'open');
             session.awaiting = 'delay'; // runScript lê/sobrescreve normalmente
             const fresh = await runScript(session, chat, steps, session.current_order, ident);
             if (fresh.length) {
@@ -678,9 +681,10 @@ async function triggerPostPurchaseChats(email, productIds) {
             // sessão por e-mail; se já existe e já tem mensagens, não reinicia
             let session = await findOrCreateSession(chat.id, { email: e, visitor: null }, true);
             const { rows: existing } = await db.query(`SELECT COUNT(*)::int AS n FROM chat_messages WHERE session_id = $1`, [session.id]);
-            const steps = await loadSteps(chat.id);
+            const steps = await loadSteps(chat.id, 'open');
             if (existing[0].n > 0 || !steps.length) continue;
             const ident = { email: e, visitor: null, city: session.city || null, cityFallback: chat.city_fallback };
+            session.current_flow = 'open';
             const fresh = await runScript(session, chat, steps, 0, ident);
             // pós-compra chega como NÃO-lida (last_seen fica no passado)
             await db.query(`UPDATE chat_sessions SET last_seen_at = NULL WHERE id = $1`, [session.id]);
@@ -782,15 +786,22 @@ router.post('/chats/status/:sid/reply', optionalUser, async (req, res) => {
             };
             await insertMsg(session.id, 'user', 'text', text, null, ref, null);
         }
-        // gatilho: pula o roteiro pro bloco configurado (a modelo reage ao status)
-        if (st.reply_goto_key) {
-            const steps = await loadSteps(st.chat_id);
+        // gatilho: roda o FLUXO "Respondeu status" (a modelo reage). Se não houver
+        // blocos nesse fluxo, cai no fallback antigo (reply_goto_key dentro de 'open').
+        let triggered = false;
+        const flowSteps = await loadSteps(st.chat_id, 'status_reply');
+        if (flowSteps.length > 0) {
+            session.current_flow = 'status_reply';
+            await runScript(session, chat, flowSteps, 0, ident);
+            triggered = true;
+        } else if (st.reply_goto_key) {
+            const steps = await loadSteps(st.chat_id, 'open');
             const j = keyIndex(steps, st.reply_goto_key);
-            if (j >= 0) await runScript(session, chat, steps, j, ident);
+            if (j >= 0) { session.current_flow = 'open'; await runScript(session, chat, steps, j, ident); triggered = true; }
         }
         // chega como não-lida (o app vai abrir a conversa e marcar como visto)
         await db.query(`UPDATE chat_sessions SET last_seen_at = NULL WHERE id = $1`, [session.id]);
-        return res.json({ success: true, chat_id: st.chat_id, replied: !!text, triggered: !!st.reply_goto_key });
+        return res.json({ success: true, chat_id: st.chat_id, replied: !!text, triggered });
     } catch (err) {
         logger.error('Erro respondendo status:', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
@@ -807,15 +818,22 @@ router.post('/chats/:id/call-trigger', optionalUser, async (req, res) => {
         const ident = getIdentity(req);
         if (!ident.email && !ident.visitor) return res.json({ success: false });
         const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
-        if (!cr.length || !cr[0].call_goto_key) return res.json({ success: true, messages: [] });
+        if (!cr.length) return res.json({ success: true, messages: [] });
         const chat = cr[0];
         const session = await findOrCreateSession(chatId, ident, true);
         await ensureSessionGeo(session, req);
         ident.city = session.city; ident.cityFallback = chat.city_fallback;
-        const steps = await loadSteps(chatId);
-        const j = keyIndex(steps, chat.call_goto_key);
-        if (j < 0) return res.json({ success: true, messages: [] });
-        const fresh = await runScript(session, chat, steps, j, ident);
+        // roda o FLUXO "Tentou ligar". Fallback: call_goto_key dentro de 'open'.
+        let fresh = [];
+        const flowSteps = await loadSteps(chatId, 'call');
+        if (flowSteps.length > 0) {
+            session.current_flow = 'call';
+            fresh = await runScript(session, chat, flowSteps, 0, ident);
+        } else if (chat.call_goto_key) {
+            const steps = await loadSteps(chatId, 'open');
+            const j = keyIndex(steps, chat.call_goto_key);
+            if (j >= 0) { session.current_flow = 'open'; fresh = await runScript(session, chat, steps, j, ident); }
+        }
         return res.json({ success: true, messages: fresh.map(publicMsg), awaiting: session.awaiting });
     } catch (err) {
         logger.error('Erro no gatilho de ligação:', err);

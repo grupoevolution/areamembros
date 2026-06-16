@@ -5684,13 +5684,15 @@ a { color: inherit; text-decoration: none; }
 
                             <!-- Roteiro (só ao editar) -->
                             <div id="chatStepsSection" style="display:none; border-top:1px solid rgba(255,255,255,.08); padding-top:16px;">
-                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
                                     <div>
                                         <div style="font-size:13px; font-weight:700; color:#fff;">💬 Roteiro da conversa</div>
-                                        <div style="font-size:11px; color:rgba(255,255,255,.5);">Blocos em ordem. Botões pulam pra outro bloco pelo rótulo.</div>
+                                        <div style="font-size:11px; color:rgba(255,255,255,.5);">Cada GATILHO tem seu próprio fluxo de blocos. Escolha o fluxo abaixo e monte a sequência dele.</div>
                                     </div>
                                     <button type="button" class="btn-secondary" onclick="openChatStepModal()" style="font-size:12px; padding:6px 12px;">+ Bloco</button>
                                 </div>
+                                <!-- Abas de fluxo (um roteiro por gatilho) -->
+                                <div id="chatFlowTabs" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;"></div>
                                 <div id="chatStepsList" style="display:flex; flex-direction:column; gap:8px;"></div>
                                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
                                     <button type="button" class="btn-secondary" onclick="openChatStatus()" style="font-size:12px;">📸 Status (stories)</button>
@@ -14558,6 +14560,7 @@ function editChatPersona(c) {
     try { trig = Array.isArray(c.trigger_product_ids) ? c.trigger_product_ids : JSON.parse(c.trigger_product_ids || '[]'); } catch(_) {}
     loadChatProductsDropdown(c.product_id || '', c.call_video_call_id || '', trig);
     document.getElementById('chatStepsSection').style.display = 'block';
+    _curChatFlow = 'open';
     loadChatSteps(c.id);
     document.getElementById('chatModalBackdrop').style.display = 'flex';
 }
@@ -14627,7 +14630,29 @@ function fmtDelay(secs) {
 }
 
 let _curChatSteps = [];
+let _curChatStepsAll = [];
 let _curChatPersona = null;
+let _curChatFlow = 'open';
+// Fluxos por gatilho (cada um é um roteiro independente da modelo)
+const CHAT_FLOWS = [
+    { key: 'open', label: '▶ Abre conversa' },
+    { key: 'status_reply', label: '💬 Respondeu status' },
+    { key: 'call', label: '📞 Tentou ligar' },
+    { key: 'inactive', label: '💤 Inativo' },
+];
+function renderChatFlowTabs() {
+    const box = document.getElementById('chatFlowTabs');
+    if (!box) return;
+    box.innerHTML = CHAT_FLOWS.map(f => {
+        const n = _curChatStepsAll.filter(s => (s.flow || 'open') === f.key).length;
+        const on = f.key === _curChatFlow;
+        return '<button type="button" onclick="setChatFlow(\''+f.key+'\')" style="font-size:11.5px; font-weight:600; padding:7px 12px; border-radius:999px; cursor:pointer; border:1px solid '+(on?'rgba(229,9,20,.6)':'rgba(255,255,255,.12)')+'; background:'+(on?'rgba(229,9,20,.18)':'rgba(255,255,255,.05)')+'; color:'+(on?'#fff':'rgba(255,255,255,.7)')+';">'+f.label+(n?' ('+n+')':'')+'</button>';
+    }).join('');
+}
+function setChatFlow(flow) {
+    _curChatFlow = flow;
+    if (_curChatId) loadChatSteps(_curChatId);
+}
 
 async function loadChatSteps(chatId) {
     const list = document.getElementById('chatStepsList');
@@ -14637,13 +14662,16 @@ async function loadChatSteps(chatId) {
         const r = await fetch('/api/admin/chats/'+chatId+'/steps', { credentials:'include' });
         const data = await r.json();
         if (!data.success) { list.innerHTML = '<div style="color:#f55">Erro</div>'; return; }
-        _curChatSteps = data.steps || [];
+        _curChatStepsAll = data.steps || [];
+        // só os blocos do FLUXO selecionado
+        _curChatSteps = _curChatStepsAll.filter(s => (s.flow || 'open') === _curChatFlow);
+        renderChatFlowTabs();
         renderChatPreview();
-        if (!data.steps.length) {
-            list.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:12px; padding:12px; text-align:center; background:rgba(0,0,0,.2); border-radius:8px;">Nenhum bloco. Clique em "+ Bloco" pra montar o roteiro.</div>';
+        if (!_curChatSteps.length) {
+            list.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:12px; padding:12px; text-align:center; background:rgba(0,0,0,.2); border-radius:8px;">Nenhum bloco neste fluxo. Clique em "+ Bloco" pra montar.</div>';
             return;
         }
-        list.innerHTML = data.steps.map((s, idx) => {
+        list.innerHTML = _curChatSteps.map((s, idx) => {
             const label = CHAT_STEP_LABELS[s.type] || s.type;
             const preview = s.type === 'buttons'
                 ? (Array.isArray(s.buttons) ? s.buttons.map(b => b.label).join(' · ') : '')
@@ -14651,7 +14679,7 @@ async function loadChatSteps(chatId) {
                 : (s.content || s.media_url || '');
             const key = s.step_key ? '<span style="background:rgba(229,9,20,.18);color:#ff6b73;font-size:9px;padding:2px 6px;border-radius:999px;margin-left:6px;">'+escHtmlAdmin(s.step_key)+'</span>' : '';
             const upDis = idx === 0 ? ' disabled style="opacity:.3;font-size:11px;padding:4px 8px;"' : ' style="font-size:11px;padding:4px 8px;"';
-            const dnDis = idx === data.steps.length - 1 ? ' disabled style="opacity:.3;font-size:11px;padding:4px 8px;"' : ' style="font-size:11px;padding:4px 8px;"';
+            const dnDis = idx === _curChatSteps.length - 1 ? ' disabled style="opacity:.3;font-size:11px;padding:4px 8px;"' : ' style="font-size:11px;padding:4px 8px;"';
             return '<div style="display:flex; align-items:center; gap:8px; padding:9px 10px; background:rgba(0,0,0,.3); border-radius:8px; border:1px solid rgba(255,255,255,.05);">'
                 + '<div style="display:flex; flex-direction:column; gap:2px;">'
                 +   '<button type="button" class="btn-secondary" onclick="moveChatStep('+idx+',-1)"'+upDis+'>▲</button>'
@@ -14856,6 +14884,7 @@ async function saveChatStep(e) {
             : 0,
         allow_input: type === 'buttons' ? document.getElementById('csAllowInput').checked : false,
         view_seconds: (type === 'view_once_image' || type === 'view_once_video') ? (parseInt(document.getElementById('csViewSeconds').value, 10) || 0) : 0,
+        flow: _curChatFlow,
     };
     try {
         const url = id ? '/api/admin/chats/'+_curChatId+'/steps/'+id : '/api/admin/chats/'+_curChatId+'/steps';
@@ -15127,7 +15156,7 @@ async function reloadBuilderSteps() {
     try {
         const r = await fetch('/api/admin/chats/' + CB.chatId + '/steps', { credentials: 'include' });
         const d = await r.json();
-        CB.steps = (d.success ? d.steps : []).filter(s => s.active !== false);
+        CB.steps = (d.success ? d.steps : []).filter(s => s.active !== false && (s.flow || 'open') === 'open');
         _curChatSteps = d.success ? d.steps : [];
         renderBuilderStage();
     } catch (e) {}
