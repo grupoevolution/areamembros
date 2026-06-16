@@ -8841,14 +8841,19 @@ window.ChatApp = (function() {
                 html += '<div class="ca-sec-block"><div class="ca-sec-label">' + esc(sec) + '</div>';
                 for (const c of sections[sec]) {
                     const bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
-                    const av = c.locked
+                    // VIP que JÁ recebeu mensagem (auto-start) mostra a foto + prévia
+                    // BORRADA pra provocar; VIP sem mensagem ainda mostra o cadeado.
+                    const vipTease = c.locked && c.last;
+                    const av = (c.locked && !vipTease)
                         ? '<div class="av locked">' + ICO.lock(16, '#a09890') + '</div>'
-                        : '<div class="av"' + bg + '>' + (c.show_online ? '<span class="dot"></span>' : '') + '</div>';
-                    const pv = c.locked
+                        : '<div class="av"' + bg + '>' + ((c.show_online && !c.locked) ? '<span class="dot"></span>' : '') + (c.locked ? '<span style="position:absolute;bottom:-1px;right:-1px;width:16px;height:16px;border-radius:50%;background:#e50914;display:flex;align-items:center;justify-content:center;border:2px solid #fff;">' + ICO.lock(8, '#fff') + '</span>' : '') + '</div>';
+                    const pv = vipTease
+                        ? '<div class="pv" style="filter:blur(4.5px);color:#555;user-select:none;pointer-events:none;">' + esc(c.last.preview) + '</div>'
+                        : c.locked
                         ? '<div class="pv vip">Desbloqueie com o VIP →</div>'
                         : c.last ? '<div class="pv">' + esc(c.last.preview) + '</div>'
                         : '<div class="pv online">' + esc(c.status_label || 'online') + '</div>';
-                    const badge = (!c.locked && c.unread > 0)
+                    const badge = (c.unread > 0)
                         ? '<span style="display:inline-flex;min-width:18px;height:18px;border-radius:999px;background:#25D366;color:#fff;font-size:10px;font-weight:600;align-items:center;justify-content:center;padding:0 5px;margin-top:3px;">' + (c.unread > 99 ? '99+' : c.unread) + '</span>'
                         : '';
                     const tm = (c.last || badge) ? '<div class="tm" style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">' + (c.last ? '<span'+(badge?' style="color:#1fa855;font-weight:600;"':'')+'>' + hhmm(c.last.at) + '</span>' : '') + badge + '</div>' : '';
@@ -8859,7 +8864,7 @@ window.ChatApp = (function() {
             }
             scroll.innerHTML = html;
             // bolinha de não-lidas na aba Conversas
-            const totalUnread = chats.reduce((s, c) => s + (c.locked ? 0 : (c.unread || 0)), 0);
+            const totalUnread = chats.reduce((s, c) => s + (c.unread || 0), 0);
             const dot = document.getElementById('chatNavDot');
             if (dot) dot.style.display = totalUnread > 0 ? '' : 'none';
         } catch (e) {
@@ -8873,7 +8878,7 @@ window.ChatApp = (function() {
             const r = await fetch('/api/user/chats?visitor_id=' + VID, { credentials: 'include' });
             const data = await r.json();
             if (!data.success) return;
-            const total = (data.chats || []).reduce((s, c) => s + (c.locked ? 0 : (c.unread || 0)), 0);
+            const total = (data.chats || []).reduce((s, c) => s + (c.unread || 0), 0);
             const dot = document.getElementById('chatNavDot');
             if (dot) dot.style.display = total > 0 ? '' : 'none';
         } catch (_) {}
@@ -9569,10 +9574,23 @@ window.ChatApp = (function() {
     } catch(_) {}
 })();
 
-// Bolinha de não-lidas: checa no boot e ao voltar o foco pro app
+// Bolinha de não-lidas: checa no boot, ao voltar o foco, e a cada 40s enquanto o
+// app está aberto — pra as mensagens que a modelo manda sozinha (auto-start)
+// "chegarem ao vivo": o badge acende e, se o cliente estiver na aba Conversas,
+// a lista se atualiza pra mostrar a prévia nova.
 (function chatUnreadBoot() {
-    const ping = () => { try { if (window.ChatApp) ChatApp.refreshUnreadDot(); } catch(_) {} };
+    const ping = () => {
+        if (document.hidden || !window.ChatApp) return;
+        try {
+            // na aba Conversas (lista aberta, sem conversa aberta) → recarrega a lista
+            const onList = document.getElementById('chat') && document.getElementById('chat').classList.contains('active');
+            const inConv = document.getElementById('chatconv') && document.getElementById('chatconv').classList.contains('active');
+            if (onList && !inConv) ChatApp.loadList();
+            else ChatApp.refreshUnreadDot();
+        } catch(_) {}
+    };
     setTimeout(ping, 4000);
+    setInterval(ping, 40000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) ping(); });
 })();
 

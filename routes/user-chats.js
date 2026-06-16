@@ -172,6 +172,26 @@ async function loadSteps(chatId, flow) {
     return rows;
 }
 
+// Motor de conversas: agenda a 1ª mensagem da modelo pra chegar SOZINHA X minutos
+// depois que o cliente entra no app. Cria a sessão num estado "delay" que o worker
+// (chat-worker) retoma no horário rodando o fluxo 'open'. Só agenda 1x (se já tem
+// sessão, não mexe). Vale pra chat VIP também (a prévia aparece borrada na lista).
+async function ensureAutoStart(chat, ident) {
+    if (!chat || !chat.auto_start_minutes || chat.auto_start_minutes <= 0) return;
+    if (!ident.email && !ident.visitor) return;
+    const existing = await findOrCreateSession(chat.id, ident, false);
+    if (existing) return; // já começou/agendou
+    const steps = await loadSteps(chat.id, 'open');
+    if (!steps.length) return; // sem roteiro de abertura, nada a agendar
+    const session = await findOrCreateSession(chat.id, ident, true);
+    await db.query(
+        `UPDATE chat_sessions SET awaiting = 'delay', current_flow = 'open', current_order = 0,
+         resume_at = NOW() + make_interval(mins => $2), last_seen_at = NULL, updated_at = NOW()
+         WHERE id = $1`,
+        [session.id, chat.auto_start_minutes]
+    );
+}
+
 function keyIndex(steps, key) {
     if (!key) return -1;
     const k = String(key).trim().toLowerCase();
@@ -296,6 +316,8 @@ router.get('/chats', optionalUser, async (req, res) => {
         for (const c of chats) {
             const owns = await ownsProduct(ident.email, c.product_id);
             const perm = permissions(c, owns, ident);
+            // motor de conversas: agenda a 1ª mensagem sozinha (auto_start_minutes)
+            await ensureAutoStart(c, ident);
             // preview da última mensagem + não-lidas (bot, após last_seen_at)
             let last = null;
             let unread = 0;

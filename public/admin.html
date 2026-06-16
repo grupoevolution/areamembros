@@ -5664,8 +5664,15 @@ a { color: inherit; text-decoration: none; }
 
                             <!-- Gate de mídia (funil principal) -->
                             <div style="background:rgba(229,9,20,.06); border:1px solid rgba(229,9,20,.2); border-radius:10px; padding:12px;">
-                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="cpGate" style="width:16px; height:16px;"> 🔒 Exigir e-mail + instalar app pra ver as mídias</label>
-                                <div class="form-help" style="margin-top:6px;">Ligado: a conversa rola livre, mas ao tocar pra ABRIR uma foto/vídeo, pede o e-mail e a instalação do app antes de liberar. É o pedágio do funil principal de tráfego.</div>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="cpGate" style="width:16px; height:16px;"> 🔒 Exigir e-mail + instalar app pra ver as mídias (gate GLOBAL)</label>
+                                <div class="form-help" style="margin-top:6px;">Ligado: QUALQUER mídia 1x pede e-mail + instalar. Pra controle fino (só uma foto isca), deixe desligado e marque o gate direto no bloco da mídia.</div>
+                            </div>
+
+                            <!-- Motor de conversas: auto-start -->
+                            <div style="background:rgba(37,211,102,.06); border:1px solid rgba(37,211,102,.2); border-radius:10px; padding:12px;">
+                                <label style="display:block; font-size:12px; color:#fff; font-weight:700; margin-bottom:4px;">⏱ Mandar a 1ª mensagem sozinha depois que o cliente entra (min)</label>
+                                <input class="form-control" type="number" id="cpAutoStart" min="0" max="10080" value="0" style="width:120px;"/>
+                                <div class="form-help" style="margin-top:6px;">0 = só começa quando ele abrir a conversa. Maior que 0 = a modelo manda a abertura sozinha nesse tempo (escalone: Gaby 1, Bia 5…). Vale pra VIP também — a mensagem chega e aparece <b>borrada</b> na lista.</div>
                             </div>
 
                             <!-- {cidade} fallback -->
@@ -14552,6 +14559,7 @@ function editChatPersona(c) {
     document.getElementById('cpAccess').value = c.access || 'free';
     document.getElementById('cpCheckout').value = c.checkout_url || '';
     document.getElementById('cpReply').value = c.reply_mode || 'vip';
+    document.getElementById('cpAutoStart').value = c.auto_start_minutes || 0;
     document.getElementById('cpInputMode').value = c.input_mode === 'gated' ? 'gated' : 'always';
     document.getElementById('cpCallGoto').value = c.call_goto_key || '';
     document.getElementById('cpPhoto').checked = c.allow_photo === true;
@@ -14581,6 +14589,7 @@ async function saveChatPersona(e) {
         product_id: document.getElementById('cpProduct').value || null,
         checkout_url: document.getElementById('cpCheckout').value.trim() || null,
         reply_mode: document.getElementById('cpReply').value,
+        auto_start_minutes: parseInt(document.getElementById('cpAutoStart').value, 10) || 0,
         input_mode: document.getElementById('cpInputMode').value,
         call_goto_key: document.getElementById('cpCallGoto').value.trim() || null,
         allow_photo: document.getElementById('cpPhoto').checked,
