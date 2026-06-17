@@ -461,6 +461,7 @@ router.get('/catalog', optionalUser, async (req, res) => {
                 COALESCE(p.chat_button_enabled, false) as chat_button_enabled,
                 p.chat_button_chat_id,
                 p.chat_button_label,
+                COALESCE(p.chat_notify_on_open, false) as chat_notify_on_open,
                 p.video_call_id,
                 p.bunny_library_id,
                 p.bunny_collection_id,

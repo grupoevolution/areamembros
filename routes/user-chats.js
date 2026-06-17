@@ -318,8 +318,23 @@ function publicMsg(m) {
 router.get('/chats', optionalUser, async (req, res) => {
     try {
         const ident = getIdentity(req);
+        // Lista os chats visíveis (listed=true) MAIS os ocultos que JÁ tiveram
+        // interação com este usuário (sessão com ≥1 mensagem) — assim um chat
+        // oculto só "aparece" depois que a conversa começou (mandou/recebeu msg),
+        // evitando poluir a aba com chats que o cliente nunca tocou.
         const { rows: chats } = await db.query(
-            `SELECT * FROM chats WHERE active = true AND listed = true ORDER BY display_order, id`
+            `SELECT * FROM chats
+             WHERE active = true AND (
+                listed = true
+                OR id IN (
+                    SELECT cs.chat_id FROM chat_sessions cs
+                    WHERE ( ($1::text IS NOT NULL AND LOWER(cs.customer_email) = $1)
+                         OR ($2::text IS NOT NULL AND cs.visitor_id = $2) )
+                      AND EXISTS (SELECT 1 FROM chat_messages cm WHERE cm.session_id = cs.id)
+                )
+             )
+             ORDER BY display_order, id`,
+            [ident.email, ident.visitor]
         );
         const out = [];
         for (const c of chats) {
@@ -448,6 +463,48 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         });
     } catch (err) {
         logger.error('Erro abrindo chat:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// POST /chats/:id/start — inicia a conversa em BACKGROUND (sem abrir a tela).
+// Usado quando o cliente ENTRA num produto configurado com "modelo manda
+// mensagem ao abrir": cria a sessão + roda o fluxo "open" (mensagens ficam
+// salvas no histórico), mas NÃO marca como lido — pra aparecer com badge de
+// não-lida e disparar o banner. Retorna nome + avatar pra montar o banner.
+router.post('/chats/:id/start', optionalUser, async (req, res) => {
+    const chatId = parseInt(req.params.id, 10);
+    if (!chatId) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const ident = getIdentity(req);
+        const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
+        if (!cr.length) return res.status(404).json({ success: false, error: 'Chat não encontrado' });
+        const chat = cr[0];
+        const owns = await ownsProduct(ident.email, chat.product_id);
+        const perm = permissions(chat, owns, ident);
+        const info = { id: chat.id, name: chat.name, avatar_url: chat.avatar_url || null };
+        // Chat bloqueado (VIP sem acesso): não cria sessão nem roda roteiro.
+        if (perm.locked) return res.json({ success: true, chat: info, started: false, locked: true });
+        if (!ident.email && !ident.visitor) return res.status(400).json({ success: false, error: 'visitor_id obrigatório' });
+
+        const session = await findOrCreateSession(chatId, ident, true);
+        await ensureSessionGeo(session, req);
+        ident.city = session.city;
+        ident.cityFallback = chat.city_fallback;
+
+        const { rows: history } = await db.query(
+            `SELECT id FROM chat_messages WHERE session_id = $1 ORDER BY id LIMIT 1`, [session.id]
+        );
+        let started = false;
+        if (history.length === 0) {
+            session.current_flow = 'open';
+            const steps = await loadSteps(chatId, 'open');
+            if (steps.length > 0) { await runScript(session, chat, steps, 0, ident); started = true; }
+        }
+        // NÃO atualiza last_seen_at — fica como não-lida de propósito.
+        return res.json({ success: true, chat: info, started });
+    } catch (err) {
+        logger.error('Erro iniciando chat (start):', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
     }
 });

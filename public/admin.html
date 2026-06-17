@@ -15716,7 +15716,8 @@ async function importProductsJSON(ev) {
             + '</div>'
             + '<div class="form-row"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pChatBtnEnabled" style="width:auto"/> Ativar botão de mensagem</label></div>'
             + '<div class="form-row"><label class="form-label">Conversa de destino</label><select id="pChatBtnChatId" class="form-input"><option value="">— selecione um chat —</option></select><div class="form-help">A conversa que abre ao clicar. Crie em Conversas (pode deixar oculta da lista).</div></div>'
-            + '<div class="form-row"><label class="form-label">Texto do botão</label><input type="text" id="pChatBtnLabel" class="form-input" placeholder="Enviar mensagem" maxlength="60"/></div>';
+            + '<div class="form-row"><label class="form-label">Texto do botão</label><input type="text" id="pChatBtnLabel" class="form-input" placeholder="Enviar mensagem" maxlength="60"/></div>'
+            + '<div class="form-row"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pChatBtnNotifyOpen" style="width:auto"/> 🔔 Modelo manda mensagem ao abrir o produto</label><div class="form-help">Ao entrar no produto, a conversa acima começa sozinha e o cliente recebe uma notificação (foto + nome + "enviou uma mensagem"). Fica salva no histórico mesmo sem clicar.</div></div>';
         form.appendChild(chatBtnBlock);
         populateChatBtnSelect();
 
@@ -16128,9 +16129,11 @@ async function importProductsJSON(ev) {
                     const cbEn = document.getElementById('pChatBtnEnabled');
                     const cbId = document.getElementById('pChatBtnChatId');
                     const cbLb = document.getElementById('pChatBtnLabel');
+                    const cbNo = document.getElementById('pChatBtnNotifyOpen');
                     if (cbEn) body.chat_button_enabled = cbEn.checked;
                     if (cbId) body.chat_button_chat_id = cbId.value ? parseInt(cbId.value, 10) : null;
                     if (cbLb) body.chat_button_label = cbLb.value.trim() || null;
+                    if (cbNo) body.chat_notify_on_open = cbNo.checked;
                     opts.body = JSON.stringify(body);
                 }
             }
@@ -16159,6 +16162,7 @@ async function importProductsJSON(ev) {
                 const cbEn = document.getElementById('pChatBtnEnabled'); if (cbEn) cbEn.checked = false;
                 const cbId = document.getElementById('pChatBtnChatId'); if (cbId) cbId.value = '';
                 const cbLb = document.getElementById('pChatBtnLabel'); if (cbLb) cbLb.value = '';
+                const cbNo = document.getElementById('pChatBtnNotifyOpen'); if (cbNo) cbNo.checked = false;
                 const radio = document.querySelector('input[name="pDeliveryMode"][value="link"]');
                 if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change')); }
             } catch (_) {}
@@ -16201,6 +16205,7 @@ async function importProductsJSON(ev) {
                     populateChatBtnSelect(p.chat_button_chat_id || '');
                     const cbEn = document.getElementById('pChatBtnEnabled'); if (cbEn) cbEn.checked = !!p.chat_button_enabled;
                     const cbLb = document.getElementById('pChatBtnLabel'); if (cbLb) cbLb.value = p.chat_button_label || '';
+                    const cbNo = document.getElementById('pChatBtnNotifyOpen'); if (cbNo) cbNo.checked = !!p.chat_notify_on_open;
 
                     // ─── Detecta modo de entrega ─────────────────────────
                     // Prioridade de detecção (do mais específico ao mais geral):

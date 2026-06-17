@@ -11863,6 +11863,10 @@ function openProductPage(productId) {
     populateProductScreen(product);
     switchScreen('product');
 
+    // "Modelo manda mensagem ao abrir o produto": inicia a conversa em background
+    // e dispara o banner (foto + nome + "enviou uma mensagem").
+    maybeProductChatNotify(product);
+
     // Tracking: registra view (não bloqueia, ignora erro)
     if (typeof TRACK !== 'undefined') TRACK.view(product.id);
 }
@@ -11873,6 +11877,38 @@ function openChatFromProduct(chatId) {
     const cid = parseInt(chatId, 10);
     if (!cid || !window.ChatApp) return;
     try { ChatApp.open(cid); } catch (_) {}
+}
+
+// Produto com chat_notify_on_open: ao entrar, a modelo "manda mensagem".
+// Inicia a conversa server-side (fica salva no histórico, mesmo sem clique) e
+// mostra o banner in-app. Notifica 1x por chat por aparelho pra não encher.
+function maybeProductChatNotify(p) {
+    try {
+        if (!p || !p.chat_notify_on_open || !p.chat_button_chat_id) return;
+        const cid = parseInt(p.chat_button_chat_id, 10);
+        if (!cid) return;
+        let vid = ''; try { vid = localStorage.getItem('mv_chat_visitor') || ''; } catch (_) {}
+        fetch('/api/user/chats/' + cid + '/start', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            credentials: 'include', body: JSON.stringify({ visitor_id: vid }),
+        }).then(r => r.json()).then(data => {
+            if (!data || !data.success || !data.chat) return;
+            const key = 'mv_prodnotify_' + cid;
+            let already = false; try { already = localStorage.getItem(key) === '1'; } catch (_) {}
+            if (already) return;
+            try { localStorage.setItem(key, '1'); } catch (_) {}
+            // pequeno atraso → parece que "chegou" depois que abriu o produto
+            setTimeout(() => {
+                if (window.MVNotify) MVNotify.push({
+                    title: data.chat.name,
+                    body: 'enviou uma mensagem',
+                    avatar: data.chat.avatar_url || null,
+                    icon: '💬',
+                    onClick: () => { if (window.ChatApp) ChatApp.open(cid); },
+                });
+            }, 1800);
+        }).catch(() => {});
+    } catch (_) {}
 }
 
 // Popup ao tocar numa mídia bloqueada da prévia → leva ao checkout do produto.
@@ -15005,18 +15041,18 @@ body.is-logged #pwaLandingBanner, body.pwa-installed #pwaLandingBanner { display
 }
 /* ─── Botão "Enviar mensagem" (verde estilo WhatsApp, sem logo) ─── */
 .product-chat-btn {
-    display: flex; align-items: center; justify-content: center; gap: 9px;
-    width: calc(100% - 32px);
-    margin: 0 16px 16px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: calc(100% - 32px); box-sizing: border-box;  /* largura cheia, alinhada ao bloco de áudio */
+    margin: 0 16px 18px;
     padding: 13px 16px;
     background: #1fa855;
-    color: #fff; font-size: 15px; font-weight: 700;
-    border: none; border-radius: 12px; cursor: pointer;
-    box-shadow: 0 6px 18px rgba(31,168,85,0.32);
+    color: #fff; font-size: 14.5px; font-weight: 700; letter-spacing: .2px;
+    border: none; border-radius: 14px; cursor: pointer;
+    box-shadow: 0 3px 10px rgba(31,168,85,0.22);
     transition: transform .12s ease, filter .12s ease;
 }
 .product-chat-btn:active { transform: scale(.98); filter: brightness(.95); }
-.product-chat-btn svg { flex-shrink: 0; }
+.product-chat-btn svg { flex-shrink: 0; opacity: .95; }
 
 /* ─── Banner de notificação in-app (estilo notificação de celular) ─── */
 #mvNotify {
