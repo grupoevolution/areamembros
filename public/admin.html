@@ -5712,6 +5712,12 @@ a { color: inherit; text-decoration: none; }
                                 <div class="form-help" style="margin-top:6px;">Ligado: QUALQUER mídia 1x pede e-mail + instalar. Pra controle fino (só uma foto isca), deixe desligado e marque o gate direto no bloco da mídia.</div>
                             </div>
 
+                            <!-- Visibilidade na lista de Conversas -->
+                            <div style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:12px;">
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="cpListed" checked style="width:16px; height:16px;"> 👁️ Aparecer na lista de Conversas</label>
+                                <div class="form-help" style="margin-top:6px;">Desligado: a conversa NÃO aparece na aba Conversas, mas continua acessível pelo botão "Enviar mensagem" de um produto (ou link direto).</div>
+                            </div>
+
                             <!-- Motor de conversas: auto-start -->
                             <div style="background:rgba(37,211,102,.06); border:1px solid rgba(37,211,102,.2); border-radius:10px; padding:12px;">
                                 <label style="display:block; font-size:12px; color:#fff; font-weight:700; margin-bottom:4px;">⏱ Mandar a 1ª mensagem sozinha depois que o cliente entra (min)</label>
@@ -14149,9 +14155,17 @@ async function loadFunnels() {
                 +   '</div>'+status
                 + '</div>'
                 + '<div style="padding:14px 16px">'
-                +   '<div style="background:rgba(0,0,0,.3);padding:8px 10px;border-radius:6px;margin-bottom:10px;display:flex;align-items:center;gap:8px">'
+                +   '<div style="background:rgba(0,0,0,.3);padding:8px 10px;border-radius:6px;margin-bottom:6px;display:flex;align-items:center;gap:8px">'
                 +     '<input type="text" readonly value="'+url+'" style="background:transparent;border:none;color:#e50914;font-family:monospace;font-size:11px;flex:1;outline:none" onclick="this.select()"/>'
                 +     '<button onclick="navigator.clipboard.writeText(\''+url+'\');this.textContent=\'✓\'" style="background:rgba(255,255,255,.1);border:none;color:#fff;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px">Copiar</button>'
+                +   '</div>'
+                +   '<div style="background:rgba(76,217,100,.08);border:1px solid rgba(76,217,100,.25);padding:8px 10px;border-radius:6px;margin-bottom:10px">'
+                +     '<div style="font-size:10px;color:#4CD964;font-weight:700;letter-spacing:.5px;margin-bottom:4px">📣 LINK PRO ANÚNCIO (META) — abre no Chrome no Android</div>'
+                +     '<div style="display:flex;align-items:center;gap:8px">'
+                +       '<input type="text" readonly value="'+origin+'/ir/'+f.slug+'" style="background:transparent;border:none;color:#4CD964;font-family:monospace;font-size:11px;flex:1;outline:none" onclick="this.select()"/>'
+                +       '<button onclick="navigator.clipboard.writeText(\''+origin+'/ir/'+f.slug+'\');this.textContent=\'✓\'" style="background:rgba(76,217,100,.18);border:none;color:#fff;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px">Copiar</button>'
+                +     '</div>'
+                +     '<div style="font-size:10px;color:rgba(255,255,255,.5);margin-top:4px">Use ESTE no Instagram/Facebook Ads: escapa do navegador interno e abre no Chrome, onde o cliente consegue instalar o app.</div>'
                 +   '</div>'
                 +   '<div style="display:flex;gap:8px;font-size:11px;color:rgba(255,255,255,.6);margin-bottom:10px">'
                 +     '<div style="flex:1;background:rgba(0,0,0,.3);padding:8px;border-radius:6px;text-align:center"><div style="font-size:18px;color:#fff;font-weight:700">'+f.visits_total+'</div>Visitas</div>'
@@ -14656,6 +14670,7 @@ function editChatPersona(c) {
     document.getElementById('cpCallGoto').value = c.call_goto_key || '';
     document.getElementById('cpPhoto').checked = c.allow_photo === true;
     document.getElementById('cpGate').checked = c.gate_media === true;
+    document.getElementById('cpListed').checked = c.listed !== false;
     document.getElementById('cpCityFallback').value = c.city_fallback || '';
     document.getElementById('cpOrder').value = c.display_order || 0;
     let trig = [];
@@ -14687,6 +14702,7 @@ async function saveChatPersona(e) {
         allow_photo: document.getElementById('cpPhoto').checked,
         display_order: parseInt(document.getElementById('cpOrder').value, 10) || 0,
         gate_media: document.getElementById('cpGate').checked,
+        listed: document.getElementById('cpListed').checked,
         city_fallback: document.getElementById('cpCityFallback').value.trim() || 'sua região',
         call_video_call_id: document.getElementById('cpCall').value || null,
         trigger_product_ids: Array.from(document.querySelectorAll('#cpTriggerProducts .cp-trigger:checked')).map(el => parseInt(el.value, 10)),
@@ -15654,6 +15670,21 @@ async function importProductsJSON(ev) {
 // ═══════════════ ÁUDIO + CHAMADA NO EDITOR DE PRODUTO ═══════════════
 // Cria os campos dinamicamente no formulário de produto (novo OU editar).
 (function setupAudioFields() {
+    // Popula o <select> de conversa de destino do botão "Enviar mensagem".
+    async function populateChatBtnSelect(selectedId) {
+        const sel = document.getElementById('pChatBtnChatId');
+        if (!sel) return;
+        try {
+            const r = await fetch('/api/admin/chats', { credentials: 'include' });
+            const data = await r.json();
+            const chats = (data && data.success && Array.isArray(data.chats)) ? data.chats : [];
+            const cur = (selectedId != null && selectedId !== '') ? String(selectedId) : sel.value;
+            const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            sel.innerHTML = '<option value="">— selecione um chat —</option>'
+                + chats.map(c => '<option value="' + c.id + '">' + esc(c.name || ('Chat ' + c.id)) + (c.listed === false ? ' (oculto)' : '') + '</option>').join('');
+            if (cur) sel.value = cur;
+        } catch (_) {}
+    }
     function injectAudioFields() {
         // O formulário real é #newProductForm (dentro de #screen-produtos-novo)
         const form = document.getElementById('newProductForm');
@@ -15673,6 +15704,21 @@ async function importProductsJSON(ev) {
             + '<div class="form-row"><label class="form-label">Ou cole uma URL externa</label><input type="url" id="pAudioUrl" class="form-input" placeholder="https://..."/><div class="form-help">MP3 / M4A / WAV — até 25MB</div></div>'
             + '<div class="form-row"><audio id="pAudioPreview" controls preload="metadata" style="width:100%;display:none"></audio></div>';
         form.appendChild(block);
+
+        // ── Botão "Enviar mensagem" → abre uma conversa (estilo WhatsApp) ──
+        const chatBtnBlock = document.createElement('div');
+        chatBtnBlock.className = 'form-card';
+        chatBtnBlock.style.cssText = 'margin-top:16px;';
+        chatBtnBlock.innerHTML = ''
+            + '<div class="form-card-head">'
+            +   '<div class="form-card-title">💬 Botão "Enviar mensagem"</div>'
+            +   '<div class="form-card-sub">Mostra um botão verde abaixo do áudio que abre uma conversa. Pode apontar pra um chat oculto da lista.</div>'
+            + '</div>'
+            + '<div class="form-row"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pChatBtnEnabled" style="width:auto"/> Ativar botão de mensagem</label></div>'
+            + '<div class="form-row"><label class="form-label">Conversa de destino</label><select id="pChatBtnChatId" class="form-input"><option value="">— selecione um chat —</option></select><div class="form-help">A conversa que abre ao clicar. Crie em Conversas (pode deixar oculta da lista).</div></div>'
+            + '<div class="form-row"><label class="form-label">Texto do botão</label><input type="text" id="pChatBtnLabel" class="form-input" placeholder="Enviar mensagem" maxlength="60"/></div>';
+        form.appendChild(chatBtnBlock);
+        populateChatBtnSelect();
 
         // ──────────────────────────────────────────────────────────────────
         // Fase E (mai/2026) — UX unificada de ENTREGA do produto.
@@ -16078,6 +16124,13 @@ async function importProductsJSON(ev) {
                     if (cph) body.call_photo_url = cph.value.trim() || null;
                     if (crt) body.call_ringing_text = crt.value.trim() || null;
                     if (crg) body.call_ringtone_url = crg.value.trim() || null;
+                    // Botão "Enviar mensagem" → chat.
+                    const cbEn = document.getElementById('pChatBtnEnabled');
+                    const cbId = document.getElementById('pChatBtnChatId');
+                    const cbLb = document.getElementById('pChatBtnLabel');
+                    if (cbEn) body.chat_button_enabled = cbEn.checked;
+                    if (cbId) body.chat_button_chat_id = cbId.value ? parseInt(cbId.value, 10) : null;
+                    if (cbLb) body.chat_button_label = cbLb.value.trim() || null;
                     opts.body = JSON.stringify(body);
                 }
             }
@@ -16103,6 +16156,9 @@ async function importProductsJSON(ev) {
                 const cph = document.getElementById('pCallPhotoUrl'); if (cph) cph.value = '';
                 const crt = document.getElementById('pCallRingingText'); if (crt) crt.value = '';
                 const crg = document.getElementById('pCallRingtoneUrl'); if (crg) crg.value = '';
+                const cbEn = document.getElementById('pChatBtnEnabled'); if (cbEn) cbEn.checked = false;
+                const cbId = document.getElementById('pChatBtnChatId'); if (cbId) cbId.value = '';
+                const cbLb = document.getElementById('pChatBtnLabel'); if (cbLb) cbLb.value = '';
                 const radio = document.querySelector('input[name="pDeliveryMode"][value="link"]');
                 if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change')); }
             } catch (_) {}
@@ -16140,6 +16196,11 @@ async function importProductsJSON(ev) {
                     const t = document.getElementById('pAudioTitle'); if (t) t.value = p.audio_title || '';
                     const prev = document.getElementById('pAudioPreview');
                     if (p.audio_url && prev) { prev.src = p.audio_url; prev.style.display = 'block'; }
+
+                    // Botão "Enviar mensagem"
+                    populateChatBtnSelect(p.chat_button_chat_id || '');
+                    const cbEn = document.getElementById('pChatBtnEnabled'); if (cbEn) cbEn.checked = !!p.chat_button_enabled;
+                    const cbLb = document.getElementById('pChatBtnLabel'); if (cbLb) cbLb.value = p.chat_button_label || '';
 
                     // ─── Detecta modo de entrega ─────────────────────────
                     // Prioridade de detecção (do mais específico ao mais geral):

@@ -8842,7 +8842,13 @@ window.ChatApp = (function() {
                 scroll.innerHTML = storiesStripHtml() || '<div class="ca-empty">Nenhuma conversa disponível ainda.<br>Volte em breve.</div>';
                 return;
             }
-            const chats = data.chats;
+            // Ordena por última mensagem (mais recente no topo, estilo WhatsApp).
+            // Conversas sem mensagem ainda vão pro fim, mantendo a ordem relativa.
+            const chats = data.chats.slice().sort((a, b) => {
+                const ta = (a.last && a.last.at) ? new Date(a.last.at).getTime() : 0;
+                const tb = (b.last && b.last.at) ? new Date(b.last.at).getTime() : 0;
+                return tb - ta;
+            });
             let html = storiesStripHtml();
             // "Online agora" removido — virou redundante com a fileira de Status.
             const sections = {};
@@ -8854,14 +8860,19 @@ window.ChatApp = (function() {
                 html += '<div class="ca-sec-block"><div class="ca-sec-label">' + esc(sec) + '</div>';
                 for (const c of sections[sec]) {
                     const bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
-                    // VIP que JÁ recebeu mensagem (auto-start) mostra a foto + prévia
-                    // BORRADA pra provocar; VIP sem mensagem ainda mostra o cadeado.
+                    // VIP que JÁ recebeu mensagem mostra que CHEGOU mensagem, mas tudo
+                    // BORRADO: foto + prévia embaçadas, sem deixar ver a imagem enviada.
+                    // VIP sem mensagem ainda mostra só o cadeado.
                     const vipTease = c.locked && c.last;
+                    // foto do VIP com mensagem entra borrada (não dá pra ver a imagem)
+                    const bgBlur = (vipTease && c.avatar_url)
+                        ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\');filter:blur(6px);"'
+                        : bg;
                     const av = (c.locked && !vipTease)
                         ? '<div class="av locked">' + ICO.lock(16, '#a09890') + '</div>'
-                        : '<div class="av"' + bg + '>' + ((c.show_online && !c.locked) ? '<span class="dot"></span>' : '') + (c.locked ? '<span style="position:absolute;bottom:-1px;right:-1px;width:16px;height:16px;border-radius:50%;background:#e50914;display:flex;align-items:center;justify-content:center;border:2px solid #fff;">' + ICO.lock(8, '#fff') + '</span>' : '') + '</div>';
+                        : '<div class="av"' + bgBlur + '>' + ((c.show_online && !c.locked) ? '<span class="dot"></span>' : '') + (c.locked ? '<span style="position:absolute;bottom:-1px;right:-1px;width:16px;height:16px;border-radius:50%;background:#e50914;display:flex;align-items:center;justify-content:center;border:2px solid #fff;">' + ICO.lock(8, '#fff') + '</span>' : '') + '</div>';
                     const pv = vipTease
-                        ? '<div class="pv" style="filter:blur(4.5px);color:#555;user-select:none;pointer-events:none;">' + esc(c.last.preview) + '</div>'
+                        ? '<div class="pv" style="color:#9aa0a6;font-style:italic;">enviou uma mensagem</div>'
                         : c.locked
                         ? '<div class="pv vip">Desbloqueie com o VIP →</div>'
                         : c.last ? '<div class="pv">' + esc(c.last.preview) + '</div>'
@@ -9577,7 +9588,8 @@ window.ChatApp = (function() {
     if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
     return { loadList, open, back, send, photo, sendPhoto, unlock, closeVonce, onCall, refreshUnreadDot, openProfile, closeProfile,
-             openStory, closeStory, storyNav, storyReply };
+             openStory, closeStory, storyNav, storyReply,
+             curId: () => (CUR ? CUR.id : null) };
 })();
 
 // Deep-link do push de mensagem: /?chat=<id> abre a conversa direto
@@ -9617,6 +9629,119 @@ window.ChatApp = (function() {
     setTimeout(ping, 4000);
     setInterval(ping, 40000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) ping(); });
+})();
+
+// ─── Notificação in-app (banner estilo notificação de celular) ───
+// Desce no topo em QUALQUER tela (mesmo dentro de outra conversa). Cobre o app
+// ABERTO; o web push cobre o app fechado. Clique → vai pro destino.
+window.MVNotify = (function() {
+    let el = null, hideT = null, queue = [], showing = false;
+    function ensure() {
+        if (el) return el;
+        el = document.createElement('div');
+        el.id = 'mvNotify';
+        el.innerHTML = '<div class="mvn-av" id="mvnAv"></div>'
+            + '<div class="mvn-txt"><div class="mvn-title" id="mvnTitle"></div><div class="mvn-body" id="mvnBody"></div></div>'
+            + '<button class="mvn-x" id="mvnX" aria-label="Fechar">×</button>';
+        document.body.appendChild(el);
+        el.addEventListener('click', (e) => {
+            if (e.target && e.target.id === 'mvnX') { hide(); return; }
+            const cb = el._onClick; hide(); if (cb) { try { cb(); } catch (_) {} }
+        });
+        return el;
+    }
+    function hide() { if (!el) return; el.classList.remove('show'); clearTimeout(hideT); showing = false; setTimeout(next, 260); }
+    function next() {
+        if (showing) return;
+        const n = queue.shift();
+        if (!n) return;
+        showing = true; ensure();
+        const av = document.getElementById('mvnAv');
+        if (n.avatar) { av.style.backgroundImage = 'url("' + n.avatar + '")'; av.textContent = ''; }
+        else { av.style.backgroundImage = 'none'; av.textContent = n.icon || '🔔'; }
+        document.getElementById('mvnTitle').textContent = n.title || '';
+        document.getElementById('mvnBody').textContent = n.body || '';
+        el._onClick = n.onClick || null;
+        requestAnimationFrame(() => el.classList.add('show'));
+        if (navigator.vibrate) { try { navigator.vibrate([60, 40, 60]); } catch (_) {} }
+        clearTimeout(hideT);
+        hideT = setTimeout(hide, n.duration || 6000);
+    }
+    function push(n) { queue.push(n); if (!showing) next(); }
+    return { push };
+})();
+
+// Resolve o destino do clique numa notificação (chat / produto / aba / link).
+function mvNavigate(url) {
+    if (!url) return;
+    try {
+        const mc = String(url).match(/[?&]chat=(\d+)/);
+        if (mc && window.ChatApp) { ChatApp.open(parseInt(mc[1], 10)); return; }
+        const mp = String(url).match(/[?&]p=(\d+)/);
+        if (mp && typeof openProductPage === 'function') { openProductPage(parseInt(mp[1], 10)); return; }
+        if (/^https?:\/\//i.test(url)) { window.open(url, '_blank'); return; }
+        if (url === '/' || url === '') { if (typeof switchScreen === 'function') switchScreen('home'); return; }
+        window.location.href = url;
+    } catch (_) {}
+}
+
+// Poller global: (a) mensagens novas de chat fora da conversa aberta, (b) campanhas
+// in-app disparadas no painel. Dedup: chat por timestamp; campanha por id (localStorage).
+(function notifyPoller() {
+    const SEEN_KEY = 'mv_notif_seen';
+    let chatState = null; // null até o 1º poll → seed silencioso (não notifica msg antiga)
+    function vid() { try { return localStorage.getItem('mv_chat_visitor') || ''; } catch (_) { return ''; } }
+    function seenIds() { try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'); } catch (_) { return []; } }
+    function markSeen(id) { try { const s = seenIds(); if (!s.includes(id)) { s.push(id); localStorage.setItem(SEEN_KEY, JSON.stringify(s.slice(-200))); } } catch (_) {} }
+
+    async function pollChats() {
+        try {
+            const r = await fetch('/api/user/chats?visitor_id=' + vid(), { credentials: 'include' });
+            const data = await r.json();
+            if (!data.success || !Array.isArray(data.chats)) return;
+            const inConv = document.getElementById('chatconv') && document.getElementById('chatconv').classList.contains('active');
+            const curOpen = (inConv && window.ChatApp && ChatApp.curId) ? ChatApp.curId() : null;
+            const nextState = {};
+            for (const c of data.chats) nextState[c.id] = (c.last && c.last.at) ? new Date(c.last.at).getTime() : 0;
+            if (chatState) {
+                for (const c of data.chats) {
+                    const at = nextState[c.id], prev = chatState[c.id] || 0;
+                    if (at > prev && c.unread > 0 && c.id !== curOpen) {
+                        MVNotify.push({
+                            title: c.name,
+                            body: c.locked ? 'enviou uma mensagem' : ((c.last && c.last.preview) || 'enviou uma mensagem'),
+                            avatar: c.locked ? null : c.avatar_url,
+                            icon: '💬',
+                            onClick: () => { if (window.ChatApp) ChatApp.open(c.id); },
+                        });
+                    }
+                }
+            }
+            chatState = nextState;
+        } catch (_) {}
+    }
+    async function pollCampaigns() {
+        try {
+            const r = await fetch('/api/user/notifications/feed?visitor_id=' + vid(), { credentials: 'include' });
+            const data = await r.json();
+            if (!data.success || !Array.isArray(data.notifications)) return;
+            const seen = seenIds();
+            const fresh = data.notifications
+                .filter(n => seen.indexOf(n.id) === -1)
+                .sort((a, b) => new Date(a.sent_at) - new Date(b.sent_at));
+            for (const n of fresh) {
+                markSeen(n.id);
+                MVNotify.push({
+                    title: n.title, body: n.body, icon: n.icon || '🎁',
+                    onClick: n.cta_url ? () => mvNavigate(n.cta_url) : null,
+                });
+            }
+        } catch (_) {}
+    }
+    function tick() { if (document.hidden) return; pollChats(); pollCampaigns(); }
+    setTimeout(tick, 6000);
+    setInterval(tick, 15000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(tick, 800); });
 })();
 
 // Initial state — bottom nav hidden for login (mas visível em modo funíl).
@@ -11742,6 +11867,14 @@ function openProductPage(productId) {
     if (typeof TRACK !== 'undefined') TRACK.view(product.id);
 }
 
+// Abre a conversa a partir do botão "Enviar mensagem" da tela do produto.
+// ChatApp.open() já troca pra tela de conversa sozinho.
+function openChatFromProduct(chatId) {
+    const cid = parseInt(chatId, 10);
+    if (!cid || !window.ChatApp) return;
+    try { ChatApp.open(cid); } catch (_) {}
+}
+
 // Popup ao tocar numa mídia bloqueada da prévia → leva ao checkout do produto.
 function openPreviewLock() {
     const p = window._previewProduct;
@@ -12215,6 +12348,31 @@ function populateProductScreen(p) {
                 if (audio.duration) audio.currentTime = audio.duration * pct;
             });
         }, 50);
+    }
+
+    // === Botão "Enviar mensagem" → abre uma conversa (abaixo do áudio) ===
+    // Estilo WhatsApp (verde) mas SEM logo. Aparece pra todo mundo (é a porta
+    // de entrada do chat). Pode apontar pra um chat oculto da lista.
+    let chatBtn = document.querySelector('#product .product-chat-btn');
+    if (chatBtn) chatBtn.remove();
+    if (p.chat_button_enabled && p.chat_button_chat_id) {
+        const cbId = parseInt(p.chat_button_chat_id, 10);
+        const cbLabel = String(p.chat_button_label || 'Enviar mensagem').slice(0, 60);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'product-chat-btn';
+        btn.setAttribute('onclick', 'openChatFromProduct(' + cbId + ')');
+        btn.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">'
+            + '<path d="M12 3C6.5 3 2 6.8 2 11.5c0 2.1.9 4 2.4 5.5-.2 1.4-.7 2.8-1.4 3.8-.2.3 0 .7.4.6 1.8-.4 3.3-1.1 4.4-1.8 1.2.4 2.5.6 3.8.6 5.5 0 10-3.8 10-8.5S17.5 3 12 3z"/>'
+            + '</svg><span>' + escapeHtmlData(cbLabel) + '</span>';
+        // Posiciona logo ABAIXO do áudio, se houver; senão no topo da .prod-body.
+        const bodyEl2 = document.querySelector('#product .prod-body');
+        const audioEl2 = document.querySelector('#product .product-audio-block');
+        if (audioEl2 && audioEl2.parentNode) {
+            audioEl2.parentNode.insertBefore(btn, audioEl2.nextSibling);
+        } else if (bodyEl2) {
+            bodyEl2.insertBefore(btn, bodyEl2.firstChild);
+        }
     }
 
     // === Badge AO VIVO ===
@@ -14845,6 +15003,39 @@ body.is-logged #pwaLandingBanner, body.pwa-installed #pwaLandingBanner { display
     border: 1px solid rgba(229,9,20,0.3);
     border-radius: 14px;
 }
+/* ─── Botão "Enviar mensagem" (verde estilo WhatsApp, sem logo) ─── */
+.product-chat-btn {
+    display: flex; align-items: center; justify-content: center; gap: 9px;
+    width: calc(100% - 32px);
+    margin: 0 16px 16px;
+    padding: 13px 16px;
+    background: #1fa855;
+    color: #fff; font-size: 15px; font-weight: 700;
+    border: none; border-radius: 12px; cursor: pointer;
+    box-shadow: 0 6px 18px rgba(31,168,85,0.32);
+    transition: transform .12s ease, filter .12s ease;
+}
+.product-chat-btn:active { transform: scale(.98); filter: brightness(.95); }
+.product-chat-btn svg { flex-shrink: 0; }
+
+/* ─── Banner de notificação in-app (estilo notificação de celular) ─── */
+#mvNotify {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
+    display: flex; align-items: center; gap: 11px;
+    margin: 8px auto; max-width: 520px; padding: 11px 12px;
+    background: rgba(28,28,30,.94);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,.12); border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.45);
+    transform: translateY(-180%); transition: transform .34s cubic-bezier(.2,.8,.2,1);
+    cursor: pointer;
+}
+#mvNotify.show { transform: translateY(0); }
+#mvNotify .mvn-av { width:42px;height:42px;border-radius:12px;flex-shrink:0;background-size:cover;background-position:center;background-color:#e50914;display:flex;align-items:center;justify-content:center;font-size:21px; }
+#mvNotify .mvn-txt { flex:1; min-width:0; }
+#mvNotify .mvn-title { color:#fff;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+#mvNotify .mvn-body { color:rgba(255,255,255,.82);font-size:12.5px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden; }
+#mvNotify .mvn-x { color:rgba(255,255,255,.5);font-size:20px;line-height:1;background:none;border:none;padding:4px;flex-shrink:0;cursor:pointer; }
 .paud-eyebrow {
     display: flex; align-items: center; gap: 8px;
     color: #fff; font-size: 10px; font-weight: 800;

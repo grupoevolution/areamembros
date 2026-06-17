@@ -168,6 +168,9 @@ router.post('/', requireAdmin, async (req, res) => {
         audio_url,
         audio_enabled,
         audio_title,
+        chat_button_enabled,
+        chat_button_chat_id,
+        chat_button_label,
         video_call_id,
         product_type,
         direct_call_video_url,
@@ -230,6 +233,13 @@ router.post('/', requireAdmin, async (req, res) => {
     const effectiveBunnyLib = isCallProduct ? null : bunnyFields.bunny_library_id;
     const effectiveBunnyCol = isCallProduct ? null : bunnyFields.bunny_collection_id;
 
+    // Botão "Enviar mensagem" → abre uma conversa. Só faz sentido em produto
+    // 'content'. chat_button_chat_id é o chat de destino (pode ser um oculto).
+    const chatBtnChatId = parseInt(chat_button_chat_id, 10);
+    const effChatBtnChatId = (chatBtnChatId && !isNaN(chatBtnChatId)) ? chatBtnChatId : null;
+    const effChatBtnEnabled = chat_button_enabled === true && !!effChatBtnChatId;
+    const effChatBtnLabel = (chat_button_label || '').trim().slice(0, 60) || null;
+
     // Regra de segurança server-side: só pode publicar se vier ao menos 1 oferta válida.
     // Mesmo que o frontend mande is_published=true sem gateway, o backend força false.
     // EXCEÇÃO: produto-chamada (product_type='video_call') não exige oferta.
@@ -249,8 +259,9 @@ router.post('/', requireAdmin, async (req, res) => {
                         audio_url, audio_enabled, audio_title, video_call_id, product_type,
                         bunny_library_id, bunny_collection_id, direct_call_video_url,
                         call_photo_url, call_ringing_text, call_ringtone_url,
-                        preview_enabled
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+                        preview_enabled,
+                        chat_button_enabled, chat_button_chat_id, chat_button_label
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
                     RETURNING *
                 `, [
                     name, description || null, category_id || null,
@@ -274,6 +285,9 @@ router.post('/', requireAdmin, async (req, res) => {
                     effectiveCallRingingText,
                     effectiveCallRingtone,
                     preview_enabled === true,
+                    effChatBtnEnabled,
+                    effChatBtnChatId,
+                    effChatBtnLabel,
                 ]);
                 created = r.rows[0];
             } catch (e) {
@@ -380,6 +394,9 @@ router.put('/:id', requireAdmin, async (req, res) => {
         audio_url,
         audio_enabled,
         audio_title,
+        chat_button_enabled,
+        chat_button_chat_id,
+        chat_button_label,
         video_call_id,
         product_type,
         direct_call_video_url,
@@ -435,6 +452,12 @@ router.put('/:id', requireAdmin, async (req, res) => {
     const effectiveBunnyLib = isCallProduct ? null : bunnyFields.bunny_library_id;
     const effectiveBunnyCol = isCallProduct ? null : bunnyFields.bunny_collection_id;
 
+    // Botão "Enviar mensagem" (mesma regra do POST).
+    const chatBtnChatId = parseInt(chat_button_chat_id, 10);
+    const effChatBtnChatId = (chatBtnChatId && !isNaN(chatBtnChatId)) ? chatBtnChatId : null;
+    const effChatBtnEnabled = chat_button_enabled === true && !!effChatBtnChatId;
+    const effChatBtnLabel = (chat_button_label || '').trim().slice(0, 60) || null;
+
     // Regra de segurança server-side (idêntica ao POST): só publica se houver
     // pelo menos 1 oferta válida no payload (ou for produto-chamada).
     const hasValidOffer = Array.isArray(offers)
@@ -462,7 +485,10 @@ router.put('/:id', requireAdmin, async (req, res) => {
                         call_photo_url = $22,
                         call_ringing_text = $23,
                         call_ringtone_url = $24,
-                        preview_enabled = $25
+                        preview_enabled = $25,
+                        chat_button_enabled = $27,
+                        chat_button_chat_id = $28,
+                        chat_button_label = $29
                     WHERE id = $26
                     RETURNING *
                 `, [
@@ -488,6 +514,9 @@ router.put('/:id', requireAdmin, async (req, res) => {
                     effectiveCallRingtone,
                     preview_enabled === true,
                     productId,
+                    effChatBtnEnabled,
+                    effChatBtnChatId,
+                    effChatBtnLabel,
                 ]);
                 updated = r.rows[0];
                 rowCount = r.rowCount;

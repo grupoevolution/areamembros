@@ -458,6 +458,9 @@ router.get('/catalog', optionalUser, async (req, res) => {
                 p.audio_url,
                 COALESCE(p.audio_enabled, false) as audio_enabled,
                 p.audio_title,
+                COALESCE(p.chat_button_enabled, false) as chat_button_enabled,
+                p.chat_button_chat_id,
+                p.chat_button_label,
                 p.video_call_id,
                 p.bunny_library_id,
                 p.bunny_collection_id,
@@ -777,6 +780,9 @@ router.get('/library', requireUser, async (req, res) => {
                 p.audio_url,
                 COALESCE(p.audio_enabled, false) as audio_enabled,
                 p.audio_title,
+                COALESCE(p.chat_button_enabled, false) as chat_button_enabled,
+                p.chat_button_chat_id,
+                p.chat_button_label,
                 p.video_call_id,
                 p.direct_call_video_url,
                 p.call_photo_url,
@@ -2194,6 +2200,71 @@ router.get('/active-call', optionalUser, async (req, res) => {
     }
 });
 
+
+// =============================================================================
+// GET /api/user/notifications/feed
+// Notificações in-app (tipo 'in_app') já ENVIADAS e direcionadas a este usuário.
+// O front guarda os IDs já vistos em localStorage e só mostra o banner pros
+// novos. Retorna as recentes (últimas 48h) pra cobrir reaberturas do app.
+// =============================================================================
+router.get('/notifications/feed', optionalUser, async (req, res) => {
+    try {
+        const email = (req.user?.email || '').toLowerCase().trim().slice(0, 255) || null;
+
+        // Status de compra (só se houver e-mail) pra resolver os alvos segmentados.
+        let hasPurchased = false;
+        if (email) {
+            try {
+                const { rows } = await db.query(
+                    `SELECT COALESCE(total_purchases, 0) > 0 AS bought FROM customers WHERE LOWER(email) = $1 LIMIT 1`,
+                    [email]
+                );
+                hasPurchased = !!(rows[0] && rows[0].bought);
+            } catch (_) {}
+        }
+
+        const { rows } = await db.query(`
+            SELECT id, title, body, icon, cta_text, cta_url, target_type, target_value, sent_at
+            FROM notifications
+            WHERE type = 'in_app'
+              AND status = 'sent'
+              AND sent_at IS NOT NULL
+              AND sent_at > NOW() - INTERVAL '48 hours'
+            ORDER BY sent_at DESC
+            LIMIT 30
+        `);
+
+        const matches = (n) => {
+            const t = n.target_type || 'all';
+            if (t === 'all' || t === 'by_level') return true; // by_level sem lookup → trata como todos
+            if (t === 'has_purchased') return hasPurchased;
+            if (t === 'no_purchase') return !hasPurchased;
+            if (t === 'by_email') {
+                if (!email) return false;
+                let tv = n.target_value;
+                try { if (typeof tv === 'string') tv = JSON.parse(tv); } catch (_) { tv = null; }
+                const emails = (tv && Array.isArray(tv.emails)) ? tv.emails.map(e => String(e).toLowerCase().trim()) : [];
+                return emails.includes(email);
+            }
+            return false;
+        };
+
+        const feed = rows.filter(matches).map(n => ({
+            id: n.id,
+            title: n.title,
+            body: n.body,
+            icon: n.icon || null,
+            cta_text: n.cta_text || null,
+            cta_url: n.cta_url || null,
+            sent_at: n.sent_at,
+        }));
+
+        return res.json({ success: true, notifications: feed });
+    } catch (err) {
+        logger.error('Erro no feed de notificações:', err);
+        return res.json({ success: true, notifications: [] });
+    }
+});
 
 
 module.exports = router;

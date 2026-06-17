@@ -351,6 +351,48 @@ app.get('/f/:slug', async (req, res) => {
     res.sendFile(path.join(__dirname, 'public/app.html'));
 });
 
+// Rota "modo anúncio" — /ir/:slug
+// Pensada pra colar no anúncio do Meta (Instagram/Facebook). Quando aberta DENTRO
+// do navegador in-app do Instagram/Facebook no ANDROID, força reabrir no Chrome
+// (via intent://) — onde o pop-up de "Instalar app" (PWA) realmente funciona.
+// Em qualquer outro caso (iOS, Chrome, navegador normal), cai direto no /f/:slug.
+app.get('/ir/:slug', (req, res) => {
+    const slug = String(req.params.slug || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 80);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    const slugJson = JSON.stringify(slug); // string segura pra embutir no <script>
+    res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Abrindo…</title>
+<style>html,body{height:100%;margin:0;background:#000;color:#fff;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+.w{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px}
+.s{width:38px;height:38px;border:3px solid rgba(255,255,255,.2);border-top-color:#e50914;border-radius:50%;animation:r 1s linear infinite}
+@keyframes r{to{transform:rotate(360deg)}}
+a{color:#e50914;font-weight:700}</style></head>
+<body><div class="w"><div class="s"></div><div>Abrindo o app…</div>
+<noscript><a id="nojs" href="/f/${slug}">Toque aqui pra continuar</a></noscript></div>
+<script>(function(){
+  var slug = ${slugJson};
+  var ua = navigator.userAgent || '';
+  var isAndroid = /Android/i.test(ua);
+  // navegadores embutidos que bloqueiam a instalação do PWA
+  var inApp = /(FBAN|FBAV|FB_IAB|FBIOS|Instagram|Line\\/|Twitter|MicroMessenger|TikTok|Snapchat)/i.test(ua);
+  var host = location.host;
+  var target = location.protocol + '//' + host + '/f/' + slug;
+  function go(){ location.replace(target); }
+  if (isAndroid && inApp) {
+    var fb = encodeURIComponent(target);
+    var intent = 'intent://' + host + '/f/' + slug + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + fb + ';end';
+    try { window.location.href = intent; } catch(e) { go(); }
+    // se o Chrome não existir / intent falhar, o fallback_url já cobre; garantia extra:
+    setTimeout(go, 1500);
+  } else {
+    go();
+  }
+})();</script></body></html>`);
+});
+
 // /app mantido como alias (compatibilidade com links antigos)
 app.get('/app', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

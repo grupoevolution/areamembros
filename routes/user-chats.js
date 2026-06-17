@@ -319,7 +319,7 @@ router.get('/chats', optionalUser, async (req, res) => {
     try {
         const ident = getIdentity(req);
         const { rows: chats } = await db.query(
-            `SELECT * FROM chats WHERE active = true ORDER BY display_order, id`
+            `SELECT * FROM chats WHERE active = true AND listed = true ORDER BY display_order, id`
         );
         const out = [];
         for (const c of chats) {
