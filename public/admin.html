@@ -14999,6 +14999,24 @@ async function saveChatStep(e) {
         flow: _curChatFlow,
     };
     try {
+        // BLOCO NOVO: já vai pro fim do fluxo e, ENTRE um bloco e outro, entra um
+        // bloco de "Espera" PADRÃO de 3s automaticamente (você edita ou apaga se
+        // quiser). Não entra antes do 1º bloco, nem se o anterior/novo já for delay.
+        if (!id) {
+            const flowSteps = _curChatSteps || [];
+            const maxOrder = flowSteps.reduce((m, s) => Math.max(m, parseInt(s.step_order, 10) || 0), 0);
+            const last = flowSteps[flowSteps.length - 1];
+            const autoDelay = flowSteps.length > 0 && type !== 'delay' && (!last || last.type !== 'delay');
+            if (autoDelay) {
+                await fetch('/api/admin/chats/' + _curChatId + '/steps', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                    body: JSON.stringify({ type: 'delay', delay_seconds: 3, step_order: maxOrder + 10, flow: _curChatFlow, typing_ms: 0 }),
+                });
+                payload.step_order = maxOrder + 20;
+            } else {
+                payload.step_order = maxOrder + 10;
+            }
+        }
         const url = id ? '/api/admin/chats/'+_curChatId+'/steps/'+id : '/api/admin/chats/'+_curChatId+'/steps';
         const r = await fetch(url, { method: id ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payload) });
         const data = await r.json();
