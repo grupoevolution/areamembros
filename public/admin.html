@@ -6043,9 +6043,12 @@ a { color: inherit; text-decoration: none; }
                         <div style="padding:20px 24px; display:flex; flex-direction:column; gap:14px;">
                             <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Tipo</label>
                                 <select class="form-control" id="stepType" style="width:100%;" onchange="updateStepFields()">
-                                    <option value="video_call">📞 Disparar chamada de vídeo</option>
                                     <option value="notification">🔔 Notificação dentro do app</option>
+                                    <option value="chat">💬 Iniciar conversa (modelo manda mensagem)</option>
+                                    <option value="navigate">➡️ Levar pra algo (produto / conversa / link)</option>
+                                    <option value="wait">⏱️ Só espera (pausa entre os passos)</option>
                                     <option value="push">📲 Push no celular (chega com o app FECHADO)</option>
+                                    <option value="video_call">📞 Disparar chamada de vídeo</option>
                                     <option value="open_product">📦 Abrir produto</option>
                                 </select>
                             </div>
@@ -6058,6 +6061,17 @@ a { color: inherit; text-decoration: none; }
                             </div>
                             <div id="stepProductWrap" style="display:none;"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Produto</label>
                                 <select class="form-control" id="stepProductSelect" style="width:100%;"><option value="">— selecione —</option></select>
+                            </div>
+                            <div id="stepChatWrap" style="display:none;"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Conversa</label>
+                                <select class="form-control" id="stepChatSelect" style="width:100%;"><option value="">— selecione —</option></select>
+                                <div id="stepChatMsgWrap"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin:10px 0 4px;">Texto da notificação (opcional)</label>
+                                    <input class="form-control" id="stepChatMsg" maxlength="500" placeholder="enviou uma mensagem pra você" style="width:100%;"/>
+                                    <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">A conversa começa sozinha (fica no histórico) e o cliente recebe o banner com a foto da modelo.</div>
+                                </div>
+                            </div>
+                            <div id="stepNavLinkWrap" style="display:none;"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Ou um link / caminho (opcional)</label>
+                                <input class="form-control" id="stepNavLink" maxlength="1000" placeholder="/ · /?p=12 · /?chat=3 · https://..." style="width:100%;"/>
+                                <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">Produto tem prioridade, depois conversa, depois o link.</div>
                             </div>
                             <div id="stepNotifWrap" style="display:none;">
                                 <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Título</label>
@@ -14342,9 +14356,14 @@ async function loadFunnelSteps(funnelId) {
             return;
         }
         list.innerHTML = data.steps.map((s, idx) => {
-            const icon = s.type === 'video_call' ? '📞' : (s.type === 'open_product' ? '📦' : (s.type === 'push' ? '📲' : '🔔'));
+            const icon = s.type === 'video_call' ? '📞' : s.type === 'open_product' ? '📦'
+                       : s.type === 'push' ? '📲' : s.type === 'chat' ? '💬'
+                       : s.type === 'navigate' ? '➡️' : s.type === 'wait' ? '⏱️' : '🔔';
             const sub = s.type === 'video_call' ? (s.video_call_name || 'Chamada')
                       : s.type === 'open_product' ? (s.product_name || 'Produto')
+                      : s.type === 'chat' ? ('Conversa: ' + (s.chat_name || 'chat'))
+                      : s.type === 'navigate' ? ('Levar pra ' + (s.product_name || s.chat_name || s.link_url || 'algo'))
+                      : s.type === 'wait' ? 'Só espera'
                       : (s.title || (s.type === 'push' ? 'Push' : 'Notificação'));
             const delay = s.delay_seconds < 60 ? s.delay_seconds+'s'
                         : s.delay_seconds < 3600 ? Math.round(s.delay_seconds/60)+'min'
@@ -14364,26 +14383,34 @@ async function loadFunnelSteps(funnelId) {
 window.updateStepFields = function() {
     const t = document.getElementById('stepType').value;
     const isMsg = (t === 'notification' || t === 'push');
+    const isChat = (t === 'chat');
+    const isNav = (t === 'navigate');
     document.getElementById('stepCallWrap').style.display = t === 'video_call' ? 'block' : 'none';
-    document.getElementById('stepProductWrap').style.display = t === 'open_product' ? 'block' : 'none';
+    document.getElementById('stepProductWrap').style.display = (t === 'open_product' || isNav) ? 'block' : 'none';
     document.getElementById('stepNotifWrap').style.display = isMsg ? 'block' : 'none';
+    document.getElementById('stepChatWrap').style.display = (isChat || isNav) ? 'block' : 'none';
+    // o campo "texto da notificação" só faz sentido pro tipo 'chat' (não pra navegar)
+    const cmw = document.getElementById('stepChatMsgWrap'); if (cmw) cmw.style.display = isChat ? 'block' : 'none';
+    document.getElementById('stepNavLinkWrap').style.display = isNav ? 'block' : 'none';
     // Popular dropdowns
     if (t === 'video_call') {
         fetch('/api/admin/calls', { credentials:'include' }).then(r => r.json()).then(data => {
             const sel = document.getElementById('stepCallSelect');
             sel.innerHTML = '<option value="">— selecione —</option>' + (data.calls||[]).map(c => '<option value="'+c.id+'">'+escHtmlAdmin(c.model_name)+' ('+escHtmlAdmin(c.name)+')</option>').join('');
         });
-    } else if (t === 'open_product') {
+    }
+    if (t === 'open_product' || isNav || isMsg) {
         fetch('/api/admin/products', { credentials:'include' }).then(r => r.json()).then(data => {
-            const sel = document.getElementById('stepProductSelect');
-            sel.innerHTML = '<option value="">— selecione —</option>' + (data.products||[]).map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
+            const opts = '<option value="">— ' + (isMsg ? 'nenhum produto' : 'selecione') + ' —</option>' + (data.products||[]).map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
+            const psel = document.getElementById('stepProductSelect'); if (psel && (t === 'open_product' || isNav)) { const cur = psel.value; psel.innerHTML = opts.replace('nenhum produto','selecione'); if (cur) psel.value = cur; }
+            const lsel = document.getElementById('stepLinkProductSelect'); if (lsel && isMsg) { const cur = lsel.value; lsel.innerHTML = '<option value="">— nenhum produto —</option>' + (data.products||[]).map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join(''); if (cur) lsel.value = cur; }
         });
     }
-    if (isMsg) {
-        fetch('/api/admin/products', { credentials:'include' }).then(r => r.json()).then(data => {
-            const sel = document.getElementById('stepLinkProductSelect');
+    if (isChat || isNav) {
+        fetch('/api/admin/chats', { credentials:'include' }).then(r => r.json()).then(data => {
+            const sel = document.getElementById('stepChatSelect');
             const cur = sel.value;
-            sel.innerHTML = '<option value="">— nenhum produto —</option>' + (data.products||[]).map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
+            sel.innerHTML = '<option value="">— selecione —</option>' + (data.chats||[]).map(c => '<option value="'+c.id+'">'+escHtmlAdmin(c.name || ('Chat '+c.id))+(c.listed === false ? ' (oculto)' : '')+'</option>').join('');
             if (cur) sel.value = cur;
         });
     }
@@ -14395,7 +14422,7 @@ function openStepModal() {
     document.getElementById('stepId').value = '';
     document.getElementById('stepForm').reset();
     document.getElementById('stepDelay').value = 5;
-    document.getElementById('stepType').value = 'video_call';
+    document.getElementById('stepType').value = 'notification';
     updateStepFields();
     document.getElementById('stepModalBackdrop').style.display = 'flex';
 }
@@ -14409,11 +14436,14 @@ function editStep(s) {
     document.getElementById('stepNotifTitle').value = s.title || '';
     document.getElementById('stepNotifMsg').value = s.message || '';
     document.getElementById('stepLinkUrl').value = s.link_url || '';
+    document.getElementById('stepChatMsg').value = (s.type === 'chat' ? (s.message || '') : '');
+    document.getElementById('stepNavLink').value = (s.type === 'navigate' ? (s.link_url || '') : '');
     updateStepFields();
     setTimeout(() => {
         if (s.video_call_id) document.getElementById('stepCallSelect').value = s.video_call_id;
-        if (s.product_id && s.type === 'open_product') document.getElementById('stepProductSelect').value = s.product_id;
+        if (s.product_id && (s.type === 'open_product' || s.type === 'navigate')) document.getElementById('stepProductSelect').value = s.product_id;
         if (s.product_id && (s.type === 'notification' || s.type === 'push')) document.getElementById('stepLinkProductSelect').value = s.product_id;
+        if (s.chat_id && (s.type === 'chat' || s.type === 'navigate')) document.getElementById('stepChatSelect').value = s.chat_id;
     }, 300);
     document.getElementById('stepModalBackdrop').style.display = 'flex';
 }
@@ -14424,8 +14454,14 @@ async function saveStep(e) {
     const id = document.getElementById('stepId').value;
     const type = document.getElementById('stepType').value;
     const isMsg = (type === 'notification' || type === 'push');
+    const isChat = (type === 'chat');
+    const isNav = (type === 'navigate');
     if (isMsg && !document.getElementById('stepNotifTitle').value.trim()) {
         alert('Título é obrigatório pra notificação/push.');
+        return false;
+    }
+    if (isChat && !document.getElementById('stepChatSelect').value) {
+        alert('Escolha a conversa que vai iniciar.');
         return false;
     }
     const payload = {
@@ -14433,11 +14469,17 @@ async function saveStep(e) {
         delay_seconds: parseInt(document.getElementById('stepDelay').value, 10) || 0,
         video_call_id: type === 'video_call' ? (document.getElementById('stepCallSelect').value || null) : null,
         product_id: type === 'open_product' ? (document.getElementById('stepProductSelect').value || null)
+                  : isNav ? (document.getElementById('stepProductSelect').value || null)
                   : isMsg ? (document.getElementById('stepLinkProductSelect').value || null)
                   : null,
+        chat_id: (isChat || isNav) ? (document.getElementById('stepChatSelect').value || null) : null,
         title: isMsg ? document.getElementById('stepNotifTitle').value.trim() : null,
-        message: isMsg ? document.getElementById('stepNotifMsg').value.trim() : null,
-        link_url: isMsg ? (document.getElementById('stepLinkUrl').value.trim() || null) : null,
+        message: isMsg ? document.getElementById('stepNotifMsg').value.trim()
+               : isChat ? (document.getElementById('stepChatMsg').value.trim() || null)
+               : null,
+        link_url: isMsg ? (document.getElementById('stepLinkUrl').value.trim() || null)
+                : isNav ? (document.getElementById('stepNavLink').value.trim() || null)
+                : null,
     };
     try {
         const url = id

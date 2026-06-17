@@ -287,10 +287,12 @@ router.get('/:id/steps', requireAdmin, async (req, res) => {
         const { rows } = await db.query(`
             SELECT fs.*,
                    vc.model_name AS video_call_name,
-                   p.name AS product_name
+                   p.name AS product_name,
+                   ch.name AS chat_name
             FROM funnel_steps fs
             LEFT JOIN video_calls vc ON vc.id = fs.video_call_id
             LEFT JOIN products p ON p.id = fs.product_id
+            LEFT JOIN chats ch ON ch.id = fs.chat_id
             WHERE fs.funnel_id = $1
             ORDER BY fs.step_order, fs.id
         `, [id]);
@@ -306,18 +308,21 @@ router.post('/:id/steps', requireAdmin, async (req, res) => {
     const funnelId = parseInt(req.params.id, 10);
     if (!funnelId) return res.status(400).json({ success: false, error: 'ID inválido' });
     try {
-        const { type, delay_seconds, video_call_id, product_id, title, message, link_url, step_order, active } = req.body || {};
-        // 'push' = web push enviado pelo SERVIDOR no horário (chega com app fechado)
-        const validTypes = ['video_call', 'notification', 'open_product', 'push'];
+        const { type, delay_seconds, video_call_id, product_id, chat_id, title, message, link_url, step_order, active } = req.body || {};
+        // Tipos: 'notification' (banner in-app) · 'chat' (inicia conversa) ·
+        // 'navigate'/'open_product' (leva pra algo) · 'wait' (só espera) ·
+        // 'push' (web push do SERVIDOR) · 'video_call'.
+        const validTypes = ['video_call', 'notification', 'open_product', 'push', 'chat', 'navigate', 'wait'];
         const t = validTypes.includes(type) ? type : 'notification';
         const delay = Math.max(0, parseInt(delay_seconds, 10) || 0);
         const vcId = video_call_id ? parseInt(video_call_id, 10) : null;
         const pId = product_id ? parseInt(product_id, 10) : null;
+        const chId = chat_id ? parseInt(chat_id, 10) : null;
         const order = parseInt(step_order, 10) || 0;
         const { rows } = await db.query(`
-            INSERT INTO funnel_steps (funnel_id, type, delay_seconds, video_call_id, product_id, title, message, link_url, step_order, active)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *
-        `, [funnelId, t, delay, vcId, pId, (title||'').trim().slice(0,120) || null, (message||'').trim().slice(0,500) || null, (link_url||'').trim().slice(0,1000) || null, order, active !== false]);
+            INSERT INTO funnel_steps (funnel_id, type, delay_seconds, video_call_id, product_id, chat_id, title, message, link_url, step_order, active)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *
+        `, [funnelId, t, delay, vcId, pId, chId, (title||'').trim().slice(0,120) || null, (message||'').trim().slice(0,500) || null, (link_url||'').trim().slice(0,1000) || null, order, active !== false]);
         return res.json({ success: true, step: rows[0] });
     } catch (err) {
         logger.error('Erro criando etapa:', err);
@@ -330,15 +335,16 @@ router.put('/:id/steps/:stepId', requireAdmin, async (req, res) => {
     const stepId = parseInt(req.params.stepId, 10);
     if (!stepId) return res.status(400).json({ success: false, error: 'ID inválido' });
     try {
-        const { type, delay_seconds, video_call_id, product_id, title, message, link_url, step_order, active } = req.body || {};
+        const { type, delay_seconds, video_call_id, product_id, chat_id, title, message, link_url, step_order, active } = req.body || {};
         const updates = []; const values = []; let p = 1;
         if (type !== undefined) {
-            const valid = ['video_call', 'notification', 'open_product', 'push'];
+            const valid = ['video_call', 'notification', 'open_product', 'push', 'chat', 'navigate', 'wait'];
             updates.push(`type = $${p++}`); values.push(valid.includes(type) ? type : 'notification');
         }
         if (delay_seconds !== undefined) { updates.push(`delay_seconds = $${p++}`); values.push(Math.max(0, parseInt(delay_seconds, 10) || 0)); }
         if (video_call_id !== undefined) { updates.push(`video_call_id = $${p++}`); values.push(video_call_id ? parseInt(video_call_id, 10) : null); }
         if (product_id !== undefined) { updates.push(`product_id = $${p++}`); values.push(product_id ? parseInt(product_id, 10) : null); }
+        if (chat_id !== undefined) { updates.push(`chat_id = $${p++}`); values.push(chat_id ? parseInt(chat_id, 10) : null); }
         if (title !== undefined) { updates.push(`title = $${p++}`); values.push((title || '').trim().slice(0, 120) || null); }
         if (message !== undefined) { updates.push(`message = $${p++}`); values.push((message || '').trim().slice(0, 500) || null); }
         if (link_url !== undefined) { updates.push(`link_url = $${p++}`); values.push((link_url || '').trim().slice(0, 1000) || null); }

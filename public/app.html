@@ -16038,14 +16038,43 @@ function executeFunnelStep(step, funnelSlug, email) {
             } catch(_) {}
         } else if (step.type === 'open_product' && step.product_id) {
             if (typeof openProductPage === 'function') openProductPage(step.product_id);
+        } else if (step.type === 'navigate') {
+            // Leva o lead pra algo: produto (product_id), chat (chat_id) ou link_url
+            if (step.product_id && typeof openProductPage === 'function') openProductPage(step.product_id);
+            else if (step.chat_id && window.ChatApp) ChatApp.open(step.chat_id);
+            else if (step.link_url && typeof mvNavigate === 'function') mvNavigate(step.link_url);
+        } else if (step.type === 'chat' && step.chat_id) {
+            // Inicia a conversa em background (fica no hist\u00f3rico) e dispara o banner.
+            const cid = parseInt(step.chat_id, 10);
+            let vid = ''; try { vid = localStorage.getItem('mv_chat_visitor') || ''; } catch (_) {}
+            fetch('/api/user/chats/' + cid + '/start', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', body: JSON.stringify({ visitor_id: vid }),
+            }).then(r => r.json()).then(d => {
+                const nm = (d && d.chat && d.chat.name) || step.chat_name || 'Mensagem';
+                const av = (d && d.chat && d.chat.avatar_url) || step.chat_avatar || null;
+                if (window.MVNotify) MVNotify.push({
+                    title: nm,
+                    body: step.message || 'enviou uma mensagem pra voc\u00ea',
+                    avatar: av, icon: '\ud83d\udcac',
+                    onClick: () => { if (window.ChatApp) ChatApp.open(cid); },
+                });
+            }).catch(() => {});
         } else if (step.type === 'notification') {
-            // Notifica\u00e7\u00e3o in-app com DESTINO: clique abre produto (product_id)
-            // ou o link configurado no painel (link_url)
-            showFunnelNotification(step.title || 'Aviso', step.message || '', {
-                product_id: step.product_id || null,
-                url: step.link_url || null,
-            });
+            // Notifica\u00e7\u00e3o in-app (banner estilo celular) com DESTINO ao clicar.
+            const dest = step.link_url || (step.product_id ? '/?p=' + step.product_id : (step.chat_id ? '/?chat=' + step.chat_id : null));
+            if (window.MVNotify) {
+                MVNotify.push({
+                    title: step.title || 'Novidade pra voc\u00ea',
+                    body: step.message || '',
+                    icon: '\ud83d\udd14',
+                    onClick: dest ? () => mvNavigate(dest) : null,
+                });
+            } else {
+                showFunnelNotification(step.title || 'Aviso', step.message || '', { product_id: step.product_id || null, url: step.link_url || null });
+            }
         }
+        // type === 'wait' \u2192 s\u00f3 o atraso, nenhuma a\u00e7\u00e3o
     } catch(_) {}
 }
 

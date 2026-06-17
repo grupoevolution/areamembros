@@ -1855,19 +1855,27 @@ async function scheduleFunnelPushes(slug, email) {
     const e = String(email || '').toLowerCase().trim().slice(0, 255);
     if (!s || !e || e.endsWith('@preview.local')) return;
     try {
+        // 'push' SEMPRE é do servidor. 'notification' e 'chat' também ganham um
+        // push de fallback (chega com o app fechado); se o app estiver aberto, o
+        // runner in-app já mostra o banner — o push só reativa quem saiu.
         await db.query(`
             INSERT INTO funnel_scheduled_pushes (funnel_id, step_id, customer_email, title, message, url, send_at)
             SELECT fs.funnel_id, fs.id, $2,
-                   COALESCE(fs.title, 'Novidade pra você'),
-                   fs.message,
+                   CASE WHEN fs.type = 'chat' THEN COALESCE(ch.name, 'Mensagem nova')
+                        ELSE COALESCE(fs.title, 'Novidade pra você') END,
+                   CASE WHEN fs.type = 'chat' THEN COALESCE(NULLIF(fs.message, ''), 'enviou uma mensagem pra você')
+                        ELSE fs.message END,
                    COALESCE(
                        fs.link_url,
-                       CASE WHEN fs.product_id IS NOT NULL THEN '/?p=' || fs.product_id ELSE NULL END
+                       CASE WHEN fs.product_id IS NOT NULL THEN '/?p=' || fs.product_id
+                            WHEN fs.chat_id IS NOT NULL THEN '/?chat=' || fs.chat_id ELSE NULL END
                    ),
                    NOW() + make_interval(secs => fs.delay_seconds)
             FROM funnel_steps fs
             JOIN funnels f ON f.id = fs.funnel_id
-            WHERE f.slug = $1 AND f.active = true AND fs.active = true AND fs.type = 'push'
+            LEFT JOIN chats ch ON ch.id = fs.chat_id
+            WHERE f.slug = $1 AND f.active = true AND fs.active = true
+              AND fs.type IN ('push', 'notification', 'chat')
             ON CONFLICT DO NOTHING
         `, [s, e]);
     } catch (err) {
@@ -2064,7 +2072,8 @@ router.get('/funnel/:slug/sequence', async (req, res) => {
         // (worker) no horário agendado — agendadas na conversão do lead.
         const { rows: steps } = await db.query(`
             SELECT fs.id, fs.type, fs.delay_seconds, fs.video_call_id, fs.product_id,
-                   fs.title, fs.message, fs.link_url,
+                   fs.chat_id, fs.title, fs.message, fs.link_url,
+                   ch.name AS chat_name, ch.avatar_url AS chat_avatar,
                    (
                        SELECT json_build_object(
                            'id', vc.id, 'slug', vc.slug, 'category', vc.category,
@@ -2076,6 +2085,7 @@ router.get('/funnel/:slug/sequence', async (req, res) => {
                        ) FROM video_calls vc WHERE vc.id = fs.video_call_id AND vc.active = true
                    ) AS video_call
             FROM funnel_steps fs
+            LEFT JOIN chats ch ON ch.id = fs.chat_id
             WHERE fs.funnel_id = $1 AND fs.active = true AND fs.type <> 'push'
             ORDER BY fs.step_order, fs.id
         `, [funnelId]);
