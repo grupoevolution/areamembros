@@ -9235,6 +9235,12 @@ window.ChatApp = (function() {
     }
 
     // ── GATE de mídia (funil principal): e-mail → instalar PWA → libera ──
+    // Navegador interno (Instagram/Facebook/TikTok/etc.): NÃO dá pra instalar PWA
+    // ali (o beforeinstallprompt nunca dispara). Detecta pra guiar o lead pro Chrome.
+    function isInAppBrowser() {
+        const ua = navigator.userAgent || '';
+        return /FBAN|FBAV|FB_IAB|FBIOS|Instagram|Line\/|Twitter|MicroMessenger|TikTok|musical_ly|Snapchat|Pinterest|Kwai/i.test(ua);
+    }
     function isStandalone() {
         try { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true || localStorage.getItem('mv_pwa_installed') === '1'; }
         catch (_) { return false; }
@@ -9314,15 +9320,8 @@ window.ChatApp = (function() {
     }
     function gateInstall(action) {
         if (isStandalone() || _gateInstalled) { closeGate(); action(); return; }
-        const dp = window.deferredPrompt;
         const nome = (CUR && CUR.chat && CUR.chat.name) ? esc(CUR.chat.name) : 'ela';
-        gateOverlay(
-            '<div style="width:56px;height:56px;border-radius:16px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;font-weight:800;color:#fff;">M</div>'
-            + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">Falta um passo</div>'
-            + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:16px;">Adicione o app à tela inicial pra abrir o conteúdo e receber as mensagens de ' + nome + ' aqui no celular. É só um toque.</div>'
-            + '<button id="caGateInstall" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;">Adicionar e ver</button>'
-            + '<button id="caGateSkip" style="width:100%;background:none;border:none;color:#999;font-size:13px;padding:11px;margin-top:4px;cursor:pointer;">Continuar mesmo assim</button>'
-        );
+        const LOGO = '<div style="width:56px;height:56px;border-radius:16px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;font-weight:800;color:#fff;">M</div>';
         // Ao prosseguir: pede permissão de notificação e registra a subscription,
         // pra modelo conseguir "chamar de volta" no celular mesmo com o app fechado.
         const proceed = () => {
@@ -9333,21 +9332,52 @@ window.ChatApp = (function() {
                 }
             } catch (_) {}
         };
-        // Instrução manual (iOS sempre; Android quando o prompt automático não
-        // está disponível — critério não atendido, já dispensado, ou in-app browser).
+        // Passo numerado (visual) pro público leigo.
+        const stepRow = (n, html) => '<div style="display:flex;align-items:flex-start;gap:10px;text-align:left;margin-bottom:9px;">'
+            + '<span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:#e50914;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">' + n + '</span>'
+            + '<span style="font-size:13px;color:#444;line-height:1.5;">' + html + '</span></div>';
+        // No navegador do Instagram/Facebook NÃO dá pra instalar — guia pro Chrome.
+        // É o momento certo: o lead já se interessou (clicou pra ver a mídia).
+        function showChromeGuide() {
+            gateOverlay(
+                LOGO
+                + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">Abra no navegador pra ver</div>'
+                + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:14px;">Você está dentro do Instagram. Pra abrir o conteúdo e receber as mensagens de ' + nome + ', abra no navegador do celular:</div>'
+                + stepRow(1, 'Toque no menu <b>⋮</b> no canto de cima da tela')
+                + stepRow(2, 'Escolha <b>"Abrir no Chrome"</b> (ou "Abrir no navegador")')
+                + '<button id="caGuideDone" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;margin-top:6px;">Já abri — continuar</button>'
+                + '<button id="caGuideSkip" style="width:100%;background:none;border:none;color:#999;font-size:13px;padding:11px;margin-top:2px;cursor:pointer;">Continuar mesmo assim</button>'
+            );
+            document.getElementById('caGuideDone').addEventListener('click', proceed);
+            document.getElementById('caGuideSkip').addEventListener('click', proceed);
+        }
+        // Instrução manual de instalar (iOS sempre; Android quando o prompt
+        // automático não veio — critério não atendido ou já dispensado).
         function showManualInstall() {
             const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
             const steps = isIOS
-                ? 'Toque no botão <b>Compartilhar</b> <span style="font-size:16px;">⬆️</span> do navegador e depois em <b>"Adicionar à Tela de Início"</b>.'
-                : 'Toque no menu <b>⋮</b> do navegador (canto superior) e depois em <b>"Adicionar à tela inicial"</b> ou <b>"Instalar app"</b>.';
+                ? stepRow(1, 'Toque no botão <b>Compartilhar</b> do navegador (quadrado com seta pra cima)')
+                  + stepRow(2, 'Role e toque em <b>"Adicionar à Tela de Início"</b>')
+                : stepRow(1, 'Toque no menu <b>⋮</b> do navegador (canto de cima)')
+                  + stepRow(2, 'Toque em <b>"Instalar app"</b> ou <b>"Adicionar à tela inicial"</b>');
             gateOverlay(
-                '<div style="width:56px;height:56px;border-radius:16px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;font-weight:800;color:#fff;">M</div>'
-                + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">Adicionar à tela inicial</div>'
-                + '<div style="font-size:13px;color:#777;line-height:1.6;margin-bottom:16px;">' + steps + '</div>'
-                + '<button id="caManualDone" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;">Já adicionei — continuar</button>'
+                LOGO
+                + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:12px;">Adicionar à tela inicial</div>'
+                + steps
+                + '<button id="caManualDone" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;margin-top:6px;">Já adicionei — continuar</button>'
             );
             document.getElementById('caManualDone').addEventListener('click', proceed);
         }
+        // Webview do Meta → caminho do Chrome direto (instalar é impossível ali).
+        if (isInAppBrowser()) { showChromeGuide(); return; }
+        // Navegador normal → 1 toque (se o prompt existir) com fallback manual.
+        gateOverlay(
+            LOGO
+            + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">Falta um passo</div>'
+            + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:16px;">Adicione o app à tela inicial pra abrir o conteúdo e receber as mensagens de ' + nome + ' aqui no celular. É só um toque.</div>'
+            + '<button id="caGateInstall" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;">Adicionar e ver</button>'
+            + '<button id="caGateSkip" style="width:100%;background:none;border:none;color:#999;font-size:13px;padding:11px;margin-top:4px;cursor:pointer;">Continuar mesmo assim</button>'
+        );
         document.getElementById('caGateInstall').addEventListener('click', () => {
             const dp2 = window.deferredPrompt; // relê na hora do clique (pode ter chegado depois)
             if (dp2 && dp2.prompt) {
