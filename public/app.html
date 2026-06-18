@@ -9674,6 +9674,7 @@ window.ChatApp = (function() {
 window.MVNotify = (function() {
     let el = null, hideT = null, queue = [], showing = false;
     let touchY = null;
+    const recent = {}; // dedupe: evita banner idêntico em janela curta (poller + push)
     // Som de notificação (2 tons) sintetizado — sem precisar de arquivo.
     function ding() {
         try {
@@ -9724,7 +9725,13 @@ window.MVNotify = (function() {
         clearTimeout(hideT);
         hideT = setTimeout(hide, n.duration || 8000);
     }
-    function push(n) { queue.push(n); if (!showing) next(); }
+    function push(n) {
+        const key = (n.title || '') + '|' + (n.body || '');
+        const now = Date.now();
+        if (recent[key] && (now - recent[key]) < 10000) return; // já mostrou agora há pouco
+        recent[key] = now;
+        queue.push(n); if (!showing) next();
+    }
     return { push };
 })();
 
@@ -9740,6 +9747,24 @@ function mvNavigate(url) {
         if (url === '/' || url === '') { if (typeof switchScreen === 'function') switchScreen('home'); return; }
         window.location.href = url;
     } catch (_) {}
+}
+
+// App ABERTO + chega push do servidor → o service worker NÃO mostra a notificação
+// nativa (evita dobrar); manda pra cá e a gente mostra o banner in-app (WhatsApp-like).
+if (navigator.serviceWorker) {
+    navigator.serviceWorker.addEventListener('message', (ev) => {
+        const d = ev.data;
+        if (!d || d.type !== 'mv-push-foreground' || !d.payload) return;
+        const p = d.payload;
+        const avatar = (p.icon && p.icon.indexOf('/assets/') === -1) ? p.icon : null;
+        if (window.MVNotify) MVNotify.push({
+            title: p.title || 'Nova mensagem',
+            body: p.body || '',
+            avatar: avatar,
+            icon: '💬',
+            onClick: p.url ? () => mvNavigate(p.url) : null,
+        });
+    });
 }
 
 // Poller global: (a) mensagens novas de chat fora da conversa aberta, (b) campanhas

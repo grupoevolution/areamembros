@@ -167,7 +167,17 @@ self.addEventListener('push', (event) => {
         data: { url: payload.url || '/', type: payload.type },
         actions: payload.actions || [],
     };
-    event.waitUntil(self.registration.showNotification(payload.title || 'Membros VIP', options));
+    // Estilo WhatsApp: se o app está ABERTO e em foco, NÃO dispara a notificação
+    // nativa — manda pro app mostrar o banner in-app (evita notificação dobrada).
+    // App fechado/minimizado → notificação nativa normal.
+    event.waitUntil((async () => {
+        const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        const focused = wins.find(w => w.focused) || wins.find(w => w.visibilityState === 'visible');
+        if (focused) {
+            try { focused.postMessage({ type: 'mv-push-foreground', payload }); return; } catch (_) {}
+        }
+        return self.registration.showNotification(payload.title || 'Membros VIP', options);
+    })());
 });
 
 self.addEventListener('notificationclick', (event) => {
