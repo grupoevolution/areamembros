@@ -371,25 +371,37 @@ app.get('/ir/:slug', (req, res) => {
 @keyframes r{to{transform:rotate(360deg)}}
 a{color:#e50914;font-weight:700}</style></head>
 <body><div class="w"><div class="s"></div><div>Abrindo o app…</div>
-<noscript><a id="nojs" href="/f/${slug}">Toque aqui pra continuar</a></noscript></div>
+<a id="manual" href="/f/${slug}" style="display:none">Toque aqui pra continuar</a>
+<noscript><a href="/f/${slug}">Toque aqui pra continuar</a></noscript></div>
 <script>(function(){
   var slug = ${slugJson};
   var ua = navigator.userAgent || '';
   var isAndroid = /Android/i.test(ua);
-  // navegadores embutidos que bloqueiam a instalação do PWA
-  var inApp = /(FBAN|FBAV|FB_IAB|FBIOS|Instagram|Line\\/|Twitter|MicroMessenger|TikTok|Snapchat)/i.test(ua);
+  // navegadores embutidos (Instagram/Facebook/etc.) onde tentamos pular pro Chrome
+  var inApp = /(FBAN|FBAV|FB_IAB|FBIOS|Instagram|Line\\/|Twitter|MicroMessenger|TikTok|Snapchat|Kwai)/i.test(ua);
   var host = location.host;
   var target = location.protocol + '//' + host + '/f/' + slug;
-  function go(){ location.replace(target); }
+  var done = false;
+  function go(){ if (done) return; done = true; try { location.replace(target); } catch(e){ try { location.href = target; } catch(_){} } }
   if (isAndroid && inApp) {
-    var fb = encodeURIComponent(target);
-    var intent = 'intent://' + host + '/f/' + slug + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + fb + ';end';
-    try { window.location.href = intent; } catch(e) { go(); }
-    // se o Chrome não existir / intent falhar, o fallback_url já cobre; garantia extra:
-    setTimeout(go, 1500);
+    // Tenta abrir no Chrome via intent — mas num IFRAME, pra NÃO derrubar/travar
+    // a página se o webview não suportar (era o que deixava "Abrindo…" parado).
+    try {
+      var fb = encodeURIComponent(target);
+      var intent = 'intent://' + host + '/f/' + slug + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + fb + ';end';
+      var ifr = document.createElement('iframe');
+      ifr.style.display = 'none';
+      document.body.appendChild(ifr);
+      ifr.src = intent;
+    } catch(e){}
+    // SEMPRE garante o app: se o Chrome não abrir (sem gesto / bloqueado), cai no /f/slug.
+    setTimeout(go, 2000);
   } else {
     go();
   }
+  // redes de segurança: nunca deixa o lead preso na tela "Abrindo…"
+  setTimeout(go, 4000);
+  setTimeout(function(){ var m = document.getElementById('manual'); if (m && !done) m.style.display = 'inline-block'; }, 3000);
 })();</script></body></html>`);
 });
 
