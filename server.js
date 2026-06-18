@@ -362,46 +362,63 @@ app.get('/ir/:slug', (req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     const slugJson = JSON.stringify(slug); // string segura pra embutir no <script>
     res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
-<title>Abrindo…</title>
-<style>html,body{height:100%;margin:0;background:#000;color:#fff;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
-.w{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px}
-.s{width:38px;height:38px;border:3px solid rgba(255,255,255,.2);border-top-color:#e50914;border-radius:50%;animation:r 1s linear infinite}
+<title>Seu acesso</title>
+<style>
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#0a0a0b;color:#fff;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+.w{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:28px}
+.logo{width:62px;height:62px;border-radius:18px;background:#e50914;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800}
+.t{font-size:22px;font-weight:800;line-height:1.2}
+.sub{font-size:14px;color:rgba(255,255,255,.65);line-height:1.5;max-width:300px}
+.btn{margin-top:6px;width:100%;max-width:340px;background:#e50914;border:none;color:#fff;font-size:17px;font-weight:800;padding:17px;border-radius:14px;cursor:pointer;box-shadow:0 8px 26px rgba(229,9,20,.4)}
+.btn:active{transform:scale(.98)}
+.s{width:34px;height:34px;border:3px solid rgba(255,255,255,.2);border-top-color:#e50914;border-radius:50%;animation:r 1s linear infinite}
 @keyframes r{to{transform:rotate(360deg)}}
-a{color:#e50914;font-weight:700}</style></head>
-<body><div class="w"><div class="s"></div><div>Abrindo o app…</div>
-<a id="manual" href="/f/${slug}" style="display:none">Toque aqui pra continuar</a>
-<noscript><a href="/f/${slug}">Toque aqui pra continuar</a></noscript></div>
+.hint{font-size:12px;color:rgba(255,255,255,.4)}
+a{color:#e50914;font-weight:700;text-decoration:none}
+</style></head>
+<body>
+<div class="w" id="splash" style="display:none">
+  <div class="logo">M</div>
+  <div class="t">Seu acesso está pronto 🔥</div>
+  <div class="sub">Toque pra abrir o app e ver tudo que preparei pra você.</div>
+  <button class="btn" id="enter">ABRIR AGORA</button>
+  <a href="/f/${slug}" id="manual" class="hint" style="display:none">ou toque aqui pra continuar</a>
+</div>
+<div class="w" id="loading"><div class="s"></div><div>Abrindo…</div></div>
+<noscript><div class="w"><a href="/f/${slug}">Toque aqui pra continuar</a></div></noscript>
 <script>(function(){
   var slug = ${slugJson};
   var ua = navigator.userAgent || '';
   var isAndroid = /Android/i.test(ua);
-  // navegadores embutidos (Instagram/Facebook/etc.) onde tentamos pular pro Chrome
+  // navegadores embutidos (Instagram/Facebook/etc.): só aqui precisamos do toque
+  // pra pular pro Chrome (onde dá pra INSTALAR o app). Fora deles, abre direto.
   var inApp = /(FBAN|FBAV|FB_IAB|FBIOS|Instagram|Line\\/|Twitter|MicroMessenger|TikTok|Snapchat|Kwai)/i.test(ua);
   var host = location.host;
   var target = location.protocol + '//' + host + '/f/' + slug;
   var done = false;
   function go(){ if (done) return; done = true; try { location.replace(target); } catch(e){ try { location.href = target; } catch(_){} } }
-  if (isAndroid && inApp) {
-    // Tenta abrir no Chrome via intent — mas num IFRAME, pra NÃO derrubar/travar
-    // a página se o webview não suportar (era o que deixava "Abrindo…" parado).
+  function toChrome(){
+    // Disparado por UM TOQUE (gesto) → o Android aceita abrir o Chrome.
     try {
-      var fb = encodeURIComponent(target);
-      var intent = 'intent://' + host + '/f/' + slug + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + fb + ';end';
-      var ifr = document.createElement('iframe');
-      ifr.style.display = 'none';
-      document.body.appendChild(ifr);
-      ifr.src = intent;
+      var intent = 'intent://' + host + '/f/' + slug + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(target) + ';end';
+      window.location.href = intent;
     } catch(e){}
-    // SEMPRE garante o app: se o Chrome não abrir (sem gesto / bloqueado), cai no /f/slug.
-    setTimeout(go, 2000);
+    // se o Chrome não abrir (sem Chrome / bloqueado), garante o app no próprio navegador
+    setTimeout(go, 2500);
+    setTimeout(function(){ var m = document.getElementById('manual'); if (m && !done) m.style.display = 'inline-block'; }, 2500);
+  }
+  if (isAndroid && inApp) {
+    // mostra a tela de entrada; o 1º toque (ABRIR AGORA) leva pro Chrome
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('splash').style.display = 'flex';
+    document.getElementById('enter').addEventListener('click', toChrome);
   } else {
+    // navegador normal (Chrome/Safari) ou iOS → abre o app direto, sem fricção
     go();
   }
-  // redes de segurança: nunca deixa o lead preso na tela "Abrindo…"
-  setTimeout(go, 4000);
-  setTimeout(function(){ var m = document.getElementById('manual'); if (m && !done) m.style.display = 'inline-block'; }, 3000);
 })();</script></body></html>`);
 });
 
