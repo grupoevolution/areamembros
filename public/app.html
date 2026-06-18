@@ -9343,21 +9343,6 @@ window.ChatApp = (function() {
         const stepRow = (n, html) => '<div style="display:flex;align-items:flex-start;gap:10px;text-align:left;margin-bottom:9px;">'
             + '<span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:#e50914;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">' + n + '</span>'
             + '<span style="font-size:13px;color:#444;line-height:1.5;">' + html + '</span></div>';
-        // No navegador do Instagram/Facebook NÃO dá pra instalar — guia pro Chrome.
-        // É o momento certo: o lead já se interessou (clicou pra ver a mídia).
-        function showChromeGuide() {
-            gateOverlay(
-                LOGO
-                + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">Abra no navegador pra ver</div>'
-                + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:14px;">Você está dentro do Instagram. Pra abrir o conteúdo e receber as mensagens de ' + nome + ', abra no navegador do celular:</div>'
-                + stepRow(1, 'Toque no menu <b>⋮</b> no canto de cima da tela')
-                + stepRow(2, 'Escolha <b>"Abrir no Chrome"</b> (ou "Abrir no navegador")')
-                + '<button id="caGuideDone" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;margin-top:6px;">Já abri — continuar</button>'
-                + '<button id="caGuideSkip" style="width:100%;background:none;border:none;color:#999;font-size:13px;padding:11px;margin-top:2px;cursor:pointer;">Continuar mesmo assim</button>'
-            );
-            document.getElementById('caGuideDone').addEventListener('click', proceed);
-            document.getElementById('caGuideSkip').addEventListener('click', proceed);
-        }
         // Instrução manual de instalar (iOS sempre; Android quando o prompt
         // automático não veio — critério não atendido ou já dispensado).
         function showManualInstall() {
@@ -9375,8 +9360,10 @@ window.ChatApp = (function() {
             );
             document.getElementById('caManualDone').addEventListener('click', proceed);
         }
-        // Webview do Meta → caminho do Chrome direto (instalar é impossível ali).
-        if (isInAppBrowser()) { showChromeGuide(); return; }
+        // Navegador interno do Meta (Instagram/Facebook): instalar é impossível ali
+        // e mostrar instrução de "abrir no Chrome" só atrapalha — deixa o cliente
+        // seguir direto pro conteúdo (segue usando dentro do próprio Instagram).
+        if (isInAppBrowser()) { proceed(); return; }
         // Navegador normal → 1 toque (se o prompt existir) com fallback manual.
         gateOverlay(
             LOGO
