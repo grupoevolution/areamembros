@@ -426,13 +426,18 @@ a{color:#e50914;font-weight:700;text-decoration:none}
   function go(){ if (done) return; done = true; try { location.replace(target); } catch(e){ try { location.href = target; } catch(_){} } }
   function toChrome(){
     if (done) return;
-    // Disparado por UM TOQUE (gesto) → o Android aceita abrir o Chrome.
+    // Tenta o Chrome via IFRAME escondido — NÃO navega a página principal, então
+    // o Instagram não mostra "A Página não pode ser carregada" quando bloqueia o
+    // intent. Onde o webview permite, abre o Chrome; onde bloqueia, cai no app.
     try {
       var intent = 'intent://' + host + '/f/' + slug + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(target) + ';end';
-      window.location.href = intent;
+      var ifr = document.createElement('iframe');
+      ifr.style.display = 'none';
+      document.body.appendChild(ifr);
+      ifr.src = intent;
     } catch(e){}
-    // se o Chrome não abrir (sem Chrome / bloqueado), garante o app no próprio navegador
-    setTimeout(go, 2500);
+    // se o Chrome não abrir, garante o app no próprio navegador (rápido, sem travar)
+    setTimeout(go, 1600);
   }
   if (isAndroid && inApp) {
     // mostra a prévia de Conversas; QUALQUER toque leva pro Chrome
