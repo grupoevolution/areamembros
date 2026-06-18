@@ -168,6 +168,7 @@ router.post('/', requireAdmin, async (req, res) => {
         audio_url,
         audio_enabled,
         audio_title,
+        audio_autoplay,
         chat_button_enabled,
         chat_button_chat_id,
         chat_button_label,
@@ -249,6 +250,7 @@ router.post('/', requireAdmin, async (req, res) => {
     const effPostRec = (Array.isArray(post_purchase_recommended_ids)
         ? post_purchase_recommended_ids.map(x => parseInt(x, 10)).filter(Boolean).slice(0, 10) : []);
     const effPostRecJson = effPostRec.length ? JSON.stringify(effPostRec) : null;
+    const effAudioAutoplay = audio_autoplay === true;
 
     // Regra de segurança server-side: só pode publicar se vier ao menos 1 oferta válida.
     // Mesmo que o frontend mande is_published=true sem gateway, o backend força false.
@@ -271,8 +273,9 @@ router.post('/', requireAdmin, async (req, res) => {
                         call_photo_url, call_ringing_text, call_ringtone_url,
                         preview_enabled,
                         chat_button_enabled, chat_button_chat_id, chat_button_label, chat_notify_on_open,
-                        post_purchase_message, post_purchase_link, post_purchase_recommended_ids
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
+                        post_purchase_message, post_purchase_link, post_purchase_recommended_ids,
+                        audio_autoplay
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
                     RETURNING *
                 `, [
                     name, description || null, category_id || null,
@@ -303,6 +306,7 @@ router.post('/', requireAdmin, async (req, res) => {
                     effPostMsg,
                     effPostLink,
                     effPostRecJson,
+                    effAudioAutoplay,
                 ]);
                 created = r.rows[0];
             } catch (e) {
@@ -409,6 +413,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
         audio_url,
         audio_enabled,
         audio_title,
+        audio_autoplay,
         chat_button_enabled,
         chat_button_chat_id,
         chat_button_label,
@@ -482,6 +487,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
     const effPostRec = (Array.isArray(post_purchase_recommended_ids)
         ? post_purchase_recommended_ids.map(x => parseInt(x, 10)).filter(Boolean).slice(0, 10) : []);
     const effPostRecJson = effPostRec.length ? JSON.stringify(effPostRec) : null;
+    const effAudioAutoplay = audio_autoplay === true;
 
     // Regra de segurança server-side (idêntica ao POST): só publica se houver
     // pelo menos 1 oferta válida no payload (ou for produto-chamada).
@@ -517,7 +523,8 @@ router.put('/:id', requireAdmin, async (req, res) => {
                         chat_notify_on_open = $30,
                         post_purchase_message = $31,
                         post_purchase_link = $32,
-                        post_purchase_recommended_ids = $33
+                        post_purchase_recommended_ids = $33,
+                        audio_autoplay = $34
                     WHERE id = $26
                     RETURNING *
                 `, [
@@ -550,6 +557,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
                     effPostMsg,
                     effPostLink,
                     effPostRecJson,
+                    effAudioAutoplay,
                 ]);
                 updated = r.rows[0];
                 rowCount = r.rowCount;

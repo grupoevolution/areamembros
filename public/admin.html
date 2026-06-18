@@ -15762,6 +15762,7 @@ async function importProductsJSON(ev) {
             +   '<div class="form-card-sub">Mensagem em áudio que aparece abaixo da capa, na tela do produto.</div>'
             + '</div>'
             + '<div class="form-row"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pAudioEnabled" style="width:auto"/> Ativar áudio neste produto</label></div>'
+            + '<div class="form-row"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pAudioAutoplay" style="width:auto"/> ▶ Tocar sozinho ao abrir (autoplay)</label><div class="form-help">Ligado: o áudio começa sozinho ao abrir o produto (se o navegador permitir). Desligado: o cliente toca no play.</div></div>'
             + '<div class="form-row"><label class="form-label">Título do áudio</label><input type="text" id="pAudioTitle" class="form-input" placeholder="Ex: Mensagem da modelo" maxlength="120"/></div>'
             + '<div class="form-row"><label class="form-label">Arquivo de áudio</label><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;"><input type="file" id="pAudioFile" accept="audio/*" style="display:none"/><button type="button" class="btn-secondary" onclick="document.getElementById(\'pAudioFile\').click()" style="white-space:nowrap;">📁 Escolher arquivo</button><span id="pAudioFileName" style="flex:1;min-width:140px;font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">O upload começa sozinho ao escolher</span></div></div>'
             + '<div class="form-row"><label class="form-label">Ou cole uma URL externa</label><input type="url" id="pAudioUrl" class="form-input" placeholder="https://..."/><div class="form-help">MP3 / M4A / WAV — até 25MB</div></div>'
@@ -16196,7 +16197,9 @@ async function importProductsJSON(ev) {
                     const cph = document.getElementById('pCallPhotoUrl');
                     const crt = document.getElementById('pCallRingingText');
                     const crg = document.getElementById('pCallRingtoneUrl');
+                    const autoplay = document.getElementById('pAudioAutoplay');
                     if (enabled) body.audio_enabled = enabled.checked;
+                    if (autoplay) body.audio_autoplay = autoplay.checked;
                     if (urlEl) body.audio_url = urlEl.value.trim() || null;
                     if (title) body.audio_title = title.value.trim() || null;
                     if (pt) body.product_type = pt.value || 'content';
@@ -16256,6 +16259,7 @@ async function importProductsJSON(ev) {
                 const pm = document.getElementById('pPostMsg'); if (pm) pm.value = '';
                 const pl = document.getElementById('pPostLink'); if (pl) pl.value = '';
                 const prc = document.getElementById('pPostRec'); if (prc) Array.from(prc.options).forEach(o => o.selected = false);
+                const apl = document.getElementById('pAudioAutoplay'); if (apl) apl.checked = false;
                 const radio = document.querySelector('input[name="pDeliveryMode"][value="link"]');
                 if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change')); }
             } catch (_) {}
@@ -16289,6 +16293,7 @@ async function importProductsJSON(ev) {
                 injectAudioFields();
                 if (p) {
                     const e = document.getElementById('pAudioEnabled'); if (e) e.checked = !!p.audio_enabled;
+                    const ap = document.getElementById('pAudioAutoplay'); if (ap) ap.checked = !!p.audio_autoplay;
                     const u = document.getElementById('pAudioUrl'); if (u) u.value = p.audio_url || '';
                     const t = document.getElementById('pAudioTitle'); if (t) t.value = p.audio_title || '';
                     const prev = document.getElementById('pAudioPreview');

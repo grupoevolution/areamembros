@@ -9662,18 +9662,23 @@ window.MVNotify = (function() {
     let el = null, hideT = null, queue = [], showing = false;
     let touchY = null;
     const recent = {}; // dedupe: evita banner idêntico em janela curta (poller + push)
-    // Som de notificação (2 tons) sintetizado — sem precisar de arquivo.
+    // Som de notificação — "pop" suave de 2 notinhas (estilo app de mensagem).
+    // Sintetizado (sem arquivo). Volume baixo e fim macio pra não ser estridente.
     function ding() {
         try {
             const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
-            const ac = new AC(); const o = ac.createOscillator(), g = ac.createGain();
-            o.connect(g); g.connect(ac.destination); o.type = 'sine';
-            o.frequency.setValueAtTime(880, ac.currentTime);
-            o.frequency.setValueAtTime(1245, ac.currentTime + 0.11);
-            g.gain.setValueAtTime(0.0001, ac.currentTime);
-            g.gain.exponentialRampToValueAtTime(0.32, ac.currentTime + 0.02);
-            g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.55);
-            o.start(); o.stop(ac.currentTime + 0.6);
+            const ac = new AC();
+            const note = (freq, start, dur) => {
+                const o = ac.createOscillator(), g = ac.createGain();
+                o.connect(g); g.connect(ac.destination); o.type = 'triangle';
+                o.frequency.setValueAtTime(freq, ac.currentTime + start);
+                g.gain.setValueAtTime(0.0001, ac.currentTime + start);
+                g.gain.exponentialRampToValueAtTime(0.18, ac.currentTime + start + 0.015);
+                g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + start + dur);
+                o.start(ac.currentTime + start); o.stop(ac.currentTime + start + dur + 0.02);
+            };
+            note(784, 0, 0.16);     // sol
+            note(1175, 0.10, 0.22); // ré (mais agudo) — sobe leve, agradável
         } catch (_) {}
     }
     function ensure() {
@@ -9763,6 +9768,15 @@ if (navigator.serviceWorker) {
     function seenIds() { try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '[]'); } catch (_) { return []; } }
     function markSeen(id) { try { const s = seenIds(); if (!s.includes(id)) { s.push(id); localStorage.setItem(SEEN_KEY, JSON.stringify(s.slice(-200))); } } catch (_) {} }
 
+    // Texto da notificação por tipo (NÃO mostra o conteúdo). Igual o cliente pediu.
+    function notifBody(c) {
+        if (c.locked) return 'Te enviou uma mensagem';
+        const t = c.last && c.last.type;
+        if (t === 'audio') return 'Te enviou um áudio';
+        if (t === 'image' || t === 'view_once_image') return 'Te enviou uma imagem';
+        if (t === 'view_once_video') return 'Te enviou um vídeo';
+        return 'Nova mensagem';
+    }
     async function pollChats() {
         try {
             const r = await fetch('/api/user/chats?visitor_id=' + vid(), { credentials: 'include' });
@@ -9771,14 +9785,16 @@ if (navigator.serviceWorker) {
             const inConv = document.getElementById('chatconv') && document.getElementById('chatconv').classList.contains('active');
             const curOpen = (inConv && window.ChatApp && ChatApp.curId) ? ChatApp.curId() : null;
             const nextState = {};
-            for (const c of data.chats) nextState[c.id] = (c.last && c.last.at) ? new Date(c.last.at).getTime() : 0;
+            // detecção por ID da última mensagem (timestamp empata quando insere em lote)
+            for (const c of data.chats) nextState[c.id] = (c.last && c.last.id) ? c.last.id : 0;
             if (chatState) {
                 for (const c of data.chats) {
-                    const at = nextState[c.id], prev = chatState[c.id] || 0;
-                    if (at > prev && c.unread > 0 && c.id !== curOpen) {
+                    const id = nextState[c.id], prev = chatState[c.id] || 0;
+                    const fromBot = !c.last || c.last.sender !== 'user'; // não notifica a própria msg do cliente
+                    if (id > prev && c.unread > 0 && c.id !== curOpen && fromBot) {
                         MVNotify.push({
                             title: c.name,
-                            body: c.locked ? 'enviou uma mensagem' : ((c.last && c.last.preview) || 'enviou uma mensagem'),
+                            body: notifBody(c),
                             avatar: c.locked ? null : c.avatar_url,
                             icon: '💬',
                             onClick: () => { if (window.ChatApp) ChatApp.open(c.id); },
@@ -9808,8 +9824,8 @@ if (navigator.serviceWorker) {
         } catch (_) {}
     }
     function tick() { if (document.hidden) return; pollChats(); pollCampaigns(); }
-    setTimeout(tick, 6000);
-    setInterval(tick, 15000);
+    setTimeout(tick, 5000);
+    setInterval(tick, 10000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(tick, 800); });
 })();
 
@@ -12458,6 +12474,14 @@ function populateProductScreen(p) {
                 const pct = (e.clientX - rect.left) / rect.width;
                 if (audio.duration) audio.currentTime = audio.duration * pct;
             });
+            // Autoplay (se ativado no painel): tenta tocar sozinho ao abrir o produto.
+            // O navegador pode bloquear sem gesto do usuário — aí fica no play normal.
+            if (p.audio_autoplay) {
+                const tryPlay = () => audio.play().catch(() => {});
+                tryPlay();
+                // 2ª tentativa após carregar metadados (alguns browsers exigem)
+                audio.addEventListener('canplay', tryPlay, { once: true });
+            }
         }, 50);
     }
 

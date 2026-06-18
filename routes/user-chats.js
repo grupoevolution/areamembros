@@ -348,7 +348,7 @@ router.get('/chats', optionalUser, async (req, res) => {
             const session = await findOrCreateSession(c.id, ident, false);
             if (session) {
                 const { rows: lm } = await db.query(
-                    `SELECT sender, type, content, created_at FROM chat_messages WHERE session_id = $1 ORDER BY id DESC LIMIT 1`,
+                    `SELECT id, sender, type, content, created_at FROM chat_messages WHERE session_id = $1 ORDER BY id DESC LIMIT 1`,
                     [session.id]
                 );
                 if (lm[0]) {
@@ -361,6 +361,10 @@ router.get('/chats', optionalUser, async (req, res) => {
                                  t === 'view_once_video' ? 'Vídeo · visualização única' :
                                  t === 'cta' ? (lm[0].content || 'Oferta') : 'Mensagem',
                         at: lm[0].created_at,
+                        // id + type alimentam a NOTIFICAÇÃO (detecção por id, texto por tipo)
+                        id: lm[0].id,
+                        type: t,
+                        sender: lm[0].sender,
                     };
                 }
                 const { rows: ur } = await db.query(
@@ -439,9 +443,17 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
             const steps = await loadSteps(chatId, 'open');
             if (steps.length > 0) fresh = await runScript(session, chat, steps, 0, ident);
         } else if (session.awaiting === 'delay' && session.resume_at && new Date(session.resume_at) <= new Date()) {
-            // Delay já venceu e o cliente abriu a conversa: retoma no fluxo atual
-            const steps = await loadSteps(chatId, session.current_flow || 'open');
-            fresh = await runScript(session, chat, steps, session.current_order, ident);
+            // Delay venceu e o cliente abriu: retoma — MAS reivindica atomicamente
+            // (awaiting 'delay'→'resuming') pra NÃO rodar junto com o worker. Sem isso,
+            // os dois inseriam as mesmas mensagens = duplicadas/"cacetada" ao reabrir.
+            const claim = await db.query(
+                `UPDATE chat_sessions SET awaiting = 'resuming' WHERE id = $1 AND awaiting = 'delay' RETURNING id`,
+                [session.id]
+            );
+            if (claim.rows.length) {
+                const steps = await loadSteps(chatId, session.current_flow || 'open');
+                fresh = await runScript(session, chat, steps, session.current_order, ident);
+            }
         }
         const all = history.concat(fresh).map(publicMsg);
         // histórico antigo não "re-digita": typing só nas mensagens novas
