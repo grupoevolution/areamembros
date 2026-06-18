@@ -9129,9 +9129,16 @@ window.ChatApp = (function() {
             d.style.alignSelf = 'stretch';
             d.style.width = '100%';
             const link = (m.meta && m.meta.link_url) || '';
+            const pid = (m.meta && m.meta.product_id) || null;
             const color = (m.meta && m.meta.cta_color) || '#25D366';
             d.innerHTML = '<button class="ca-cta-btn" style="background:' + esc(color) + ';">' + esc(m.content || 'Ver oferta') + '</button>';
-            d.querySelector('button').addEventListener('click', () => { if (link) window.open(link, '_blank', 'noopener'); });
+            d.querySelector('button').addEventListener('click', () => {
+                if (pid && typeof openProductPage === 'function') { try { openProductPage(parseInt(pid, 10)); } catch(_) {} return; }
+                if (!link) return;
+                // caminho interno (/?p=, /?chat=, /) navega no app; URL externa abre nova aba
+                if (String(link).charAt(0) === '/') { if (typeof mvNavigate === 'function') mvNavigate(link); else window.location.href = link; }
+                else window.open(link, '_blank', 'noopener');
+            });
         } else if (m.type === 'call') {
             // "Ela liga": pílula no chat + dispara a chamada recebida (VideoCall)
             d.style.alignSelf = 'center';

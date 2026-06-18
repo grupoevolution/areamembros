@@ -172,6 +172,9 @@ router.post('/', requireAdmin, async (req, res) => {
         chat_button_chat_id,
         chat_button_label,
         chat_notify_on_open,
+        post_purchase_message,
+        post_purchase_link,
+        post_purchase_recommended_ids,
         video_call_id,
         product_type,
         direct_call_video_url,
@@ -241,6 +244,11 @@ router.post('/', requireAdmin, async (req, res) => {
     const effChatBtnEnabled = chat_button_enabled === true && !!effChatBtnChatId;
     const effChatBtnLabel = (chat_button_label || '').trim().slice(0, 60) || null;
     const effChatNotifyOnOpen = chat_notify_on_open === true && !!effChatBtnChatId;
+    const effPostMsg = (post_purchase_message || '').trim().slice(0, 2000) || null;
+    const effPostLink = (post_purchase_link || '').trim().slice(0, 1000) || null;
+    const effPostRec = (Array.isArray(post_purchase_recommended_ids)
+        ? post_purchase_recommended_ids.map(x => parseInt(x, 10)).filter(Boolean).slice(0, 10) : []);
+    const effPostRecJson = effPostRec.length ? JSON.stringify(effPostRec) : null;
 
     // Regra de segurança server-side: só pode publicar se vier ao menos 1 oferta válida.
     // Mesmo que o frontend mande is_published=true sem gateway, o backend força false.
@@ -262,8 +270,9 @@ router.post('/', requireAdmin, async (req, res) => {
                         bunny_library_id, bunny_collection_id, direct_call_video_url,
                         call_photo_url, call_ringing_text, call_ringtone_url,
                         preview_enabled,
-                        chat_button_enabled, chat_button_chat_id, chat_button_label, chat_notify_on_open
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
+                        chat_button_enabled, chat_button_chat_id, chat_button_label, chat_notify_on_open,
+                        post_purchase_message, post_purchase_link, post_purchase_recommended_ids
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
                     RETURNING *
                 `, [
                     name, description || null, category_id || null,
@@ -291,6 +300,9 @@ router.post('/', requireAdmin, async (req, res) => {
                     effChatBtnChatId,
                     effChatBtnLabel,
                     effChatNotifyOnOpen,
+                    effPostMsg,
+                    effPostLink,
+                    effPostRecJson,
                 ]);
                 created = r.rows[0];
             } catch (e) {
@@ -401,6 +413,9 @@ router.put('/:id', requireAdmin, async (req, res) => {
         chat_button_chat_id,
         chat_button_label,
         chat_notify_on_open,
+        post_purchase_message,
+        post_purchase_link,
+        post_purchase_recommended_ids,
         video_call_id,
         product_type,
         direct_call_video_url,
@@ -462,6 +477,11 @@ router.put('/:id', requireAdmin, async (req, res) => {
     const effChatBtnEnabled = chat_button_enabled === true && !!effChatBtnChatId;
     const effChatBtnLabel = (chat_button_label || '').trim().slice(0, 60) || null;
     const effChatNotifyOnOpen = chat_notify_on_open === true && !!effChatBtnChatId;
+    const effPostMsg = (post_purchase_message || '').trim().slice(0, 2000) || null;
+    const effPostLink = (post_purchase_link || '').trim().slice(0, 1000) || null;
+    const effPostRec = (Array.isArray(post_purchase_recommended_ids)
+        ? post_purchase_recommended_ids.map(x => parseInt(x, 10)).filter(Boolean).slice(0, 10) : []);
+    const effPostRecJson = effPostRec.length ? JSON.stringify(effPostRec) : null;
 
     // Regra de segurança server-side (idêntica ao POST): só publica se houver
     // pelo menos 1 oferta válida no payload (ou for produto-chamada).
@@ -494,7 +514,10 @@ router.put('/:id', requireAdmin, async (req, res) => {
                         chat_button_enabled = $27,
                         chat_button_chat_id = $28,
                         chat_button_label = $29,
-                        chat_notify_on_open = $30
+                        chat_notify_on_open = $30,
+                        post_purchase_message = $31,
+                        post_purchase_link = $32,
+                        post_purchase_recommended_ids = $33
                     WHERE id = $26
                     RETURNING *
                 `, [
@@ -524,6 +547,9 @@ router.put('/:id', requireAdmin, async (req, res) => {
                     effChatBtnChatId,
                     effChatBtnLabel,
                     effChatNotifyOnOpen,
+                    effPostMsg,
+                    effPostLink,
+                    effPostRecJson,
                 ]);
                 updated = r.rows[0];
                 rowCount = r.rowCount;

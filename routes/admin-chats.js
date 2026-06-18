@@ -46,13 +46,13 @@ router.post('/', requireAdmin, async (req, res) => {
     try {
         const { name, avatar_url, section, status_label, show_online, access,
                 product_id, checkout_url, reply_mode, allow_photo, display_order, active,
-                city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key, tag, auto_start_minutes, listed } = req.body || {};
+                city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key, tag, auto_start_minutes, listed, is_support } = req.body || {};
         if (!name || !String(name).trim()) return res.status(400).json({ success: false, error: 'Nome obrigatório' });
         const { rows } = await db.query(`
             INSERT INTO chats (name, avatar_url, section, status_label, show_online, access,
                                product_id, checkout_url, reply_mode, allow_photo, display_order, active,
-                               city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key, tag, auto_start_minutes, listed)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING *
+                               city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key, tag, auto_start_minutes, listed, is_support)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING *
         `, [
             String(name).trim().slice(0, 80),
             (avatar_url || '').trim().slice(0, 1000) || null,
@@ -75,7 +75,12 @@ router.post('/', requireAdmin, async (req, res) => {
             (tag || '').trim().slice(0, 30) || null,
             Math.max(0, Math.min(10080, parseInt(auto_start_minutes, 10) || 0)),
             listed !== false,
+            is_support === true,
         ]);
+        // Só um chat de Suporte por vez.
+        if (is_support === true) {
+            await db.query(`UPDATE chats SET is_support = false WHERE id <> $1`, [rows[0].id]);
+        }
         return res.json({ success: true, chat: rows[0] });
     } catch (err) {
         logger.error('Erro criando chat:', err);
@@ -111,11 +116,16 @@ router.put('/:id', requireAdmin, async (req, res) => {
         if (b.tag !== undefined) set('tag', (b.tag || '').trim().slice(0, 30) || null);
         if (b.auto_start_minutes !== undefined) set('auto_start_minutes', Math.max(0, Math.min(10080, parseInt(b.auto_start_minutes, 10) || 0)));
         if (b.listed !== undefined) set('listed', !!b.listed);
+        if (b.is_support !== undefined) set('is_support', !!b.is_support);
         if (b.graph !== undefined) set('graph', b.graph ? JSON.stringify(b.graph) : null);
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
         values.push(id);
         const { rows } = await db.query(`UPDATE chats SET ${updates.join(', ')} WHERE id = $${p} RETURNING *`, values);
         if (!rows.length) return res.status(404).json({ success: false, error: 'Não encontrado' });
+        // Só um chat de Suporte por vez.
+        if (b.is_support === true) {
+            await db.query(`UPDATE chats SET is_support = false WHERE id <> $1`, [id]);
+        }
         return res.json({ success: true, chat: rows[0] });
     } catch (err) {
         logger.error('Erro atualizando chat:', err);

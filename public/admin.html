@@ -5718,6 +5718,12 @@ a { color: inherit; text-decoration: none; }
                                 <div class="form-help" style="margin-top:6px;">Desligado: a conversa NÃO aparece na aba Conversas, mas continua acessível pelo botão "Enviar mensagem" de um produto (ou link direto).</div>
                             </div>
 
+                            <!-- Chat de Suporte / entrega de venda -->
+                            <div style="background:rgba(31,168,85,.08); border:1px solid rgba(31,168,85,.25); border-radius:10px; padding:12px;">
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="cpSupport" style="width:16px; height:16px;"> 🎧 Este é o chat de Suporte (recebe as entregas de venda)</label>
+                                <div class="form-help" style="margin-top:6px;">A cada venda aprovada, este chat manda a "Mensagem de pós-compra" do produto comprado (configurada no produto). Só um chat pode ser o Suporte.</div>
+                            </div>
+
                             <!-- Motor de conversas: auto-start -->
                             <div style="background:rgba(37,211,102,.06); border:1px solid rgba(37,211,102,.2); border-radius:10px; padding:12px;">
                                 <label style="display:block; font-size:12px; color:#fff; font-weight:700; margin-bottom:4px;">⏱ Mandar a 1ª mensagem sozinha depois que o cliente entra (min)</label>
@@ -14713,6 +14719,7 @@ function editChatPersona(c) {
     document.getElementById('cpPhoto').checked = c.allow_photo === true;
     document.getElementById('cpGate').checked = c.gate_media === true;
     document.getElementById('cpListed').checked = c.listed !== false;
+    document.getElementById('cpSupport').checked = c.is_support === true;
     document.getElementById('cpCityFallback').value = c.city_fallback || '';
     document.getElementById('cpOrder').value = c.display_order || 0;
     let trig = [];
@@ -14745,6 +14752,7 @@ async function saveChatPersona(e) {
         display_order: parseInt(document.getElementById('cpOrder').value, 10) || 0,
         gate_media: document.getElementById('cpGate').checked,
         listed: document.getElementById('cpListed').checked,
+        is_support: document.getElementById('cpSupport').checked,
         city_fallback: document.getElementById('cpCityFallback').value.trim() || 'sua região',
         call_video_call_id: document.getElementById('cpCall').value || null,
         trigger_product_ids: Array.from(document.querySelectorAll('#cpTriggerProducts .cp-trigger:checked')).map(el => parseInt(el.value, 10)),
@@ -15727,6 +15735,19 @@ async function importProductsJSON(ev) {
             if (cur) sel.value = cur;
         } catch (_) {}
     }
+    // Popula o multi-select de produtos recomendados (cross-sell pós-compra).
+    async function populatePostRec(selectedIds) {
+        const sel = document.getElementById('pPostRec');
+        if (!sel) return;
+        try {
+            const r = await fetch('/api/admin/products', { credentials: 'include' });
+            const data = await r.json();
+            const prods = (data.products || data.data || []);
+            const want = Array.isArray(selectedIds) ? selectedIds.map(x => String(x)) : Array.from(sel.selectedOptions || []).map(o => o.value);
+            const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            sel.innerHTML = prods.map(p => '<option value="' + p.id + '"' + (want.indexOf(String(p.id)) >= 0 ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('');
+        } catch (_) {}
+    }
     function injectAudioFields() {
         // O formulário real é #newProductForm (dentro de #screen-produtos-novo)
         const form = document.getElementById('newProductForm');
@@ -15762,6 +15783,27 @@ async function importProductsJSON(ev) {
             + '<div class="form-row"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pChatBtnNotifyOpen" style="width:auto"/> 🔔 Modelo manda mensagem ao abrir o produto</label><div class="form-help">Ao entrar no produto, a conversa acima começa sozinha e o cliente recebe uma notificação (foto + nome + "enviou uma mensagem"). Fica salva no histórico mesmo sem clicar.</div></div>';
         form.appendChild(chatBtnBlock);
         populateChatBtnSelect();
+
+        // ── Entrega (pós-compra): mensagem que o chat de Suporte manda ao comprar ──
+        const deliveryBlk = document.createElement('div');
+        deliveryBlk.className = 'form-card';
+        deliveryBlk.style.cssText = 'margin-top:16px;';
+        deliveryBlk.innerHTML = ''
+            + '<div class="form-card-head">'
+            +   '<div class="form-card-title">🎁 Entrega (pós-compra)</div>'
+            +   '<div class="form-card-sub">Quando este produto é comprado, o chat de Suporte manda esta mensagem (além do WhatsApp). Marque um chat como Suporte em Conversas.</div>'
+            + '</div>'
+            + '<div class="form-row"><label class="form-label">Mensagem de pós-compra</label>'
+            +   '<textarea id="pPostMsg" class="form-input" maxlength="2000" style="min-height:80px;" placeholder="Oi {nome}! Parabéns pela compra de {produto} 🎉 Seu acesso já está em Minhas Compras. Qualquer dúvida, é só falar aqui 💬"></textarea>'
+            +   '<div class="form-help">Use {nome} (1º nome do cliente) e {produto}. Vazio = usa uma mensagem padrão.</div></div>'
+            + '<div class="form-row"><label class="form-label">Link de acesso (grupo/conteúdo)</label>'
+            +   '<input type="url" id="pPostLink" class="form-input" placeholder="https://t.me/... ou https://chat.whatsapp.com/..."/>'
+            +   '<div class="form-help">Vira um botão "Acessar agora" na conversa.</div></div>'
+            + '<div class="form-row"><label class="form-label">Produtos recomendados (cross-sell)</label>'
+            +   '<select id="pPostRec" class="form-input" multiple style="min-height:90px;"></select>'
+            +   '<div class="form-help">Segure Ctrl/Cmd pra escolher vários. Aparecem como botões depois da mensagem. Até 10.</div></div>';
+        form.appendChild(deliveryBlk);
+        populatePostRec();
 
         // ──────────────────────────────────────────────────────────────────
         // Fase E (mai/2026) — UX unificada de ENTREGA do produto.
@@ -16176,6 +16218,12 @@ async function importProductsJSON(ev) {
                     if (cbId) body.chat_button_chat_id = cbId.value ? parseInt(cbId.value, 10) : null;
                     if (cbLb) body.chat_button_label = cbLb.value.trim() || null;
                     if (cbNo) body.chat_notify_on_open = cbNo.checked;
+                    const pPostMsg = document.getElementById('pPostMsg');
+                    const pPostLink = document.getElementById('pPostLink');
+                    const pPostRec = document.getElementById('pPostRec');
+                    if (pPostMsg) body.post_purchase_message = pPostMsg.value.trim() || null;
+                    if (pPostLink) body.post_purchase_link = pPostLink.value.trim() || null;
+                    if (pPostRec) body.post_purchase_recommended_ids = Array.from(pPostRec.selectedOptions || []).map(o => parseInt(o.value, 10)).filter(Boolean);
                     opts.body = JSON.stringify(body);
                 }
             }
@@ -16205,6 +16253,9 @@ async function importProductsJSON(ev) {
                 const cbId = document.getElementById('pChatBtnChatId'); if (cbId) cbId.value = '';
                 const cbLb = document.getElementById('pChatBtnLabel'); if (cbLb) cbLb.value = '';
                 const cbNo = document.getElementById('pChatBtnNotifyOpen'); if (cbNo) cbNo.checked = false;
+                const pm = document.getElementById('pPostMsg'); if (pm) pm.value = '';
+                const pl = document.getElementById('pPostLink'); if (pl) pl.value = '';
+                const prc = document.getElementById('pPostRec'); if (prc) Array.from(prc.options).forEach(o => o.selected = false);
                 const radio = document.querySelector('input[name="pDeliveryMode"][value="link"]');
                 if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change')); }
             } catch (_) {}
@@ -16248,6 +16299,10 @@ async function importProductsJSON(ev) {
                     const cbEn = document.getElementById('pChatBtnEnabled'); if (cbEn) cbEn.checked = !!p.chat_button_enabled;
                     const cbLb = document.getElementById('pChatBtnLabel'); if (cbLb) cbLb.value = p.chat_button_label || '';
                     const cbNo = document.getElementById('pChatBtnNotifyOpen'); if (cbNo) cbNo.checked = !!p.chat_notify_on_open;
+                    const pm = document.getElementById('pPostMsg'); if (pm) pm.value = p.post_purchase_message || '';
+                    const pl = document.getElementById('pPostLink'); if (pl) pl.value = p.post_purchase_link || '';
+                    let recIds = []; try { recIds = Array.isArray(p.post_purchase_recommended_ids) ? p.post_purchase_recommended_ids : JSON.parse(p.post_purchase_recommended_ids || '[]'); } catch (_) {}
+                    populatePostRec(recIds);
 
                     // ─── Detecta modo de entrega ─────────────────────────
                     // Prioridade de detecção (do mais específico ao mais geral):

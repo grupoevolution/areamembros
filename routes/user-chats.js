@@ -812,6 +812,53 @@ async function triggerPostPurchaseChats(email, productIds) {
     return out;
 }
 
+// Entrega de venda aprovada no chat de SUPORTE (chats.is_support). A cada compra
+// aprovada, injeta a mensagem de pós-compra do produto (texto {nome}/{produto} +
+// botão de acesso + recomendados manuais). Aditivo ao WhatsApp; chega NÃO-lida.
+// Diferente do trigger_product_ids: NÃO roda roteiro fixo e dispara TODA compra.
+async function deliverPurchaseToSupport(email, productIds) {
+    const e = String(email || '').toLowerCase().trim();
+    const ids = (Array.isArray(productIds) ? productIds : []).map(x => parseInt(x, 10)).filter(Boolean);
+    if (!e || e.endsWith('@preview.local') || !ids.length) return [];
+    const { rows: sc } = await db.query(`SELECT * FROM chats WHERE active = true AND is_support = true ORDER BY id LIMIT 1`);
+    if (!sc.length) return []; // nenhum chat marcado como Suporte → nada a entregar
+    const chat = sc[0];
+    const { rows: prods } = await db.query(
+        `SELECT id, name, post_purchase_message, post_purchase_link, post_purchase_recommended_ids
+         FROM products WHERE id = ANY($1)`, [ids]
+    );
+    if (!prods.length) return [];
+    const session = await findOrCreateSession(chat.id, { email: e, visitor: null }, true);
+    const ctx = { email: e, city: session.city || null, cityFallback: chat.city_fallback };
+    const GREEN = '#1fa855', RED = '#e50914';
+    let firstMsg = null;
+    for (const p of prods) {
+        const base = (p.post_purchase_message && p.post_purchase_message.trim())
+            || 'Oi {nome}! Parabéns pela compra de {produto} 🎉 Seu acesso já está liberado em Minhas Compras. Qualquer dúvida, é só falar aqui 💬';
+        let text = base.replace(/\{produto\}/gi, p.name || 'seu produto');
+        text = await fillVars(text, ctx);
+        const m1 = await insertMsg(session.id, 'bot', 'text', text, null, { typing_ms: 0 }, null);
+        if (!firstMsg) firstMsg = m1;
+        if (p.post_purchase_link && p.post_purchase_link.trim()) {
+            await insertMsg(session.id, 'bot', 'cta', 'Acessar agora', null, { link_url: p.post_purchase_link.trim(), cta_color: GREEN }, null);
+        }
+        let rec = [];
+        try { rec = Array.isArray(p.post_purchase_recommended_ids) ? p.post_purchase_recommended_ids : JSON.parse(p.post_purchase_recommended_ids || '[]'); } catch (_) {}
+        rec = rec.map(x => parseInt(x, 10)).filter(Boolean).slice(0, 3);
+        if (rec.length) {
+            const { rows: recProds } = await db.query(`SELECT id, name FROM products WHERE id = ANY($1) AND is_active = true`, [rec]);
+            if (recProds.length) {
+                await insertMsg(session.id, 'bot', 'text', 'Separei isso aqui que tem tudo a ver com você 👇', null, { typing_ms: 0 }, null);
+                for (const rp of recProds) {
+                    await insertMsg(session.id, 'bot', 'cta', rp.name, null, { product_id: rp.id, cta_color: RED }, null);
+                }
+            }
+        }
+    }
+    await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [session.id]);
+    return firstMsg ? [{ chat, messages: [firstMsg], email: e }] : [];
+}
+
 // ── STATUS (stories) ─────────────────────────────────────────────────────────
 async function markStatusViewed(sid, ident) {
     try {
@@ -994,4 +1041,5 @@ async function postDueStatusSchedules() {
 module.exports = router;
 module.exports.resumeDelayed = resumeDelayed;
 module.exports.triggerPostPurchaseChats = triggerPostPurchaseChats;
+module.exports.deliverPurchaseToSupport = deliverPurchaseToSupport;
 module.exports.postDueStatusSchedules = postDueStatusSchedules;
