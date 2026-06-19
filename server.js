@@ -405,6 +405,14 @@ html,body{height:100%;margin:0;background:#fff;color:#111;font-family:-apple-sys
 .s{width:34px;height:34px;border:3px solid #eee;border-top-color:#e50914;border-radius:50%;animation:r 1s linear infinite}
 @keyframes r{to{transform:rotate(360deg)}}
 a{color:#e50914;font-weight:700;text-decoration:none}
+.gw{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;text-align:center;padding:30px 26px}
+.glogo{width:60px;height:60px;border-radius:18px;background:#e50914;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#fff}
+.gt{font-size:20px;font-weight:800;color:#111}
+.gsub{font-size:14px;color:#777;line-height:1.5;max-width:300px;margin-bottom:4px}
+.gstep{display:flex;align-items:center;gap:11px;text-align:left;width:100%;max-width:330px;background:#f5f5f6;border-radius:12px;padding:13px 14px;font-size:14px;color:#444}
+.gnum{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#e50914;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.gstep b{color:#111}
+.gbtn{margin-top:8px;background:none;border:none;color:#aaa;font-size:13px;padding:10px;cursor:pointer}
 </style></head>
 <body>
 <div id="teaser" style="display:none">
@@ -412,12 +420,21 @@ a{color:#e50914;font-weight:700;text-decoration:none}
   <div class="lbl">MINHAS CONVERSAS</div>
   ${rowsHtml}
 </div>
+<div id="iosguide" class="gw" style="display:none">
+  <div class="glogo">M</div>
+  <div class="gt">Abra no navegador pra ver tudo</div>
+  <div class="gsub">Você está dentro do Instagram. Pra abrir o conteúdo e receber as mensagens:</div>
+  <div class="gstep"><span class="gnum">1</span><span>Toque em <b>•••</b> no canto da tela</span></div>
+  <div class="gstep"><span class="gnum">2</span><span>Toque em <b>"Abrir no navegador externo"</b></span></div>
+  <button class="gbtn" id="iosskip">continuar assim mesmo</button>
+</div>
 <div id="load"><div class="s"></div></div>
 <noscript><div style="padding:24px;text-align:center"><a href="/f/${slug}">Toque aqui pra continuar</a></div></noscript>
 <script>(function(){
   var slug = ${slugJson};
   var ua = navigator.userAgent || '';
   var isAndroid = /Android/i.test(ua);
+  var isIOS = /iphone|ipad|ipod/i.test(ua);
   var inApp = /(FBAN|FBAV|FB_IAB|FBIOS|Instagram|Line\\/|Twitter|MicroMessenger|TikTok|Snapchat|Kwai)/i.test(ua);
   var host = location.host;
   var target = location.protocol + '//' + host + '/f/' + slug;
@@ -433,7 +450,13 @@ a{color:#e50914;font-weight:700;text-decoration:none}
     // se o Chrome não abrir / o lead voltar, cai no app no próprio navegador
     setTimeout(go, 2500);
   }
-  if (isAndroid && inApp) {
+  if (isIOS && inApp) {
+    // iPhone: NÃO dá pra forçar o Safari (Apple não tem o intent://). Mostra o
+    // passo a passo manual (••• → Abrir no navegador externo). Único caminho no iOS.
+    document.getElementById('load').style.display = 'none';
+    document.getElementById('iosguide').style.display = 'flex';
+    document.getElementById('iosskip').addEventListener('click', go);
+  } else if (isAndroid && inApp) {
     document.getElementById('load').style.display = 'none';
     document.getElementById('teaser').style.display = 'block';
     // QUALQUER toque dispara; e se ele não tocar, dispara sozinho em 6s.
