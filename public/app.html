@@ -9838,7 +9838,9 @@ if (navigator.serviceWorker) {
             for (const n of fresh) {
                 markSeen(n.id);
                 MVNotify.push({
-                    title: n.title, body: n.body, icon: n.icon || '🎁',
+                    title: n.title, body: n.body,
+                    avatar: n.image || null,   // foto do produto, se a notificação apontar pra um
+                    icon: n.icon || '🎁',
                     onClick: n.cta_url ? () => mvNavigate(n.cta_url) : null,
                 });
             }

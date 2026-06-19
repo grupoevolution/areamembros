@@ -6347,7 +6347,13 @@ a { color: inherit; text-decoration: none; }
                             <input type="text" class="form-input" id="notifCtaUrl" placeholder="https://...">
                         </div>
                     </div>
-                    
+
+                    <div class="form-row" style="margin-bottom:14px;">
+                        <label class="form-label">Produto (opcional) — usa a CAPA dele como imagem e leva pra ele ao clicar</label>
+                        <select class="form-select" id="notifProduct"><option value="">— sem produto (usa o ícone) —</option></select>
+                        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px;">Se escolher um produto, a notificação aparece com a foto dele e abre o produto ao tocar (ignora o link acima).</div>
+                    </div>
+
                     <div class="form-card-head" style="margin:18px 0 10px;">
                         <div class="form-card-title">Público alvo</div>
                     </div>
@@ -11006,6 +11012,19 @@ async function loadNotifications() {
     }).join('');
 }
 
+async function populateNotifProducts(selectedId) {
+    const sel = document.getElementById('notifProduct');
+    if (!sel) return;
+    try {
+        const r = await fetch('/api/admin/products', { credentials: 'include' });
+        const data = await r.json();
+        const prods = (data && (data.products || data.data)) || [];
+        sel.innerHTML = '<option value="">— sem produto (usa o ícone) —</option>' +
+            prods.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+        if (selectedId) sel.value = String(selectedId);
+    } catch (_) {}
+}
+
 async function openNotifModal(notif) {
     _editingNotifId = notif?.id || null;
     document.getElementById('notifModalTitle').textContent = notif ? 'Editar notificação' : 'Nova notificação';
@@ -11020,6 +11039,7 @@ async function openNotifModal(notif) {
     set('notifCtaText', notif?.cta_text || '');
     set('notifCtaUrl', notif?.cta_url || '');
     set('notifTarget', notif?.target_type || 'all');
+    populateNotifProducts(notif?.product_id || '');
     
     if (notif?.scheduled_at) {
         set('notifSchedule', 'schedule');
@@ -11131,6 +11151,7 @@ async function saveNotif() {
         cta_text: get('notifCtaText') || null,
         cta_url: get('notifCtaUrl') || null,
         icon: get('notifIcon') || null,
+        product_id: get('notifProduct') ? parseInt(get('notifProduct'), 10) : null,
     };
     
     if (sched === 'now') {

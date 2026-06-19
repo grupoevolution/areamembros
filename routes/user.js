@@ -2237,13 +2237,15 @@ router.get('/notifications/feed', optionalUser, async (req, res) => {
         }
 
         const { rows } = await db.query(`
-            SELECT id, title, body, icon, cta_text, cta_url, target_type, target_value, sent_at
-            FROM notifications
-            WHERE type = 'in_app'
-              AND status = 'sent'
-              AND sent_at IS NOT NULL
-              AND sent_at > NOW() - INTERVAL '48 hours'
-            ORDER BY sent_at DESC
+            SELECT n.id, n.title, n.body, n.icon, n.cta_text, n.cta_url, n.target_type,
+                   n.target_value, n.sent_at, n.product_id, p.banner_url AS product_image
+            FROM notifications n
+            LEFT JOIN products p ON p.id = n.product_id
+            WHERE n.type = 'in_app'
+              AND n.status = 'sent'
+              AND n.sent_at IS NOT NULL
+              AND n.sent_at > NOW() - INTERVAL '48 hours'
+            ORDER BY n.sent_at DESC
             LIMIT 30
         `);
 
@@ -2267,8 +2269,11 @@ router.get('/notifications/feed', optionalUser, async (req, res) => {
             title: n.title,
             body: n.body,
             icon: n.icon || null,
+            // se a notificação aponta pra um produto: usa a CAPA dele como imagem
+            // e, sem link definido, leva pro produto ao clicar.
+            image: n.product_id ? (n.product_image || null) : null,
             cta_text: n.cta_text || null,
-            cta_url: n.cta_url || null,
+            cta_url: n.cta_url || (n.product_id ? ('/?p=' + n.product_id) : null),
             sent_at: n.sent_at,
         }));
 

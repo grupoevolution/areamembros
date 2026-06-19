@@ -32,7 +32,7 @@ router.get('/', requireAdmin, async (req, res) => {
         const { rows } = await db.query(`
             SELECT id, title, body, type, target_type, target_value,
                    cta_text, cta_url, icon, scheduled_at, sent_at,
-                   sent_count, read_count, status, created_at
+                   sent_count, read_count, status, created_at, product_id
             FROM notifications
             ${where}
             ORDER BY created_at DESC
@@ -53,7 +53,7 @@ router.post('/', requireAdmin, async (req, res) => {
     try {
         const {
             title, body, type, target_type, target_value,
-            cta_text, cta_url, icon, scheduled_at, send_now
+            cta_text, cta_url, icon, scheduled_at, send_now, product_id
         } = req.body || {};
         
         if (!title || typeof title !== 'string' || title.trim().length < 2) {
@@ -93,12 +93,13 @@ router.post('/', requireAdmin, async (req, res) => {
         
         const adminUser = req.admin?.username || 'admin';
         
+        const pid = product_id ? parseInt(product_id, 10) : null;
         const { rows } = await db.query(`
             INSERT INTO notifications (
                 title, body, type, target_type, target_value,
                 cta_text, cta_url, icon, scheduled_at, sent_at,
-                status, created_by
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                status, created_by, product_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             RETURNING *
         `, [
             title.trim().slice(0, 200),
@@ -113,6 +114,7 @@ router.post('/', requireAdmin, async (req, res) => {
             finalSentAt,
             status,
             adminUser,
+            (pid && !isNaN(pid)) ? pid : null,
         ]);
         
         // Se foi marcada como "sent", calcular target count (best-effort, pode falhar silenciosamente)
@@ -158,13 +160,14 @@ router.put('/:id', requireAdmin, async (req, res) => {
         
         const {
             title, body, type, target_type, target_value,
-            cta_text, cta_url, icon, scheduled_at
+            cta_text, cta_url, icon, scheduled_at, product_id
         } = req.body || {};
-        
+
         const updates = [];
         const params = [];
         let p = 1;
-        
+
+        if (product_id !== undefined) { updates.push(`product_id = $${p++}`); params.push(product_id ? parseInt(product_id, 10) : null); }
         if (title !== undefined) { updates.push(`title = $${p++}`); params.push(title.trim().slice(0, 200)); }
         if (body !== undefined) { updates.push(`body = $${p++}`); params.push(body.trim()); }
         if (type !== undefined) { updates.push(`type = $${p++}`); params.push(type); }
