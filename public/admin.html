@@ -3825,6 +3825,16 @@ a { color: inherit; text-decoration: none; }
                     </div>
                     <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Frase do paywall</label><input class="form-control" id="exPwText" maxlength="300" placeholder="Você já viu o grátis. O resto é só pra VIP 🔥" style="width:100%;"/></div>
 
+                    <div style="background:rgba(229,9,20,.06); border:1px solid rgba(229,9,20,.25); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;">
+                        <div style="font-size:13px; font-weight:700; color:#fff;">💰 Oferta exibida no paywall</div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Preço "de" (riscado)</label><input class="form-control" type="number" step="0.01" id="exOfferOrig" placeholder="49.90" style="width:100%;"/></div>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Preço "por"</label><input class="form-control" type="number" step="0.01" id="exOfferPrice" placeholder="19.90" style="width:100%;"/></div>
+                        </div>
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Observação (ex: acesso vitalício)</label><input class="form-control" id="exOfferNote" maxlength="80" placeholder="acesso vitalício · 1 pagamento" style="width:100%;"/></div>
+                        <div class="form-help" style="margin-top:-4px;">O desconto (%) é calculado sozinho. Deixe o "de" vazio se não quiser preço riscado.</div>
+                    </div>
+
                     <div style="border-top:1px solid rgba(255,255,255,.08); padding-top:12px;">
                         <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:8px;">🔒 Exigir instalar o app (PWA) pra:</div>
                         <div style="display:flex; flex-direction:column; gap:8px;">
@@ -13666,6 +13676,9 @@ async function loadExplore() {
             document.getElementById('exPwTitle').value = e.paywall_title || '';
             document.getElementById('exPwText').value = e.paywall_text || '';
             document.getElementById('exPwCta').value = e.paywall_cta || '';
+            document.getElementById('exOfferOrig').value = e.offer_original_price != null ? e.offer_original_price : '';
+            document.getElementById('exOfferPrice').value = e.offer_price != null ? e.offer_price : '';
+            document.getElementById('exOfferNote').value = e.offer_note || '';
             document.getElementById('exGateStories').checked = g.gate_stories !== false;
             document.getElementById('exGateViewOnce').checked = g.gate_view_once !== false;
             document.getElementById('exGateExplore').checked = g.gate_explore !== false;
@@ -13776,6 +13789,9 @@ async function saveExploreSettings() {
             paywall_title: document.getElementById('exPwTitle').value.trim() || null,
             paywall_text: document.getElementById('exPwText').value.trim() || null,
             paywall_cta: document.getElementById('exPwCta').value.trim() || null,
+            offer_original_price: document.getElementById('exOfferOrig').value || null,
+            offer_price: document.getElementById('exOfferPrice').value || null,
+            offer_note: document.getElementById('exOfferNote').value.trim() || null,
         },
         pwa_gate: {
             gate_stories: document.getElementById('exGateStories').checked,

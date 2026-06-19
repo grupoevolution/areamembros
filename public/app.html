@@ -17453,6 +17453,12 @@ document.addEventListener('keydown', function(e) {
 .mvpw-title{font-size:21px;font-weight:800;letter-spacing:-.02em;color:#fff;line-height:1.2;margin-bottom:8px;}
 .mvpw-sub{font-size:14px;color:#a8a2a5;line-height:1.5;margin:0 auto 16px;max-width:300px;}
 .mvpw-bigprice{font-size:26px;font-weight:800;color:#fff;margin-bottom:12px;}
+.mvpw-offer{margin:4px auto 14px;}
+.mvpw-offer-de{font-size:13px;color:#9a9398;}
+.mvpw-offer-de s{color:#9a9398;}
+.mvpw-offer-por{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:3px;}
+.mvpw-offer-price{font-size:36px;font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1;}
+.mvpw-offer-note{font-size:12.5px;color:#ff6482;font-weight:700;margin-top:6px;}
 .mvpw-buy{width:100%;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:800;cursor:pointer;background:#2a2530;color:#fff;margin-top:8px;}
 .mvpw-buy.rec{background:linear-gradient(90deg,#ff1f3d,#e50914);color:#fff;box-shadow:0 8px 26px rgba(229,9,20,.4);}
 .mvpw-bigcta{letter-spacing:.02em;}
@@ -17519,6 +17525,18 @@ window.MVPaywall = (function () {
         let body;
         if (plans.length) {
             body = '<div class="mvpw-plans">' + plans.map(p => planCard(p, unlock)).join('') + '</div>';
+        } else if (opts.offer && opts.offer.price != null && opts.offer.price !== '') {
+            // Oferta "de X por Y" com desconto destacado
+            const p = fmtMoney(opts.offer.price);
+            const o = fmtMoney(opts.offer.original_price);
+            const off = discount(opts.offer.price, opts.offer.original_price);
+            const ctaLabel = (opts.ctaText || 'QUERO SER VIP') + (p ? ' · ' + p : '');
+            body = '<div class="mvpw-offer">'
+                + (o ? '<div class="mvpw-offer-de">de <s>' + esc(o) + '</s> por</div>' : '')
+                + '<div class="mvpw-offer-por"><span class="mvpw-offer-price">' + esc(p) + '</span>' + (off ? '<span class="mvpw-off">-' + off + '%</span>' : '') + '</div>'
+                + (opts.offer.note ? '<div class="mvpw-offer-note">' + esc(opts.offer.note) + '</div>' : '')
+                + '</div>'
+                + '<button class="mvpw-buy rec mvpw-bigcta" data-mv-buy data-url="' + esc(unlock.checkout_url || '') + '">' + esc(ctaLabel) + '</button>';
         } else {
             const price = fmtMoney(unlock.price);
             const ctaLabel = (opts.ctaText || 'QUERO SER VIP') + (price ? ' · ' + price : '');
@@ -17760,11 +17778,15 @@ window.Explore = (function () {
         if (!ov || ov.classList.contains('open') || !window.MVPaywall) return;
         pauseAll();
         const pw = (data && data.paywall) || {};
-        MVPaywall.renderInline(ov, data.unlock || {}, {
+        // card INTERNO (o overlay é flex e centraliza; o banner vai num filho,
+        // senão os itens viram linha horizontal).
+        ov.innerHTML = '<div id="tkPaywallCard"></div>';
+        MVPaywall.renderInline(document.getElementById('tkPaywallCard'), data.unlock || {}, {
             icon: 'lock',
-            title: pw.title || 'Continue assistindo',
-            subtitle: pw.text || 'Você já viu o grátis. O resto é só pra VIP 🔥',
-            ctaText: pw.cta || 'QUERO SER VIP',
+            title: pw.title || 'Você já viu o grátis 🔥',
+            subtitle: pw.text || 'Libera o feed completo agora — sem limite.',
+            ctaText: pw.cta || 'QUERO ACESSO VIP',
+            offer: { price: pw.offer_price, original_price: pw.offer_original_price, note: pw.offer_note },
             social: '+2.400 já viraram VIP esta semana',
             // "agora não": sai do feed de vídeos e volta pra Home (sem travar o app)
             onClose: () => { closePaywall(); if (typeof switchScreen === 'function') switchScreen('home'); },

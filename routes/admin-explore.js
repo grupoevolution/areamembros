@@ -36,9 +36,13 @@ const DEFAULT_EXPLORE = {
     // Pasta (coleção) do Bunny — preenchida, alimenta o feed inteiro de uma vez
     // (igual aos conteúdos do produto). Tem prioridade sobre a lista manual.
     collection_library_id: null, collection_id: null, creator_name: null,
-    paywall_title: 'Continue assistindo',
-    paywall_text: 'Você já viu o grátis. O resto é só pra VIP 🔥',
-    paywall_cta: 'QUERO SER VIP',
+    paywall_title: 'Você já viu o grátis 🔥',
+    paywall_text: 'Libera o feed completo agora — sem limite. As que mais bombam tão te esperando do outro lado.',
+    paywall_cta: 'QUERO ACESSO VIP',
+    // Oferta exibida no paywall (de X por Y)
+    offer_original_price: 49.90,
+    offer_price: 19.90,
+    offer_note: 'acesso vitalício · 1 pagamento',
 };
 const DEFAULT_PWA_GATE = {
     gate_stories: true, gate_view_once: true, gate_explore: true,
@@ -93,6 +97,9 @@ router.put('/settings', requireAdmin, async (req, res) => {
                 paywall_title: (e.paywall_title || '').toString().trim().slice(0, 120) || DEFAULT_EXPLORE.paywall_title,
                 paywall_text: (e.paywall_text || '').toString().trim().slice(0, 300) || DEFAULT_EXPLORE.paywall_text,
                 paywall_cta: (e.paywall_cta || '').toString().trim().slice(0, 40) || DEFAULT_EXPLORE.paywall_cta,
+                offer_original_price: e.offer_original_price != null && e.offer_original_price !== '' ? Math.max(0, parseFloat(e.offer_original_price)) || null : null,
+                offer_price: e.offer_price != null && e.offer_price !== '' ? Math.max(0, parseFloat(e.offer_price)) || null : null,
+                offer_note: (e.offer_note || '').toString().trim().slice(0, 80) || null,
             };
             await writeConfig('explore_config', next, req.admin?.username);
         }
