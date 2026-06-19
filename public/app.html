@@ -1380,11 +1380,18 @@ body.is-slowconn .prod-cta-fixed {
 .nav-icon { width: 20px; height: 20px; }
 .nav-label { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
 .nav-dot {
-    position: absolute; top: 4px; right: calc(50% - 16px);
-    width: 6px; height: 6px;
+    position: absolute; top: 2px; right: calc(50% - 20px);
+    width: 11px; height: 11px;
     background: var(--red-bright);
     border-radius: 50%;
     border: 2px solid #000;
+    box-shadow: 0 0 0 0 rgba(229,9,20,.6);
+    animation: navDotPulse 1.6s ease-out infinite;
+}
+@keyframes navDotPulse {
+    0%   { box-shadow: 0 0 0 0 rgba(229,9,20,.55); }
+    70%  { box-shadow: 0 0 0 7px rgba(229,9,20,0); }
+    100% { box-shadow: 0 0 0 0 rgba(229,9,20,0); }
 }
 .fab-wrap {
     position: relative; flex: 1;
@@ -8933,7 +8940,7 @@ window.ChatApp = (function() {
             if (data && data.awaiting !== 'delay' && (!data.messages || !data.messages.length)) {
                 // não para de vez: continua num ritmo lento pra ficar em sincronia
             }
-        }, 4000);
+        }, 2000); // 2s: com pacing no servidor, as mensagens dripam ~no tempo de digitar
     }
     // Conversa aberta + app volta do background → consulta na hora (sem esperar 4s).
     document.addEventListener('visibilitychange', () => {
@@ -9001,7 +9008,13 @@ window.ChatApp = (function() {
             QUEUE.push(m);
         }
         QUEUE._awaiting = data.awaiting;
-        if (CUR) CUR.awaiting = data.awaiting;
+        if (CUR) {
+            CUR.awaiting = data.awaiting;
+            // próxima mensagem vem LOGO? (delay curto = pacing automático entre msgs).
+            // Usado pra mostrar "digitando…" no intervalo (não em espera longa).
+            CUR.nextSoon = !!(data.awaiting === 'delay' && data.resume_at &&
+                (new Date(data.resume_at).getTime() - Date.now()) < 12000);
+        }
         if (!RENDERING) drain();
     }
 
@@ -9070,6 +9083,12 @@ window.ChatApp = (function() {
         RENDERING = false;
         renderChoices(QUEUE._awaiting);
         updateInputBar();
+        // Entre uma mensagem e outra (pacing no servidor), mostra "digitando…" no
+        // rodapé pra dar o ritmo de conversa real enquanto a próxima não chega.
+        if (CUR && CUR.nextSoon && QUEUE._awaiting === 'delay') {
+            const nm = (CUR.chat && CUR.chat.name) || 'Ela';
+            showBottomStatus(nm + ' está digitando…');
+        }
         // Conversa aberta SEMPRE consulta o servidor (a cada 4s) — assim capta as
         // mensagens que o roteiro/worker manda depois (delay, auto-start, "esperar
         // abrir" de outro device) mesmo sem o cliente interagir. Para no back().
@@ -9662,23 +9681,25 @@ window.MVNotify = (function() {
     let el = null, hideT = null, queue = [], showing = false;
     let touchY = null;
     const recent = {}; // dedupe: evita banner idêntico em janela curta (poller + push)
-    // Som de notificação — "pop" suave de 2 notinhas (estilo app de mensagem).
-    // Sintetizado (sem arquivo). Volume baixo e fim macio pra não ser estridente.
+    // Som de notificação — chime de 3 notas, CLARO e perceptível (não estridente).
+    // Sintetizado (sem arquivo). Volume mais alto que antes.
     function ding() {
         try {
             const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
             const ac = new AC();
-            const note = (freq, start, dur) => {
+            const note = (freq, start, dur, vol) => {
                 const o = ac.createOscillator(), g = ac.createGain();
-                o.connect(g); g.connect(ac.destination); o.type = 'triangle';
+                o.connect(g); g.connect(ac.destination); o.type = 'sine';
                 o.frequency.setValueAtTime(freq, ac.currentTime + start);
                 g.gain.setValueAtTime(0.0001, ac.currentTime + start);
-                g.gain.exponentialRampToValueAtTime(0.18, ac.currentTime + start + 0.015);
+                g.gain.exponentialRampToValueAtTime(vol || 0.5, ac.currentTime + start + 0.012);
                 g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + start + dur);
                 o.start(ac.currentTime + start); o.stop(ac.currentTime + start + dur + 0.02);
             };
-            note(784, 0, 0.16);     // sol
-            note(1175, 0.10, 0.22); // ré (mais agudo) — sobe leve, agradável
+            // dó-mi-sol ascendente (acorde alegre, chama atenção sem irritar)
+            note(880, 0, 0.18, 0.5);
+            note(1108, 0.11, 0.20, 0.5);
+            note(1318, 0.22, 0.30, 0.55);
         } catch (_) {}
     }
     function ensure() {
@@ -11700,10 +11721,11 @@ function renderLibrary() {
                     <div style="font-size:16px;font-weight:600;margin-bottom:8px;color:#fff;">
                         Seu acervo está vazio
                     </div>
-                    <div style="font-size:13px;line-height:1.5;">
+                    <div style="font-size:13px;line-height:1.5;margin-bottom:18px;">
                         Explore o catálogo e faça sua primeira compra.<br>
                         Os produtos aparecerão aqui.
                     </div>
+                    <button onclick="switchScreen('home')" style="background:#e50914;border:none;color:#fff;font-size:14px;font-weight:700;padding:13px 26px;border-radius:12px;cursor:pointer;box-shadow:0 4px 14px rgba(229,9,20,.35);">Ver catálogo →</button>
                 </div>`;
         });
         return;
@@ -12021,10 +12043,11 @@ function openPreviewLock() {
     const sub = modal.querySelector('#previewLockSub');
     if (sub) sub.textContent = `Compre pra liberar todas as fotos e vídeos de ${p.name || 'este produto'}.`;
     modal.querySelector('#previewLockBuy').onclick = () => {
-        closePreviewLock();
+        // Só FECHA o popup — o lead já está na página do produto, onde o
+        // "COMPRAR AGORA" real (com o preço/plano cadastrado) está logo abaixo.
+        // (Antes ia pra uma tela de checkout legada com preço não cadastrado.)
         if (typeof TRACK !== 'undefined') TRACK.event('preview_lock_buy_click', { product_id: p.id });
-        if (typeof populateCheckoutScreen === 'function') populateCheckoutScreen(p);
-        if (typeof switchScreen === 'function') switchScreen('checkout');
+        closePreviewLock();
     };
     modal.style.display = 'flex';
 }
@@ -15184,22 +15207,21 @@ body.is-logged #pwaLandingBanner, body.pwa-installed #pwaLandingBanner { display
 /* ─── Banner de notificação in-app (estilo notificação de celular) ─── */
 #mvNotify {
     position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
-    display: flex; align-items: center; gap: 11px;
-    margin: 8px auto; max-width: 520px; padding: 11px 12px;
-    background: rgba(28,28,30,.94);
-    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-    border: 1px solid rgba(255,255,255,.12); border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.45);
-    transform: translateY(-180%); transition: transform .34s cubic-bezier(.2,.8,.2,1);
+    display: flex; align-items: center; gap: 12px;
+    margin: 10px auto; max-width: 520px; padding: 12px 14px;
+    background: #ffffff;
+    border: 1px solid rgba(0,0,0,.06); border-radius: 18px;
+    box-shadow: 0 12px 34px rgba(0,0,0,.35);
+    transform: translateY(-200%); transition: transform .38s cubic-bezier(.2,.85,.25,1);
     cursor: pointer;
 }
 #mvNotify.show { transform: translateY(0); }
-#mvNotify .mvn-av { width:42px;height:42px;border-radius:12px;flex-shrink:0;background-size:cover;background-position:center;background-color:#e50914;display:flex;align-items:center;justify-content:center;font-size:21px; }
+#mvNotify .mvn-av { width:46px;height:46px;border-radius:50%;flex-shrink:0;background-size:cover;background-position:center;background-color:#e50914;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 0 2px #e50914; }
 #mvNotify .mvn-txt { flex:1; min-width:0; }
 #mvNotify .mvn-top { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
-#mvNotify .mvn-title { color:#fff;font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-#mvNotify .mvn-time { color:rgba(255,255,255,.45);font-size:11px;flex-shrink:0; }
-#mvNotify .mvn-body { color:rgba(255,255,255,.82);font-size:12.5px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:1px; }
+#mvNotify .mvn-title { color:#111;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+#mvNotify .mvn-time { color:#e50914;font-size:11px;font-weight:700;flex-shrink:0; }
+#mvNotify .mvn-body { color:#555;font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:2px; }
 .paud-eyebrow {
     display: flex; align-items: center; gap: 8px;
     color: #fff; font-size: 10px; font-weight: 800;

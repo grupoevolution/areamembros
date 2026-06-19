@@ -249,7 +249,10 @@ async function runScript(session, chat, steps, idx, ident) {
             session.resume_at = rr[0] ? rr[0].resume_at : null;
             return out; // sai sem o UPDATE final (já gravamos resume_at aqui)
         }
-        let type = s.type, content = null, media = null, meta = { typing_ms: typing };
+        // O "tempo de digitar" vira a ESPERA no servidor (pacing) — então a
+        // mensagem em si renderiza rápido no cliente (settle curto). O "digitando…"
+        // aparece durante a espera (awaiting='delay'), não em cima da mensagem.
+        let type = s.type, content = null, media = null, meta = { typing_ms: 500 };
         if (s.type === 'text') content = await fillVars(s.content, ident);
         else if (s.type === 'audio') { media = s.media_url; }
         else if (s.type === 'image') { media = s.media_url; content = await fillVars(s.content, ident); }
@@ -285,6 +288,28 @@ async function runScript(session, chat, steps, idx, ident) {
         if ((s.type === 'view_once_image' || s.type === 'view_once_video') && s.wait_open === true) {
             awaiting = 'view_once';
             break;
+        }
+        // PACING AUTOMÁTICO: entrega UMA mensagem por vez. Se o próximo bloco também
+        // é mensagem (passivo), agenda ele via 'delay' (= o tempo de digitar dele) e
+        // retorna agora. Assim as mensagens chegam ESPAÇADAS no servidor: o worker
+        // entrega enquanto o cliente está FORA (dispara notificação por mensagem) e,
+        // ao voltar, ele NÃO recebe um monte de uma vez.
+        if (idx >= 0 && idx < steps.length) {
+            const nx = steps[idx];
+            const PASSIVE = ['text', 'audio', 'image', 'view_once_image', 'view_once_video', 'cta', 'call'];
+            if (nx && PASSIVE.indexOf(nx.type) >= 0) {
+                const gapMs = Math.max(800, Math.min(8000, parseInt(nx.typing_ms, 10) || 3000));
+                const secs = Math.max(1, Math.round(gapMs / 1000));
+                const { rows: rr } = await db.query(
+                    `UPDATE chat_sessions SET current_order = $2, awaiting = 'delay', current_flow = $4,
+                     resume_at = NOW() + make_interval(secs => $3), updated_at = NOW() WHERE id = $1 RETURNING resume_at`,
+                    [session.id, idx, secs, session.current_flow || 'open']
+                );
+                session.current_order = idx;
+                session.awaiting = 'delay';
+                session.resume_at = rr[0] ? rr[0].resume_at : null;
+                return out;
+            }
         }
     }
     if (awaiting === null) idx = steps.length; // roteiro acabou
@@ -642,7 +667,12 @@ router.get('/chats/:id/poll', optionalUser, async (req, res) => {
         if (msgs.length) {
             await db.query(`UPDATE chat_sessions SET last_seen_at = NOW() WHERE id = $1`, [session.id]);
         }
-        return res.json({ success: true, messages: msgs.map(publicMsg), awaiting: session.awaiting });
+        return res.json({
+            success: true,
+            messages: msgs.map(publicMsg),
+            awaiting: session.awaiting,
+            resume_at: session.awaiting === 'delay' ? session.resume_at : null,
+        });
     } catch (err) {
         return res.json({ success: false });
     }
