@@ -17575,6 +17575,14 @@ window.Explore = (function () {
 
     let loaded = false, data = null, audioUnlocked = false, activeIndex = 0, gatePassed = false, io = null;
     const feedEl = () => document.getElementById('tkFeed');
+
+    // Memória de "já visto" por lead (no aparelho). Não repete vídeo e conta o
+    // total assistido na vida pra decidir o paywall (X grátis → paga).
+    let seen = null;
+    function loadSeen() { if (seen) return seen; try { seen = new Set(JSON.parse(localStorage.getItem('mv_explore_seen') || '[]')); } catch (_) { seen = new Set(); } return seen; }
+    function saveSeen() { try { localStorage.setItem('mv_explore_seen', JSON.stringify([...seen].slice(-3000))); } catch (_) {} }
+    function markSeen(id) { if (id == null) return; loadSeen(); if (!seen.has(id)) { seen.add(id); saveSeen(); } }
+    function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
     function esc(s) { try { return escapeHtmlData(s == null ? '' : String(s)); } catch (_) { return ''; } }
     function fmt(n) { n = n || 0; return n >= 1000 ? (n / 1000).toFixed(1).replace('.0', '') + 'k' : String(n); }
 
@@ -17586,6 +17594,13 @@ window.Explore = (function () {
             const d = await r.json();
             if (!d || !d.success || !Array.isArray(d.videos) || !d.videos.length) { showEmpty(); return; }
             data = d;
+            // Ordem ALEATÓRIA por lead + sem repetir o que ele já viu. Se já viu
+            // tudo, recomeça do zero (embaralhado de novo) pra o feed nunca acabar.
+            loadSeen();
+            const all = d.videos;
+            let list = shuffle(all.filter(v => !seen.has(v.id)));
+            if (!list.length) { seen.clear(); saveSeen(); list = shuffle(all); }
+            data.videos = list;
             build();
         } catch (_) { showEmpty(); }
     }
@@ -17663,21 +17678,25 @@ window.Explore = (function () {
     function onActive(i) {
         if (!data) return;
         const slides = feedEl().querySelectorAll('.tk-slide');
+        const watched = loadSeen().size; // vídeos únicos já assistidos na vida
         if (!data.has_access) {
             // Gate de PWA: sem instalar, libera só pwa_gate_after vídeos
-            if (gateExploreOn() && !gatePassed && window.ChatApp && !ChatApp.isStandalone() && i >= (data.pwa_gate_after || 0) && i < (data.free_limit || 9999)) {
+            if (gateExploreOn() && !gatePassed && window.ChatApp && !ChatApp.isStandalone() && watched >= (data.pwa_gate_after || 0) && watched < (data.free_limit || 9999)) {
                 pauseAll();
                 try { ChatApp.gateInstall(() => { gatePassed = true; playActive(); }); } catch (_) { gatePassed = true; playActive(); }
                 return;
             }
-            // Paywall: passou do limite grátis
-            if (i >= (data.free_limit || 9999)) {
+            // Paywall: já usou os vídeos grátis
+            if (watched >= (data.free_limit || 9999)) {
                 pauseAll();
                 openPaywall();
                 return;
             }
         }
         playActive(i);
+        // conta este vídeo como visto (não repete + alimenta o paywall)
+        const cur = data.videos[i];
+        if (cur) markSeen(cur.id);
         // prepara vizinhos, libera distantes
         prepare(slides[i + 1]);
         slides.forEach((s, idx) => { if (Math.abs(idx - i) > 2) release(s); });
@@ -17730,9 +17749,9 @@ window.Explore = (function () {
             ctaText: pw.cta || 'QUERO SER VIP',
             social: '+2.400 já viraram VIP esta semana',
             onClose: () => {
-                // volta pro último vídeo grátis
+                // volta pro último vídeo que ele podia ver (antes do paywall)
                 const feed = feedEl(); if (!feed) return;
-                const back = Math.max(0, (data.free_limit || 1) - 1);
+                const back = Math.max(0, activeIndex - 1);
                 const target = feed.querySelector('.tk-slide[data-index="' + back + '"]');
                 if (target) target.scrollIntoView();
                 setTimeout(() => playActive(back), 250);
