@@ -8328,11 +8328,17 @@ body.is-slowconn .prod-cta-fixed {
 @keyframes tkbob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,6px)}}
 .tk-brand{position:absolute;top:calc(12px + env(safe-area-inset-top));left:0;right:0;text-align:center;z-index:7;color:#fff;font-weight:800;font-size:16px;letter-spacing:-.01em;text-shadow:0 1px 8px rgba(0,0,0,.7);pointer-events:none;}
 .tk-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#888;font-size:14px;padding:30px;text-align:center;}
+/* Paywall do feed: cobre só os vídeos (z-index 50 < 500 da barra) — a barra de
+   baixo continua visível e clicável, o lead pode ir pra outras partes do app. */
+.tk-paywall{position:absolute;left:0;right:0;top:0;bottom:0;z-index:50;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(8,6,7,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.tk-paywall.open{display:flex;}
+.tk-paywall .mvpw-inline{background:#141013;border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:26px 22px 18px;max-width:340px;box-shadow:0 30px 80px rgba(0,0,0,.6);}
 </style>
 <div class="screen" id="tiktok">
-    <div class="tk-brand">Explorar</div>
+    <div class="tk-brand">Vídeos</div>
     <div class="tk-feed" id="tkFeed"></div>
     <div class="tk-empty" id="tkEmpty" style="display:none;">Nenhum vídeo por aqui ainda.</div>
+    <div class="tk-paywall" id="tkPaywall"></div>
 </div>
 
 <div class="bottom-nav" id="bottomNav">
@@ -17587,7 +17593,12 @@ window.Explore = (function () {
     function fmt(n) { n = n || 0; return n >= 1000 ? (n / 1000).toFixed(1).replace('.0', '') + 'k' : String(n); }
 
     async function open() {
-        if (loaded) { playActive(); return; }
+        if (loaded) {
+            // reabriu a aba: se já estourou o limite grátis, mostra o paywall de novo
+            if (data && !data.has_access && loadSeen().size >= (data.free_limit || 9999)) openPaywall();
+            else playActive();
+            return;
+        }
         loaded = true;
         try {
             const r = await fetch('/api/user/explore/feed', { credentials: 'include' });
@@ -17740,23 +17751,25 @@ window.Explore = (function () {
         v.dataset.ready = '';
     }
 
+    function closePaywall() {
+        const ov = document.getElementById('tkPaywall');
+        if (ov) { ov.classList.remove('open'); ov.innerHTML = ''; }
+    }
     function openPaywall() {
+        const ov = document.getElementById('tkPaywall');
+        if (!ov || ov.classList.contains('open') || !window.MVPaywall) return;
+        pauseAll();
         const pw = (data && data.paywall) || {};
-        MVPaywall.openModal(data.unlock || {}, {
+        MVPaywall.renderInline(ov, data.unlock || {}, {
             icon: 'lock',
             title: pw.title || 'Continue assistindo',
             subtitle: pw.text || 'Você já viu o grátis. O resto é só pra VIP 🔥',
             ctaText: pw.cta || 'QUERO SER VIP',
             social: '+2.400 já viraram VIP esta semana',
-            onClose: () => {
-                // volta pro último vídeo que ele podia ver (antes do paywall)
-                const feed = feedEl(); if (!feed) return;
-                const back = Math.max(0, activeIndex - 1);
-                const target = feed.querySelector('.tk-slide[data-index="' + back + '"]');
-                if (target) target.scrollIntoView();
-                setTimeout(() => playActive(back), 250);
-            },
+            // "agora não": sai do feed de vídeos e volta pra Home (sem travar o app)
+            onClose: () => { closePaywall(); if (typeof switchScreen === 'function') switchScreen('home'); },
         });
+        ov.classList.add('open');
     }
 
     function doShare() {
