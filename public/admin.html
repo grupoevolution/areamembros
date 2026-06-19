@@ -3819,6 +3819,10 @@ a { color: inherit; text-decoration: none; }
                         <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Produto que libera o feed (VIP)</label><select class="form-control" id="exProduct" style="width:100%;"><option value="">— nenhum —</option></select></div>
                         <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link de checkout do paywall</label><input class="form-control" id="exCheckout" maxlength="1000" placeholder="https://pay..." style="width:100%;"/></div>
                     </div>
+                    <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Códigos de oferta que liberam o feed (separados por vírgula)</label>
+                        <input class="form-control" id="exOfferCodes" maxlength="500" placeholder="ex: OFERTA123, plan_abc, 99887766" style="width:100%;"/>
+                        <div class="form-help" style="margin-top:4px;">São os mesmos códigos (offer_id / plan.code) que você cadastra nas ofertas dos produtos. Quando o cliente compra qualquer um deles, o webhook libera o feed pra ele. Pode usar junto com o produto acima.</div>
+                    </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                         <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Título do paywall</label><input class="form-control" id="exPwTitle" maxlength="120" placeholder="Continue assistindo" style="width:100%;"/></div>
                         <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Texto do botão</label><input class="form-control" id="exPwCta" maxlength="40" placeholder="QUERO SER VIP" style="width:100%;"/></div>
@@ -5685,6 +5689,7 @@ a { color: inherit; text-decoration: none; }
                             <div id="srBgWrap" style="display:none;"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Cor de fundo</label><input class="form-control" type="text" id="srBg" placeholder="#e50914" style="width:140px;"/></div>
                             <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Legenda / texto</label><input class="form-control" id="srCaption" maxlength="300" placeholder="bom dia amor 💋" style="width:100%;"/></div>
                             <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Gatilho ao responder (rótulo do bloco) — opcional</label><input class="form-control" id="srReplyGoto" maxlength="40" placeholder="ex: reacao_story" style="width:100%;"/></div>
+                            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; background:rgba(245,197,66,.06); border:1px solid rgba(245,197,66,.3); border-radius:10px; padding:10px;"><input type="checkbox" id="srIsVip" style="width:16px; height:16px;"> 👑 Postar como Story VIP (só quem comprou os Stories VIP da modelo)</label>
                             <button type="button" class="btn-primary" onclick="saveStatusSchedule()">Agendar status</button>
                         </div>
                     </div>
@@ -13676,6 +13681,7 @@ async function loadExplore() {
             document.getElementById('exPwaGateAfter').value = e.pwa_gate_after != null ? e.pwa_gate_after : 2;
             if (e.product_id) document.getElementById('exProduct').value = e.product_id;
             document.getElementById('exCheckout').value = e.checkout_url || '';
+            document.getElementById('exOfferCodes').value = e.unlock_offer_codes || '';
             document.getElementById('exColLib').value = e.collection_library_id || '';
             document.getElementById('exColId').value = e.collection_id || '';
             document.getElementById('exColCreator').value = e.creator_name || '';
@@ -13789,6 +13795,7 @@ async function saveExploreSettings() {
             pwa_gate_after: parseInt(document.getElementById('exPwaGateAfter').value, 10) || 0,
             product_id: document.getElementById('exProduct').value || null,
             checkout_url: document.getElementById('exCheckout').value.trim() || null,
+            unlock_offer_codes: document.getElementById('exOfferCodes').value.trim() || null,
             collection_library_id: document.getElementById('exColLib').value.trim() || null,
             collection_id: document.getElementById('exColId').value.trim() || null,
             creator_name: document.getElementById('exColCreator').value.trim() || null,
@@ -15571,7 +15578,7 @@ async function loadStatusScheduleList() {
             const dim = s.active ? '' : 'opacity:.5;';
             return '<div style="display:flex; align-items:center; gap:12px; padding:12px 14px; background:var(--card,#1a1a1a); border:1px solid var(--border,rgba(255,255,255,.08)); border-radius:12px;' + dim + '">'
                 + '<div style="width:40px;height:40px;border-radius:50%;background:#3a2a2c;' + av + 'flex-shrink:0;"></div>'
-                + '<div style="flex:1; min-width:0;"><div style="font-size:13.5px; font-weight:700; color:#fff;">' + escHtmlAdmin(s.chat_name) + ' · <span style="color:#e50914;">' + s.post_time + '</span></div>'
+                + '<div style="flex:1; min-width:0;"><div style="font-size:13.5px; font-weight:700; color:#fff;">' + escHtmlAdmin(s.chat_name) + ' · <span style="color:#e50914;">' + s.post_time + '</span>' + (s.is_vip ? ' <span style="color:#f5c542;">👑 VIP</span>' : '') + '</div>'
                 + '<div style="font-size:11.5px; color:rgba(255,255,255,.55);">' + days + ' · ' + icon + ' ' + escHtmlAdmin((s.caption || s.media_url || '').slice(0, 40)) + '</div></div>'
                 + '<button onclick="toggleStatusSchedule(' + s.id + ',' + (!s.active) + ')" class="btn-secondary" style="font-size:11px;padding:5px 10px;">' + (s.active ? 'Pausar' : 'Ativar') + '</button>'
                 + '<button onclick="deleteStatusSchedule(' + s.id + ')" class="btn-danger" style="font-size:11px;padding:5px 10px;">×</button>'
@@ -15591,6 +15598,7 @@ async function saveStatusSchedule() {
         caption: document.getElementById('srCaption').value.trim() || null,
         reply_goto_key: document.getElementById('srReplyGoto').value.trim() || null,
         expires_hours: parseInt(document.getElementById('srHours').value, 10) || 24,
+        is_vip: document.getElementById('srIsVip').checked,
     };
     if (!payload.chat_id) { alert('Escolha a modelo.'); return; }
     if (!payload.weekdays.length) { alert('Escolha pelo menos 1 dia.'); return; }
@@ -15601,6 +15609,7 @@ async function saveStatusSchedule() {
         if (!d.success) { alert('Erro: ' + (d.error || '')); return; }
         document.getElementById('srMedia').value = '';
         document.getElementById('srCaption').value = '';
+        document.getElementById('srIsVip').checked = false;
         loadStatusScheduleList();
     } catch (e) { alert('Erro: ' + e.message); }
 }

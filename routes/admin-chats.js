@@ -505,8 +505,8 @@ router.post('/status-schedule', requireAdmin, async (req, res) => {
         const weekdays = cleanWeekdays(b.weekdays);
         if (!weekdays.length) return res.status(400).json({ success: false, error: 'Escolha pelo menos 1 dia da semana' });
         const { rows } = await db.query(`
-            INSERT INTO chat_status_schedule (chat_id, weekdays, post_time, type, media_url, caption, bg_color, reply_goto_key, expires_hours, active)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *
+            INSERT INTO chat_status_schedule (chat_id, weekdays, post_time, type, media_url, caption, bg_color, reply_goto_key, expires_hours, active, is_vip)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *
         `, [
             chatId, JSON.stringify(weekdays), cleanTime(b.post_time), type, mediaUrl,
             (b.caption || '').trim().slice(0, 300) || null,
@@ -514,6 +514,7 @@ router.post('/status-schedule', requireAdmin, async (req, res) => {
             (b.reply_goto_key || '').trim().slice(0, 40) || null,
             Math.max(1, Math.min(168, parseInt(b.expires_hours, 10) || 24)),
             b.active !== false,
+            b.is_vip === true,
         ]);
         return res.json({ success: true, schedule: rows[0] });
     } catch (err) {
@@ -533,6 +534,7 @@ router.put('/status-schedule/:sid', requireAdmin, async (req, res) => {
         if (b.post_time !== undefined) set('post_time', cleanTime(b.post_time));
         if (b.caption !== undefined) set('caption', (b.caption || '').trim().slice(0, 300) || null);
         if (b.active !== undefined) set('active', !!b.active);
+        if (b.is_vip !== undefined) set('is_vip', !!b.is_vip);
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
         values.push(sid);
         const { rows } = await db.query(`UPDATE chat_status_schedule SET ${updates.join(', ')} WHERE id = $${p} RETURNING *`, values);

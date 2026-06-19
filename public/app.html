@@ -8326,6 +8326,16 @@ body.is-slowconn .prod-cta-fixed {
 @keyframes tkring{0%{transform:scale(.85);opacity:.8}100%{transform:scale(1.45);opacity:0}}
 .tk-hint{position:absolute;bottom:78px;left:50%;transform:translateX(-50%);z-index:7;font-size:11px;color:rgba(255,255,255,.6);animation:tkbob 1.6s ease-in-out infinite;pointer-events:none;}
 @keyframes tkbob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,6px)}}
+/* guia "arraste pra cima" (1º vídeo) */
+.tk-swipeup{position:absolute;bottom:86px;left:50%;transform:translateX(-50%);z-index:7;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;animation:tkSwipeUpBob 1.8s ease-in-out infinite, tkSwipeFade 10s ease forwards;}
+.tk-swipeup-ico{display:flex;flex-direction:column;align-items:center;height:26px;}
+.tk-swipeup-ico span{width:15px;height:15px;border-top:3px solid #fff;border-left:3px solid #fff;transform:rotate(45deg);margin-top:-8px;opacity:.25;border-radius:2px;animation:tkChev 1.5s ease-in-out infinite;}
+.tk-swipeup-ico span:nth-child(2){animation-delay:.18s;}
+.tk-swipeup-ico span:nth-child(3){animation-delay:.36s;}
+.tk-swipeup-tx{font-size:12.5px;font-weight:700;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.7);background:rgba(0,0,0,.4);padding:6px 14px;border-radius:999px;}
+@keyframes tkChev{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes tkSwipeUpBob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-8px)}}
+@keyframes tkSwipeFade{0%,82%{opacity:1}100%{opacity:0;visibility:hidden}}
 .tk-brand{position:absolute;top:calc(12px + env(safe-area-inset-top));left:0;right:0;text-align:center;z-index:7;color:#fff;font-weight:800;font-size:16px;letter-spacing:-.01em;text-shadow:0 1px 8px rgba(0,0,0,.7);pointer-events:none;}
 .tk-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#888;font-size:14px;padding:30px;text-align:center;}
 /* Paywall do feed: cobre só os vídeos (z-index 50 < 500 da barra) — a barra de
@@ -9937,8 +9947,7 @@ if (navigator.serviceWorker) {
                 markSeen(n.id);
                 MVNotify.push({
                     title: n.title, body: n.body,
-                    avatar: n.image || null,   // foto do produto, se a notificação apontar pra um
-                    icon: n.icon || '🎁',
+                    avatar: n.image || '/assets/icon-192.png',   // foto do produto, ou a logo do sistema
                     onClick: n.cta_url ? () => mvNavigate(n.cta_url) : null,
                 });
             }
@@ -12158,19 +12167,29 @@ function closePreviewLock() {
 
 // Abre item da galeria do produto no lightbox (reusa o #libLightbox da biblioteca).
 // Itens vêm de window.__prodGalleryItems (setado por populateProductScreen).
-function openProdGalleryItem(idx) {
+function _prodEsc(s) {
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+// Renderiza a mídia atual no lightbox (com swipe/setas entre as mídias da prévia)
+function renderProdLightbox(idx) {
     const items = window.__prodGalleryItems || [];
     const g = items[idx];
     if (!g) return;
-    if (g.is_locked) { if (typeof openPreviewLock === 'function') openPreviewLock(); return; }
-    if (!g.url) return;
+    window.__prodGalleryCur = idx;
     const inner = document.getElementById('libLightboxInner');
-    const box = document.getElementById('libLightbox');
-    if (!inner || !box) return;
-    const esc = s => String(s == null ? '' : s)
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-    if (g.type === 'video') {
+    if (!inner) return;
+    const esc = _prodEsc;
+    if (g.is_locked) {
+        const poster = g.thumbnail_url ? '<img src="' + esc(g.thumbnail_url) + '" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(22px) brightness(.55);transform:scale(1.12);">' : '';
+        inner.innerHTML = '<div class="lib-lightbox-media" style="position:relative;width:min(88vw,400px);aspect-ratio:9/16;background:#111;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;">'
+            + poster
+            + '<div style="position:relative;text-align:center;color:#fff;padding:22px;">'
+            + '<div style="width:62px;height:62px;border-radius:18px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 8px 26px rgba(229,9,20,.5);"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>'
+            + '<div style="font-size:16px;font-weight:800;margin-bottom:6px;">Conteúdo exclusivo</div>'
+            + '<div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:14px;">Compre pra desbloquear todas as fotos e vídeos.</div>'
+            + '<button type="button" onclick="event.stopPropagation();if(typeof openPreviewLock===\'function\')openPreviewLock()" style="background:#e50914;border:0;color:#fff;font-size:14px;font-weight:700;padding:13px 26px;border-radius:12px;cursor:pointer;">Comprar e desbloquear</button>'
+            + '</div></div>';
+    } else if (g.url && g.type === 'video') {
         const isBunny = g.url.indexOf('mediadelivery.net') !== -1;
         if (isBunny) {
             const embedUrl = g.url
@@ -12182,9 +12201,44 @@ function openProdGalleryItem(idx) {
         } else {
             inner.innerHTML = '<video class="lib-lightbox-media" src="' + esc(g.url) + '" controls autoplay playsinline preload="metadata" style="max-width:100%;max-height:100%;"></video>';
         }
-    } else {
+    } else if (g.url) {
         inner.innerHTML = '<img class="lib-lightbox-media" src="' + esc(g.url) + '" alt="" decoding="async" style="max-width:100%;max-height:100%;">';
     }
+    const prev = document.getElementById('libLbPrev'), next = document.getElementById('libLbNext');
+    if (prev) prev.disabled = idx <= 0;
+    if (next) next.disabled = idx >= items.length - 1;
+}
+function prodGalleryNav(dir) {
+    const items = window.__prodGalleryItems || [];
+    const idx = (window.__prodGalleryCur || 0) + dir;
+    if (idx < 0 || idx >= items.length) return;
+    renderProdLightbox(idx);
+    if (navigator.vibrate) navigator.vibrate(5);
+}
+let __prodSwipeBound = false;
+function bindProdSwipe() {
+    if (__prodSwipeBound) return;
+    const box = document.getElementById('libLightbox');
+    if (!box) return;
+    let sx = null, sy = null;
+    box.addEventListener('touchstart', e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; }, { passive: true });
+    box.addEventListener('touchend', e => {
+        if (sx === null || !box.classList.contains('prod-nav')) { sx = null; return; }
+        const t = e.changedTouches[0];
+        const dx = t.clientX - sx, dy = t.clientY - sy;
+        if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.4) prodGalleryNav(dx < 0 ? 1 : -1);
+        sx = null;
+    }, { passive: true });
+    __prodSwipeBound = true;
+}
+function openProdGalleryItem(idx) {
+    const items = window.__prodGalleryItems || [];
+    if (!items[idx]) return;
+    const box = document.getElementById('libLightbox');
+    if (!box) return;
+    box.classList.add('prod-nav'); // liga as setas só pra galeria de prévia
+    bindProdSwipe();
+    renderProdLightbox(idx);
     box.classList.add('is-open');
     box.setAttribute('aria-hidden', 'false');
     if (navigator.vibrate) navigator.vibrate(8);
@@ -16297,7 +16351,7 @@ function executeFunnelStep(step, funnelSlug, email) {
                 MVNotify.push({
                     title: step.title || 'Novidade pra voc\u00ea',
                     body: step.message || '',
-                    icon: '\ud83d\udd14',
+                    avatar: '/assets/icon-192.png',
                     onClick: dest ? () => mvNavigate(dest) : null,
                 });
             } else {
@@ -17207,6 +17261,21 @@ document.addEventListener('keydown', function(e) {
     touch-action: pan-y;
 }
 .lib-lightbox.is-open { display: flex; }
+/* setas de navegação da galeria de prévia (só em modo produto) */
+.lib-lb-nav {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.14);
+    color: #fff; font-size: 26px; line-height: 1; display: none;
+    align-items: center; justify-content: center; cursor: pointer; z-index: 5;
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    animation: lbNavPulse 2s ease-in-out infinite;
+}
+.lib-lightbox.prod-nav .lib-lb-nav { display: flex; }
+.lib-lb-prev { left: 12px; }
+.lib-lb-next { right: 12px; }
+.lib-lb-nav:disabled { opacity: 0; pointer-events: none; }
+@keyframes lbNavPulse { 0%,100% { opacity: .5; } 50% { opacity: .92; } }
 .lib-lightbox-media {
     max-width: 100%; max-height: 100%;
     border-radius: 12px;
@@ -17266,6 +17335,8 @@ document.addEventListener('keydown', function(e) {
 <!-- Lightbox de mídia -->
 <div class="lib-lightbox" id="libLightbox" onclick="closeLibLightbox(event)" role="dialog" aria-hidden="true">
     <button class="lib-lightbox-close" type="button" aria-label="Fechar" onclick="closeLibLightbox(event, true)">×</button>
+    <button class="lib-lb-nav lib-lb-prev" id="libLbPrev" type="button" aria-label="Anterior" onclick="event.stopPropagation();prodGalleryNav(-1)">‹</button>
+    <button class="lib-lb-nav lib-lb-next" id="libLbNext" type="button" aria-label="Próximo" onclick="event.stopPropagation();prodGalleryNav(1)">›</button>
     <div id="libLightboxInner" style="position:relative;max-width:100%;max-height:100%;display:flex;align-items:center;justify-content:center;"></div>
 </div>
 
@@ -17389,6 +17460,7 @@ document.addEventListener('keydown', function(e) {
         const el = $('libLightbox');
         if (!el) return;
         el.classList.remove('is-open');
+        el.classList.remove('prod-nav');
         el.setAttribute('aria-hidden', 'true');
         const v = el.querySelector('video');
         if (v) { try { v.pause(); v.removeAttribute('src'); v.load(); } catch(_) {} }
@@ -17649,7 +17721,8 @@ window.Explore = (function () {
             const hls = v.hls_url ? ' data-hls="' + esc(v.hls_url) + '"' : '';
             const src = v.src ? ' data-src="' + esc(v.src) + '"' : '';
             const audiogate = i === 0
-                ? '<div class="tk-audiogate" data-audiogate><div class="ring">' + SOUND + '</div><p>Toque para ativar o som</p></div><div class="tk-hint">deslize para cima ↑</div>'
+                ? '<div class="tk-audiogate" data-audiogate><div class="ring">' + SOUND + '</div><p>Toque para ativar o som</p></div>'
+                  + '<div class="tk-swipeup"><div class="tk-swipeup-ico"><span></span><span></span><span></span></div><div class="tk-swipeup-tx">arraste pra cima pra ver mais</div></div>'
                 : '';
             return '<div class="tk-slide" data-index="' + i + '">'
                 + '<video loop playsinline preload="' + (i === 0 ? 'auto' : 'none') + '" muted' + poster + hls + src + '></video>'

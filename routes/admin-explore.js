@@ -32,7 +32,7 @@ function sanitizeBunnyGuid(raw) {
 // ── CONFIG (explore_config + pwa_gate_config) ────────────────────────────────
 const DEFAULT_EXPLORE = {
     enabled: false, free_limit: 15, pwa_gate_after: 2,
-    product_id: null, checkout_url: null,
+    product_id: null, checkout_url: null, unlock_offer_codes: null,
     // Pasta (coleção) do Bunny — preenchida, alimenta o feed inteiro de uma vez
     // (igual aos conteúdos do produto). Tem prioridade sobre a lista manual.
     collection_library_id: null, collection_id: null, creator_name: null,
@@ -91,6 +91,7 @@ router.put('/settings', requireAdmin, async (req, res) => {
                 pwa_gate_after: Math.max(0, Math.min(9999, parseInt(e.pwa_gate_after, 10) || 0)),
                 product_id: e.product_id ? parseInt(e.product_id, 10) : null,
                 checkout_url: sanitizeUrl(e.checkout_url),
+                unlock_offer_codes: (e.unlock_offer_codes || '').toString().trim().slice(0, 500) || null,
                 collection_library_id: sanitizeBunnyLib(e.collection_library_id),
                 collection_id: sanitizeBunnyGuid(e.collection_id),
                 creator_name: (e.creator_name || '').toString().trim().slice(0, 120) || null,

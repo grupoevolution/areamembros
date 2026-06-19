@@ -1130,9 +1130,9 @@ async function postDueStatusSchedules() {
         if (String(s.post_time) > nowHM) continue; // ainda não deu o horário
         try {
             await db.query(
-                `INSERT INTO chat_status (chat_id, type, media_url, caption, bg_color, reply_goto_key, expires_at)
-                 VALUES ($1,$2,$3,$4,$5,$6, NOW() + make_interval(hours => $7))`,
-                [s.chat_id, s.type, s.media_url, s.caption, s.bg_color, s.reply_goto_key, Math.max(1, Math.min(168, s.expires_hours || 24))]
+                `INSERT INTO chat_status (chat_id, type, media_url, caption, bg_color, reply_goto_key, is_vip, expires_at)
+                 VALUES ($1,$2,$3,$4,$5,$6,$7, NOW() + make_interval(hours => $8))`,
+                [s.chat_id, s.type, s.media_url, s.caption, s.bg_color, s.reply_goto_key, s.is_vip === true, Math.max(1, Math.min(168, s.expires_hours || 24))]
             );
             await db.query(`UPDATE chat_status_schedule SET last_posted_date = $2::date WHERE id = $1`, [s.id, today]);
             posted++;

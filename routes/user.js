@@ -1835,6 +1835,27 @@ async function ownsExploreProduct(email, productId) {
     } catch (_) { return false; }
 }
 
+// Desbloqueio por CÓDIGOS DE OFERTA (igual produtos): o cliente comprou alguma
+// das ofertas listadas → libera o feed. Casa pela venda já registrada
+// (user_access.offer_id → product_offers.offer_id = código do gateway).
+function parseOfferCodes(raw) {
+    if (!raw) return [];
+    return String(raw).split(',').map(s => s.trim()).filter(Boolean).slice(0, 50);
+}
+async function ownsExploreByOffers(email, rawCodes) {
+    if (!email) return false;
+    const codes = parseOfferCodes(rawCodes);
+    if (!codes.length) return false;
+    try {
+        const { rows } = await db.query(
+            `SELECT 1 FROM user_access ua JOIN product_offers po ON po.id = ua.offer_id
+             WHERE LOWER(ua.email) = $1 AND ua.status = 'active' AND po.offer_id = ANY($2::text[]) LIMIT 1`,
+            [email.toLowerCase().trim(), codes]
+        );
+        return rows.length > 0;
+    } catch (_) { return false; }
+}
+
 // Info de desbloqueio (produto + planos) pro paywall do Explorar
 async function loadExploreUnlock(productId, checkoutUrl) {
     const info = { product_id: productId || null, checkout_url: checkoutUrl || null, name: null, price: null, banner_url: null, plans: [] };
@@ -1860,7 +1881,8 @@ router.get('/explore/feed', optionalUser, async (req, res) => {
         const pwaGateAfter = Number.isFinite(+cfg.pwa_gate_after) ? Math.max(0, parseInt(cfg.pwa_gate_after, 10)) : 2;
         const productId = cfg.product_id ? parseInt(cfg.product_id, 10) : null;
         const email = req.user?.email || null;
-        const hasAccess = await ownsExploreProduct(email, productId);
+        let hasAccess = await ownsExploreProduct(email, productId);
+        if (!hasAccess) hasAccess = await ownsExploreByOffers(email, cfg.unlock_offer_codes);
 
         // Pasta (coleção) do Bunny tem prioridade; senão, a lista manual de vídeos.
         let videos;
