@@ -14706,6 +14706,15 @@ window.PWA = (function() {
         if (modalShown) return;
         if (!shouldShow()) return;
 
+        // Só aparece em telas de COMPRA (home / explorar / produto). Em chat,
+        // conversa, biblioteca, perfil, etc. NÃO incomoda — adia e tenta depois.
+        const act = document.querySelector('.screen.active');
+        const sid = act ? act.id : '';
+        if (['home', 'explore', 'product'].indexOf(sid) === -1) {
+            setTimeout(showModal, 12000);
+            return;
+        }
+
         // Fase L12: chamada de video ativa? Adia 15s e tenta de novo.
         if (isVideoCallActive()) {
             setTimeout(showModal, 15000);
