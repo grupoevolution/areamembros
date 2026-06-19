@@ -33,6 +33,9 @@ function sanitizeBunnyGuid(raw) {
 const DEFAULT_EXPLORE = {
     enabled: false, free_limit: 15, pwa_gate_after: 2,
     product_id: null, checkout_url: null,
+    // Pasta (coleção) do Bunny — preenchida, alimenta o feed inteiro de uma vez
+    // (igual aos conteúdos do produto). Tem prioridade sobre a lista manual.
+    collection_library_id: null, collection_id: null, creator_name: null,
     paywall_title: 'Continue assistindo',
     paywall_text: 'Você já viu o grátis. O resto é só pra VIP 🔥',
     paywall_cta: 'QUERO SER VIP',
@@ -84,6 +87,9 @@ router.put('/settings', requireAdmin, async (req, res) => {
                 pwa_gate_after: Math.max(0, Math.min(9999, parseInt(e.pwa_gate_after, 10) || 0)),
                 product_id: e.product_id ? parseInt(e.product_id, 10) : null,
                 checkout_url: sanitizeUrl(e.checkout_url),
+                collection_library_id: sanitizeBunnyLib(e.collection_library_id),
+                collection_id: sanitizeBunnyGuid(e.collection_id),
+                creator_name: (e.creator_name || '').toString().trim().slice(0, 120) || null,
                 paywall_title: (e.paywall_title || '').toString().trim().slice(0, 120) || DEFAULT_EXPLORE.paywall_title,
                 paywall_text: (e.paywall_text || '').toString().trim().slice(0, 300) || DEFAULT_EXPLORE.paywall_text,
                 paywall_cta: (e.paywall_cta || '').toString().trim().slice(0, 40) || DEFAULT_EXPLORE.paywall_cta,

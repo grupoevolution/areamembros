@@ -3133,9 +3133,9 @@ a { color: inherit; text-decoration: none; }
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><path d="M12 8v4l3 2"/></svg>
                     Rotina de Status
                 </div>
-                <div class="nav-item" data-screen="explore" onclick="switchAdminScreen(this, 'explore', 'Explorar (Feed)'); loadExplore();">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2.2 4.8-4.8 2.2 2.2-4.8 4.8-2.2z"/></svg>
-                    Explorar (Feed)
+                <div class="nav-item" data-screen="explore" onclick="switchAdminScreen(this, 'explore', 'Vídeos (Feed)'); loadExplore();">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M10 8.3l5.5 3.7-5.5 3.7z"/></svg>
+                    Vídeos
                 </div>
             </div>
 
@@ -3790,15 +3790,27 @@ a { color: inherit; text-decoration: none; }
             <div class="screen-content" id="screen-explore">
                 <div class="page-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
                     <div>
-                        <h1 style="margin:0;">Explorar (Feed estilo TikTok)</h1>
+                        <h1 style="margin:0;">Vídeos (Feed estilo TikTok)</h1>
                         <p style="margin:4px 0 0; color:rgba(255,255,255,.55); font-size:13px;">Feed vertical de vídeos. Qualquer cliente vê alguns grátis; depois do limite aparece o paywall pra assinar.</p>
                     </div>
-                    <button class="btn-primary" onclick="openExploreVideoModal()">+ Novo vídeo</button>
+                    <button class="btn-primary" onclick="openExploreVideoModal()">+ Vídeo avulso</button>
                 </div>
 
                 <!-- CONFIG -->
                 <div style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:18px; margin-bottom:18px; display:flex; flex-direction:column; gap:14px; max-width:760px;">
-                    <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#fff; cursor:pointer; font-weight:700;"><input type="checkbox" id="exEnabled" style="width:18px; height:18px;"> Ativar a aba "Explorar" no app</label>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#fff; cursor:pointer; font-weight:700;"><input type="checkbox" id="exEnabled" style="width:18px; height:18px;"> Ativar a aba "Vídeos" no app</label>
+
+                    <!-- Pasta (coleção) do Bunny — alimenta o feed inteiro de uma vez -->
+                    <div style="background:rgba(99,102,241,.07); border:1px solid rgba(99,102,241,.3); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;">
+                        <div style="font-size:13px; font-weight:700; color:#fff;">📁 Pasta do Bunny (recomendado)</div>
+                        <div class="form-help" style="margin-top:-4px;">Cole a Library ID e a Collection ID da pasta no Bunny — o feed puxa TODOS os vídeos dela automaticamente (igual aos conteúdos do produto). Se preencher aqui, a lista de vídeos avulsos abaixo é ignorada.</div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Library ID</label><input class="form-control" id="exColLib" maxlength="20" placeholder="ex: 12345" style="width:100%;"/></div>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Collection ID</label><input class="form-control" id="exColId" maxlength="80" placeholder="ex: a1b2c3d4-..." style="width:100%;"/></div>
+                        </div>
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Nome exibido nos vídeos (opcional)</label><input class="form-control" id="exColCreator" maxlength="120" placeholder="ex: Marina" style="width:100%;"/></div>
+                    </div>
+
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                         <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Vídeos grátis antes do paywall</label><input class="form-control" type="number" id="exFreeLimit" min="0" value="15" style="width:100%;"/></div>
                         <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Vídeos antes de exigir instalar o app</label><input class="form-control" type="number" id="exPwaGateAfter" min="0" value="2" style="width:100%;"/></div>
@@ -13648,6 +13660,9 @@ async function loadExplore() {
             document.getElementById('exPwaGateAfter').value = e.pwa_gate_after != null ? e.pwa_gate_after : 2;
             if (e.product_id) document.getElementById('exProduct').value = e.product_id;
             document.getElementById('exCheckout').value = e.checkout_url || '';
+            document.getElementById('exColLib').value = e.collection_library_id || '';
+            document.getElementById('exColId').value = e.collection_id || '';
+            document.getElementById('exColCreator').value = e.creator_name || '';
             document.getElementById('exPwTitle').value = e.paywall_title || '';
             document.getElementById('exPwText').value = e.paywall_text || '';
             document.getElementById('exPwCta').value = e.paywall_cta || '';
@@ -13755,6 +13770,9 @@ async function saveExploreSettings() {
             pwa_gate_after: parseInt(document.getElementById('exPwaGateAfter').value, 10) || 0,
             product_id: document.getElementById('exProduct').value || null,
             checkout_url: document.getElementById('exCheckout').value.trim() || null,
+            collection_library_id: document.getElementById('exColLib').value.trim() || null,
+            collection_id: document.getElementById('exColId').value.trim() || null,
+            creator_name: document.getElementById('exColCreator').value.trim() || null,
             paywall_title: document.getElementById('exPwTitle').value.trim() || null,
             paywall_text: document.getElementById('exPwText').value.trim() || null,
             paywall_cta: document.getElementById('exPwCta').value.trim() || null,

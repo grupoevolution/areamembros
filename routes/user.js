@@ -1790,6 +1790,32 @@ function resolveExploreVideo(v) {
     };
 }
 
+// Curtidas exibidas estáveis a partir do guid (cosmético; coleção não tem likes)
+function likesFromGuid(g) {
+    let h = 0; const s = String(g || '');
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    return 500 + (h % 9000);
+}
+
+// Resolve o feed a partir de uma PASTA (coleção) do Bunny — igual aos conteúdos
+// do produto. Pega todos os vídeos prontos da coleção de uma vez.
+async function resolveExploreCollection(cfg) {
+    try {
+        const list = await listCollectionVideos(cfg.collection_library_id, cfg.collection_id);
+        return (list || [])
+            .filter(v => v.status == null || v.status >= 4) // só os prontos pra streaming
+            .map(v => ({
+                id: 'col-' + v.guid,
+                caption: '',
+                creator_name: cfg.creator_name || '',
+                hls_url: bunnyHlsUrl(v.guid),
+                src: null,
+                poster: bunnyThumbUrl(v.guid, v.thumbnailFileName),
+                likes: likesFromGuid(v.guid),
+            }));
+    } catch (_) { return []; }
+}
+
 // Cliente tem acesso ilimitado ao Explorar? (pagou o produto OU é preview)
 async function ownsExploreProduct(email, productId) {
     if (!email) return false;
@@ -1836,11 +1862,17 @@ router.get('/explore/feed', optionalUser, async (req, res) => {
         const email = req.user?.email || null;
         const hasAccess = await ownsExploreProduct(email, productId);
 
-        const { rows } = await db.query(
-            `SELECT id, caption, creator_name, video_url, bunny_library_id, bunny_video_id, hls_url, thumbnail_url, likes_seed
-             FROM explore_videos WHERE active = true ORDER BY position, id LIMIT 200`
-        );
-        const videos = rows.map(resolveExploreVideo);
+        // Pasta (coleção) do Bunny tem prioridade; senão, a lista manual de vídeos.
+        let videos;
+        if (cfg.collection_library_id && cfg.collection_id) {
+            videos = await resolveExploreCollection(cfg);
+        } else {
+            const { rows } = await db.query(
+                `SELECT id, caption, creator_name, video_url, bunny_library_id, bunny_video_id, hls_url, thumbnail_url, likes_seed
+                 FROM explore_videos WHERE active = true ORDER BY position, id LIMIT 200`
+            );
+            videos = rows.map(resolveExploreVideo);
+        }
 
         return res.json({
             success: true,
