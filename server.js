@@ -356,97 +356,40 @@ app.get('/f/:slug', async (req, res) => {
 // do navegador in-app do Instagram/Facebook no ANDROID, força reabrir no Chrome
 // (via intent://) — onde o pop-up de "Instalar app" (PWA) realmente funciona.
 // Em qualquer outro caso (iOS, Chrome, navegador normal), cai direto no /f/:slug.
-app.get('/ir/:slug', async (req, res) => {
+app.get('/ir/:slug', (req, res) => {
     const slug = String(req.params.slug || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 80);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     const slugJson = JSON.stringify(slug);
-    const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-
-    // Prévia REAL da tela de Conversas (modelos online) — vira a "isca": o lead
-    // toca numa conversa pra abrir e ESSE toque leva pro Chrome. Sem mexer no app.
-    let chats = [];
-    try {
-        const db = require('./db');
-        const { rows } = await db.query(
-            `SELECT name, avatar_url, show_online FROM chats WHERE active = true AND listed = true ORDER BY display_order, id LIMIT 4`
-        );
-        chats = rows;
-    } catch (_) {}
-    if (!chats.length) chats = [{ name: 'Eliene', avatar_url: null, show_online: true }, { name: 'Fabi', avatar_url: null, show_online: true }];
-
-    const rowsHtml = chats.map((c, i) => {
-        const avStyle = c.avatar_url ? ` style="background-image:url('${esc(c.avatar_url)}')"` : '';
-        const dot = (c.show_online !== false) ? '<span class="dot"></span>' : '';
-        const sub = i === 0 ? '<div class="sub">Áudio</div>' : '<div class="sub on">online</div>';
-        return `<div class="row"><div class="av"${avStyle}>${dot}</div><div class="mid"><div class="nm">${esc(c.name)}</div>${sub}</div><div class="tm">agora</div></div>`;
-    }).join('');
-
+    // VERSÃO ORIGINAL (a que funcionava): redireciona AUTOMÁTICO no carregamento,
+    // sem clique. No Android dentro do webview do Meta dispara o intent pro Chrome
+    // (mostra o aviso "abrir app externo?" e abre o Chrome). Fallback pro /f/slug.
     res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>Conversas</title>
-<style>
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;background:#fff;color:#111;font-family:-apple-system,Segoe UI,Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
-.hd{padding:18px 18px 12px;font-size:26px;font-weight:800;border-bottom:1px solid #f0f0f0}
-.lbl{padding:16px 18px 8px;font-size:12px;font-weight:700;letter-spacing:1.5px;color:#9a9a9a}
-.row{display:flex;align-items:center;gap:13px;padding:12px 18px;border-bottom:1px solid #f3f3f3;cursor:pointer}
-.row:active{background:#f6f6f6}
-.av{position:relative;width:54px;height:54px;border-radius:50%;flex-shrink:0;background-size:cover;background-position:center;background-color:#e3e3e6}
-.dot{position:absolute;right:1px;bottom:1px;width:13px;height:13px;border-radius:50%;background:#25D366;border:2.5px solid #fff}
-.mid{flex:1;min-width:0}
-.nm{font-size:17px;font-weight:700;color:#111}
-.sub{font-size:14px;color:#8a8a8a;margin-top:2px}
-.sub.on{color:#1fa855}
-.tm{font-size:13px;color:#b0b0b0;align-self:flex-start;margin-top:3px}
-#load{position:fixed;inset:0;background:#fff;display:flex;align-items:center;justify-content:center}
-.s{width:34px;height:34px;border:3px solid #eee;border-top-color:#e50914;border-radius:50%;animation:r 1s linear infinite}
+<title>Abrindo…</title>
+<style>html,body{height:100%;margin:0;background:#000;color:#fff;font-family:-apple-system,Segoe UI,Roboto,sans-serif}
+.w{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px}
+.s{width:38px;height:38px;border:3px solid rgba(255,255,255,.2);border-top-color:#e50914;border-radius:50%;animation:r 1s linear infinite}
 @keyframes r{to{transform:rotate(360deg)}}
-a{color:#e50914;font-weight:700;text-decoration:none}
-</style></head>
-<body>
-<div id="teaser" style="display:none">
-  <div class="hd">Conversas</div>
-  <div class="lbl">MINHAS CONVERSAS</div>
-  ${rowsHtml}
-</div>
-<div id="load"><div class="s"></div></div>
-<noscript><div style="padding:24px;text-align:center"><a href="/f/${slug}">Toque aqui pra continuar</a></div></noscript>
+a{color:#e50914;font-weight:700}</style></head>
+<body><div class="w"><div class="s"></div><div>Abrindo o app…</div>
+<noscript><a href="/f/${slug}">Toque aqui pra continuar</a></noscript></div>
 <script>(function(){
   var slug = ${slugJson};
   var ua = navigator.userAgent || '';
   var isAndroid = /Android/i.test(ua);
-  // navegadores embutidos (Instagram/Facebook/etc.): aqui o lead PRECISA tocar
-  // pra a gente pular pro Chrome (onde dá pra INSTALAR o app). Fora deles, abre direto.
   var inApp = /(FBAN|FBAV|FB_IAB|FBIOS|Instagram|Line\\/|Twitter|MicroMessenger|TikTok|Snapchat|Kwai)/i.test(ua);
   var host = location.host;
   var target = location.protocol + '//' + host + '/f/' + slug;
-  var done = false;
-  function go(){ if (done) return; done = true; try { location.replace(target); } catch(e){ try { location.href = target; } catch(_){} } }
-  function toChrome(){
-    if (done) return;
-    // Tenta o Chrome via IFRAME escondido — NÃO navega a página principal, então
-    // o Instagram não mostra "A Página não pode ser carregada" quando bloqueia o
-    // intent. Onde o webview permite, abre o Chrome; onde bloqueia, cai no app.
-    try {
-      var intent = 'intent://' + host + '/f/' + slug + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(target) + ';end';
-      var ifr = document.createElement('iframe');
-      ifr.style.display = 'none';
-      document.body.appendChild(ifr);
-      ifr.src = intent;
-    } catch(e){}
-    // se o Chrome não abrir, garante o app no próprio navegador (rápido, sem travar)
-    setTimeout(go, 1600);
-  }
+  function go(){ location.replace(target); }
   if (isAndroid && inApp) {
-    // mostra a prévia de Conversas; QUALQUER toque leva pro Chrome
-    document.getElementById('load').style.display = 'none';
-    document.getElementById('teaser').style.display = 'block';
-    document.addEventListener('click', toChrome, { once: true });
-    document.addEventListener('touchend', toChrome, { once: true, passive: true });
+    var fb = encodeURIComponent(target);
+    var intent = 'intent://' + host + '/f/' + slug + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + fb + ';end';
+    try { window.location.href = intent; } catch(e) { go(); }
+    // se o Chrome não abrir / o lead voltar, cai no app no próprio navegador
+    setTimeout(go, 2500);
   } else {
-    // navegador normal (Chrome/Safari) ou iOS → abre o app direto, sem fricção
     go();
   }
 })();</script></body></html>`);
