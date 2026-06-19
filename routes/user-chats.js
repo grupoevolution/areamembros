@@ -283,9 +283,10 @@ async function runScript(session, chat, steps, idx, ident) {
         out.push(msg);
         const j = keyIndex(steps, s.goto_key);
         idx = j >= 0 ? j : idx + 1;
-        // "Esperar abrir": mídia 1x com wait_open PAUSA o fluxo aqui. Só continua
-        // (do próximo bloco = idx atual) quando o cliente ABRIR a mídia (/viewed).
-        if ((s.type === 'view_once_image' || s.type === 'view_once_video') && s.wait_open === true) {
+        // Visualização única SEMPRE pausa o fluxo aqui (padrão): a conversa só
+        // continua (do próximo bloco = idx atual) quando o cliente ABRIR a mídia
+        // (/viewed). Evita as próximas mensagens chegarem antes dele ver a 1x.
+        if (s.type === 'view_once_image' || s.type === 'view_once_video') {
             awaiting = 'view_once';
             break;
         }
