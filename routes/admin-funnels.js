@@ -91,7 +91,7 @@ router.post('/', requireAdmin, async (req, res) => {
 
         const fpId = featured_product_id ? parseInt(featured_product_id, 10) : null;
         const vcId = video_call_id ? parseInt(video_call_id, 10) : null;
-        const entryT = ['home', 'product', 'category', 'chat', 'chat_list'].includes(entry_type) ? entry_type : 'home';
+        const entryT = ['home', 'product', 'category', 'chat', 'chat_list', 'videos'].includes(entry_type) ? entry_type : 'home';
         const entryP = entry_product_id ? parseInt(entry_product_id, 10) : null;
         const entryC = entry_category_id ? parseInt(entry_category_id, 10) : null;
         const entryCh = entry_chat_id ? parseInt(entry_chat_id, 10) : null;
@@ -134,7 +134,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
 
         if (entry_type !== undefined) {
             updates.push(`entry_type = $${p++}`);
-            values.push(['home', 'product', 'category', 'chat', 'chat_list'].includes(entry_type) ? entry_type : 'home');
+            values.push(['home', 'product', 'category', 'chat', 'chat_list', 'videos'].includes(entry_type) ? entry_type : 'home');
         }
         if (entry_product_id !== undefined) {
             updates.push(`entry_product_id = $${p++}`);
@@ -312,7 +312,7 @@ router.post('/:id/steps', requireAdmin, async (req, res) => {
         // Tipos: 'notification' (banner in-app) · 'chat' (inicia conversa) ·
         // 'navigate'/'open_product' (leva pra algo) · 'wait' (só espera) ·
         // 'push' (web push do SERVIDOR) · 'video_call'.
-        const validTypes = ['video_call', 'notification', 'open_product', 'push', 'chat', 'navigate', 'wait'];
+        const validTypes = ['video_call', 'notification', 'open_product', 'push', 'chat', 'navigate', 'wait', 'open_videos'];
         const t = validTypes.includes(type) ? type : 'notification';
         const delay = Math.max(0, parseInt(delay_seconds, 10) || 0);
         const vcId = video_call_id ? parseInt(video_call_id, 10) : null;
@@ -338,7 +338,7 @@ router.put('/:id/steps/:stepId', requireAdmin, async (req, res) => {
         const { type, delay_seconds, video_call_id, product_id, chat_id, title, message, link_url, step_order, active } = req.body || {};
         const updates = []; const values = []; let p = 1;
         if (type !== undefined) {
-            const valid = ['video_call', 'notification', 'open_product', 'push', 'chat', 'navigate', 'wait'];
+            const valid = ['video_call', 'notification', 'open_product', 'push', 'chat', 'navigate', 'wait', 'open_videos'];
             updates.push(`type = $${p++}`); values.push(valid.includes(type) ? type : 'notification');
         }
         if (delay_seconds !== undefined) { updates.push(`delay_seconds = $${p++}`); values.push(Math.max(0, parseInt(delay_seconds, 10) || 0)); }

@@ -5953,8 +5953,11 @@ a { color: inherit; text-decoration: none; }
                             </div>
                             <div id="csCtaWrap" style="display:none;">
                                 <div style="font-size:11px; color:rgba(255,255,255,.45); margin-bottom:8px;">O <b>texto do botão</b> (o que aparece pro cliente) é o campo "Texto" lá em cima.</div>
-                                <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link do botão (checkout/oferta)</label>
+                                <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Levar pra um produto (opcional)</label>
+                                <select class="form-control" id="csCtaProduct" style="width:100%; margin-bottom:10px;"><option value="">— nenhum (usar o link) —</option></select>
+                                <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Ou link do botão (checkout/oferta)</label>
                                 <input class="form-control" id="csLink" maxlength="1000" placeholder="https://pay..." style="width:100%;"/>
+                                <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">Se escolher um produto, o botão abre a página dele no app. O produto tem prioridade sobre o link.</div>
                                 <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin:10px 0 4px;">Cor do botão</label>
                                 <select class="form-control" id="csCtaColor" style="width:100%;">
                                     <option value="#25D366">🟢 Verde</option>
@@ -6068,6 +6071,7 @@ a { color: inherit; text-decoration: none; }
                                     <option value="category">🗂 Numa categoria específica</option>
                                     <option value="chat">💬 Direto numa conversa (abre o chat)</option>
                                     <option value="chat_list">📨 Lista de conversas (chega mensagem dela)</option>
+                                    <option value="videos">📹 Aba de Vídeos (feed)</option>
                                 </select>
                                 <div id="funnelEntryProductWrap" style="display:none; margin-top:10px;">
                                     <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Produto de destino</label>
@@ -6168,6 +6172,7 @@ a { color: inherit; text-decoration: none; }
                                     <option value="push">📲 Push no celular (chega com o app FECHADO)</option>
                                     <option value="video_call">📞 Disparar chamada de vídeo</option>
                                     <option value="open_product">📦 Abrir produto</option>
+                                    <option value="open_videos">📹 Abrir aba de Vídeos (feed)</option>
                                 </select>
                             </div>
                             <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Quando disparar (segundos após o cliente digitar o e-mail)</label>
@@ -6200,6 +6205,7 @@ a { color: inherit; text-decoration: none; }
                                 <select class="form-control" id="stepLinkProductSelect" style="width:100%; margin-bottom:8px;"><option value="">— nenhum produto —</option></select>
                                 <input class="form-control" id="stepLinkUrl" maxlength="1000" placeholder="Ou cole um link: https://... ou caminho tipo /" style="width:100%;"/>
                                 <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">Escolha um produto OU um link. Produto tem prioridade. Vazio = clique só abre o app.</div>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#fff; cursor:pointer; margin-top:10px;"><input type="checkbox" id="stepNotifVideos" style="width:15px; height:15px;"> 📹 Levar pra aba de Vídeos (feed)</label>
                             </div>
                         </div>
                         <div style="padding:16px 24px; border-top:1px solid var(--border,rgba(255,255,255,.1)); display:flex; gap:10px; justify-content:flex-end;">
@@ -14459,7 +14465,7 @@ async function loadFunnels() {
                 + '<div style="padding:14px 16px;border-bottom:1px solid var(--border,rgba(255,255,255,.08));display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
                 +   '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;color:#fff">'+escHtmlAdmin(f.name)+'</div>'
                 +     '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px">'
-                +       (f.entry_type === 'product' ? '🎯 Direto no produto' : f.entry_type === 'category' ? '🎯 Direto na categoria' : (f.entry_type === 'chat' || f.entry_type === 'chat_list') ? '🎯 Direto na conversa' : '🎯 Home')
+                +       (f.entry_type === 'product' ? '🎯 Direto no produto' : f.entry_type === 'category' ? '🎯 Direto na categoria' : (f.entry_type === 'chat' || f.entry_type === 'chat_list') ? '🎯 Direto na conversa' : f.entry_type === 'videos' ? '🎯 Aba de Vídeos' : '🎯 Home')
                 +       (f.featured_product_name ? ' · 📦 '+escHtmlAdmin(f.featured_product_name) : '')+(f.video_call_model_name ? ' · 📞 '+escHtmlAdmin(f.video_call_model_name) : '')+'</div>'
                 +   '</div>'+status
                 + '</div>'
@@ -14653,10 +14659,12 @@ async function loadFunnelSteps(funnelId) {
         list.innerHTML = data.steps.map((s, idx) => {
             const icon = s.type === 'video_call' ? '📞' : s.type === 'open_product' ? '📦'
                        : s.type === 'push' ? '📲' : s.type === 'chat' ? '💬'
+                       : s.type === 'open_videos' ? '📹'
                        : s.type === 'navigate' ? '➡️' : s.type === 'wait' ? '⏱️' : '🔔';
             const sub = s.type === 'video_call' ? (s.video_call_name || 'Chamada')
                       : s.type === 'open_product' ? (s.product_name || 'Produto')
                       : s.type === 'chat' ? ('Conversa: ' + (s.chat_name || 'chat'))
+                      : s.type === 'open_videos' ? 'Abrir aba de Vídeos'
                       : s.type === 'navigate' ? ('Levar pra ' + (s.product_name || s.chat_name || s.link_url || 'algo'))
                       : s.type === 'wait' ? 'Só espera'
                       : (s.title || (s.type === 'push' ? 'Push' : 'Notificação'));
@@ -14730,7 +14738,9 @@ function editStep(s) {
     document.getElementById('stepDelay').value = s.delay_seconds || 0;
     document.getElementById('stepNotifTitle').value = s.title || '';
     document.getElementById('stepNotifMsg').value = s.message || '';
-    document.getElementById('stepLinkUrl').value = s.link_url || '';
+    const isVideosLink = /[?&]videos=/.test(s.link_url || '');
+    document.getElementById('stepNotifVideos').checked = (s.type === 'notification' || s.type === 'push') && isVideosLink;
+    document.getElementById('stepLinkUrl').value = isVideosLink ? '' : (s.link_url || '');
     document.getElementById('stepChatMsg').value = (s.type === 'chat' ? (s.message || '') : '');
     document.getElementById('stepNavLink').value = (s.type === 'navigate' ? (s.link_url || '') : '');
     updateStepFields();
@@ -14772,7 +14782,7 @@ async function saveStep(e) {
         message: isMsg ? document.getElementById('stepNotifMsg').value.trim()
                : isChat ? (document.getElementById('stepChatMsg').value.trim() || null)
                : null,
-        link_url: isMsg ? (document.getElementById('stepLinkUrl').value.trim() || null)
+        link_url: isMsg ? (document.getElementById('stepNotifVideos').checked ? '/?videos=1' : (document.getElementById('stepLinkUrl').value.trim() || null))
                 : isNav ? (document.getElementById('stepNavLink').value.trim() || null)
                 : null,
     };
@@ -15287,6 +15297,18 @@ function collectChatBtns() {
     })).filter(b => b.label);
 }
 
+async function loadChatStepProducts(selectedId) {
+    try {
+        const pr = await fetch('/api/admin/products', { credentials:'include' }).then(r => r.json());
+        const products = pr.products || [];
+        const sel = document.getElementById('csCtaProduct');
+        if (sel) {
+            sel.innerHTML = '<option value="">— nenhum (usar o link) —</option>' + products.map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
+            if (selectedId) sel.value = selectedId;
+        }
+    } catch(_) {}
+}
+
 function openChatStepModal() {
     if (!_curChatId) { alert('Salve o chat primeiro.'); return; }
     document.getElementById('chatStepModalTitle').textContent = 'Novo Bloco';
@@ -15302,6 +15324,7 @@ function openChatStepModal() {
     document.getElementById('csCtaColor').value = '#25D366';
     document.getElementById('csButtonRows').innerHTML = '';
     addChatBtnRow();
+    loadChatStepProducts('');
     updateChatStepFields();
     document.getElementById('chatStepModalBackdrop').style.display = 'flex';
 }
@@ -15323,6 +15346,7 @@ function editChatStep(s) {
     document.getElementById('csGate').checked = s.gate === true;
     document.getElementById('csWaitOpen').checked = s.wait_open === true;
     document.getElementById('csCtaColor').value = s.cta_color || '#25D366';
+    loadChatStepProducts(s.product_id || '');
     // delay: escolhe a maior unidade exata (h > min > s)
     const ds = parseInt(s.delay_seconds, 10) || 0;
     if (ds && ds % 3600 === 0) { document.getElementById('csDelayValue').value = ds / 3600; document.getElementById('csDelayUnit').value = '3600'; }
@@ -15360,6 +15384,7 @@ async function saveChatStep(e) {
         gate: (type === 'view_once_image' || type === 'view_once_video') ? document.getElementById('csGate').checked : false,
         wait_open: (type === 'view_once_image' || type === 'view_once_video') ? document.getElementById('csWaitOpen').checked : false,
         cta_color: type === 'cta' ? document.getElementById('csCtaColor').value : null,
+        product_id: type === 'cta' ? (document.getElementById('csCtaProduct').value || null) : null,
         flow: _curChatFlow,
     };
     try {
