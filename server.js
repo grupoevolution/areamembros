@@ -236,6 +236,7 @@ app.use('/api/admin/gift-campaigns', require('./routes/admin-gift-campaigns'));
 app.use('/api/admin/sales-analytics', require('./routes/admin-sales-analytics'));
 app.use('/api/admin/engagement', require('./routes/admin-engagement'));
 app.use('/api/admin/chats', require('./routes/admin-chats'));
+app.use('/api/admin/explore', require('./routes/admin-explore'));
 app.use('/api/user', require('./routes/user-chats'));
 app.use('/api/user', require('./routes/user'));
 

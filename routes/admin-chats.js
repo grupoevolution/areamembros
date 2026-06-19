@@ -46,13 +46,15 @@ router.post('/', requireAdmin, async (req, res) => {
     try {
         const { name, avatar_url, section, status_label, show_online, access,
                 product_id, checkout_url, reply_mode, allow_photo, display_order, active,
-                city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key, tag, auto_start_minutes, listed, is_support } = req.body || {};
+                city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key, tag, auto_start_minutes, listed, is_support,
+                story_vip_product_id, story_vip_checkout_url } = req.body || {};
         if (!name || !String(name).trim()) return res.status(400).json({ success: false, error: 'Nome obrigatório' });
         const { rows } = await db.query(`
             INSERT INTO chats (name, avatar_url, section, status_label, show_online, access,
                                product_id, checkout_url, reply_mode, allow_photo, display_order, active,
-                               city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key, tag, auto_start_minutes, listed, is_support)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22) RETURNING *
+                               city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key, tag, auto_start_minutes, listed, is_support,
+                               story_vip_product_id, story_vip_checkout_url)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24) RETURNING *
         `, [
             String(name).trim().slice(0, 80),
             (avatar_url || '').trim().slice(0, 1000) || null,
@@ -76,6 +78,8 @@ router.post('/', requireAdmin, async (req, res) => {
             Math.max(0, Math.min(10080, parseInt(auto_start_minutes, 10) || 0)),
             listed !== false,
             is_support === true,
+            story_vip_product_id ? parseInt(story_vip_product_id, 10) : null,
+            (story_vip_checkout_url || '').trim().slice(0, 1000) || null,
         ]);
         // Só um chat de Suporte por vez.
         if (is_support === true) {
@@ -117,6 +121,8 @@ router.put('/:id', requireAdmin, async (req, res) => {
         if (b.auto_start_minutes !== undefined) set('auto_start_minutes', Math.max(0, Math.min(10080, parseInt(b.auto_start_minutes, 10) || 0)));
         if (b.listed !== undefined) set('listed', !!b.listed);
         if (b.is_support !== undefined) set('is_support', !!b.is_support);
+        if (b.story_vip_product_id !== undefined) set('story_vip_product_id', b.story_vip_product_id ? parseInt(b.story_vip_product_id, 10) : null);
+        if (b.story_vip_checkout_url !== undefined) set('story_vip_checkout_url', (b.story_vip_checkout_url || '').trim().slice(0, 1000) || null);
         if (b.graph !== undefined) set('graph', b.graph ? JSON.stringify(b.graph) : null);
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
         values.push(id);
@@ -428,13 +434,14 @@ router.post('/:id/status', requireAdmin, async (req, res) => {
         // duração configurável: padrão 24h, aceita horas custom (1..168)
         const hours = Math.max(1, Math.min(168, parseInt(b.expires_hours, 10) || 24));
         const { rows } = await db.query(`
-            INSERT INTO chat_status (chat_id, type, media_url, caption, bg_color, reply_goto_key, expires_at)
-            VALUES ($1,$2,$3,$4,$5,$6, NOW() + make_interval(hours => $7)) RETURNING *
+            INSERT INTO chat_status (chat_id, type, media_url, caption, bg_color, reply_goto_key, is_vip, expires_at)
+            VALUES ($1,$2,$3,$4,$5,$6,$7, NOW() + make_interval(hours => $8)) RETURNING *
         `, [
             id, type, mediaUrl,
             (b.caption || '').trim().slice(0, 300) || null,
             (b.bg_color || '').trim().slice(0, 20) || null,
             (b.reply_goto_key || '').trim().slice(0, 40) || null,
+            b.is_vip === true,
             hours,
         ]);
         return res.json({ success: true, status: rows[0] });

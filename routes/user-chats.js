@@ -61,9 +61,11 @@ function getIdentity(req) {
 }
 
 async function ownsProduct(email, productId) {
-    if (!email || !productId) return false;
-    // E-mail Premium (preview) destrava tudo, inclusive chat VIP.
+    if (!email) return false;
+    // E-mail Premium (preview) destrava tudo, inclusive chat VIP (antes do guard
+    // de productId, pra preview ver tudo mesmo quando o produto não foi configurado).
     try { if (await require('../lib/preview').isPreviewEmail(email)) return true; } catch (_) {}
+    if (!productId) return false;
     try {
         const { rows } = await db.query(
             `SELECT 1 FROM user_access WHERE LOWER(email) = $1 AND product_id = $2 AND status = 'active' LIMIT 1`,
@@ -71,6 +73,25 @@ async function ownsProduct(email, productId) {
         );
         return rows.length > 0;
     } catch (_) { return false; }
+}
+
+// Monta a info de desbloqueio (produto + planos) usada nos paywalls VIP
+// (conversa, stories). O frontend renderiza o banner com o nome/preço/planos.
+async function loadUnlock(productId, checkoutUrl) {
+    if (!productId && !checkoutUrl) return null;
+    const info = { product_id: productId || null, checkout_url: checkoutUrl || null, name: null, price: null, banner_url: null, plans: [] };
+    if (productId) {
+        try {
+            const { rows } = await db.query(`SELECT id, name, price, banner_url FROM products WHERE id = $1 LIMIT 1`, [productId]);
+            if (rows.length) { info.name = rows[0].name; info.price = rows[0].price; info.banner_url = rows[0].banner_url; }
+            const { rows: plans } = await db.query(
+                `SELECT name, price, original_price, badge, benefits, checkout_url, is_recommended
+                 FROM product_plans WHERE product_id = $1 AND active = true ORDER BY display_order, id`, [productId]
+            );
+            info.plans = plans;
+        } catch (_) {}
+    }
+    return info;
 }
 
 function permissions(chat, owns, ident) {
@@ -366,6 +387,8 @@ router.get('/chats', optionalUser, async (req, res) => {
         for (const c of chats) {
             const owns = await ownsProduct(ident.email, c.product_id);
             const perm = permissions(c, owns, ident);
+            // enriquece o desbloqueio com produto + planos (banner VIP rico)
+            if (perm.locked) perm.unlock = await loadUnlock(c.product_id, c.checkout_url);
             // motor de conversas: agenda a 1ª mensagem sozinha (auto_start_minutes)
             await ensureAutoStart(c, ident);
             // preview da última mensagem + não-lidas (bot, após last_seen_at)
@@ -432,6 +455,8 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         const chat = cr[0];
         const owns = await ownsProduct(ident.email, chat.product_id);
         const perm = permissions(chat, owns, ident);
+        // enriquece o desbloqueio com produto + planos (banner VIP rico)
+        if (perm.locked) perm.unlock = await loadUnlock(chat.product_id, chat.checkout_url);
 
         const callPayload = await loadChatCall(chat.call_video_call_id);
         const persona = {
@@ -918,7 +943,9 @@ router.get('/chats/status', optionalUser, async (req, res) => {
         const ident = getIdentity(req);
         const { rows } = await db.query(`
             SELECT s.id, s.chat_id, s.type, s.media_url, s.caption, s.bg_color, s.created_at,
+                   COALESCE(s.is_vip, false) AS is_vip,
                    c.name, c.avatar_url, c.display_order,
+                   c.story_vip_product_id, c.story_vip_checkout_url,
                    EXISTS(SELECT 1 FROM chat_status_views v WHERE v.status_id = s.id
                           AND (($1 <> '' AND LOWER(v.customer_email) = $1) OR ($2 <> '' AND v.visitor_id = $2))) AS seen
             FROM chat_status s
@@ -926,14 +953,39 @@ router.get('/chats/status', optionalUser, async (req, res) => {
             WHERE s.active = true AND s.expires_at > NOW() AND c.active = true
             ORDER BY c.display_order, c.id, s.created_at
         `, [ident.email || '', ident.visitor || '']);
+        // Resolve, 1x por modelo, se o cliente JÁ pagou os stories VIP dela.
+        const ownsVipCache = new Map();
+        async function ownsStoryVip(productId) {
+            if (!productId) return false;
+            if (ownsVipCache.has(productId)) return ownsVipCache.get(productId);
+            const ok = await ownsProduct(ident.email, productId);
+            ownsVipCache.set(productId, ok);
+            return ok;
+        }
         const map = new Map();
         for (const r of rows) {
             if (!map.has(r.chat_id)) {
-                map.set(r.chat_id, { chat_id: r.chat_id, name: r.name, avatar_url: r.avatar_url, has_unseen: false, items: [] });
+                map.set(r.chat_id, {
+                    chat_id: r.chat_id, name: r.name, avatar_url: r.avatar_url,
+                    has_unseen: false, has_vip_locked: false, vip_unlock: null,
+                    story_vip_product_id: r.story_vip_product_id || null,
+                    story_vip_checkout_url: r.story_vip_checkout_url || null,
+                    items: [],
+                });
             }
             const g = map.get(r.chat_id);
-            g.items.push({ id: r.id, type: r.type, media_url: r.media_url, caption: r.caption, bg_color: r.bg_color, created_at: r.created_at });
-            if (!r.seen) g.has_unseen = true;
+            // Só trava se o story é VIP E a modelo tem produto de desbloqueio configurado.
+            // Sem produto → degrada pra story normal (evita paywall sem saída).
+            const vipLocked = r.is_vip === true && !!r.story_vip_product_id && !(await ownsStoryVip(r.story_vip_product_id));
+            g.items.push({ id: r.id, type: r.type, media_url: r.media_url, caption: r.caption, bg_color: r.bg_color, created_at: r.created_at, is_vip: r.is_vip === true, vip_locked: vipLocked });
+            if (!r.seen && !vipLocked) g.has_unseen = true;
+            if (vipLocked) g.has_vip_locked = true;
+        }
+        // Anexa a info de desbloqueio (produto/planos) nos grupos com story VIP travado
+        for (const g of map.values()) {
+            if (g.has_vip_locked) {
+                g.vip_unlock = await loadUnlock(g.story_vip_product_id, g.story_vip_checkout_url);
+            }
         }
         // não-vistos primeiro (anel verde acende), igual WhatsApp
         const stories = Array.from(map.values()).sort((a, b) => (b.has_unseen - a.has_unseen));
@@ -973,6 +1025,14 @@ router.post('/chats/status/:sid/reply', optionalUser, async (req, res) => {
         const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1`, [st.chat_id]);
         if (!cr.length) return res.status(404).json({ success: false, error: 'Chat não encontrado' });
         const chat = cr[0];
+        // Story VIP: só responde/destrava quem pagou os stories dessa modelo.
+        // Sem produto configurado, o story não é travado (degrada pra normal).
+        if (st.is_vip === true && chat.story_vip_product_id && !(await ownsProduct(ident.email, chat.story_vip_product_id))) {
+            return res.status(403).json({
+                success: false, error: 'vip_required',
+                unlock: await loadUnlock(chat.story_vip_product_id, chat.story_vip_checkout_url),
+            });
+        }
         const session = await findOrCreateSession(st.chat_id, ident, true);
         await ensureSessionGeo(session, req);
         ident.city = session.city; ident.cityFallback = chat.city_fallback;

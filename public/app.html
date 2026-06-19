@@ -8294,6 +8294,44 @@ body.is-slowconn .prod-cta-fixed {
     <div class="pv-body"><img id="caPhotoImg" src="" alt=""></div>
 </div>
 
+<!-- ═══════════ EXPLORAR / TIKTOK (feed vertical de vídeos) ═══════════ -->
+<style>
+#tiktok{background:#000;}
+#tiktok .tk-feed{height:100vh;height:100dvh;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;background:#000;}
+#tiktok .tk-feed::-webkit-scrollbar{display:none;}
+.tk-slide{position:relative;height:100vh;height:100dvh;scroll-snap-align:start;scroll-snap-stop:always;display:flex;align-items:center;justify-content:center;background:#000;overflow:hidden;}
+.tk-slide video{width:100%;height:100%;object-fit:cover;background:#000;}
+.tk-slide::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(to top,rgba(0,0,0,.78) 0%,transparent 26%,transparent 70%,rgba(0,0,0,.45) 100%);}
+.tk-meta{position:absolute;left:16px;bottom:90px;z-index:6;max-width:62%;color:#fff;}
+.tk-meta .nm{font-weight:700;font-size:16px;margin-bottom:6px;text-shadow:0 1px 6px rgba(0,0,0,.6);}
+.tk-meta .cap{font-size:14px;line-height:1.42;color:rgba(255,255,255,.93);text-shadow:0 1px 6px rgba(0,0,0,.6);}
+.tk-rail{position:absolute;right:12px;bottom:100px;z-index:6;display:flex;flex-direction:column;gap:20px;align-items:center;}
+.tk-act{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;color:#fff;}
+.tk-act .b{width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.13);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;transition:transform .15s;}
+.tk-act:active .b{transform:scale(.86);}
+.tk-act .b svg{width:25px;height:25px;}
+.tk-act .c{font-size:12px;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.5);}
+.tk-act.liked .b svg{fill:#ff2d55;stroke:#ff2d55;animation:tkpop .35s ease;}
+.tk-act.liked .c{color:#ff6482;}
+@keyframes tkpop{0%{transform:scale(1)}40%{transform:scale(1.3)}100%{transform:scale(1)}}
+.tk-prog{position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,.15);z-index:7;}
+.tk-prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#ff2d55,#ff6482);}
+.tk-audiogate{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:rgba(0,0,0,.3);color:#fff;cursor:pointer;}
+.tk-audiogate.hidden{display:none;}
+.tk-audiogate .ring{width:78px;height:78px;border-radius:50%;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;animation:tkbreathe 2s ease-in-out infinite;}
+.tk-audiogate p{font-size:14px;font-weight:600;text-shadow:0 1px 6px rgba(0,0,0,.6);}
+@keyframes tkbreathe{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.08);opacity:1}}
+.tk-hint{position:absolute;bottom:78px;left:50%;transform:translateX(-50%);z-index:7;font-size:11px;color:rgba(255,255,255,.6);animation:tkbob 1.6s ease-in-out infinite;pointer-events:none;}
+@keyframes tkbob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,6px)}}
+.tk-brand{position:absolute;top:calc(12px + env(safe-area-inset-top));left:0;right:0;text-align:center;z-index:7;color:#fff;font-weight:800;font-size:16px;letter-spacing:-.01em;text-shadow:0 1px 8px rgba(0,0,0,.7);pointer-events:none;}
+.tk-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#888;font-size:14px;padding:30px;text-align:center;}
+</style>
+<div class="screen" id="tiktok">
+    <div class="tk-brand">Explorar</div>
+    <div class="tk-feed" id="tkFeed"></div>
+    <div class="tk-empty" id="tkEmpty" style="display:none;">Nenhum vídeo por aqui ainda.</div>
+</div>
+
 <div class="bottom-nav" id="bottomNav">
     <button class="nav-item active" data-nav="home">
         <svg class="nav-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9v9a2 2 0 01-2 2h-4v-6H9v6H5a2 2 0 01-2-2v-9z"/></svg>
@@ -8310,10 +8348,10 @@ body.is-slowconn .prod-cta-fixed {
         </span>
         <div class="nav-label">Minhas Compras</div>
     </button>
-    <button class="nav-item" id="navSoon" style="opacity:.45;" onclick="showSoonToast()">
-        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8-5-3.6-5 3.6 1.9-5.8L4 8.8h6.1L12 3z"/></svg>
-        <div class="nav-label">Surpresa</div>
-        <span style="position:absolute; top:-3px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.12); color:rgba(255,255,255,.7); font-size:6.5px; font-weight:800; letter-spacing:.5px; padding:1px 6px; border-radius:999px; white-space:nowrap;">EM BREVE</span>
+    <button class="nav-item" id="navSoon" style="opacity:.45;" onclick="openExploreTab()">
+        <svg class="nav-icon" id="navSoonIcon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8-5-3.6-5 3.6 1.9-5.8L4 8.8h6.1L12 3z"/></svg>
+        <div class="nav-label" id="navSoonLabel">Surpresa</div>
+        <span id="navSoonBadge" style="position:absolute; top:-3px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.12); color:rgba(255,255,255,.7); font-size:6.5px; font-weight:800; letter-spacing:.5px; padding:1px 6px; border-radius:999px; white-space:nowrap;">EM BREVE</span>
     </button>
     <button class="nav-item" data-nav="profile">
         <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zm-9 13a5 5 0 0110 0v1H7v-1z"/></svg>
@@ -8586,6 +8624,8 @@ function switchScreen(name) {
     }
 
     const active = document.querySelector('.screen.active');
+    // Sai da aba Explorar (TikTok): pausa o feed pra o áudio não vazar nas outras telas
+    if (active && active.id === 'tiktok' && name !== 'tiktok' && window.Explore && Explore.pause) Explore.pause();
     let savedScrollTop = null;
     if (active && active.id) {
         const s = active.querySelector('.screen-scroll');
@@ -8685,6 +8725,17 @@ function showSoonToast(msg) {
     t._h = setTimeout(() => { t.style.opacity = '0'; }, 2500);
 }
 
+// Aba inferior "Surpresa": vira "Explorar" (feed TikTok) quando ligada no painel.
+// Desligada → mantém o aviso "em breve".
+function openExploreTab() {
+    const cfg = window.MV_EXPLORE || {};
+    if (cfg.enabled !== true) { showSoonToast('Novidade chegando em breve...'); return; }
+    switchScreen('tiktok');
+    document.querySelectorAll('.nav-item.active').forEach(n => n.classList.remove('active'));
+    const b = document.getElementById('navSoon'); if (b) b.classList.add('active');
+    if (window.Explore) window.Explore.open();
+}
+
 // ═══════════════ CHAT INTEGRADO (estilo WhatsApp — mesmo motor do /chat-lab) ═══════════════
 window.ChatApp = (function() {
     function visitorId() {
@@ -8747,8 +8798,8 @@ window.ChatApp = (function() {
     function openStory(chatId) {
         const group = STORIES.find(g => g.chat_id === chatId);
         if (!group || !group.items.length) return;
-        STORY = { group, idx: 0 };
-        renderStory();
+        // Gate de PWA pra ver stories (se ligado no painel e ainda não instalou)
+        pwaGate('gate_stories', () => { STORY = { group, idx: 0 }; renderStory(); });
     }
     function renderStory() {
         if (!STORY) return;
@@ -8756,21 +8807,41 @@ window.ChatApp = (function() {
         const it = g.items[STORY.idx];
         if (!it) { closeStory(); return; }
         const el = ensureStoryEl();
+        const locked = it.vip_locked === true;
         const bars = g.items.map((_, i) => '<div class="b"><i id="caStoryBar' + i + '"></i></div>').join('');
         const avbg = g.avatar_url ? ' style="background-image:url(\'' + esc(g.avatar_url) + '\')"' : '';
+        const blurCls = locked ? ' class="vipblur"' : '';
         let media;
-        if (it.type === 'video') media = '<video id="caStoryVid" src="' + esc(it.media_url || '') + '" autoplay playsinline></video>';
-        else if (it.type === 'text') media = '<div class="txtcard" style="background:' + (it.bg_color ? esc(it.bg_color) : '#128C7E') + '">' + esc(it.caption || '') + '</div>';
-        else media = '<img src="' + esc(it.media_url || '') + '" alt="">';
-        const cap = (it.type !== 'text' && it.caption) ? '<div class="scap">' + esc(it.caption) + '</div>' : '';
+        // VIP travado: vídeo segue rodando (com áudio) porém BORRADO por trás do paywall.
+        if (it.type === 'video') media = '<video id="caStoryVid"' + blurCls + ' src="' + esc(it.media_url || '') + '" autoplay playsinline' + (locked ? ' loop' : '') + '></video>';
+        else if (it.type === 'text') media = '<div class="txtcard' + (locked ? ' vipblur' : '') + '" style="background:' + (it.bg_color ? esc(it.bg_color) : '#128C7E') + '">' + esc(it.caption || '') + '</div>';
+        else media = '<img' + blurCls + ' src="' + esc(it.media_url || '') + '" alt="">';
+        const cap = (!locked && it.type !== 'text' && it.caption) ? '<div class="scap">' + esc(it.caption) + '</div>' : '';
+        const reply = locked ? '' : ('<div class="sreply"><input id="caStoryReply" type="text" placeholder="Responder ' + esc(g.name) + '..." autocomplete="off">'
+            + '<button onclick="ChatApp.storyReply()" aria-label="Enviar"><svg viewBox="0 0 24 24" fill="#fff"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a.993.993 0 00-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z"/></svg></button></div>');
+        const vipOv = locked ? '<div class="tk-vip-overlay" id="caStoryVip"></div>' : '';
         el.innerHTML = '<div class="bars">' + bars + '</div>'
             + '<div class="shead"><div class="av"' + avbg + '></div><div class="nm">' + esc(g.name) + '</div>'
             + '<button class="x" onclick="ChatApp.closeStory()" aria-label="Fechar">×</button></div>'
             + '<div class="smedia">' + media + cap
-            + '<div class="snav left" onclick="ChatApp.storyNav(-1)"></div><div class="snav right" onclick="ChatApp.storyNav(1)"></div></div>'
-            + '<div class="sreply"><input id="caStoryReply" type="text" placeholder="Responder ' + esc(g.name) + '..." autocomplete="off">'
-            + '<button onclick="ChatApp.storyReply()" aria-label="Enviar"><svg viewBox="0 0 24 24" fill="#fff"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a.993.993 0 00-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z"/></svg></button></div>';
+            + (locked ? '' : '<div class="snav left" onclick="ChatApp.storyNav(-1)"></div><div class="snav right" onclick="ChatApp.storyNav(1)"></div>') + '</div>'
+            + reply + vipOv;
         el.classList.add('show');
+        // VIP travado: mostra o paywall (mídia segue rodando borrada atrás), NÃO marca
+        // visto e NÃO auto-avança — fica até o cliente pagar ou fechar.
+        if (locked) {
+            const ov = document.getElementById('caStoryVip');
+            if (ov && window.MVPaywall) {
+                MVPaywall.renderInline(ov, g.vip_unlock || {}, {
+                    icon: 'crown',
+                    title: 'Conteúdo só pra assinantes 🔥',
+                    subtitle: 'A ' + g.name + ' posta o conteúdo mais quente só pros assinantes. Vira assinante e desbloqueia tudo dela.',
+                    ctaText: 'VIRAR ASSINANTE',
+                    onClose: () => closeStory(),
+                });
+            }
+            return;
+        }
         // pausa o auto-advance enquanto o cliente digita a resposta
         const rep = document.getElementById('caStoryReply');
         if (rep) { rep.addEventListener('focus', stopStoryTimer); rep.addEventListener('keydown', e => { if (e.key === 'Enter') storyReply(); }); }
@@ -8982,8 +9053,19 @@ window.ChatApp = (function() {
         if (data.permissions.locked) {
             body.style.display = 'none';
             document.getElementById('caInputBar').style.display = 'none';
-            document.getElementById('caLocked').style.display = 'flex';
-            document.getElementById('caLockedName').textContent = 'Conversa exclusiva com ' + data.chat.name;
+            const lk = document.getElementById('caLocked');
+            lk.style.display = 'flex';
+            // Banner VIP rico (planos do produto vinculado) — print "Conversa VIP"
+            if (window.MVPaywall) {
+                MVPaywall.renderInline(lk, data.permissions.unlock || {}, {
+                    icon: 'lock',
+                    title: 'Conversa VIP 🔥',
+                    subtitle: 'Pra falar com ' + data.chat.name + ' vira VIP. Libere o acesso e converse sem limite.',
+                    ctaText: 'QUERO SER VIP',
+                });
+            } else {
+                document.getElementById('caLockedName').textContent = 'Conversa exclusiva com ' + data.chat.name;
+            }
             return;
         }
         handleAdvance(data);
@@ -9405,9 +9487,18 @@ window.ChatApp = (function() {
         document.getElementById('caGateSkip').addEventListener('click', proceed);
     }
 
+    // Gate de PWA GLOBAL (vale pra logado normal também, não só funil): se a ação
+    // está ligada no painel (MV_PWA_GATE) e o cliente não instalou, exige instalar.
+    function pwaGate(flag, action) {
+        const on = window.MV_PWA_GATE && window.MV_PWA_GATE[flag];
+        if (on && !isStandalone() && !_gateInstalled) { gateInstall(action); return; }
+        action();
+    }
+
     let vonceCur = null;
     let vonceTimer = null;
-    function openVonce(bubble) { gateThen(bubble.dataset.gate === '1', () => doOpenVonce(bubble)); }
+    // visualização única: 1º o gate de e-mail (funil), depois o gate de instalar PWA.
+    function openVonce(bubble) { gateThen(bubble.dataset.gate === '1', () => pwaGate('gate_view_once', () => doOpenVonce(bubble))); }
     function doOpenVonce(bubble) {
         const url = bubble.dataset.mediaUrl;
         if (!url) return;
@@ -9628,6 +9719,7 @@ window.ChatApp = (function() {
 
     return { loadList, open, back, send, photo, sendPhoto, unlock, closeVonce, onCall, refreshUnreadDot, openProfile, closeProfile,
              openStory, closeStory, storyNav, storyReply,
+             gateInstall, isStandalone,
              curId: () => (CUR ? CUR.id : null) };
 })();
 
@@ -13465,6 +13557,30 @@ function applyAppMetadata() {
 
     // Navegação
     applyToggle(['.nav-item[data-nav="explore"]', '[data-feature="explore"]'], app.explore_tab_enabled);
+
+    // ═══ Explorar/TikTok + gate de PWA global ═══
+    // Guarda as configs globais e transforma a aba "Surpresa" em "Explorar"
+    // quando o feed está ligado no painel.
+    try {
+        window.MV_PWA_GATE = (APP_DATA.config && APP_DATA.config.pwa_gate) || {};
+        window.MV_EXPLORE = (APP_DATA.config && APP_DATA.config.explore) || {};
+        const soonBtn = document.getElementById('navSoon');
+        const soonLbl = document.getElementById('navSoonLabel');
+        const soonBadge = document.getElementById('navSoonBadge');
+        const soonIcon = document.getElementById('navSoonIcon');
+        if (soonBtn) {
+            if (window.MV_EXPLORE.enabled === true) {
+                soonBtn.style.opacity = '1';
+                if (soonLbl) soonLbl.textContent = 'Explorar';
+                if (soonBadge) soonBadge.style.display = 'none';
+                if (soonIcon) soonIcon.innerHTML = '<circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M15.5 8.5l-2.2 4.8-4.8 2.2 2.2-4.8 4.8-2.2z"/>';
+            } else {
+                soonBtn.style.opacity = '.45';
+                if (soonLbl) soonLbl.textContent = 'Surpresa';
+                if (soonBadge) soonBadge.style.display = '';
+            }
+        }
+    } catch (_) {}
 
     // Quando a aba "favoritos" está OFF e o cliente está nela, manda pra home
     if (app.favorites_enabled === false) {
@@ -17318,5 +17434,315 @@ document.addEventListener('keydown', function(e) {
 })();
 </script>
 
+<!-- ═══════════════ PAYWALL VIP REUTILIZÁVEL + FEED EXPLORAR/TIKTOK ═══════════════ -->
+<style>
+#mvPaywall{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(8,6,7,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+#mvPaywall.open{display:flex;}
+#mvPaywall .mvpw-card{background:#141013;border:1px solid rgba(255,255,255,.08);border-radius:22px;max-width:360px;width:100%;padding:26px 22px 18px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.6);max-height:92vh;overflow-y:auto;}
+.mvpw-inline{width:100%;max-width:360px;margin:0 auto;text-align:center;color:#fff;}
+.mvpw-icon{width:62px;height:62px;border-radius:18px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 8px 26px rgba(229,9,20,.42);}
+.mvpw-title{font-size:21px;font-weight:800;letter-spacing:-.02em;color:#fff;line-height:1.2;margin-bottom:8px;}
+.mvpw-sub{font-size:14px;color:#a8a2a5;line-height:1.5;margin:0 auto 16px;max-width:300px;}
+.mvpw-bigprice{font-size:26px;font-weight:800;color:#fff;margin-bottom:12px;}
+.mvpw-buy{width:100%;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:800;cursor:pointer;background:#2a2530;color:#fff;margin-top:8px;}
+.mvpw-buy.rec{background:linear-gradient(90deg,#ff1f3d,#e50914);color:#fff;box-shadow:0 8px 26px rgba(229,9,20,.4);}
+.mvpw-bigcta{letter-spacing:.02em;}
+.mvpw-plans{display:flex;flex-direction:column;gap:12px;margin-bottom:6px;text-align:left;}
+.mvpw-plan{position:relative;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:15px 16px;background:rgba(255,255,255,.03);}
+.mvpw-plan.rec{border-color:rgba(229,9,20,.7);background:rgba(229,9,20,.06);}
+.mvpw-tag{position:absolute;top:-9px;left:14px;background:#e50914;color:#fff;font-size:10px;font-weight:800;letter-spacing:.5px;padding:3px 9px;border-radius:999px;}
+.mvpw-pname{font-size:15px;font-weight:800;color:#fff;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px;}
+.mvpw-prow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
+.mvpw-price{font-size:23px;font-weight:800;color:#fff;}
+.mvpw-orig{font-size:13px;color:#8a8288;text-decoration:line-through;}
+.mvpw-off{font-size:11px;font-weight:800;color:#fff;background:#e50914;border-radius:6px;padding:2px 7px;}
+.mvpw-benef{font-size:12.5px;color:#a8a2a5;line-height:1.45;margin-bottom:10px;white-space:pre-line;}
+.mvpw-foot{font-size:11.5px;color:#8a8288;margin-top:14px;}
+.mvpw-social{font-size:12px;color:#b9b3b6;margin-top:8px;}
+.mvpw-ghost{margin-top:8px;background:none;border:none;color:#8a8288;font-size:13px;padding:9px;cursor:pointer;text-decoration:underline;}
+/* overlay de story VIP (mídia segue rodando borrada por trás) */
+.tk-vip-overlay{position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(to bottom,rgba(8,6,7,.55),rgba(8,6,7,.82));}
+.tk-vip-overlay .mvpw-inline{max-width:330px;}
+.smedia .vipblur{filter:blur(20px) brightness(.75);transform:scale(1.15);}
+</style>
+<script>
+// ──────────────── MVPaywall: banner VIP reutilizável (chat, stories, tiktok) ────────────────
+// Renderiza o paywall a partir de um "unlock" (produto + planos vindos do backend).
+// Usado como modal (tiktok) ou injetado num container (banner do chat VIP / stories).
+window.MVPaywall = (function () {
+    function esc(s) { try { return escapeHtmlData(s == null ? '' : String(s)); } catch (_) { return String(s == null ? '' : s); } }
+    function fmtMoney(v) {
+        if (v == null || v === '') return null;
+        const n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'));
+        if (isNaN(n)) return null;
+        return 'R$ ' + n.toFixed(2).replace('.', ',');
+    }
+    function discount(price, orig) {
+        const p = parseFloat(price), o = parseFloat(orig);
+        if (!o || !p || o <= p) return null;
+        return Math.round((1 - p / o) * 100);
+    }
+    const LOCK = '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+    const CROWN = '<svg viewBox="0 0 24 24" width="30" height="30" fill="#f5c542" stroke="#f5c542" stroke-width="1.2"><path d="M3 7l4 4 5-7 5 7 4-4-2 12H5L3 7z"/></svg>';
+
+    function planCard(p, unlock) {
+        const price = fmtMoney(p.price) || '';
+        const orig = fmtMoney(p.original_price);
+        const off = discount(p.price, p.original_price);
+        const rec = p.is_recommended === true;
+        const cta = (p.name || 'Assinar');
+        return '<div class="mvpw-plan' + (rec ? ' rec' : '') + '">'
+            + (rec ? '<div class="mvpw-tag">MAIS ESCOLHIDO</div>' : '')
+            + '<div class="mvpw-pname">' + esc(p.name || 'VIP') + '</div>'
+            + '<div class="mvpw-prow"><span class="mvpw-price">' + esc(price) + '</span>'
+            + (orig ? '<span class="mvpw-orig">' + esc(orig) + '</span>' : '')
+            + (off ? '<span class="mvpw-off">-' + off + '%</span>' : '') + '</div>'
+            + (p.benefits ? '<div class="mvpw-benef">' + esc(p.benefits) + '</div>' : '')
+            + '<button class="mvpw-buy' + (rec ? ' rec' : '') + '" data-mv-buy data-url="' + esc(p.checkout_url || unlock.checkout_url || '') + '">' + esc(rec ? ('Quero ' + cta) : ('Assinar ' + cta)) + '</button>'
+            + '</div>';
+    }
+
+    function bannerHTML(unlock, opts) {
+        unlock = unlock || {};
+        opts = opts || {};
+        const icon = opts.icon === 'crown' ? CROWN : LOCK;
+        const plans = Array.isArray(unlock.plans) ? unlock.plans : [];
+        let body;
+        if (plans.length) {
+            body = '<div class="mvpw-plans">' + plans.map(p => planCard(p, unlock)).join('') + '</div>';
+        } else {
+            const price = fmtMoney(unlock.price);
+            const ctaLabel = (opts.ctaText || 'QUERO SER VIP') + (price ? ' · ' + price : '');
+            body = (price ? '<div class="mvpw-bigprice">' + esc(price) + '</div>' : '')
+                + '<button class="mvpw-buy rec mvpw-bigcta" data-mv-buy data-url="' + esc(unlock.checkout_url || '') + '">' + esc(ctaLabel) + '</button>';
+        }
+        return '<div class="mvpw-icon">' + icon + '</div>'
+            + '<div class="mvpw-title">' + esc(opts.title || 'O resto é só pra VIP') + '</div>'
+            + (opts.subtitle ? '<div class="mvpw-sub">' + esc(opts.subtitle) + '</div>' : '')
+            + body
+            + '<div class="mvpw-foot">🔒 Pagamento seguro · Cancele quando quiser</div>'
+            + (opts.social ? '<div class="mvpw-social">' + esc(opts.social) + '</div>' : '')
+            + '<button class="mvpw-ghost" data-mv-close>agora não</button>';
+    }
+
+    function checkout(unlock, url) {
+        if (url) { try { window.open(url, '_blank', 'noopener'); } catch (_) { window.location.href = url; } return; }
+        if (unlock && unlock.product_id && typeof openProductPage === 'function') {
+            close();
+            try { switchScreen('home'); } catch (_) {}
+            openProductPage(unlock.product_id);
+        }
+    }
+    function wire(root, unlock, opts) {
+        root.querySelectorAll('[data-mv-buy]').forEach(b => b.addEventListener('click', () => checkout(unlock, b.dataset.url || '')));
+        const c = root.querySelector('[data-mv-close]');
+        if (c) c.addEventListener('click', () => { if (opts && typeof opts.onClose === 'function') opts.onClose(); else close(); });
+    }
+
+    // Injeta o banner num container já existente (ex.: #caLocked do chat, overlay do story)
+    function renderInline(el, unlock, opts) {
+        if (!el) return;
+        el.classList.add('mvpw-inline');
+        el.innerHTML = bannerHTML(unlock, opts);
+        wire(el, unlock, opts);
+    }
+
+    // Modal de tela cheia (tiktok / uso genérico)
+    function openModal(unlock, opts) {
+        opts = opts || {};
+        let m = document.getElementById('mvPaywall');
+        if (!m) { m = document.createElement('div'); m.id = 'mvPaywall'; document.body.appendChild(m); }
+        const userClose = opts.onClose;
+        const innerOpts = Object.assign({}, opts, { onClose: () => { close(); if (typeof userClose === 'function') userClose(); } });
+        m.innerHTML = '<div class="mvpw-card">' + bannerHTML(unlock, innerOpts) + '</div>';
+        wire(m, unlock, innerOpts);
+        m.classList.add('open');
+    }
+    function close() { const m = document.getElementById('mvPaywall'); if (m) m.classList.remove('open'); }
+
+    return { bannerHTML, renderInline, openModal, close, checkout };
+})();
+
+// ──────────────── Explore: feed vertical estilo TikTok ────────────────
+window.Explore = (function () {
+    const HEART = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+    const SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>';
+    const SOUND = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+
+    let loaded = false, data = null, audioUnlocked = false, activeIndex = 0, gatePassed = false, io = null;
+    const feedEl = () => document.getElementById('tkFeed');
+    function esc(s) { try { return escapeHtmlData(s == null ? '' : String(s)); } catch (_) { return ''; } }
+    function fmt(n) { n = n || 0; return n >= 1000 ? (n / 1000).toFixed(1).replace('.0', '') + 'k' : String(n); }
+
+    async function open() {
+        if (loaded) { playActive(); return; }
+        loaded = true;
+        try {
+            const r = await fetch('/api/user/explore/feed', { credentials: 'include' });
+            const d = await r.json();
+            if (!d || !d.success || !Array.isArray(d.videos) || !d.videos.length) { showEmpty(); return; }
+            data = d;
+            build();
+        } catch (_) { showEmpty(); }
+    }
+    function showEmpty() {
+        const e = document.getElementById('tkEmpty'); if (e) e.style.display = 'flex';
+    }
+
+    function build() {
+        const feed = feedEl(); if (!feed) return;
+        feed.innerHTML = data.videos.map((v, i) => {
+            const poster = v.poster ? ' poster="' + esc(v.poster) + '"' : '';
+            const hls = v.hls_url ? ' data-hls="' + esc(v.hls_url) + '"' : '';
+            const src = v.src ? ' data-src="' + esc(v.src) + '"' : '';
+            const audiogate = i === 0
+                ? '<div class="tk-audiogate" data-audiogate><div class="ring">' + SOUND + '</div><p>Toque para ativar o som</p></div><div class="tk-hint">deslize para cima ↑</div>'
+                : '';
+            return '<div class="tk-slide" data-index="' + i + '">'
+                + '<video loop playsinline preload="' + (i === 0 ? 'auto' : 'none') + '" muted' + poster + hls + src + '></video>'
+                + '<div class="tk-meta"><div class="nm">' + esc(v.creator_name) + '</div><div class="cap">' + esc(v.caption) + '</div></div>'
+                + '<div class="tk-rail">'
+                + '<div class="tk-act like"><div class="b">' + HEART + '</div><span class="c">' + fmt(v.likes) + '</span></div>'
+                + '<div class="tk-act share"><div class="b">' + SHARE + '</div><span class="c">Enviar</span></div>'
+                + '</div>'
+                + '<div class="tk-prog"><i></i></div>'
+                + audiogate
+                + '</div>';
+        }).join('');
+
+        const slides = [...feed.querySelectorAll('.tk-slide')];
+        // play/pause + gates conforme o slide entra na tela
+        io = new IntersectionObserver((entries) => {
+            entries.forEach(en => {
+                const idx = +en.target.dataset.index;
+                if (en.isIntersecting) { activeIndex = idx; onActive(idx); }
+                else { const v = en.target.querySelector('video'); if (v) v.pause(); }
+            });
+        }, { root: feed, threshold: 0.6 });
+        slides.forEach(s => io.observe(s));
+
+        // progresso + curtir + compartilhar
+        slides.forEach((s, idx) => {
+            const v = s.querySelector('video');
+            const fill = s.querySelector('.tk-prog i');
+            if (v && fill) v.addEventListener('timeupdate', () => { if (v.duration) fill.style.width = (v.currentTime / v.duration * 100) + '%'; });
+            const like = s.querySelector('.tk-act.like');
+            if (like) {
+                const toggle = () => {
+                    like.classList.toggle('liked');
+                    const c = like.querySelector('.c');
+                    const base = data.videos[idx].likes || 0;
+                    c.textContent = fmt(base + (like.classList.contains('liked') ? 1 : 0));
+                };
+                like.addEventListener('click', toggle);
+                s.addEventListener('dblclick', () => { if (!like.classList.contains('liked')) toggle(); });
+            }
+            const share = s.querySelector('.tk-act.share');
+            if (share) share.addEventListener('click', doShare);
+            const ag = s.querySelector('[data-audiogate]');
+            if (ag) ag.addEventListener('click', () => {
+                audioUnlocked = true; ag.classList.add('hidden');
+                const v2 = s.querySelector('video'); if (v2) { v2.muted = false; v2.play().catch(() => {}); }
+            });
+        });
+
+        // primeiro slide
+        onActive(0);
+    }
+
+    function gateExploreOn() { return !window.MV_PWA_GATE || window.MV_PWA_GATE.gate_explore !== false; }
+
+    function onActive(i) {
+        if (!data) return;
+        const slides = feedEl().querySelectorAll('.tk-slide');
+        if (!data.has_access) {
+            // Gate de PWA: sem instalar, libera só pwa_gate_after vídeos
+            if (gateExploreOn() && !gatePassed && window.ChatApp && !ChatApp.isStandalone() && i >= (data.pwa_gate_after || 0) && i < (data.free_limit || 9999)) {
+                pauseAll();
+                try { ChatApp.gateInstall(() => { gatePassed = true; playActive(); }); } catch (_) { gatePassed = true; playActive(); }
+                return;
+            }
+            // Paywall: passou do limite grátis
+            if (i >= (data.free_limit || 9999)) {
+                pauseAll();
+                openPaywall();
+                return;
+            }
+        }
+        playActive(i);
+        // prepara vizinhos, libera distantes
+        prepare(slides[i + 1]);
+        slides.forEach((s, idx) => { if (Math.abs(idx - i) > 2) release(s); });
+    }
+
+    function playActive(i) {
+        if (i == null) i = activeIndex;
+        const feed = feedEl(); if (!feed) return;
+        const slides = feed.querySelectorAll('.tk-slide');
+        slides.forEach((s, idx) => { const v = s.querySelector('video'); if (v && idx !== i) v.pause(); });
+        const slide = slides[i]; if (!slide) return;
+        const v = prepare(slide); if (!v) return;
+        v.muted = !audioUnlocked;
+        v.play().catch(() => {});
+    }
+    function pauseAll() {
+        const feed = feedEl(); if (!feed) return;
+        feed.querySelectorAll('video').forEach(v => v.pause());
+    }
+
+    function prepare(slide) {
+        if (!slide) return null;
+        const v = slide.querySelector('video'); if (!v) return null;
+        if (v.dataset.ready === '1') return v;
+        const hls = v.dataset.hls, src = v.dataset.src;
+        try {
+            if (hls) {
+                if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = hls; }
+                else if (window.Hls && window.Hls.isSupported()) { const h = new Hls({ maxBufferLength: 8, maxMaxBufferLength: 24 }); h.loadSource(hls); h.attachMedia(v); v._hls = h; }
+                else if (src) { v.src = src; }
+            } else if (src) { v.src = src; }
+        } catch (_) { if (src) { try { v.src = src; } catch (e) {} } }
+        v.dataset.ready = '1';
+        return v;
+    }
+    function release(slide) {
+        if (!slide) return;
+        const v = slide.querySelector('video'); if (!v || v.dataset.ready !== '1') return;
+        try { if (v._hls) { v._hls.destroy(); v._hls = null; } } catch (_) {}
+        try { v.pause(); v.removeAttribute('src'); v.load && v.load(); } catch (_) {}
+        v.dataset.ready = '';
+    }
+
+    function openPaywall() {
+        const pw = (data && data.paywall) || {};
+        MVPaywall.openModal(data.unlock || {}, {
+            icon: 'lock',
+            title: pw.title || 'Continue assistindo',
+            subtitle: pw.text || 'Você já viu o grátis. O resto é só pra VIP 🔥',
+            ctaText: pw.cta || 'QUERO SER VIP',
+            social: '+2.400 já viraram VIP esta semana',
+            onClose: () => {
+                // volta pro último vídeo grátis
+                const feed = feedEl(); if (!feed) return;
+                const back = Math.max(0, (data.free_limit || 1) - 1);
+                const target = feed.querySelector('.tk-slide[data-index="' + back + '"]');
+                if (target) target.scrollIntoView();
+                setTimeout(() => playActive(back), 250);
+            },
+        });
+    }
+
+    function doShare() {
+        const url = location.origin + '/';
+        if (navigator.share) { navigator.share({ title: document.title, url }).catch(() => {}); return; }
+        try { navigator.clipboard.writeText(url); if (typeof showSoonToast === 'function') showSoonToast('Link copiado ✓'); } catch (_) {}
+    }
+
+    // Pausa tudo ao sair da aba (senão o áudio do vídeo vaza por cima das outras telas)
+    function pause() { pauseAll(); }
+
+    return { open, pause };
+})();
+</script>
 </body>
 </html>

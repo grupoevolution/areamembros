@@ -1596,7 +1596,8 @@ router.get('/app-config', async (req, res) => {
                 SELECT key, value FROM gamification_config
                 WHERE key IN (
                     'app_config', 'login_config', 'profile_config', 'home_layout',
-                    'reviews_list', 'flash_offers', 'live_notifications'
+                    'reviews_list', 'flash_offers', 'live_notifications',
+                    'explore_config', 'pwa_gate_config'
                 )
             `),
             safe(`
@@ -1681,6 +1682,17 @@ router.get('/app-config', async (req, res) => {
         if (!configs.home_layout) configs.home_layout = { sections: [] };
         if (!configs.reviews_list) configs.reviews_list = { items: [] };
         if (!configs.flash_offers) configs.flash_offers = { items: [] };
+        // Explorar/TikTok — só expõe o necessário pra montar a aba (sem segredos)
+        configs.explore_config = {
+            enabled: false, free_limit: 15, pwa_gate_after: 2,
+            ...(configs.explore_config || {}),
+        };
+        configs.pwa_gate_config = {
+            gate_stories: true, gate_view_once: true, gate_explore: true,
+            title: 'Falta um passo',
+            text: 'Instale o app na tela inicial pra ver esse conteúdo.',
+            ...(configs.pwa_gate_config || {}),
+        };
         
         // Filtra ofertas: só ativas e dentro do período
         const now = new Date();
@@ -1730,11 +1742,122 @@ router.get('/app-config', async (req, res) => {
             flash_offers: activeOffers,
             categories: categoriesResult.rows,
             live_notifications: configs.live_notifications,
+            // Explorar/TikTok: só flags pra montar a aba (enabled + gates). O feed
+            // real (vídeos + acesso) vem autenticado de /api/user/explore/feed.
+            explore: {
+                enabled: configs.explore_config.enabled === true,
+                free_limit: configs.explore_config.free_limit,
+                pwa_gate_after: configs.explore_config.pwa_gate_after,
+            },
+            pwa_gate: configs.pwa_gate_config,
             // Lista de produtos com progresso de visualização — vazia até ter player real
             continue_watching: [],
         });
     } catch (err) {
         logger.error('Erro em /app-config:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+
+// =============================================================================
+// EXPLORAR / TIKTOK — feed vertical de vídeos
+// =============================================================================
+// GET /api/user/explore/feed — vídeos publicados + config (limite grátis, gate
+// de PWA, produto de desbloqueio). has_access = e-mail já pagou o produto VIP
+// do Explorar (ou é e-mail premium/preview). Reaproveita Bunny pra HLS/thumb.
+
+// Resolve as URLs de um vídeo do Explorar (Bunny HLS/thumb ou MP4 cru).
+function resolveExploreVideo(v) {
+    let hls = v.hls_url || null;
+    let guid = v.bunny_video_id || null;
+    let mp4 = null;
+    if (!hls && v.video_url) {
+        const b = parseBunnyUrl(v.video_url);
+        if (b) { guid = guid || b.guid; hls = bunnyHlsUrl(b.guid); }
+        else { mp4 = v.video_url; }
+    }
+    if (!hls && guid) hls = bunnyHlsUrl(guid);
+    const poster = v.thumbnail_url || (guid ? bunnyThumbUrl(guid) : null);
+    return {
+        id: v.id,
+        caption: v.caption || '',
+        creator_name: v.creator_name || '',
+        hls_url: hls,
+        src: mp4,
+        poster: poster,
+        likes: v.likes_seed || 0,
+    };
+}
+
+// Cliente tem acesso ilimitado ao Explorar? (pagou o produto OU é preview)
+async function ownsExploreProduct(email, productId) {
+    if (!email) return false;
+    try { if (await isPreviewEmail(email)) return true; } catch (_) {}
+    if (!productId) return false;
+    const e = email.toLowerCase().trim();
+    try {
+        const { rows } = await db.query(
+            `SELECT 1 FROM user_access WHERE LOWER(email) = $1 AND product_id = $2 AND status = 'active' LIMIT 1`, [e, productId]
+        );
+        if (rows.length) return true;
+        const { rows: g } = await db.query(
+            `SELECT 1 FROM gifts WHERE LOWER(email) = $1 AND product_id = $2 AND status = 'active'
+             AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1`, [e, productId]
+        );
+        return g.length > 0;
+    } catch (_) { return false; }
+}
+
+// Info de desbloqueio (produto + planos) pro paywall do Explorar
+async function loadExploreUnlock(productId, checkoutUrl) {
+    const info = { product_id: productId || null, checkout_url: checkoutUrl || null, name: null, price: null, banner_url: null, plans: [] };
+    if (productId) {
+        try {
+            const { rows } = await db.query(`SELECT id, name, price, banner_url FROM products WHERE id = $1 LIMIT 1`, [productId]);
+            if (rows.length) { info.name = rows[0].name; info.price = rows[0].price; info.banner_url = rows[0].banner_url; }
+            const { rows: plans } = await db.query(
+                `SELECT name, price, original_price, badge, benefits, checkout_url, is_recommended
+                 FROM product_plans WHERE product_id = $1 AND active = true ORDER BY display_order, id`, [productId]
+            );
+            info.plans = plans;
+        } catch (_) {}
+    }
+    return info;
+}
+
+router.get('/explore/feed', optionalUser, async (req, res) => {
+    try {
+        const cfgRow = await db.query(`SELECT value FROM gamification_config WHERE key = 'explore_config'`).catch(() => ({ rows: [] }));
+        const cfg = cfgRow.rows[0]?.value || {};
+        const freeLimit = Number.isFinite(+cfg.free_limit) ? Math.max(0, parseInt(cfg.free_limit, 10)) : 15;
+        const pwaGateAfter = Number.isFinite(+cfg.pwa_gate_after) ? Math.max(0, parseInt(cfg.pwa_gate_after, 10)) : 2;
+        const productId = cfg.product_id ? parseInt(cfg.product_id, 10) : null;
+        const email = req.user?.email || null;
+        const hasAccess = await ownsExploreProduct(email, productId);
+
+        const { rows } = await db.query(
+            `SELECT id, caption, creator_name, video_url, bunny_library_id, bunny_video_id, hls_url, thumbnail_url, likes_seed
+             FROM explore_videos WHERE active = true ORDER BY position, id LIMIT 200`
+        );
+        const videos = rows.map(resolveExploreVideo);
+
+        return res.json({
+            success: true,
+            enabled: cfg.enabled === true,
+            has_access: hasAccess,
+            free_limit: freeLimit,
+            pwa_gate_after: pwaGateAfter,
+            paywall: {
+                title: cfg.paywall_title || 'Continue assistindo',
+                text: cfg.paywall_text || 'Você já viu o grátis. O resto é só pra VIP 🔥',
+                cta: cfg.paywall_cta || 'QUERO SER VIP',
+            },
+            unlock: hasAccess ? null : await loadExploreUnlock(productId, cfg.checkout_url || null),
+            videos,
+        });
+    } catch (err) {
+        logger.error('Erro no feed Explorar:', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
     }
 });

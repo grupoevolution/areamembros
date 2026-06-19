@@ -3133,6 +3133,10 @@ a { color: inherit; text-decoration: none; }
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><path d="M12 8v4l3 2"/></svg>
                     Rotina de Status
                 </div>
+                <div class="nav-item" data-screen="explore" onclick="switchAdminScreen(this, 'explore', 'Explorar (Feed)'); loadExplore();">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2.2 4.8-4.8 2.2 2.2-4.8 4.8-2.2z"/></svg>
+                    Explorar (Feed)
+                </div>
             </div>
 
             <div class="nav-section">
@@ -3778,6 +3782,76 @@ a { color: inherit; text-decoration: none; }
                                 <div style="font-size:11px;color:var(--text-muted);" id="perfectpayStatusText">verificando...</div>
                             </div>
                             <span id="perfectpayStatusBadge" class="badge">—</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="screen-content" id="screen-explore">
+                <div class="page-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                    <div>
+                        <h1 style="margin:0;">Explorar (Feed estilo TikTok)</h1>
+                        <p style="margin:4px 0 0; color:rgba(255,255,255,.55); font-size:13px;">Feed vertical de vídeos. Qualquer cliente vê alguns grátis; depois do limite aparece o paywall pra assinar.</p>
+                    </div>
+                    <button class="btn-primary" onclick="openExploreVideoModal()">+ Novo vídeo</button>
+                </div>
+
+                <!-- CONFIG -->
+                <div style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.1); border-radius:14px; padding:18px; margin-bottom:18px; display:flex; flex-direction:column; gap:14px; max-width:760px;">
+                    <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#fff; cursor:pointer; font-weight:700;"><input type="checkbox" id="exEnabled" style="width:18px; height:18px;"> Ativar a aba "Explorar" no app</label>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Vídeos grátis antes do paywall</label><input class="form-control" type="number" id="exFreeLimit" min="0" value="15" style="width:100%;"/></div>
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Vídeos antes de exigir instalar o app</label><input class="form-control" type="number" id="exPwaGateAfter" min="0" value="2" style="width:100%;"/></div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Produto que libera o feed (VIP)</label><select class="form-control" id="exProduct" style="width:100%;"><option value="">— nenhum —</option></select></div>
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link de checkout do paywall</label><input class="form-control" id="exCheckout" maxlength="1000" placeholder="https://pay..." style="width:100%;"/></div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Título do paywall</label><input class="form-control" id="exPwTitle" maxlength="120" placeholder="Continue assistindo" style="width:100%;"/></div>
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Texto do botão</label><input class="form-control" id="exPwCta" maxlength="40" placeholder="QUERO SER VIP" style="width:100%;"/></div>
+                    </div>
+                    <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Frase do paywall</label><input class="form-control" id="exPwText" maxlength="300" placeholder="Você já viu o grátis. O resto é só pra VIP 🔥" style="width:100%;"/></div>
+
+                    <div style="border-top:1px solid rgba(255,255,255,.08); padding-top:12px;">
+                        <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:8px;">🔒 Exigir instalar o app (PWA) pra:</div>
+                        <div style="display:flex; flex-direction:column; gap:8px;">
+                            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="exGateStories" style="width:16px; height:16px;"> Ver os stories das modelos</label>
+                            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="exGateViewOnce" style="width:16px; height:16px;"> Abrir mídia de visualização única no chat</label>
+                            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="exGateExplore" style="width:16px; height:16px;"> Continuar no feed Explorar após os vídeos iniciais</label>
+                        </div>
+                    </div>
+                    <div><button class="btn-primary" onclick="saveExploreSettings()">Salvar configurações</button></div>
+                </div>
+
+                <!-- LISTA DE VÍDEOS -->
+                <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:10px;">Vídeos do feed</div>
+                <div id="exVideoList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px;"><div style="color:rgba(255,255,255,.4); font-size:13px;">Carregando...</div></div>
+
+                <!-- MODAL VÍDEO -->
+                <div id="exVideoModalBackdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+                    <div style="background:#1a1620; border:1px solid rgba(255,255,255,.12); border-radius:16px; max-width:480px; width:100%; max-height:90vh; overflow-y:auto; padding:22px;">
+                        <h3 id="exVideoModalTitle" style="margin:0 0 16px; color:#fff;">Novo vídeo</h3>
+                        <input type="hidden" id="exVidId"/>
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link do vídeo (Bunny ou MP4)</label>
+                                <input class="form-control" id="exVidUrl" maxlength="1000" placeholder="https://iframe.mediadelivery.net/play/.../..." style="width:100%;"/>
+                                <div class="form-help" style="margin-top:4px;">Cole a URL do vídeo no Bunny (o app resolve o streaming e a capa sozinho) ou um link MP4 direto.</div>
+                            </div>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Capa (thumbnail) — opcional</label>
+                                <div style="display:flex; gap:8px;"><input class="form-control" id="exVidThumb" maxlength="1000" placeholder="https://..." style="flex:1;"/><button type="button" class="btn-secondary" onclick="UploadHelper.openPicker('exVidThumb','banner-produto',()=>{})">📤</button></div>
+                            </div>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Nome da modelo / criador</label><input class="form-control" id="exVidCreator" maxlength="120" placeholder="ex: Marina" style="width:100%;"/></div>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Legenda</label><input class="form-control" id="exVidCaption" maxlength="300" placeholder="Bastidores do ensaio ✨" style="width:100%;"/></div>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Curtidas exibidas</label><input class="form-control" type="number" id="exVidLikes" min="0" value="0" style="width:100%;"/></div>
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Ordem</label><input class="form-control" type="number" id="exVidPos" value="0" style="width:100%;"/></div>
+                            </div>
+                            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="exVidActive" checked style="width:16px; height:16px;"> Ativo (aparece no feed)</label>
+                        </div>
+                        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:18px;">
+                            <button class="btn-secondary" onclick="closeExploreVideoModal()">Cancelar</button>
+                            <button class="btn-primary" onclick="saveExploreVideo()">Salvar</button>
                         </div>
                     </div>
                 </div>
@@ -5684,6 +5758,18 @@ a { color: inherit; text-decoration: none; }
                                 <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="cpPhoto" style="width:16px; height:16px;"> VIP pode mandar FOTO</label>
                             </div>
 
+                            <!-- Stories VIP (close friends pago) -->
+                            <div style="background:rgba(245,197,66,.06); border:1px solid rgba(245,197,66,.3); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;">
+                                <div style="font-size:12px; color:#f5c542; font-weight:700;">👑 Stories VIP (close friends pago)</div>
+                                <div class="form-help" style="margin-top:-4px;">Marque um story como VIP no editor de Status. Quem NÃO tiver o produto abaixo vê o story borrado + aviso pra assinar. Pagar libera TODOS os stories VIP desta modelo.</div>
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Produto que libera os Stories VIP desta modelo</label>
+                                    <select class="form-control" id="cpStoryVipProduct" style="width:100%;"><option value="">— nenhum —</option></select>
+                                </div>
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link de checkout dos Stories VIP</label>
+                                    <input class="form-control" id="cpStoryVipCheckout" maxlength="1000" placeholder="https://pay..." style="width:100%;"/>
+                                </div>
+                            </div>
+
                             <!-- Modo de digitação (TapBot) -->
                             <div style="background:rgba(37,211,102,.06); border:1px solid rgba(37,211,102,.25); border-radius:10px; padding:12px;">
                                 <label style="display:block; font-size:12px; color:#fff; font-weight:700; margin-bottom:4px;">⌨️ Quando o cliente pode digitar</label>
@@ -5923,6 +6009,10 @@ a { color: inherit; text-decoration: none; }
                         <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Legenda / texto</label><input class="form-control" id="stCaption" maxlength="300" placeholder="oi amor, viu meu story? 😏" style="width:100%;"/></div>
                         <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">📞 Gatilho ao RESPONDER — pular pro bloco (rótulo)</label><input class="form-control" id="stReplyGoto" maxlength="40" placeholder="ex: reacao_story" style="width:100%;"/>
                             <div class="form-help" style="margin-top:4px;">Vazio = a resposta só cai na conversa. Com rótulo = a modelo reage pulando pro bloco.</div>
+                        </div>
+                        <div style="background:rgba(245,197,66,.06); border:1px solid rgba(245,197,66,.3); border-radius:10px; padding:10px;">
+                            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="stIsVip" style="width:16px; height:16px;"> 👑 Story VIP (só quem comprou os Stories VIP desta modelo)</label>
+                            <div class="form-help" style="margin-top:6px;">Quem não tiver o produto de Stories VIP (configurado no chat) vê este story borrado, com o áudio rodando, e um aviso pra assinar.</div>
                         </div>
                         <button type="button" class="btn-primary" onclick="saveChatStatus()">+ Publicar status</button>
                         <div style="border-top:1px solid rgba(255,255,255,.08); padding-top:12px;">
@@ -13539,6 +13629,150 @@ function renderPreviewEmailCard(p) {
         + '</div>';
 }
 
+// ═══════════════ EXPLORAR / FEED TIKTOK ═══════════════
+async function loadExplore() {
+    // produtos pro select de desbloqueio
+    try {
+        const pr = await fetch('/api/admin/products', { credentials:'include' }).then(r => r.json());
+        const products = pr.products || [];
+        const sel = document.getElementById('exProduct');
+        if (sel) sel.innerHTML = '<option value="">— nenhum —</option>' + products.map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
+    } catch(_) {}
+    // config (explore + gate de PWA)
+    try {
+        const s = await fetch('/api/admin/explore/settings', { credentials:'include' }).then(r => r.json());
+        if (s && s.success) {
+            const e = s.explore || {}, g = s.pwa_gate || {};
+            document.getElementById('exEnabled').checked = e.enabled === true;
+            document.getElementById('exFreeLimit').value = e.free_limit != null ? e.free_limit : 15;
+            document.getElementById('exPwaGateAfter').value = e.pwa_gate_after != null ? e.pwa_gate_after : 2;
+            if (e.product_id) document.getElementById('exProduct').value = e.product_id;
+            document.getElementById('exCheckout').value = e.checkout_url || '';
+            document.getElementById('exPwTitle').value = e.paywall_title || '';
+            document.getElementById('exPwText').value = e.paywall_text || '';
+            document.getElementById('exPwCta').value = e.paywall_cta || '';
+            document.getElementById('exGateStories').checked = g.gate_stories !== false;
+            document.getElementById('exGateViewOnce').checked = g.gate_view_once !== false;
+            document.getElementById('exGateExplore').checked = g.gate_explore !== false;
+        }
+    } catch(_) {}
+    loadExploreVideos();
+}
+
+async function loadExploreVideos() {
+    const list = document.getElementById('exVideoList');
+    list.innerHTML = '<div style="color:rgba(255,255,255,.4);font-size:13px;">Carregando...</div>';
+    try {
+        const r = await fetch('/api/admin/explore/videos', { credentials:'include' });
+        const d = await r.json();
+        if (!d.success) { list.innerHTML = '<div style="color:#ff6b6b">Erro ao carregar.</div>'; return; }
+        const items = d.videos || [];
+        window._exVideos = items;
+        if (!items.length) {
+            list.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:rgba(255,255,255,.45);"><div style="font-size:38px;margin-bottom:10px;">🎬</div>Nenhum vídeo ainda.<br>Clique em "+ Novo vídeo".</div>';
+            return;
+        }
+        list.innerHTML = items.map(renderExploreVideoCard).join('');
+    } catch(e) { list.innerHTML = '<div style="color:#ff6b6b">Erro: '+escHtmlAdmin(e.message)+'</div>'; }
+}
+
+function renderExploreVideoCard(v) {
+    const thumb = v.thumbnail_url ? "background-image:url('"+escHtmlAdmin(v.thumbnail_url)+"');" : '';
+    return '<div style="background:var(--card,#1a1a1a);border:1px solid rgba(255,255,255,.07);border-radius:14px;overflow:hidden;">'
+        + '<div style="height:150px;background:#000 center/cover no-repeat;'+thumb+'"></div>'
+        + '<div style="padding:12px 14px;">'
+        + '<div style="font-size:13px;color:#fff;font-weight:700;">'+escHtmlAdmin(v.creator_name||'(sem nome)')+(v.active===false?' <span style="color:#ff6b6b;font-size:11px;">(inativo)</span>':'')+'</div>'
+        + '<div style="font-size:12px;color:rgba(255,255,255,.55);margin:3px 0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+escHtmlAdmin(v.caption||'')+'</div>'
+        + '<div style="display:flex;gap:8px;align-items:center;">'
+        + '<button class="btn-secondary" style="font-size:11px;padding:5px 10px;" onclick="editExploreVideo('+v.id+')">Editar</button>'
+        + '<button class="btn-secondary" style="font-size:11px;padding:5px 10px;color:#ff6b6b;" onclick="deleteExploreVideo('+v.id+')">Excluir</button>'
+        + '<span style="margin-left:auto;font-size:11px;color:rgba(255,255,255,.35);">ordem '+(v.position||0)+'</span>'
+        + '</div></div></div>';
+}
+
+function openExploreVideoModal() {
+    document.getElementById('exVideoModalTitle').textContent = 'Novo vídeo';
+    document.getElementById('exVidId').value = '';
+    document.getElementById('exVidUrl').value = '';
+    document.getElementById('exVidThumb').value = '';
+    document.getElementById('exVidCreator').value = '';
+    document.getElementById('exVidCaption').value = '';
+    document.getElementById('exVidLikes').value = '0';
+    document.getElementById('exVidPos').value = '0';
+    document.getElementById('exVidActive').checked = true;
+    document.getElementById('exVideoModalBackdrop').style.display = 'flex';
+}
+function closeExploreVideoModal() { document.getElementById('exVideoModalBackdrop').style.display = 'none'; }
+
+function editExploreVideo(id) {
+    const v = (window._exVideos || []).find(x => x.id === id);
+    if (!v) return;
+    document.getElementById('exVideoModalTitle').textContent = 'Editar vídeo';
+    document.getElementById('exVidId').value = v.id;
+    document.getElementById('exVidUrl').value = v.video_url || '';
+    document.getElementById('exVidThumb').value = v.thumbnail_url || '';
+    document.getElementById('exVidCreator').value = v.creator_name || '';
+    document.getElementById('exVidCaption').value = v.caption || '';
+    document.getElementById('exVidLikes').value = v.likes_seed || 0;
+    document.getElementById('exVidPos').value = v.position || 0;
+    document.getElementById('exVidActive').checked = v.active !== false;
+    document.getElementById('exVideoModalBackdrop').style.display = 'flex';
+}
+
+async function saveExploreVideo() {
+    const id = document.getElementById('exVidId').value;
+    const payload = {
+        video_url: document.getElementById('exVidUrl').value.trim() || null,
+        thumbnail_url: document.getElementById('exVidThumb').value.trim() || null,
+        creator_name: document.getElementById('exVidCreator').value.trim() || null,
+        caption: document.getElementById('exVidCaption').value.trim() || null,
+        likes_seed: parseInt(document.getElementById('exVidLikes').value, 10) || 0,
+        position: parseInt(document.getElementById('exVidPos').value, 10) || 0,
+        active: document.getElementById('exVidActive').checked,
+    };
+    if (!payload.video_url) { alert('Cole o link do vídeo.'); return; }
+    try {
+        const url = id ? '/api/admin/explore/videos/'+id : '/api/admin/explore/videos';
+        const r = await fetch(url, { method: id ? 'PUT' : 'POST', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payload) });
+        const d = await r.json();
+        if (!d.success) { alert('Erro: '+(d.error||'')); return; }
+        closeExploreVideoModal();
+        loadExploreVideos();
+    } catch(e) { alert('Erro: '+e.message); }
+}
+
+async function deleteExploreVideo(id) {
+    if (!confirm('Excluir esse vídeo do feed?')) return;
+    try { await fetch('/api/admin/explore/videos/'+id, { method:'DELETE', credentials:'include' }); loadExploreVideos(); }
+    catch(e) { alert('Erro: '+e.message); }
+}
+
+async function saveExploreSettings() {
+    const payload = {
+        explore: {
+            enabled: document.getElementById('exEnabled').checked,
+            free_limit: parseInt(document.getElementById('exFreeLimit').value, 10) || 0,
+            pwa_gate_after: parseInt(document.getElementById('exPwaGateAfter').value, 10) || 0,
+            product_id: document.getElementById('exProduct').value || null,
+            checkout_url: document.getElementById('exCheckout').value.trim() || null,
+            paywall_title: document.getElementById('exPwTitle').value.trim() || null,
+            paywall_text: document.getElementById('exPwText').value.trim() || null,
+            paywall_cta: document.getElementById('exPwCta').value.trim() || null,
+        },
+        pwa_gate: {
+            gate_stories: document.getElementById('exGateStories').checked,
+            gate_view_once: document.getElementById('exGateViewOnce').checked,
+            gate_explore: document.getElementById('exGateExplore').checked,
+        },
+    };
+    try {
+        const r = await fetch('/api/admin/explore/settings', { method:'PUT', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payload) });
+        const d = await r.json();
+        if (!d.success) { alert('Erro: '+(d.error||'')); return; }
+        alert('Configurações salvas ✓');
+    } catch(e) { alert('Erro: '+e.message); }
+}
+
 function openPreviewEmailModal() {
     document.getElementById('previewEmailInput').value = '';
     document.getElementById('previewEmailLabel').value = '';
@@ -14674,7 +14908,7 @@ async function loadAdminChats() {
     } catch(e) { list.innerHTML = '<div style="color:#f55">Erro: '+e.message+'</div>'; }
 }
 
-async function loadChatProductsDropdown(selectedId, callId, triggerIds) {
+async function loadChatProductsDropdown(selectedId, callId, triggerIds, storyVipProductId) {
     try {
         const [pr, cr] = await Promise.all([
             fetch('/api/admin/products', { credentials:'include' }).then(r => r.json()),
@@ -14685,6 +14919,12 @@ async function loadChatProductsDropdown(selectedId, callId, triggerIds) {
         if (sel) {
             sel.innerHTML = '<option value="">— nenhum —</option>' + products.map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
             if (selectedId) sel.value = selectedId;
+        }
+        // Produto que libera os Stories VIP desta modelo
+        const svSel = document.getElementById('cpStoryVipProduct');
+        if (svSel) {
+            svSel.innerHTML = '<option value="">— nenhum —</option>' + products.map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
+            if (storyVipProductId) svSel.value = storyVipProductId;
         }
         // Chamada vinculada
         const callSel = document.getElementById('cpCall');
@@ -14733,6 +14973,7 @@ function editChatPersona(c) {
     document.getElementById('cpOnline').checked = c.show_online !== false;
     document.getElementById('cpAccess').value = c.access || 'free';
     document.getElementById('cpCheckout').value = c.checkout_url || '';
+    document.getElementById('cpStoryVipCheckout').value = c.story_vip_checkout_url || '';
     document.getElementById('cpReply').value = c.reply_mode || 'vip';
     document.getElementById('cpAutoStart').value = c.auto_start_minutes || 0;
     document.getElementById('cpInputMode').value = c.input_mode === 'gated' ? 'gated' : 'always';
@@ -14745,7 +14986,7 @@ function editChatPersona(c) {
     document.getElementById('cpOrder').value = c.display_order || 0;
     let trig = [];
     try { trig = Array.isArray(c.trigger_product_ids) ? c.trigger_product_ids : JSON.parse(c.trigger_product_ids || '[]'); } catch(_) {}
-    loadChatProductsDropdown(c.product_id || '', c.call_video_call_id || '', trig);
+    loadChatProductsDropdown(c.product_id || '', c.call_video_call_id || '', trig, c.story_vip_product_id || '');
     document.getElementById('chatStepsSection').style.display = 'block';
     _curChatFlow = 'open';
     loadChatSteps(c.id);
@@ -14765,6 +15006,8 @@ async function saveChatPersona(e) {
         access: document.getElementById('cpAccess').value,
         product_id: document.getElementById('cpProduct').value || null,
         checkout_url: document.getElementById('cpCheckout').value.trim() || null,
+        story_vip_product_id: document.getElementById('cpStoryVipProduct').value || null,
+        story_vip_checkout_url: document.getElementById('cpStoryVipCheckout').value.trim() || null,
         reply_mode: document.getElementById('cpReply').value,
         auto_start_minutes: parseInt(document.getElementById('cpAutoStart').value, 10) || 0,
         input_mode: document.getElementById('cpInputMode').value,
@@ -15173,6 +15416,7 @@ function openChatStatus() {
     document.getElementById('stBg').value = '';
     document.getElementById('stCaption').value = '';
     document.getElementById('stReplyGoto').value = '';
+    document.getElementById('stIsVip').checked = false;
     updateStatusFields();
     document.getElementById('chatStatusBackdrop').style.display = 'flex';
     loadChatStatus();
@@ -15187,9 +15431,10 @@ async function loadChatStatus() {
         list.innerHTML = data.status.map(s => {
             const icon = s.type === 'video' ? '🎬' : s.type === 'text' ? '📝' : '📷';
             const exp = s.expired ? '<span style="color:#FF3B30;">expirado</span>' : ('expira '+new Date(s.expires_at).toLocaleString('pt-BR').slice(0,16));
+            const vip = s.is_vip ? ' <span style="color:#f5c542;font-weight:700;">👑 VIP</span>' : '';
             const trig = s.reply_goto_key ? ' · ↪ '+escHtmlAdmin(s.reply_goto_key) : '';
             return '<div style="display:flex; align-items:center; gap:10px; padding:9px 10px; background:rgba(0,0,0,.3); border-radius:8px;">'
-                + '<div style="flex:1; min-width:0;"><div style="font-size:12.5px; font-weight:700; color:#fff;">'+icon+' '+escHtmlAdmin(s.caption || '(sem legenda)')+'</div>'
+                + '<div style="flex:1; min-width:0;"><div style="font-size:12.5px; font-weight:700; color:#fff;">'+icon+' '+escHtmlAdmin(s.caption || '(sem legenda)')+vip+'</div>'
                 + '<div style="font-size:10.5px; color:rgba(255,255,255,.5);">'+exp+' · 👁 '+s.views+trig+'</div></div>'
                 + '<button type="button" onclick="deleteChatStatus('+s.id+')" class="btn-danger" style="font-size:11px; padding:4px 10px;">×</button></div>';
         }).join('');
@@ -15203,6 +15448,7 @@ async function saveChatStatus() {
         bg_color: document.getElementById('stBg').value.trim() || null,
         caption: document.getElementById('stCaption').value.trim() || null,
         reply_goto_key: document.getElementById('stReplyGoto').value.trim() || null,
+        is_vip: document.getElementById('stIsVip').checked,
         expires_hours: parseInt(document.getElementById('stHours').value, 10) || 24,
     };
     if ((type === 'image' || type === 'video') && !payload.media_url) { alert('Informe a URL da mídia.'); return; }
