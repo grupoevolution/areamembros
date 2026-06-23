@@ -16879,6 +16879,9 @@ document.addEventListener('keydown', function(e) {
         // Não intercepta o CHAT (lista/conversa) nem os popups do gate/chamada:
         // a conversa rola livre e o e-mail é pedido só ao tocar pra ver a mídia.
         if (t.closest('#chat') || t.closest('#chatconv') || t.closest('#caGate') || t.closest('#caCallScr') || t.closest('#caCallPop') || t.closest('#caViewer') || t.closest('#caPhotoViewer') || t.closest('#caVipToast')) return;
+        // Aba de Vídeos (feed): o e-mail é pedido pelo próprio fluxo do feed
+        // (toca no áudio → 3-4s → popup; ou ao tentar rolar pro 2º vídeo).
+        if (t.closest('#tiktok')) return;
         // Não intercepta controles próprios (audio/video do navegador)
         if (t.matches('audio, video, audio *, video *')) return;
         // Pra TUDO o resto, bloqueia e abre login
@@ -17773,6 +17776,13 @@ window.Explore = (function () {
                 audioUnlocked = true; ag.classList.add('hidden');
                 const v2 = s.querySelector('video'); if (v2) { v2.muted = false; v2.play().catch(() => {}); }
                 updateSoundIcons();
+                // Lead anônimo: deixa ele curtir o vídeo com som por uns segundos e
+                // então pede o e-mail (gancho antes do popup).
+                if (window.MV_ANONYMOUS === true) {
+                    setTimeout(() => {
+                        if (window.MV_ANONYMOUS === true && typeof window.MV_openLoginModal === 'function') window.MV_openLoginModal();
+                    }, 3500);
+                }
             });
         });
 
@@ -17785,6 +17795,20 @@ window.Explore = (function () {
     function onActive(i) {
         if (!data) return;
         const slides = feedEl().querySelectorAll('.tk-slide');
+        // Lead ANÔNIMO (modo funil): só o 1º vídeo roda no fundo. Tentar rolar pro
+        // próximo trava e abre o popup de e-mail (capta o lead antes de liberar).
+        if (window.MV_ANONYMOUS === true) {
+            if (i >= 1) {
+                pauseAll();
+                const target = feedEl().querySelector('.tk-slide[data-index="0"]');
+                if (target) target.scrollIntoView();
+                setTimeout(() => playActive(0), 200);
+                if (typeof window.MV_openLoginModal === 'function') window.MV_openLoginModal();
+                return;
+            }
+            playActive(0);
+            return;
+        }
         const watched = loadSeen().size; // vídeos únicos já assistidos na vida
         if (!data.has_access) {
             // Gate de PWA: sem instalar, libera só pwa_gate_after vídeos
