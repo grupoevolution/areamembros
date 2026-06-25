@@ -9172,13 +9172,14 @@ window.ChatApp = (function() {
             scrollChatToBottom();
             return;
         }
-        // gated não-liberado / parado → sem input. Se a modelo NÃO está fazendo
-        // nada agora (sem status ao vivo), o rodapé fica VAZIO (sem "online").
+        // gated não-liberado / parado → sem input. A barra de baixo FICA FIXA
+        // (igual estava), só que SEM TEXTO quando a modelo não está fazendo nada.
+        // O "digitando…/gravando…" aparece quando há status ao vivo.
         bar.style.display = 'none';
         if (ch) ch.style.display = 'none';
         if (sb) {
-            if (sb.dataset.live) { sb.style.display = 'block'; }
-            else { sb.textContent = ''; sb.style.display = 'none'; }
+            if (!sb.dataset.live) sb.textContent = '';
+            sb.style.display = 'block';
         }
         scrollChatToBottom();
     }
