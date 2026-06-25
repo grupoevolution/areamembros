@@ -9172,12 +9172,13 @@ window.ChatApp = (function() {
             scrollChatToBottom();
             return;
         }
-        // gated não-liberado / parado → BARRA DE STATUS FIXA (nunca vazio).
+        // gated não-liberado / parado → sem input. Se a modelo NÃO está fazendo
+        // nada agora (sem status ao vivo), o rodapé fica VAZIO (sem "online").
         bar.style.display = 'none';
         if (ch) ch.style.display = 'none';
         if (sb) {
-            if (!sb.dataset.live) sb.textContent = (CUR.chat && CUR.chat.status_label) || 'online';
-            sb.style.display = 'block';
+            if (sb.dataset.live) { sb.style.display = 'block'; }
+            else { sb.textContent = ''; sb.style.display = 'none'; }
         }
         scrollChatToBottom();
     }
@@ -9465,6 +9466,10 @@ window.ChatApp = (function() {
                     window.currentUserEmail = d.email; window.MV_ANONYMOUS = false;
                     try { document.body.classList.remove('funnel-mode'); } catch(_) {}
                     try { if (window.PUSH && Notification.permission === 'granted') PUSH.subscribe(); } catch(_) {}
+                    // Dispara a sequência do funil (notificações/conversas/etc). Sem
+                    // isso, quem digita o e-mail AQUI (gate de mídia do chat) nunca
+                    // recebia as etapas — só quem digitava no modal de login principal.
+                    try { if (typeof window.tryTriggerCallAfterLogin === 'function') window.tryTriggerCallAfterLogin(); } catch(_) {}
                     gateInstall(action);
                 } else { err.textContent = d.error || 'Erro, tente de novo.'; btn.disabled = false; btn.textContent = 'Liberar acesso'; }
             } catch (_) { err.textContent = 'Erro de conexão.'; btn.disabled = false; btn.textContent = 'Liberar acesso'; }
