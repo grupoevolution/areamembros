@@ -139,6 +139,39 @@ router.put('/:id', requireAdmin, async (req, res) => {
     }
 });
 
+// RANKING dos chats — abertura (sessões), conclusão (chegou ao fim do roteiro)
+// e conversão (virou comprador). Pra saber quais conversas convertem mais.
+router.get('/ranking', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await db.query(`
+            WITH steps_count AS (
+                SELECT chat_id, COUNT(*)::int AS total
+                FROM chat_steps WHERE active = true AND COALESCE(flow,'open') = 'open'
+                GROUP BY chat_id
+            )
+            SELECT ch.id, ch.name, ch.access,
+                   COALESCE(sc.total, 0)::int AS total_steps,
+                   COUNT(s.id)::int AS opens,
+                   COUNT(s.id) FILTER (WHERE sc.total > 0 AND s.current_order >= sc.total - 1)::int AS completions,
+                   COUNT(DISTINCT LOWER(s.customer_email)) FILTER (
+                       WHERE s.customer_email IS NOT NULL AND EXISTS(
+                           SELECT 1 FROM user_access ua
+                           WHERE LOWER(ua.email) = LOWER(s.customer_email) AND ua.status = 'active'
+                       )
+                   )::int AS conversions
+            FROM chats ch
+            LEFT JOIN steps_count sc ON sc.chat_id = ch.id
+            LEFT JOIN chat_sessions s ON s.chat_id = ch.id
+            GROUP BY ch.id, ch.name, ch.access, sc.total
+            ORDER BY opens DESC
+        `);
+        return res.json({ success: true, ranking: rows });
+    } catch (err) {
+        logger.error('Erro no ranking de chats:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
 // VIP ÚNICO: aplica o MESMO produto (e checkout) em TODAS as conversas VIP, e
 // marca como VIP as conversas escolhidas. Assim quem compra esse 1 produto vira
 // VIP em todas elas de uma vez.

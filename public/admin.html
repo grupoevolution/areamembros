@@ -3133,6 +3133,10 @@ a { color: inherit; text-decoration: none; }
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><path d="M12 8v4l3 2"/></svg>
                     Rotina de Status
                 </div>
+                <div class="nav-item" data-screen="chat-ranking" onclick="switchAdminScreen(this, 'chat-ranking', 'Ranking de Chats'); loadChatRanking();">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM7 6H4v2a3 3 0 003 3M17 6h3v2a3 3 0 01-3 3"/></svg>
+                    Ranking de Chats
+                </div>
                 <div class="nav-item" data-screen="explore" onclick="switchAdminScreen(this, 'explore', 'Vídeos (Feed)'); loadExplore();">
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M10 8.3l5.5 3.7-5.5 3.7z"/></svg>
                     Vídeos
@@ -3784,6 +3788,35 @@ a { color: inherit; text-decoration: none; }
                             <span id="perfectpayStatusBadge" class="badge">—</span>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div class="screen-content" id="screen-chat-ranking">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">🏆 Ranking de Chats</h1>
+                        <p class="page-subtitle">Desempenho de TODAS as conversas (estejam ou não em funil). Clique no título da coluna pra ordenar.</p>
+                    </div>
+                    <div class="page-actions">
+                        <button class="btn-secondary" onclick="loadChatRanking()">Atualizar</button>
+                    </div>
+                </div>
+                <div class="data-table-wrap" style="margin-top:20px;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Modelo</th>
+                                <th style="cursor:pointer;" onclick="sortChatRanking('opens')">Aberturas <span id="rkArrowOpens"></span></th>
+                                <th style="cursor:pointer;" onclick="sortChatRanking('completions')">Concluíram <span id="rkArrowCompletions"></span></th>
+                                <th style="cursor:pointer;" onclick="sortChatRanking('completion_rate')">% conclusão <span id="rkArrowCompletion_rate"></span></th>
+                                <th style="cursor:pointer;" onclick="sortChatRanking('conversions')">Compraram <span id="rkArrowConversions"></span></th>
+                                <th style="cursor:pointer;" onclick="sortChatRanking('conversion_rate')">% conversão <span id="rkArrowConversion_rate"></span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="chatRankingBody">
+                            <tr><td colspan="6" style="text-align:center; padding:40px; color:var(--text-muted);">Carregando...</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -15235,6 +15268,53 @@ async function loadChatProductsDropdown(selectedId, callId, triggerIds, storyVip
                 : '<div style="font-size:11px;color:rgba(255,255,255,.4);">Nenhum produto cadastrado.</div>';
         }
     } catch(_) {}
+}
+
+// ═══════════════ RANKING DE CHATS ═══════════════
+let _chatRanking = [], _rkSort = 'opens', _rkDir = 'desc';
+async function loadChatRanking() {
+    const tb = document.getElementById('chatRankingBody');
+    tb.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:40px; color:var(--text-muted);">Carregando...</td></tr>';
+    try {
+        const r = await fetch('/api/admin/chats/ranking', { credentials:'include' });
+        const d = await r.json();
+        if (!d.success) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#f55">Erro ao carregar.</td></tr>'; return; }
+        _chatRanking = (d.ranking || []).map(c => ({
+            ...c,
+            completion_rate: c.opens > 0 ? Math.round((c.completions / c.opens) * 100) : 0,
+            conversion_rate: c.opens > 0 ? Math.round((c.conversions / c.opens) * 100) : 0,
+        }));
+        renderChatRanking();
+    } catch(e) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:#f55">Erro: '+e.message+'</td></tr>'; }
+}
+function sortChatRanking(col) {
+    if (_rkSort === col) _rkDir = (_rkDir === 'desc' ? 'asc' : 'desc');
+    else { _rkSort = col; _rkDir = 'desc'; }
+    renderChatRanking();
+}
+function renderChatRanking() {
+    const tb = document.getElementById('chatRankingBody');
+    ['opens','completions','completion_rate','conversions','conversion_rate'].forEach(c => {
+        const el = document.getElementById('rkArrow' + c.charAt(0).toUpperCase() + c.slice(1));
+        if (el) el.textContent = (_rkSort === c) ? (_rkDir === 'desc' ? '▼' : '▲') : '';
+    });
+    const arr = _chatRanking.slice().sort((a, b) => {
+        const x = a[_rkSort] || 0, y = b[_rkSort] || 0;
+        return _rkDir === 'desc' ? (y - x) : (x - y);
+    });
+    if (!arr.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted)">Nenhuma conversa ainda.</td></tr>'; return; }
+    tb.innerHTML = arr.map((c, i) => {
+        const medal = i === 0 ? '🥇 ' : i === 1 ? '🥈 ' : i === 2 ? '🥉 ' : '';
+        const vip = c.access === 'vip' ? ' <span style="font-size:10px;color:#f5c542;">VIP</span>' : '';
+        return '<tr>'
+            + '<td style="font-weight:600;">' + medal + escHtmlAdmin(c.name) + vip + '</td>'
+            + '<td>' + (c.opens || 0) + '</td>'
+            + '<td>' + (c.completions || 0) + '</td>'
+            + '<td>' + c.completion_rate + '%</td>'
+            + '<td>' + (c.conversions || 0) + '</td>'
+            + '<td style="color:#13c08a;font-weight:700;">' + c.conversion_rate + '%</td>'
+            + '</tr>';
+    }).join('');
 }
 
 async function openVipUnicoModal() {
