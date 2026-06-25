@@ -4571,6 +4571,10 @@ a { color: inherit; text-decoration: none; }
                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
                             Atualizar
                         </button>
+                        <button class="btn-secondary" onclick="openBulkGrantModal()">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 14v4a2 2 0 002 2h12a2 2 0 002-2v-4M12 3v12m0-12l-4 4m4-4l4 4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            Importar lista de e-mails
+                        </button>
                         <button class="btn-primary" onclick="openGrantAccessModal()">
                             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                             Liberar acesso manual
@@ -4645,6 +4649,43 @@ a { color: inherit; text-decoration: none; }
                     <div style="display:flex;gap:10px;justify-content:flex-end;">
                         <button class="btn-secondary" onclick="closeGrantAccessModal()">Cancelar</button>
                         <button class="btn-primary" id="grantSaveBtn" onclick="confirmGrantAccess()">Liberar acesso</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===========================
+                 MODAL: Importar lista de e-mails (em massa)
+            =========================== -->
+            <div class="modal-overlay" id="bulkGrantOverlay" onclick="closeBulkGrantModal(event)" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;">
+                <div class="modal-box" onclick="event.stopPropagation()" style="background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;width:100%;max-width:520px;margin:20px;padding:24px;max-height:92vh;overflow-y:auto;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+                        <div>
+                            <h2 style="font-size:18px;font-weight:700;margin-bottom:4px;">Importar lista de e-mails</h2>
+                            <p style="font-size:12px;color:var(--text-muted);">Cole a lista de e-mails (um por linha, ou separados por vírgula) e escolha o produto. Libera o acesso de todos de uma vez. Quem já tem é pulado.</p>
+                        </div>
+                        <button onclick="closeBulkGrantModal()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;">×</button>
+                    </div>
+
+                    <div class="form-row" style="margin-bottom:14px;">
+                        <label class="form-label">Produto</label>
+                        <select class="form-select" id="bulkProductId">
+                            <option value="">— Escolha um produto —</option>
+                        </select>
+                    </div>
+                    <div class="form-row" style="margin-bottom:14px;">
+                        <label class="form-label">E-mails</label>
+                        <textarea class="form-input" id="bulkEmails" placeholder="joao@gmail.com&#10;maria@hotmail.com&#10;..." style="width:100%;min-height:180px;resize:vertical;font-family:monospace;font-size:13px;"></textarea>
+                    </div>
+                    <div class="form-row" style="margin-bottom:14px;">
+                        <label class="form-label">Observação (opcional)</label>
+                        <input type="text" class="form-input" id="bulkNote" placeholder="Ex: importação de vendas antigas">
+                    </div>
+
+                    <div id="bulkGrantAlert" style="display:none;padding:10px;border-radius:8px;font-size:13px;margin-bottom:14px;white-space:pre-line;"></div>
+
+                    <div style="display:flex;gap:10px;justify-content:flex-end;">
+                        <button class="btn-secondary" onclick="closeBulkGrantModal()">Cancelar</button>
+                        <button class="btn-primary" id="bulkGrantBtn" onclick="confirmBulkGrant()">Liberar acesso de todos</button>
                     </div>
                 </div>
             </div>
@@ -8709,6 +8750,46 @@ async function confirmGrantAccess() {
     
     closeGrantAccessModal();
     loadAccess();
+}
+
+// Modal: Importar lista de e-mails (em massa)
+function openBulkGrantModal() {
+    const select = document.getElementById('bulkProductId');
+    if (select) select.innerHTML = '<option value="">— Escolha um produto —</option>' +
+        products.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+    document.getElementById('bulkProductId').value = '';
+    document.getElementById('bulkEmails').value = '';
+    document.getElementById('bulkNote').value = '';
+    document.getElementById('bulkGrantAlert').style.display = 'none';
+    document.getElementById('bulkGrantOverlay').style.display = 'flex';
+}
+function closeBulkGrantModal(ev) {
+    if (ev && ev.target.closest('.modal-box')) return;
+    document.getElementById('bulkGrantOverlay').style.display = 'none';
+}
+async function confirmBulkGrant() {
+    const productId = document.getElementById('bulkProductId').value;
+    const emails = document.getElementById('bulkEmails').value.trim();
+    const note = document.getElementById('bulkNote').value.trim();
+    const alertEl = document.getElementById('bulkGrantAlert');
+    const btn = document.getElementById('bulkGrantBtn');
+    const errStyle = 'display:block;padding:10px;border-radius:8px;font-size:13px;margin-bottom:14px;background:rgba(240,82,82,0.1);color:var(--danger);border:1px solid rgba(240,82,82,0.3);white-space:pre-line;';
+    const okStyle = 'display:block;padding:10px;border-radius:8px;font-size:13px;margin-bottom:14px;background:rgba(0,200,120,0.12);color:#13c08a;border:1px solid rgba(0,200,120,0.3);white-space:pre-line;';
+    if (!productId) { alertEl.style.cssText = errStyle; alertEl.textContent = 'Escolha um produto'; return; }
+    if (!emails) { alertEl.style.cssText = errStyle; alertEl.textContent = 'Cole a lista de e-mails'; return; }
+    btn.disabled = true; btn.textContent = 'Liberando...';
+    const { ok, data } = await API.call('/api/admin/access/grant-bulk', {
+        method: 'POST',
+        body: JSON.stringify({ product_id: productId, emails, note }),
+    });
+    btn.disabled = false; btn.textContent = 'Liberar acesso de todos';
+    if (!ok || !data.success) { alertEl.style.cssText = errStyle; alertEl.textContent = (data && data.error) || 'Erro ao importar'; return; }
+    alertEl.style.cssText = okStyle;
+    alertEl.textContent = '✅ ' + data.liberados + ' acesso(s) liberado(s) pra "' + data.product_name + '".'
+        + '\n' + data.ja_tinham + ' já tinham acesso.'
+        + (data.invalidos ? ('\n' + data.invalidos + ' e-mail(s) inválido(s) ignorados.') : '')
+        + (data.erros ? ('\n' + data.erros + ' com erro.') : '');
+    if (typeof loadAccess === 'function') loadAccess();
 }
 
 // ============================================================================

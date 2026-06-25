@@ -171,6 +171,55 @@ router.post('/access/grant', requireAdmin, async (req, res) => {
 
 
 // =============================================================================
+// LIBERAR ACESSO EM MASSA (cola uma lista de e-mails + escolhe o produto)
+// =============================================================================
+
+router.post('/access/grant-bulk', requireAdmin, async (req, res) => {
+    const { emails, product_id, note } = req.body || {};
+    if (!emails || !product_id) {
+        return res.status(400).json({ success: false, error: 'Lista de e-mails e produto são obrigatórios' });
+    }
+    try {
+        const { rows: [product] } = await db.query('SELECT id, name FROM products WHERE id = $1', [product_id]);
+        if (!product) return res.status(404).json({ success: false, error: 'Produto não encontrado' });
+
+        const re = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+        // aceita separados por linha, vírgula, ponto-e-vírgula ou espaço
+        const raw = String(emails).split(/[\s,;]+/).map(e => e.toLowerCase().trim()).filter(Boolean);
+        const valid = [...new Set(raw.filter(e => re.test(e)))];
+        const invalid = [...new Set(raw.filter(e => !re.test(e)))];
+
+        let granted = 0, already = 0, errors = 0;
+        for (const email of valid) {
+            try {
+                await db.query(`INSERT INTO customers (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`, [email]);
+                const { rows: [exists] } = await db.query(
+                    `SELECT id FROM user_access WHERE LOWER(email) = $1 AND product_id = $2 AND status = 'active' LIMIT 1`,
+                    [email, product_id]
+                );
+                if (exists) { already++; continue; }
+                await db.query(
+                    `INSERT INTO user_access (email, product_id, status, granted_by, metadata)
+                     VALUES ($1, $2, 'active', $3, $4::jsonb)`,
+                    [email, product_id, req.admin.username, JSON.stringify({ note: note || 'importação em massa', granted_manually: true, bulk: true })]
+                );
+                granted++;
+            } catch (e) { errors++; }
+        }
+        logger.info(`Importação em massa por ${req.admin.username}: produto ${product_id} (${product.name}) — ${granted} liberados, ${already} já tinham, ${invalid.length} inválidos, ${errors} erros`);
+        return res.json({
+            success: true, product_name: product.name,
+            total_lidos: raw.length, liberados: granted, ja_tinham: already,
+            invalidos: invalid.length, invalidos_lista: invalid.slice(0, 20), erros: errors,
+        });
+    } catch (err) {
+        logger.error('Erro na importação em massa:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+
+// =============================================================================
 // LISTAR WEBHOOKS (LOGS)
 // =============================================================================
 
