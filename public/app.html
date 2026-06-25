@@ -8161,6 +8161,8 @@ body.is-slowconn .prod-cta-fixed {
 .ca-bub .tm2 { font-size: 9.5px; color: #999; text-align: right; margin-top: 2px; display: flex; align-items: center; justify-content: flex-end; gap: 3px; }
 .ca-bub .tm2 .ticks { display: inline-flex; align-items: center; }
 .ca-bub img.photo { max-width: 100%; border-radius: 8px; display: block; }
+/* status "digitando…/gravando…/respondendo…" no CABEÇALHO (igual WhatsApp) */
+#caStatus.ca-typing-st { color: #1fa855; font-style: italic; }
 .ca-typing { align-self: flex-start; background: #fff; border-radius: 0 10px 10px 10px; padding: 12px 14px; box-shadow: 0 1px 1px rgba(0,0,0,.08); }
 .ca-typing i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #b5aea8; margin-right: 3px; animation: caTp 1.2s infinite; }
 .ca-typing i:nth-child(2) { animation-delay: .2s; } .ca-typing i:nth-child(3) { animation-delay: .4s; margin-right: 0; }
@@ -9121,14 +9123,19 @@ window.ChatApp = (function() {
     // de botões com "permitir digitar" (awaiting='buttons' + allow_input).
     // Barra de baixo mostrando o que a modelo está fazendo ("X está respondendo…").
     // Enquanto aparece, esconde os botões e o input (eles voltam ao fim do drain).
+    // O "digitando/gravando/respondendo" vai no CABEÇALHO (igual WhatsApp), não
+    // numa barra flutuante no rodapé. Some os botões velhos durante a digitação.
     function showBottomStatus(txt) {
-        const sb = document.getElementById('caStatusBar');
-        if (sb) { sb.textContent = txt; sb.style.display = 'block'; }
+        const st = document.getElementById('caStatus');
+        if (st) { st.textContent = txt; st.classList.add('ca-typing-st'); }
         const ch = document.getElementById('caChoices'); if (ch) ch.style.display = 'none';
-        const ib = document.getElementById('caInputBar'); if (ib) ib.style.display = 'none';
     }
     function hideBottomStatus() {
-        const sb = document.getElementById('caStatusBar'); if (sb) sb.style.display = 'none';
+        const st = document.getElementById('caStatus');
+        if (!st) return;
+        st.classList.remove('ca-typing-st');
+        const base = (CUR && CUR.chat) ? (CUR.chat.status_label || (CUR.chat.show_online === false ? '' : 'online')) : 'online';
+        st.textContent = base;
     }
 
     function updateInputBar() {
@@ -9137,18 +9144,13 @@ window.ChatApp = (function() {
         hideBottomStatus();
         if (!CUR || (CUR.perm && CUR.perm.locked)) { bar.style.display = 'none'; return; }
         const aw = CUR.awaiting;
-        // Em QUALQUER modo: durante botões SEM digitar liberado, a barra some
-        // (ponto de decisão — o cliente escolhe, não digita). Igual bot do WhatsApp.
+        // Ponto de decisão por botões (sem digitar liberado): a barra some e os
+        // botões aparecem. Em todo o resto a barra de digitar fica FIXA no rodapé
+        // (igual WhatsApp) — quem não pode responder leva o nudge de VIP ao enviar.
         if (aw === 'buttons' && !CUR.lastButtonsAllowInput) { bar.style.display = 'none'; return; }
-        const mode = (CUR.chat && CUR.chat.input_mode) || 'always';
-        if (mode !== 'gated') { bar.style.display = 'flex'; return; }
-        // modo "gated" (TapBot): só aparece em "Liberar resposta" ou botões+digitar
-        const show = aw === 'input' || (aw === 'buttons' && CUR.lastButtonsAllowInput);
-        bar.style.display = show ? 'flex' : 'none';
-        if (show) {
-            const input = document.getElementById('caInput');
-            if (input) input.placeholder = (aw === 'buttons') ? 'Digite ou escolha 👆' : 'Digite sua resposta...';
-        }
+        bar.style.display = 'flex';
+        const input = document.getElementById('caInput');
+        if (input) input.placeholder = (aw === 'buttons') ? 'Digite ou escolha 👆' : 'Mensagem';
     }
 
     async function drain() {
