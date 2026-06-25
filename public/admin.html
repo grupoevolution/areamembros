@@ -5616,6 +5616,7 @@ a { color: inherit; text-decoration: none; }
                         <p class="page-subtitle">Conversas estilo WhatsApp com roteiro (substitui o Typebot). Teste em <a href="/chat-lab" target="_blank" style="color:#e50914;">/chat-lab</a>.</p>
                     </div>
                     <div class="page-actions">
+                        <button class="btn-secondary" onclick="openVipUnicoModal()">💎 VIP único</button>
                         <button class="btn-secondary" onclick="document.getElementById('chatImportFile').click()">⬇ Importar JSON</button>
                         <input type="file" id="chatImportFile" accept="application/json,.json" style="display:none" onchange="importChatJSON(event)"/>
                         <button class="btn-primary" onclick="openChatModal()">+ Novo Chat</button>
@@ -5623,6 +5624,29 @@ a { color: inherit; text-decoration: none; }
                 </div>
                 <div id="adminChatsList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:24px;">
                     <div style="color:rgba(255,255,255,.5)">Carregando...</div>
+                </div>
+            </div>
+
+            <!-- MODAL: VIP único (1 produto libera todas as conversas VIP) -->
+            <div id="vipUnicoBackdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+                <div style="background:#1a1620; border:1px solid rgba(255,255,255,.12); border-radius:16px; max-width:480px; width:100%; padding:24px;">
+                    <h3 style="margin:0 0 6px; color:#fff;">💎 VIP único</h3>
+                    <p style="font-size:12.5px; color:rgba(255,255,255,.6); margin:0 0 16px;">Vincula o MESMO produto em todas as conversas marcadas como VIP. Quem comprar esse produto vira VIP em todas elas de uma vez.</p>
+                    <div style="display:flex; flex-direction:column; gap:12px;">
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Produto que libera os chats VIP</label>
+                            <select class="form-control" id="vipUnicoProduct" style="width:100%;"><option value="">— escolha —</option></select>
+                        </div>
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link de checkout (opcional)</label>
+                            <input class="form-control" id="vipUnicoCheckout" maxlength="1000" placeholder="https://pay..." style="width:100%;"/>
+                        </div>
+                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; background:rgba(229,9,20,.06); border:1px solid rgba(229,9,20,.25); border-radius:10px; padding:10px;">
+                            <input type="checkbox" id="vipUnicoMarkAll" style="width:16px; height:16px;"> Marcar TODAS as conversas como VIP (não só as que já são)
+                        </label>
+                    </div>
+                    <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:18px;">
+                        <button class="btn-secondary" onclick="closeVipUnicoModal()">Cancelar</button>
+                        <button class="btn-primary" onclick="applyVipUnico()">Aplicar</button>
+                    </div>
                 </div>
             </div>
 
@@ -15088,6 +15112,36 @@ async function loadChatProductsDropdown(selectedId, callId, triggerIds, storyVip
                 : '<div style="font-size:11px;color:rgba(255,255,255,.4);">Nenhum produto cadastrado.</div>';
         }
     } catch(_) {}
+}
+
+async function openVipUnicoModal() {
+    try {
+        const pr = await fetch('/api/admin/products', { credentials:'include' }).then(r => r.json());
+        const sel = document.getElementById('vipUnicoProduct');
+        if (sel) sel.innerHTML = '<option value="">— escolha —</option>' + (pr.products || []).map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
+    } catch(_) {}
+    document.getElementById('vipUnicoCheckout').value = '';
+    document.getElementById('vipUnicoMarkAll').checked = false;
+    document.getElementById('vipUnicoBackdrop').style.display = 'flex';
+}
+function closeVipUnicoModal() { document.getElementById('vipUnicoBackdrop').style.display = 'none'; }
+async function applyVipUnico() {
+    const productId = document.getElementById('vipUnicoProduct').value;
+    if (!productId) { alert('Escolha o produto.'); return; }
+    const checkout = document.getElementById('vipUnicoCheckout').value.trim();
+    const markAll = document.getElementById('vipUnicoMarkAll').checked;
+    if (!confirm(markAll ? 'Marcar TODAS as conversas como VIP e vincular esse produto nelas?' : 'Vincular esse produto em todas as conversas que já são VIP?')) return;
+    try {
+        const r = await fetch('/api/admin/chats/apply-vip-product', {
+            method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+            body: JSON.stringify({ product_id: productId, checkout_url: checkout || null, mark_all_vip: markAll }),
+        });
+        const d = await r.json();
+        if (!d.success) { alert('Erro: '+(d.error||'')); return; }
+        alert('✅ Aplicado em ' + d.updated + ' conversa(s) VIP.');
+        closeVipUnicoModal();
+        loadAdminChats();
+    } catch(e) { alert('Erro: '+e.message); }
 }
 
 function openChatModal() {

@@ -139,6 +139,29 @@ router.put('/:id', requireAdmin, async (req, res) => {
     }
 });
 
+// VIP ÚNICO: aplica o MESMO produto (e checkout) em TODAS as conversas VIP, e
+// marca como VIP as conversas escolhidas. Assim quem compra esse 1 produto vira
+// VIP em todas elas de uma vez.
+router.post('/apply-vip-product', requireAdmin, async (req, res) => {
+    const productId = req.body?.product_id ? parseInt(req.body.product_id, 10) : null;
+    const checkoutUrl = (req.body?.checkout_url || '').trim().slice(0, 1000) || null;
+    const alsoMarkAll = req.body?.mark_all_vip === true; // marca TODAS as conversas como VIP
+    if (!productId) return res.status(400).json({ success: false, error: 'Escolha o produto' });
+    try {
+        if (alsoMarkAll) {
+            await db.query(`UPDATE chats SET access = 'vip'`);
+        }
+        const { rowCount } = await db.query(
+            `UPDATE chats SET product_id = $1, checkout_url = COALESCE($2, checkout_url) WHERE access = 'vip'`,
+            [productId, checkoutUrl]
+        );
+        return res.json({ success: true, updated: rowCount });
+    } catch (err) {
+        logger.error('Erro aplicando VIP único:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
 router.delete('/:id', requireAdmin, async (req, res) => {
     const id = parseInt(req.params.id, 10);
     if (!id) return res.status(400).json({ success: false, error: 'ID inválido' });
