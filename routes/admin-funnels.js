@@ -276,6 +276,103 @@ router.get('/:id/stats', requireAdmin, async (req, res) => {
 
 
 // =============================================================================
+// MÉTRICAS DETALHADAS — funil de conversão (chegou → email → PWA → comprou),
+// receita, série por dia, distribuição por hora, progresso no chat e leads.
+// =============================================================================
+router.get('/:id/metrics', requireAdmin, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const parseDay = (s) => (/^\d{4}-\d{2}-\d{2}$/.test(String(s || '')) ? s : null);
+        const from = parseDay(req.query.from);
+        const to = parseDay(req.query.to);
+        const params = [id];
+        const dc = [];
+        if (from) { params.push(from); dc.push(`visited_at >= $${params.length}::date`); }
+        if (to) { params.push(to); dc.push(`visited_at < ($${params.length}::date + INTERVAL '1 day')`); }
+        const dwhere = dc.length ? ('AND ' + dc.join(' AND ')) : '';
+
+        // Resumo (funil de conversão)
+        const { rows: [summary] } = await db.query(`
+            WITH visits AS (
+                SELECT * FROM funnel_visits fv WHERE fv.funnel_id = $1 ${dwhere}
+            ),
+            emails AS (
+                SELECT DISTINCT LOWER(customer_email) AS email FROM visits WHERE customer_email IS NOT NULL
+            )
+            SELECT
+                (SELECT COUNT(*) FROM visits)::int AS visits,
+                (SELECT COUNT(DISTINCT ip) FROM visits)::int AS unique_ips,
+                (SELECT COUNT(*) FROM emails)::int AS emails,
+                (SELECT COUNT(DISTINCT te.customer_email) FROM tracking_events te
+                    JOIN emails e ON LOWER(te.customer_email) = e.email
+                    WHERE te.event_type = 'pwa_app_installed')::int AS pwa_installs,
+                (SELECT COUNT(DISTINCT ua.email) FROM user_access ua
+                    JOIN emails e ON LOWER(ua.email) = e.email WHERE ua.status = 'active')::int AS buyers,
+                (SELECT COALESCE(SUM(ua.sale_amount), 0) FROM user_access ua
+                    JOIN emails e ON LOWER(ua.email) = e.email WHERE ua.status = 'active' AND ua.granted_by = 'webhook')::numeric AS revenue
+        `, params);
+
+        // Série por dia
+        const { rows: daily } = await db.query(`
+            SELECT TO_CHAR(visited_at::date, 'YYYY-MM-DD') AS day,
+                   COUNT(*)::int AS visits,
+                   COUNT(*) FILTER (WHERE converted = true)::int AS emails
+            FROM funnel_visits fv WHERE fv.funnel_id = $1 ${dwhere}
+            GROUP BY visited_at::date ORDER BY visited_at::date
+        `, params);
+
+        // Distribuição por HORA (Brasília = UTC-3)
+        const { rows: hourly } = await db.query(`
+            SELECT EXTRACT(HOUR FROM (visited_at - INTERVAL '3 hours'))::int AS hour, COUNT(*)::int AS visits
+            FROM funnel_visits fv WHERE fv.funnel_id = $1 ${dwhere}
+            GROUP BY 1 ORDER BY 1
+        `, params);
+
+        // Progresso no CHAT — conversas vinculadas ao funil (entrada + etapas 'chat')
+        let chat_progress = [];
+        try {
+            const { rows: cp } = await db.query(`
+                WITH funnel_chats AS (
+                    SELECT entry_chat_id AS chat_id FROM funnels WHERE id = $1 AND entry_chat_id IS NOT NULL
+                    UNION
+                    SELECT chat_id FROM funnel_steps WHERE funnel_id = $1 AND type = 'chat' AND chat_id IS NOT NULL
+                ),
+                femails AS (
+                    SELECT DISTINCT LOWER(customer_email) AS email FROM funnel_visits fv
+                    WHERE fv.funnel_id = $1 AND customer_email IS NOT NULL ${dwhere}
+                )
+                SELECT ch.id, ch.name,
+                    (SELECT COUNT(*) FROM chat_steps st WHERE st.chat_id = ch.id AND st.active = true AND COALESCE(st.flow,'open') = 'open')::int AS total_steps,
+                    COUNT(s.id)::int AS sessions,
+                    COALESCE(MAX(s.current_order), 0)::int AS max_step,
+                    ROUND(COALESCE(AVG(s.current_order), 0)::numeric, 1) AS avg_step
+                FROM funnel_chats fc
+                JOIN chats ch ON ch.id = fc.chat_id
+                LEFT JOIN chat_sessions s ON s.chat_id = ch.id AND LOWER(s.customer_email) IN (SELECT email FROM femails)
+                GROUP BY ch.id, ch.name
+            `, params);
+            chat_progress = cp;
+        } catch (e) { logger.warn('chat_progress falhou: ' + e.message); }
+
+        // Leads recentes com status (colocou email / instalou / comprou)
+        const { rows: leads } = await db.query(`
+            SELECT v.customer_email AS email, v.ip, v.visited_at, v.converted_at,
+                   EXISTS(SELECT 1 FROM user_access ua WHERE LOWER(ua.email) = LOWER(v.customer_email) AND ua.status = 'active') AS bought,
+                   EXISTS(SELECT 1 FROM tracking_events te WHERE LOWER(te.customer_email) = LOWER(v.customer_email) AND te.event_type = 'pwa_app_installed') AS installed
+            FROM funnel_visits v WHERE v.funnel_id = $1 ${dwhere} AND v.customer_email IS NOT NULL
+            ORDER BY v.visited_at DESC LIMIT 60
+        `, params);
+
+        return res.json({ success: true, summary, daily, hourly, chat_progress, leads, from, to });
+    } catch (err) {
+        logger.error('Erro métricas funíl:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+
+// =============================================================================
 // ETAPAS DO FUNÍL (sequência de eventos pós-login)
 // =============================================================================
 

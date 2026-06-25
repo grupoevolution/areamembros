@@ -6287,6 +6287,23 @@ a { color: inherit; text-decoration: none; }
                 </div>
             </div>
 
+            <!-- MODAL: Métricas DETALHADAS do funil -->
+            <div id="funnelMetricsBackdrop" style="position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:310; display:none; align-items:flex-start; justify-content:center; padding:16px; overflow-y:auto;">
+                <div style="background:var(--card,#1a1a1a); border-radius:16px; width:100%; max-width:760px; margin:16px auto;">
+                    <div style="padding:18px 22px; border-bottom:1px solid rgba(255,255,255,.1); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:var(--card,#1a1a1a); border-radius:16px 16px 0 0; z-index:2;">
+                        <span style="font-size:16px; font-weight:700; color:#fff;">📊 Métricas — <span id="fmName"></span></span>
+                        <button onclick="document.getElementById('funnelMetricsBackdrop').style.display='none'" style="background:none; border:none; color:#fff; font-size:22px; cursor:pointer;">×</button>
+                    </div>
+                    <div style="padding:14px 22px; display:flex; gap:8px; flex-wrap:wrap; border-bottom:1px solid rgba(255,255,255,.07);">
+                        <button class="btn-secondary" style="font-size:12px;" onclick="fmPreset(0)">Hoje</button>
+                        <button class="btn-secondary" style="font-size:12px;" onclick="fmPreset(6)">7 dias</button>
+                        <button class="btn-secondary" style="font-size:12px;" onclick="fmPreset(29)">30 dias</button>
+                        <button class="btn-secondary" style="font-size:12px;" onclick="fmPreset(null)">Tudo</button>
+                    </div>
+                    <div id="funnelMetricsBody" style="padding:18px 22px;"><div style="color:rgba(255,255,255,.5);">Carregando...</div></div>
+                </div>
+            </div>
+
             <!-- MODAL: Métricas do funil (período + comparação) -->
             <div id="funnelStatsBackdrop" style="position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:300; display:none; align-items:center; justify-content:center; padding:16px;">
                 <div style="background:var(--card,#1a1a1a); border-radius:16px; width:100%; max-width:680px; max-height:92vh; overflow-y:auto;">
@@ -14615,7 +14632,7 @@ async function loadFunnels() {
                 +     '<div style="flex:1;background:rgba(0,0,0,.3);padding:8px;border-radius:6px;text-align:center"><div style="font-size:18px;color:#e50914;font-weight:700">'+conversionRate+'%</div>Taxa</div>'
                 +   '</div>'
                 +   '<div style="display:flex;gap:6px;flex-wrap:wrap">'
-                +     '<button class="btn-secondary" style="flex:1;min-width:70px" onclick=\'openFunnelStats('+f.id+', '+JSON.stringify(f.name||'').replace(/'/g,"&#39;")+')\'>📊 Métricas</button>'
+                +     '<button class="btn-secondary" style="flex:1;min-width:70px" onclick=\'openFunnelMetrics('+f.id+', '+JSON.stringify(f.name||'').replace(/'/g,"&#39;")+')\'>📊 Métricas</button>'
                 +     '<button class="btn-secondary" style="flex:1;min-width:70px" onclick=\'editFunnel('+JSON.stringify(f).replace(/'/g,"&#39;")+')\'>Editar</button>'
                 +     '<button class="btn-secondary" style="flex:1;min-width:70px" onclick="toggleFunnel('+f.id+')">'+(f.active?'Desativar':'Ativar')+'</button>'
                 +     '<button class="btn-danger" style="flex:1;min-width:70px" onclick="deleteFunnel('+f.id+')">Excluir</button>'
@@ -14684,6 +14701,108 @@ function openFunnelModal() {
     document.getElementById('funnelModalBackdrop').style.display = 'flex';
 }
 function closeFunnelModal() { document.getElementById('funnelModalBackdrop').style.display = 'none'; }
+// ═══════════════ MÉTRICAS DETALHADAS DO FUNIL ═══════════════
+let _fmId = null;
+function openFunnelMetrics(id, name) {
+    _fmId = id;
+    document.getElementById('fmName').textContent = name || '';
+    document.getElementById('funnelMetricsBackdrop').style.display = 'flex';
+    fmPreset(6);
+}
+function fmPreset(daysBack) {
+    let from = '', to = '';
+    if (daysBack !== null) {
+        const now = new Date();
+        const d = new Date(now.getTime() - daysBack * 86400000);
+        const fmt = x => x.toISOString().slice(0, 10);
+        from = fmt(d); to = fmt(now);
+    }
+    loadFunnelMetrics(from, to);
+}
+async function loadFunnelMetrics(from, to) {
+    const body = document.getElementById('funnelMetricsBody');
+    body.innerHTML = '<div style="color:rgba(255,255,255,.5);">Carregando...</div>';
+    try {
+        const qs = [];
+        if (from) qs.push('from=' + from);
+        if (to) qs.push('to=' + to);
+        const r = await fetch('/api/admin/funnels/' + _fmId + '/metrics' + (qs.length ? ('?' + qs.join('&')) : ''), { credentials: 'include' });
+        const d = await r.json();
+        if (!d.success) { body.innerHTML = '<div style="color:#f55">Erro ao carregar.</div>'; return; }
+        renderFunnelMetrics(d);
+    } catch (e) { body.innerHTML = '<div style="color:#f55">Erro: ' + e.message + '</div>'; }
+}
+function renderFunnelMetrics(d) {
+    const s = d.summary || {};
+    const visits = s.visits || 0, emails = s.emails || 0, pwa = s.pwa_installs || 0, buyers = s.buyers || 0;
+    const revenue = parseFloat(s.revenue || 0);
+    const pct = (a, b) => b > 0 ? Math.round(a / b * 100) : 0;
+    const money = v => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',');
+    const card = (label, val, sub, color) => '<div style="flex:1; min-width:130px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:14px;">'
+        + '<div style="font-size:11px; color:rgba(255,255,255,.55); text-transform:uppercase; letter-spacing:.5px;">' + label + '</div>'
+        + '<div style="font-size:24px; font-weight:800; color:' + (color || '#fff') + '; margin-top:4px;">' + val + '</div>'
+        + (sub ? '<div style="font-size:11px; color:rgba(255,255,255,.5); margin-top:2px;">' + sub + '</div>' : '') + '</div>';
+
+    let html = '<div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:10px;">Funil de conversão</div>';
+    html += '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">'
+        + card('Chegaram', visits, (s.unique_ips || 0) + ' IPs únicos')
+        + card('Colocaram e-mail', emails, pct(emails, visits) + '% das chegadas', '#3b82f6')
+        + card('Instalaram o app', pwa, pct(pwa, emails) + '% dos e-mails', '#a855f7')
+        + card('Compraram', buyers, pct(buyers, visits) + '% das chegadas', '#13c08a')
+        + '</div>';
+    html += '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px;">'
+        + card('Receita', money(revenue), 'vendas atribuídas', '#13c08a')
+        + card('Ticket médio', money(buyers > 0 ? revenue / buyers : 0), 'por comprador')
+        + '</div>';
+
+    const hourly = d.hourly || [];
+    if (hourly.length) {
+        const byHour = {}; hourly.forEach(h => byHour[h.hour] = h.visits);
+        const maxH = Math.max.apply(null, hourly.map(h => h.visits).concat([1]));
+        let bars = '';
+        for (let h = 0; h < 24; h++) {
+            const v = byHour[h] || 0;
+            const hgt = Math.max(Math.round(v / maxH * 60), 2);
+            bars += '<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;" title="' + h + 'h: ' + v + '">'
+                + '<div style="width:100%; max-width:14px; height:' + hgt + 'px; background:' + (v ? '#e50914' : 'rgba(255,255,255,.1)') + '; border-radius:3px;"></div>'
+                + (h % 3 === 0 ? '<div style="font-size:8px; color:rgba(255,255,255,.4);">' + h + '</div>' : '<div style="height:10px;"></div>') + '</div>';
+        }
+        html += '<div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:8px;">Chegadas por hora (Brasília)</div>'
+            + '<div style="display:flex; align-items:flex-end; gap:2px; height:80px; margin-bottom:18px;">' + bars + '</div>';
+    }
+
+    const cp = d.chat_progress || [];
+    if (cp.length) {
+        html += '<div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:8px;">Progresso no chat</div><div style="display:flex; flex-direction:column; gap:8px; margin-bottom:18px;">';
+        cp.forEach(c => {
+            const total = c.total_steps || 0, mx = c.max_step || 0;
+            const prog = total > 0 ? Math.min(100, Math.round(mx / total * 100)) : 0;
+            html += '<div style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:12px;">'
+                + '<div style="display:flex; justify-content:space-between; font-size:13px; color:#fff;"><b>' + escHtmlAdmin(c.name) + '</b><span>' + c.sessions + ' conversas</span></div>'
+                + '<div style="font-size:11px; color:rgba(255,255,255,.5); margin:4px 0 6px;">chegaram em média ao passo ' + c.avg_step + ' de ' + total + ' (máx ' + mx + ')</div>'
+                + '<div style="height:6px; background:rgba(255,255,255,.1); border-radius:3px; overflow:hidden;"><div style="height:100%; width:' + prog + '%; background:#25D366;"></div></div>'
+                + '</div>';
+        });
+        html += '</div>';
+    }
+
+    const leads = d.leads || [];
+    html += '<div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:8px;">Últimos leads (' + leads.length + ')</div>';
+    if (!leads.length) html += '<div style="color:rgba(255,255,255,.4); font-size:12px;">Nenhum lead com e-mail ainda.</div>';
+    else {
+        const badge = (txt, col) => '<span style="font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; background:' + col + '22; color:' + col + ';">' + txt + '</span>';
+        html += '<div style="display:flex; flex-direction:column; gap:6px;">';
+        leads.forEach(l => {
+            html += '<div style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,.25); border-radius:8px; padding:8px 10px;">'
+                + '<div style="flex:1; min-width:0; font-size:12.5px; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escHtmlAdmin(l.email) + '</div>'
+                + badge('e-mail', '#3b82f6') + (l.installed ? badge('app', '#a855f7') : '') + (l.bought ? badge('comprou', '#13c08a') : '')
+                + '</div>';
+        });
+        html += '</div>';
+    }
+    document.getElementById('funnelMetricsBody').innerHTML = html;
+}
+
 function editFunnel(f) {
     document.getElementById('funnelModalTitle').textContent = 'Editar Funíl';
     document.getElementById('funnelId').value = f.id;

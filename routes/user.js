@@ -1927,7 +1927,7 @@ router.get('/explore/feed', optionalUser, async (req, res) => {
 // POST /api/user/track/event — evento genérico (cta_click, scroll_end, etc)
 // Endpoints aceitam não-logados também (anônimos).
 
-router.post('/track/view', async (req, res) => {
+router.post('/track/view', optionalUser, async (req, res) => {
     try {
         const { product_id, duration_seconds, clicked_buy, clicked_access } = req.body || {};
         const email = req.user?.email || null;
@@ -1945,7 +1945,7 @@ router.post('/track/view', async (req, res) => {
     }
 });
 
-router.post('/track/event', async (req, res) => {
+router.post('/track/event', optionalUser, async (req, res) => {
     try {
         const { type, product_id, metadata } = req.body || {};
         if (!type || typeof type !== 'string') return res.status(400).json({ success: false, error: 'type obrigatório' });
@@ -1969,7 +1969,7 @@ router.post('/track/event', async (req, res) => {
 // PUSH SUBSCRIPTIONS (Web Push API)
 // =============================================================================
 
-router.post('/push/subscribe', async (req, res) => {
+router.post('/push/subscribe', optionalUser, async (req, res) => {
     try {
         const { endpoint, keys, userAgent } = req.body || {};
         if (!endpoint || !keys?.p256dh || !keys?.auth) {
