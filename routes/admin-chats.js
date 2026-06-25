@@ -15,7 +15,7 @@ const db = require('../db');
 const { requireAdmin } = require('../lib/auth');
 const { logger } = require('../lib/logger');
 
-const STEP_TYPES = ['text', 'audio', 'image', 'view_once_image', 'view_once_video', 'buttons', 'wait_input', 'cta', 'delay', 'call'];
+const STEP_TYPES = ['text', 'audio', 'image', 'video', 'view_once_image', 'view_once_video', 'buttons', 'wait_input', 'cta', 'delay', 'call'];
 const REPLY_MODES = ['vip', 'all', 'none'];
 const INPUT_MODES = ['always', 'gated'];
 // Fluxos por gatilho (cada modelo tem um roteiro independente por fluxo)

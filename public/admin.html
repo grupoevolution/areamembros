@@ -5984,6 +5984,7 @@ a { color: inherit; text-decoration: none; }
                                         <option value="text">💬 Texto</option>
                                         <option value="audio">🎤 Áudio (waveform)</option>
                                         <option value="image">📷 Foto normal</option>
+                                        <option value="video">🎬 Vídeo normal</option>
                                         <option value="view_once_image">👁 Foto 1x (visualização única)</option>
                                         <option value="view_once_video">🎬 Vídeo 1x (visualização única)</option>
                                         <option value="buttons">🔘 Botões de escolha</option>
@@ -6006,9 +6007,12 @@ a { color: inherit; text-decoration: none; }
                                 <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">Áudio: MP3/M4A. Foto: JPG/PNG/WEBP. Vídeo: MP4.</div>
                             </div>
                             <div id="csViewWrap" style="display:none; background:rgba(37,211,102,.06); border:1px solid rgba(37,211,102,.2); border-radius:10px; padding:12px;">
-                                <label style="display:block; font-size:12px; color:#fff; font-weight:700; margin-bottom:4px;">👁 Fecha sozinha após (segundos)</label>
-                                <input class="form-control" type="number" id="csViewSeconds" min="1" max="120" value="7" style="width:120px;"/>
-                                <div style="font-size:11px; color:rgba(255,255,255,.5); margin-top:6px;">A mídia abre tipo story e fecha sozinha nesse tempo — depois não vê de novo.</div>
+                                <div id="csViewSecondsWrap">
+                                    <label style="display:block; font-size:12px; color:#fff; font-weight:700; margin-bottom:4px;">👁 Fecha sozinha após (segundos)</label>
+                                    <input class="form-control" type="number" id="csViewSeconds" min="1" max="120" value="7" style="width:120px;"/>
+                                    <div style="font-size:11px; color:rgba(255,255,255,.5); margin-top:6px;">A mídia abre tipo story e fecha sozinha nesse tempo — depois não vê de novo.</div>
+                                </div>
+                                <div id="csViewVideoNote" style="display:none; font-size:11px; color:rgba(255,255,255,.6); margin-bottom:4px;">🎬 O vídeo 1x fecha sozinho <b>quando o vídeo acaba</b> — não precisa definir tempo.</div>
                                 <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#fff; cursor:pointer; margin-top:10px;"><input type="checkbox" id="csGate" style="width:15px; height:15px;"> 🔒 Pra abrir ESTA, pedir e-mail + instalar o app</label>
                                 <div style="font-size:11px; color:rgba(255,255,255,.45); margin-top:2px;">A "isca" do funil: ao tocar pra abrir, pede o e-mail e a instalação antes de liberar. Use na foto/vídeo mais quente.</div>
                                 <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#fff; cursor:pointer; margin-top:10px;"><input type="checkbox" id="csWaitOpen" style="width:15px; height:15px;"> ⏸ Só continuar o roteiro DEPOIS que o cliente abrir esta mídia</label>
@@ -15369,7 +15373,7 @@ async function deleteChatPersona(id) {
 
 // ── Blocos do roteiro ──
 const CHAT_STEP_LABELS = {
-    text: '💬 Texto', audio: '🎤 Áudio', image: '📷 Foto',
+    text: '💬 Texto', audio: '🎤 Áudio', image: '📷 Foto', video: '🎬 Vídeo',
     view_once_image: '👁 Foto 1x', view_once_video: '🎬 Vídeo 1x',
     buttons: '🔘 Botões', wait_input: '⌨️ Liberar resposta', delay: '⏱ Espera (tempo)', call: '📹 Ela liga', cta: '💳 Oferta',
 };
@@ -15548,9 +15552,11 @@ async function importChatJSON(ev) {
 
 window.updateChatStepFields = function() {
     const t = document.getElementById('csType').value;
-    document.getElementById('csContentWrap').style.display = (t === 'text' || t === 'buttons' || t === 'cta' || t === 'image' || t === 'call') ? 'block' : 'none';
-    document.getElementById('csMediaWrap').style.display = (t === 'audio' || t === 'image' || t === 'view_once_image' || t === 'view_once_video') ? 'block' : 'none';
+    document.getElementById('csContentWrap').style.display = (t === 'text' || t === 'buttons' || t === 'cta' || t === 'image' || t === 'video' || t === 'call') ? 'block' : 'none';
+    document.getElementById('csMediaWrap').style.display = (t === 'audio' || t === 'image' || t === 'video' || t === 'view_once_image' || t === 'view_once_video') ? 'block' : 'none';
     document.getElementById('csViewWrap').style.display = (t === 'view_once_image' || t === 'view_once_video') ? 'block' : 'none';
+    document.getElementById('csViewSecondsWrap').style.display = (t === 'view_once_image') ? 'block' : 'none';
+    document.getElementById('csViewVideoNote').style.display = (t === 'view_once_video') ? 'block' : 'none';
     document.getElementById('csButtonsWrap').style.display = t === 'buttons' ? 'block' : 'none';
     document.getElementById('csCtaWrap').style.display = t === 'cta' ? 'block' : 'none';
     document.getElementById('csDelayWrap').style.display = t === 'delay' ? 'block' : 'none';

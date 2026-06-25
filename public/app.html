@@ -9254,6 +9254,11 @@ window.ChatApp = (function() {
             d.className = 'ca-bub' + (mine ? ' mine' : '');
             d.innerHTML = (m.media_url ? '<img class="photo" src="' + esc(m.media_url) + '" alt="" loading="lazy">' : '')
                 + (m.content ? '<div class="tx" style="margin-top:5px;">' + esc(m.content) + '</div>' : '') + tm;
+        } else if (m.type === 'video') {
+            // vídeo normal (assiste quantas vezes quiser, com controles)
+            d.className = 'ca-bub' + (mine ? ' mine' : '');
+            d.innerHTML = (m.media_url ? '<video class="photo" src="' + esc(m.media_url) + '" controls playsinline preload="metadata" style="max-width:100%;border-radius:10px;display:block;"></video>' : '')
+                + (m.content ? '<div class="tx" style="margin-top:5px;">' + esc(m.content) + '</div>' : '') + tm;
         } else if (m.type === 'view_once_image' || m.type === 'view_once_video') {
             const isVid = m.type === 'view_once_video';
             d.className = 'ca-bub';
@@ -9565,10 +9570,29 @@ window.ChatApp = (function() {
             : '<img src="' + esc(url) + '" alt="">';
         const viewer = document.getElementById('caViewer');
         viewer.classList.add('show');
-        // Auto-fechar estilo story: barra branca no topo escoa e a mídia fecha
-        // sozinha em N segundos (configurável por mídia no painel). Depois não vê.
-        const secs = Math.max(1, Math.min(120, parseInt(bubble.dataset.viewSeconds, 10) || 7));
         const bar = document.getElementById('caVonceBar');
+        clearTimeout(vonceTimer); vonceTimer = null;
+
+        if (isVid) {
+            // VÍDEO 1x: fecha sozinho QUANDO O VÍDEO ACABA (sem tempo fixo). A barra
+            // acompanha o progresso do vídeo.
+            const vid = document.getElementById('caViewerMedia').querySelector('video');
+            if (vid) {
+                vid.onended = () => closeVonce();
+                if (bar) { bar.style.transition = 'none'; bar.style.width = '0%'; }
+                vid.addEventListener('timeupdate', () => { if (bar && vid.duration) bar.style.width = (vid.currentTime / vid.duration * 100) + '%'; });
+                // fallback: se o 'ended' não disparar, fecha ao fim da duração + 1.5s
+                vid.addEventListener('loadedmetadata', () => {
+                    const ms = (vid.duration && isFinite(vid.duration)) ? (vid.duration * 1000 + 1500) : 120000;
+                    clearTimeout(vonceTimer);
+                    vonceTimer = setTimeout(() => closeVonce(), ms);
+                });
+            }
+            return;
+        }
+
+        // FOTO 1x: barra escoa e fecha em N segundos (configurável no painel).
+        const secs = Math.max(1, Math.min(120, parseInt(bubble.dataset.viewSeconds, 10) || 7));
         if (bar) {
             bar.style.transition = 'none';
             bar.style.width = '100%';
@@ -9576,7 +9600,6 @@ window.ChatApp = (function() {
             bar.style.transition = 'width ' + secs + 's linear';
             bar.style.width = '0%';
         }
-        clearTimeout(vonceTimer);
         vonceTimer = setTimeout(() => closeVonce(), secs * 1000);
     }
     async function closeVonce() {

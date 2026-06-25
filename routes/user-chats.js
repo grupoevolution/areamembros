@@ -277,6 +277,7 @@ async function runScript(session, chat, steps, idx, ident) {
         if (s.type === 'text') content = await fillVars(s.content, ident);
         else if (s.type === 'audio') { media = s.media_url; }
         else if (s.type === 'image') { media = s.media_url; content = await fillVars(s.content, ident); }
+        else if (s.type === 'video') { media = s.media_url; content = await fillVars(s.content, ident); }
         else if (s.type === 'view_once_image' || s.type === 'view_once_video') {
             media = s.media_url;
             const vs = parseInt(s.view_seconds, 10) || 0;
@@ -318,7 +319,7 @@ async function runScript(session, chat, steps, idx, ident) {
         // ao voltar, ele NÃO recebe um monte de uma vez.
         if (idx >= 0 && idx < steps.length) {
             const nx = steps[idx];
-            const PASSIVE = ['text', 'audio', 'image', 'view_once_image', 'view_once_video', 'cta', 'call'];
+            const PASSIVE = ['text', 'audio', 'image', 'video', 'view_once_image', 'view_once_video', 'cta', 'call'];
             if (nx && PASSIVE.indexOf(nx.type) >= 0) {
                 const gapMs = Math.max(800, Math.min(8000, parseInt(nx.typing_ms, 10) || 3000));
                 const secs = Math.max(1, Math.round(gapMs / 1000));
