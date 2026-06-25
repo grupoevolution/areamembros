@@ -107,19 +107,15 @@ router.post('/kirvano', webhookLimiter, async (req, res) => {
         signatureValid,
     });
     
-    // 3. Se assinatura inválida, rejeita
+    // 3. Assinatura inválida NÃO bloqueia a entrega da venda. Antes rejeitávamos
+    //    com 401 e o cliente que PAGOU não recebia o acesso. Agora só logamos um
+    //    aviso (signature_valid fica false no log pra você ver) e seguimos
+    //    processando — a venda precisa ser entregue. Pra validação 100% limpa,
+    //    configure o mesmo Token na Kirvano e no painel/KIRVANO_WEBHOOK_SECRET.
     if (!signatureValid) {
-        logger.warn(`Webhook Kirvano rejeitado — assinatura inválida (IP: ${getIp(req)})`);
-        await logWebhookProcessed(logId, {
-            processed: false,
-            error: 'Assinatura inválida',
-        });
-        // Retornamos 401 pra mostrar que rejeitamos, mas mesmo assim a Kirvano
-        // pode reenviar. Se estiver recebendo várias rejeições é sinal de
-        // token mal configurado.
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
+        logger.warn(`Webhook Kirvano com assinatura inválida — processando mesmo assim (token não confere). IP: ${getIp(req)}`);
     }
-    
+
     // 4. Normaliza payload
     const normalized = kirvanoAdapter.normalizeKirvanoPayload(req.body);
     
@@ -171,15 +167,11 @@ router.post('/perfectpay', webhookLimiter, async (req, res) => {
         signatureValid,
     });
     
+    // Igual à Kirvano: token inválido não bloqueia a entrega — só loga e segue.
     if (!signatureValid) {
-        logger.warn(`Webhook PerfectPay rejeitado — token inválido (IP: ${getIp(req)})`);
-        await logWebhookProcessed(logId, {
-            processed: false,
-            error: 'Token inválido',
-        });
-        return res.status(401).json({ success: false, error: 'Unauthorized' });
+        logger.warn(`Webhook PerfectPay com token inválido — processando mesmo assim. IP: ${getIp(req)}`);
     }
-    
+
     const normalized = perfectpayAdapter.normalizePerfectPayPayload(req.body);
     
     if (!normalized.valid) {

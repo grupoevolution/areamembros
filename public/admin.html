@@ -4971,6 +4971,7 @@ a { color: inherit; text-decoration: none; }
                         <option value="true">Processados</option>
                         <option value="false">Nao processados</option>
                     </select>
+                    <button class="btn-primary" style="margin-left:auto;" onclick="reprocessAllFailed()">↻ Reprocessar todas as falhas</button>
                 </div>
 
                 <div class="data-table-wrap">
@@ -8537,6 +8538,20 @@ async function reprocessWebhook(id) {
         loadSales();
     } else {
         alert(data.error || 'Erro ao reprocessar');
+    }
+}
+
+async function reprocessAllFailed() {
+    if (!confirm('Reprocessar TODAS as vendas que não foram entregues? Isso libera o acesso pra quem comprou e não recebeu.')) return;
+    const { ok, data } = await API.call('/api/admin/webhooks/reprocess-failed', { method: 'POST' });
+    if (ok && data.success) {
+        alert('Pronto!\n\nReprocessadas: ' + data.reprocessed + ' de ' + data.total
+            + '\nAcessos liberados: ' + data.accesses_granted
+            + (data.failed ? ('\nFalharam: ' + data.failed + (data.errors && data.errors.length ? ('\n\n' + data.errors.join('\n')) : '')) : ''));
+        if (typeof loadWebhookLogs === 'function') loadWebhookLogs();
+        if (typeof loadSales === 'function') loadSales();
+    } else {
+        alert((data && data.error) || 'Erro ao reprocessar');
     }
 }
 

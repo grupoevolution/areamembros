@@ -302,6 +302,42 @@ router.post('/webhooks/:id/reprocess', requireAdmin, async (req, res) => {
 
 
 // =============================================================================
+// REPROCESSAR TODAS AS FALHAS (recupera vendas que não foram entregues)
+// =============================================================================
+
+router.post('/webhooks/reprocess-failed', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await db.query(
+            `SELECT * FROM webhook_logs WHERE processed = false ORDER BY received_at ASC LIMIT 1000`
+        );
+        let ok = 0, fail = 0, granted = 0;
+        const errors = [];
+        for (const webhook of rows) {
+            try {
+                const adapter = webhook.gateway === 'kirvano' ? kirvanoAdapter : perfectpayAdapter;
+                const fn = webhook.gateway === 'kirvano' ? 'normalizeKirvanoPayload' : 'normalizePerfectPayPayload';
+                const normalized = adapter[fn](webhook.raw_payload);
+                if (!normalized.valid) { fail++; errors.push(`#${webhook.id}: ${normalized.reason}`); continue; }
+                const summary = await processSale(normalized.data);
+                granted += (summary.accesses_granted || 0);
+                await db.query(
+                    `UPDATE webhook_logs SET processed = true, processing_error = NULL, processed_at = NOW(),
+                            raw_payload = raw_payload || $1::jsonb WHERE id = $2`,
+                    [JSON.stringify({ _reprocessed_bulk: { at: new Date().toISOString(), by: req.admin.username, summary } }), webhook.id]
+                );
+                ok++;
+            } catch (e) { fail++; errors.push(`#${webhook.id}: ${e.message}`); }
+        }
+        logger.info(`Reprocesso em massa por ${req.admin.username}: ${ok} ok, ${fail} falhas, ${granted} acessos liberados`);
+        return res.json({ success: true, total: rows.length, reprocessed: ok, failed: fail, accesses_granted: granted, errors: errors.slice(0, 15) });
+    } catch (err) {
+        logger.error('Erro no reprocesso em massa:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+
+// =============================================================================
 // SIMULAR WEBHOOK (pra testar)
 // =============================================================================
 
