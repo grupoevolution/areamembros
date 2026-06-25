@@ -6283,9 +6283,9 @@ a { color: inherit; text-decoration: none; }
                                     <option value="open_videos">📹 Abrir aba de Vídeos (feed)</option>
                                 </select>
                             </div>
-                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Quando disparar (segundos após o cliente digitar o e-mail)</label>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Disparar quantos segundos APÓS A ETAPA ANTERIOR</label>
                                 <input class="form-control" type="number" id="stepDelay" min="0" max="604800" value="5" style="width:100%;"/>
-                                <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">5 = 5s · 300 = 5min · 3600 = 1h · 86400 = 24h · 259200 = 3 dias (máx 7 dias)</div>
+                                <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">É uma FILA: a 1ª etapa conta a partir do e-mail; as próximas contam a partir da etapa de cima. 5 = 5s · 300 = 5min · 3600 = 1h · 86400 = 24h (máx 7 dias).</div>
                             </div>
                             <div id="stepCallWrap"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Chamada</label>
                                 <select class="form-control" id="stepCallSelect" style="width:100%;"><option value="">— selecione —</option></select>

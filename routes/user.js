@@ -2040,24 +2040,33 @@ async function scheduleFunnelPushes(slug, email) {
         // 'push' SEMPRE é do servidor. 'notification' e 'chat' também ganham um
         // push de fallback (chega com o app fechado); se o app estiver aberto, o
         // runner in-app já mostra o banner — o push só reativa quem saiu.
+        // MODO FILA: send_at usa o delay ACUMULADO (soma das etapas anteriores),
+        // calculado sobre TODAS as etapas ativas em ordem — bate com o /sequence.
         await db.query(`
+            WITH ordered AS (
+                SELECT fs.*,
+                       SUM(GREATEST(COALESCE(fs.delay_seconds,0),0))
+                           OVER (ORDER BY fs.step_order, fs.id
+                                 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cum_delay
+                FROM funnel_steps fs
+                JOIN funnels f ON f.id = fs.funnel_id
+                WHERE f.slug = $1 AND f.active = true AND fs.active = true
+            )
             INSERT INTO funnel_scheduled_pushes (funnel_id, step_id, customer_email, title, message, url, send_at)
-            SELECT fs.funnel_id, fs.id, $2,
-                   CASE WHEN fs.type = 'chat' THEN COALESCE(ch.name, 'Mensagem nova')
-                        ELSE COALESCE(fs.title, 'Novidade pra você') END,
-                   CASE WHEN fs.type = 'chat' THEN COALESCE(NULLIF(fs.message, ''), 'enviou uma mensagem pra você')
-                        ELSE fs.message END,
+            SELECT s.funnel_id, s.id, $2,
+                   CASE WHEN s.type = 'chat' THEN COALESCE(ch.name, 'Mensagem nova')
+                        ELSE COALESCE(s.title, 'Novidade pra você') END,
+                   CASE WHEN s.type = 'chat' THEN COALESCE(NULLIF(s.message, ''), 'enviou uma mensagem pra você')
+                        ELSE s.message END,
                    COALESCE(
-                       fs.link_url,
-                       CASE WHEN fs.product_id IS NOT NULL THEN '/?p=' || fs.product_id
-                            WHEN fs.chat_id IS NOT NULL THEN '/?chat=' || fs.chat_id ELSE NULL END
+                       s.link_url,
+                       CASE WHEN s.product_id IS NOT NULL THEN '/?p=' || s.product_id
+                            WHEN s.chat_id IS NOT NULL THEN '/?chat=' || s.chat_id ELSE NULL END
                    ),
-                   NOW() + make_interval(secs => fs.delay_seconds)
-            FROM funnel_steps fs
-            JOIN funnels f ON f.id = fs.funnel_id
-            LEFT JOIN chats ch ON ch.id = fs.chat_id
-            WHERE f.slug = $1 AND f.active = true AND fs.active = true
-              AND fs.type IN ('push', 'notification', 'chat')
+                   NOW() + make_interval(secs => s.cum_delay)
+            FROM ordered s
+            LEFT JOIN chats ch ON ch.id = s.chat_id
+            WHERE s.type IN ('push', 'notification', 'chat')
             ON CONFLICT DO NOTHING
         `, [s, e]);
     } catch (err) {
@@ -2252,9 +2261,21 @@ router.get('/funnel/:slug/sequence', async (req, res) => {
         const funnelId = f[0].id;
         // Etapas tipo 'push' NÃO vão pro cliente: são enviadas pelo SERVIDOR
         // (worker) no horário agendado — agendadas na conversão do lead.
+        // MODO FILA: delay_seconds vira ACUMULADO (soma das etapas anteriores +
+        // a desta), calculado sobre TODAS as etapas ativas em ordem. Assim cada
+        // etapa dispara "X segundos depois da anterior". O app já trata o valor
+        // como tempo a partir do e-mail, então não precisa mudar nada lá.
         const { rows: steps } = await db.query(`
-            SELECT fs.id, fs.type, fs.delay_seconds, fs.video_call_id, fs.product_id,
-                   fs.chat_id, fs.title, fs.message, fs.link_url,
+            WITH ordered AS (
+                SELECT fs.*,
+                       SUM(GREATEST(COALESCE(fs.delay_seconds,0),0))
+                           OVER (ORDER BY fs.step_order, fs.id
+                                 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cum_delay
+                FROM funnel_steps fs
+                WHERE fs.funnel_id = $1 AND fs.active = true
+            )
+            SELECT s.id, s.type, s.cum_delay AS delay_seconds, s.video_call_id, s.product_id,
+                   s.chat_id, s.title, s.message, s.link_url, s.step_order,
                    ch.name AS chat_name, ch.avatar_url AS chat_avatar,
                    (
                        SELECT json_build_object(
@@ -2264,12 +2285,12 @@ router.get('/funnel/:slug/sequence', async (req, res) => {
                            'cta_text', vc.cta_text, 'trigger_delay_sec', vc.trigger_delay_sec,
                            'cta_type', COALESCE(vc.cta_type, 'home'),
                            'cta_target_id', vc.cta_target_id
-                       ) FROM video_calls vc WHERE vc.id = fs.video_call_id AND vc.active = true
+                       ) FROM video_calls vc WHERE vc.id = s.video_call_id AND vc.active = true
                    ) AS video_call
-            FROM funnel_steps fs
-            LEFT JOIN chats ch ON ch.id = fs.chat_id
-            WHERE fs.funnel_id = $1 AND fs.active = true AND fs.type <> 'push'
-            ORDER BY fs.step_order, fs.id
+            FROM ordered s
+            LEFT JOIN chats ch ON ch.id = s.chat_id
+            WHERE s.type <> 'push'
+            ORDER BY s.step_order, s.id
         `, [funnelId]);
 
         // Se tem email, filtra chamadas j\u00e1 vistas
