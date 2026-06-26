@@ -17601,7 +17601,7 @@ document.addEventListener('keydown', function(e) {
 
 <!-- ═══════════════ PAYWALL VIP REUTILIZÁVEL + FEED EXPLORAR/TIKTOK ═══════════════ -->
 <style>
-#mvPaywall{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(8,6,7,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
+#mvPaywall{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(6,4,5,.92);}
 #mvPaywall.open{display:flex;}
 #mvPaywall .mvpw-card{background:#141013;border:1px solid rgba(255,255,255,.08);border-radius:22px;max-width:360px;width:100%;padding:26px 22px 18px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.6);max-height:92vh;overflow-y:auto;}
 .mvpw-inline{width:100%;max-width:360px;margin:0 auto;text-align:center;color:#fff;}
@@ -17626,6 +17626,9 @@ document.addEventListener('keydown', function(e) {
 .mvpw-pname{font-size:15px;font-weight:800;color:#fff;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px;}
 .mvpw-prow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
 .mvpw-price{font-size:23px;font-weight:800;color:#fff;}
+.mvpw-permes{font-size:13px;color:#8a8288;font-weight:600;margin-left:-4px;}
+.mvpw-incl{font-size:12.5px;color:#a8a2a5;cursor:pointer;margin-bottom:10px;user-select:none;}
+.mvpw-incl i{font-style:normal;}
 .mvpw-orig{font-size:13px;color:#8a8288;text-decoration:line-through;}
 .mvpw-off{font-size:11px;font-weight:800;color:#fff;background:#e50914;border-radius:6px;padding:2px 7px;}
 .mvpw-benef{font-size:12.5px;color:#a8a2a5;line-height:1.45;margin-bottom:10px;white-space:pre-line;}
@@ -17662,15 +17665,19 @@ window.MVPaywall = (function () {
         const orig = fmtMoney(p.original_price);
         const off = discount(p.price, p.original_price);
         const rec = p.is_recommended === true;
-        const cta = (p.name || 'Assinar');
+        const nm = (p.name || (rec ? 'PREMIUM' : 'VIP'));
+        const incl = p.benefits
+            ? '<div class="mvpw-incl" onclick="var b=this.nextElementSibling;var open=b.style.display!==\'block\';b.style.display=open?\'block\':\'none\';this.querySelector(\'i\').textContent=open?\'⌃\':\'⌄\';">ver o que está incluído <i>⌄</i></div>'
+              + '<div class="mvpw-benef" style="display:none;">' + esc(p.benefits) + '</div>'
+            : '';
         return '<div class="mvpw-plan' + (rec ? ' rec' : '') + '">'
             + (rec ? '<div class="mvpw-tag">MAIS ESCOLHIDO</div>' : '')
-            + '<div class="mvpw-pname">' + esc(p.name || 'VIP') + '</div>'
-            + '<div class="mvpw-prow"><span class="mvpw-price">' + esc(price) + '</span>'
+            + '<div class="mvpw-pname">' + esc(nm) + '</div>'
+            + '<div class="mvpw-prow"><span class="mvpw-price">' + esc(price) + '</span><span class="mvpw-permes">/mês</span>'
             + (orig ? '<span class="mvpw-orig">' + esc(orig) + '</span>' : '')
             + (off ? '<span class="mvpw-off">-' + off + '%</span>' : '') + '</div>'
-            + (p.benefits ? '<div class="mvpw-benef">' + esc(p.benefits) + '</div>' : '')
-            + '<button class="mvpw-buy' + (rec ? ' rec' : '') + '" data-mv-buy data-url="' + esc(p.checkout_url || unlock.checkout_url || '') + '">' + esc(rec ? ('Quero ' + cta) : ('Assinar ' + cta)) + '</button>'
+            + incl
+            + '<button class="mvpw-buy' + (rec ? ' rec' : '') + '" data-mv-buy data-url="' + esc(p.checkout_url || unlock.checkout_url || '') + '">' + esc(rec ? ('Quero ' + nm) : ('Assinar ' + nm)) + '</button>'
             + '</div>';
     }
 
@@ -17738,12 +17745,15 @@ window.MVPaywall = (function () {
         let m = document.getElementById('mvPaywall');
         if (!m) { m = document.createElement('div'); m.id = 'mvPaywall'; document.body.appendChild(m); }
         const userClose = opts.onClose;
-        const innerOpts = Object.assign({}, opts, { onClose: () => { close(); if (typeof userClose === 'function') userClose(); } });
+        const doClose = () => { close(); if (typeof userClose === 'function') userClose(); };
+        const innerOpts = Object.assign({}, opts, { onClose: doClose });
         m.innerHTML = '<div class="mvpw-card">' + bannerHTML(unlock, innerOpts) + '</div>';
         wire(m, unlock, innerOpts);
+        // toca no fundo (fora do card) → fecha
+        m.onclick = (e) => { if (e.target === m) doClose(); };
         m.classList.add('open');
     }
-    function close() { const m = document.getElementById('mvPaywall'); if (m) m.classList.remove('open'); }
+    function close() { const m = document.getElementById('mvPaywall'); if (m) { m.classList.remove('open'); m.innerHTML = ''; } }
 
     return { bannerHTML, renderInline, openModal, close, checkout };
 })();
