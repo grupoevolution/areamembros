@@ -8138,6 +8138,8 @@ body.is-slowconn .prod-cta-fixed {
 .ca-row .pv { font-size: 12.5px; color: #8a8480; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
 .ca-row .pv.vip { color: #e50914; font-weight: 600; }
 .ca-row .pv.online { color: #1fa855; }
+/* prévia da conversa VIP: dá pra ver que chegou mensagem, mas o conteúdo fica borrado */
+.ca-row .pv.ca-blur-msg { filter: blur(4.5px); user-select: none; pointer-events: none; }
 .ca-row .tm { font-size: 10.5px; color: #8a8480; align-self: flex-start; margin-top: 4px; }
 .ca-empty { padding: 60px 24px; text-align: center; color: #8a8480; font-size: 13.5px; line-height: 1.6; background: #fff; }
 /* conversa */
@@ -8795,6 +8797,7 @@ window.ChatApp = (function() {
     // ── STATUS (stories) ──
     let STORIES = [];
     let STORY = null; // { group, idx, timer, started }
+    let LIST_CHATS = []; // últimos chats carregados (pra abrir o paywall VIP no clique)
     function storiesStripHtml() {
         if (!STORIES.length) return '';
         const items = STORIES.map(g => {
@@ -8942,39 +8945,34 @@ window.ChatApp = (function() {
                 const tb = (b.last && b.last.at) ? new Date(b.last.at).getTime() : 0;
                 return tb - ta;
             });
+            LIST_CHATS = chats;
             let html = storiesStripHtml();
-            // "Online agora" removido — virou redundante com a fileira de Status.
+            // VIP NÃO tem mais seção separada — entra junto com as conversas normais.
             const sections = {};
             for (const c of chats) {
-                const sec = c.locked ? 'Só no VIP' : (c.section || 'Minhas conversas');
+                const sec = c.section || 'Minhas conversas';
                 (sections[sec] = sections[sec] || []).push(c);
             }
             for (const sec of Object.keys(sections)) {
                 html += '<div class="ca-sec-block"><div class="ca-sec-label">' + esc(sec) + '</div>';
                 for (const c of sections[sec]) {
                     const bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
-                    // VIP que JÁ recebeu mensagem mostra que CHEGOU mensagem, mas tudo
-                    // BORRADO: foto + prévia embaçadas, sem deixar ver a imagem enviada.
-                    // VIP sem mensagem ainda mostra só o cadeado.
-                    const vipTease = c.locked && c.last;
-                    // foto do VIP com mensagem entra borrada (não dá pra ver a imagem)
-                    const bgBlur = (vipTease && c.avatar_url)
-                        ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\');filter:blur(6px);"'
-                        : bg;
-                    const av = (c.locked && !vipTease)
-                        ? '<div class="av locked">' + ICO.lock(16, '#a09890') + '</div>'
-                        : '<div class="av"' + bgBlur + '>' + ((c.show_online && !c.locked) ? '<span class="dot"></span>' : '') + (c.locked ? '<span style="position:absolute;bottom:-1px;right:-1px;width:16px;height:16px;border-radius:50%;background:#e50914;display:flex;align-items:center;justify-content:center;border:2px solid #fff;">' + ICO.lock(8, '#fff') + '</span>' : '') + '</div>';
-                    const pv = vipTease
-                        ? '<div class="pv" style="color:#9aa0a6;font-style:italic;">enviou uma mensagem</div>'
-                        : c.locked
-                        ? '<div class="pv vip">Desbloqueie com o VIP →</div>'
-                        : c.last ? '<div class="pv">' + esc(c.last.preview) + '</div>'
+                    // Avatar SEMPRE normal (foto + online), inclusive nos VIP — o lead
+                    // vê tudo nítido e só descobre que é VIP ao clicar.
+                    const av = '<div class="av"' + bg + '>' + (c.show_online ? '<span class="dot"></span>' : '') + '</div>';
+                    // VIP COM mensagem: mostra que CHEGOU mensagem (badge/hora), mas o
+                    // CONTEÚDO da prévia fica BORRADO. VIP SEM mensagem: fica normal.
+                    const pv = (c.locked && c.last)
+                        ? '<div class="pv ca-blur-msg">' + esc(c.last.preview || 'mensagem nova') + '</div>'
+                        : (c.last && !c.locked)
+                        ? '<div class="pv">' + esc(c.last.preview) + '</div>'
                         : '<div class="pv online">' + esc(c.status_label || 'online') + '</div>';
                     const badge = (c.unread > 0)
                         ? '<span style="display:inline-flex;min-width:18px;height:18px;border-radius:999px;background:#25D366;color:#fff;font-size:10px;font-weight:600;align-items:center;justify-content:center;padding:0 5px;margin-top:3px;">' + (c.unread > 99 ? '99+' : c.unread) + '</span>'
                         : '';
                     const tm = (c.last || badge) ? '<div class="tm" style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">' + (c.last ? '<span'+(badge?' style="color:#1fa855;font-weight:600;"':'')+'>' + hhmm(c.last.at) + '</span>' : '') + badge + '</div>' : '';
-                    html += '<div class="ca-row" onclick="ChatApp.open(' + c.id + ')">' + av
+                    const click = c.locked ? 'ChatApp.openVipLocked(' + c.id + ')' : 'ChatApp.open(' + c.id + ')';
+                    html += '<div class="ca-row" onclick="' + click + '">' + av
                         + '<div class="mid"><div class="nm">' + esc(c.name) + '</div>' + pv + '</div>' + tm + '</div>';
                 }
                 html += '</div>';
@@ -8986,6 +8984,24 @@ window.ChatApp = (function() {
             if (dot) dot.style.display = totalUnread > 0 ? '' : 'none';
         } catch (e) {
             scroll.innerHTML = '<div class="ca-empty">Erro carregando conversas.</div>';
+        }
+    }
+
+    // Clique numa conversa VIP bloqueada → abre o POPUP de assinar (não a conversa).
+    function openVipLocked(id) {
+        const c = (LIST_CHATS || []).find(x => x.id === id);
+        if (!c) { open(id); return; }
+        const unlock = c.unlock || {};
+        if (window.MVPaywall) {
+            MVPaywall.openModal(unlock, {
+                icon: 'lock',
+                eyebrow: 'ACESSO EXCLUSIVO',
+                title: 'Conversa VIP 🔥',
+                subtitle: 'Pra falar com ' + c.name + ' de verdade, vira VIP. Libera o acesso e conversa sem limite, sem censura. 🔥',
+                ctaText: 'QUERO SER VIP',
+            });
+        } else {
+            open(id);
         }
     }
 
@@ -9797,7 +9813,7 @@ window.ChatApp = (function() {
     if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
     return { loadList, open, back, send, photo, sendPhoto, unlock, closeVonce, onCall, refreshUnreadDot, openProfile, closeProfile,
-             openStory, closeStory, storyNav, storyReply,
+             openStory, closeStory, storyNav, storyReply, openVipLocked,
              gateInstall, isStandalone,
              curId: () => (CUR ? CUR.id : null) };
 })();
@@ -17590,6 +17606,7 @@ document.addEventListener('keydown', function(e) {
 #mvPaywall .mvpw-card{background:#141013;border:1px solid rgba(255,255,255,.08);border-radius:22px;max-width:360px;width:100%;padding:26px 22px 18px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.6);max-height:92vh;overflow-y:auto;}
 .mvpw-inline{width:100%;max-width:360px;margin:0 auto;text-align:center;color:#fff;}
 .mvpw-icon{width:62px;height:62px;border-radius:18px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 8px 26px rgba(229,9,20,.42);}
+.mvpw-eyebrow{font-size:11px;font-weight:800;letter-spacing:2px;color:#e50914;text-transform:uppercase;margin-bottom:5px;}
 .mvpw-title{font-size:21px;font-weight:800;letter-spacing:-.02em;color:#fff;line-height:1.2;margin-bottom:8px;}
 .mvpw-sub{font-size:14px;color:#a8a2a5;line-height:1.5;margin:0 auto 16px;max-width:300px;}
 .mvpw-bigprice{font-size:26px;font-weight:800;color:#fff;margin-bottom:12px;}
@@ -17684,6 +17701,7 @@ window.MVPaywall = (function () {
                 + '<button class="mvpw-buy rec mvpw-bigcta" data-mv-buy data-url="' + esc(unlock.checkout_url || '') + '">' + esc(ctaLabel) + '</button>';
         }
         return '<div class="mvpw-icon">' + icon + '</div>'
+            + (opts.eyebrow ? '<div class="mvpw-eyebrow">' + esc(opts.eyebrow) + '</div>' : '')
             + '<div class="mvpw-title">' + esc(opts.title || 'O resto é só pra VIP') + '</div>'
             + (opts.subtitle ? '<div class="mvpw-sub">' + esc(opts.subtitle) + '</div>' : '')
             + body
