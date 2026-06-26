@@ -8997,7 +8997,7 @@ window.ChatApp = (function() {
                 icon: 'lock',
                 eyebrow: 'ACESSO EXCLUSIVO',
                 title: 'Conversa VIP 🔥',
-                subtitle: 'Pra falar com ' + c.name + ' de verdade, vira VIP. Libera o acesso e conversa sem limite, sem censura. 🔥',
+                subtitle: 'Pra falar com ' + c.name + ' vira VIP. Libere o acesso e converse sem limite.',
                 ctaText: 'QUERO SER VIP',
             });
         } else {
@@ -16958,6 +16958,9 @@ document.addEventListener('keydown', function(e) {
         // Aba de Vídeos (feed): o e-mail é pedido pelo próprio fluxo do feed
         // (toca no áudio → 3-4s → popup; ou ao tentar rolar pro 2º vídeo).
         if (t.closest('#tiktok')) return;
+        // Popup de assinar VIP (paywall): não pode ser sequestrado pelo interceptor
+        // (senão o "agora não"/planos não funcionam e abre o login por cima).
+        if (t.closest('#mvPaywall')) return;
         // Não intercepta controles próprios (audio/video do navegador)
         if (t.matches('audio, video, audio *, video *')) return;
         // Pra TUDO o resto, bloqueia e abre login
