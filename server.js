@@ -352,122 +352,17 @@ app.get('/f/:slug', async (req, res) => {
     res.sendFile(path.join(__dirname, 'public/app.html'));
 });
 
-// Rota "modo anúncio" — /ir/:slug
-// Pensada pra colar no anúncio do Meta (Instagram/Facebook). Quando aberta DENTRO
-// do navegador in-app do Instagram/Facebook no ANDROID, força reabrir no Chrome
-// (via intent://) — onde o pop-up de "Instalar app" (PWA) realmente funciona.
-// Em qualquer outro caso (iOS, Chrome, navegador normal), cai direto no /f/:slug.
-app.get('/ir/:slug', async (req, res) => {
+// Rota "modo anúncio" — /ir/:slug (mantida como ALIAS dos anúncios já no ar).
+// IMPORTANTE: NÃO força mais abrir o Chrome via intent:// na landing. Esse redirect
+// forçado/automático (no 1º toque ou em 6s) era o que o crawler do Meta detectava
+// como "browser breakout" e punia bloqueando as contas de anúncio. Agora é só um
+// redirect simples pro funil /f/:slug. O passo de abrir no navegador externo (pra
+// instalar o PWA) acontece DENTRO do funil, DEPOIS do lead digitar o e-mail e tocar
+// num botão (gesto consciente) — em conformidade com as regras do Meta.
+app.get('/ir/:slug', (req, res) => {
     const slug = String(req.params.slug || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 80);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    const slugJson = JSON.stringify(slug);
-    const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-
-    // Prévia da tela de Conversas (modelos reais) como entrada: dá uns segundos de
-    // contexto antes do aviso (em vez de jogar o aviso no lead frio). QUALQUER toque
-    // OU 6s sem toque → dispara o Chrome (window.location.href = intent, que FUNCIONA).
-    // Vai pro /f/slug → o funil abre direto no chat configurado. É só isca (sem sessão).
-    let chats = [];
-    try {
-        const db = require('./db');
-        const { rows } = await db.query(
-            `SELECT name, avatar_url, show_online FROM chats WHERE active = true AND listed = true ORDER BY display_order, id LIMIT 4`
-        );
-        chats = rows;
-    } catch (_) {}
-    if (!chats.length) chats = [{ name: 'Eliene', avatar_url: null, show_online: true }, { name: 'Fabi', avatar_url: null, show_online: true }];
-    const rowsHtml = chats.map((c, i) => {
-        const avStyle = c.avatar_url ? ` style="background-image:url('${esc(c.avatar_url)}')"` : '';
-        const dot = (c.show_online !== false) ? '<span class="dot"></span>' : '';
-        const sub = i === 0 ? '<div class="sub">Áudio</div>' : '<div class="sub on">online</div>';
-        return `<div class="row"><div class="av"${avStyle}>${dot}</div><div class="mid"><div class="nm">${esc(c.name)}</div>${sub}</div><div class="tm">agora</div></div>`;
-    }).join('');
-
-    res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="noindex,nofollow">
-<title>Conversas</title>
-<style>
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;background:#fff;color:#111;font-family:-apple-system,Segoe UI,Roboto,sans-serif;-webkit-tap-highlight-color:transparent}
-.hd{padding:18px 18px 12px;font-size:26px;font-weight:800;border-bottom:1px solid #f0f0f0}
-.lbl{padding:16px 18px 8px;font-size:12px;font-weight:700;letter-spacing:1.5px;color:#9a9a9a}
-.row{display:flex;align-items:center;gap:13px;padding:12px 18px;border-bottom:1px solid #f3f3f3;cursor:pointer}
-.row:active{background:#f6f6f6}
-.av{position:relative;width:54px;height:54px;border-radius:50%;flex-shrink:0;background-size:cover;background-position:center;background-color:#e3e3e6}
-.dot{position:absolute;right:1px;bottom:1px;width:13px;height:13px;border-radius:50%;background:#25D366;border:2.5px solid #fff}
-.mid{flex:1;min-width:0}
-.nm{font-size:17px;font-weight:700;color:#111}
-.sub{font-size:14px;color:#8a8a8a;margin-top:2px}
-.sub.on{color:#1fa855}
-.tm{font-size:13px;color:#b0b0b0;align-self:flex-start;margin-top:3px}
-#load{position:fixed;inset:0;background:#fff;display:flex;align-items:center;justify-content:center}
-.s{width:34px;height:34px;border:3px solid #eee;border-top-color:#e50914;border-radius:50%;animation:r 1s linear infinite}
-@keyframes r{to{transform:rotate(360deg)}}
-a{color:#e50914;font-weight:700;text-decoration:none}
-.gw{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;text-align:center;padding:30px 26px}
-.glogo{width:60px;height:60px;border-radius:18px;background:#e50914;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#fff}
-.gt{font-size:20px;font-weight:800;color:#111}
-.gsub{font-size:14px;color:#777;line-height:1.5;max-width:300px;margin-bottom:4px}
-.gstep{display:flex;align-items:center;gap:11px;text-align:left;width:100%;max-width:330px;background:#f5f5f6;border-radius:12px;padding:13px 14px;font-size:14px;color:#444}
-.gnum{flex-shrink:0;width:24px;height:24px;border-radius:50%;background:#e50914;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
-.gstep b{color:#111}
-.gbtn{margin-top:8px;background:none;border:none;color:#aaa;font-size:13px;padding:10px;cursor:pointer}
-</style></head>
-<body>
-<div id="teaser" style="display:none">
-  <div class="hd">Conversas</div>
-  <div class="lbl">MINHAS CONVERSAS</div>
-  ${rowsHtml}
-</div>
-<div id="iosguide" class="gw" style="display:none">
-  <div class="glogo">M</div>
-  <div class="gt">Abra no navegador pra ver tudo</div>
-  <div class="gsub">Você está dentro do Instagram. Pra abrir o conteúdo e receber as mensagens:</div>
-  <div class="gstep"><span class="gnum">1</span><span>Toque em <b>•••</b> no canto da tela</span></div>
-  <div class="gstep"><span class="gnum">2</span><span>Toque em <b>"Abrir no navegador externo"</b></span></div>
-  <button class="gbtn" id="iosskip">continuar assim mesmo</button>
-</div>
-<div id="load"><div class="s"></div></div>
-<noscript><div style="padding:24px;text-align:center"><a href="/f/${slug}">Toque aqui pra continuar</a></div></noscript>
-<script>(function(){
-  var slug = ${slugJson};
-  var ua = navigator.userAgent || '';
-  var isAndroid = /Android/i.test(ua);
-  var isIOS = /iphone|ipad|ipod/i.test(ua);
-  var inApp = /(FBAN|FBAV|FB_IAB|FBIOS|Instagram|Line\\/|Twitter|MicroMessenger|TikTok|Snapchat|Kwai)/i.test(ua);
-  var host = location.host;
-  var target = location.protocol + '//' + host + '/f/' + slug;
-  var done = false, fired = false;
-  function go(){ if (done) return; done = true; try { location.replace(target); } catch(e){ try { location.href = target; } catch(_){} } }
-  function toChrome(){
-    if (fired) return; fired = true;
-    // mesmo mecanismo da versão que funciona (window.location.href = intent).
-    try {
-      var intent = 'intent://' + host + '/f/' + slug + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(target) + ';end';
-      window.location.href = intent;
-    } catch(e){}
-    // se o Chrome não abrir / o lead voltar, cai no app no próprio navegador
-    setTimeout(go, 2500);
-  }
-  if (isIOS && inApp) {
-    // iPhone: NÃO dá pra forçar o Safari (Apple não tem o intent://). Mostra o
-    // passo a passo manual (••• → Abrir no navegador externo). Único caminho no iOS.
-    document.getElementById('load').style.display = 'none';
-    document.getElementById('iosguide').style.display = 'flex';
-    document.getElementById('iosskip').addEventListener('click', go);
-  } else if (isAndroid && inApp) {
-    document.getElementById('load').style.display = 'none';
-    document.getElementById('teaser').style.display = 'block';
-    // QUALQUER toque dispara; e se ele não tocar, dispara sozinho em 6s.
-    document.addEventListener('click', toChrome, { once: true });
-    document.addEventListener('touchend', toChrome, { once: true, passive: true });
-    setTimeout(toChrome, 6000);
-  } else {
-    go();
-  }
-})();</script></body></html>`);
+    res.redirect(302, '/f/' + slug);
 });
 
 // /app mantido como alias (compatibilidade com links antigos)

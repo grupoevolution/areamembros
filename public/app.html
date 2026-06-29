@@ -8768,6 +8768,7 @@ window.ChatApp = (function() {
         return v;
     }
     const VID = visitorId();
+    try { window.VID = VID; } catch(_) {}
     const ICO = {
         lock: (s, c) => '<svg width="'+s+'" height="'+s+'" fill="none" stroke="'+(c||'currentColor')+'" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
         play: '<svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
@@ -9499,6 +9500,57 @@ window.ChatApp = (function() {
         btn.addEventListener('click', submit);
         inp.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
     }
+    // Navegador interno do Meta (Instagram/Facebook): o PWA NÃO instala aqui. Em vez
+    // de só seguir dentro do Instagram, levamos o lead pro navegador externo (Android:
+    // intent:// pro Chrome; iOS: menu ••• → "abrir no navegador externo"), carregando
+    // o e-mail na URL (?e=) pra ele NÃO precisar digitar de novo no Chrome/Safari.
+    // O disparo só acontece no TOQUE do lead — exigência técnica do webview (sem gesto
+    // ativo o intent:// é bloqueado) e também o que mantém em conformidade com o Meta.
+    function breakoutToBrowser(fallback) {
+        const slug = window.MV_FUNNEL_SLUG || '';
+        const host = location.host;
+        const email = window.currentUserEmail || '';
+        const q = email ? ('?e=' + encodeURIComponent(email)) : '';
+        const path = '/f/' + slug + q;
+        const target = location.protocol + '//' + host + path;
+        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        const nome = (CUR && CUR.chat && CUR.chat.name) ? esc(CUR.chat.name) : 'ela';
+        const LOGO = '<div style="width:56px;height:56px;border-radius:16px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;font-weight:800;color:#fff;">M</div>';
+        // No iOS, "abrir no navegador externo" abre a URL que está na barra — então
+        // deixamos o e-mail nela pra o Safari já entrar logado.
+        try { if (email) history.replaceState(null, '', path); } catch(_) {}
+        if (isIOS) {
+            const stepRow = (n, html) => '<div style="display:flex;align-items:flex-start;gap:10px;text-align:left;margin-bottom:9px;"><span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:#e50914;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">' + n + '</span><span style="font-size:13px;color:#444;line-height:1.5;">' + html + '</span></div>';
+            gateOverlay(
+                LOGO
+                + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">Toque pra ver a foto de ' + nome + ' 👀</div>'
+                + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:14px;">Pra abrir a foto e receber as mensagens, abra no seu navegador:</div>'
+                + stepRow(1, 'Toque em <b>•••</b> no canto da tela')
+                + stepRow(2, 'Toque em <b>"Abrir no navegador externo"</b>')
+                + '<button id="caBreakSkip" style="width:100%;background:none;border:none;color:#999;font-size:13px;padding:11px;margin-top:6px;cursor:pointer;">ver aqui mesmo</button>'
+            );
+            const sk = document.getElementById('caBreakSkip'); if (sk) sk.addEventListener('click', fallback);
+            return;
+        }
+        // Android: o botão é o gesto que faz o webview liberar o intent:// pro Chrome.
+        gateOverlay(
+            LOGO
+            + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">Sua foto está pronta 👀</div>'
+            + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:16px;">Toque no botão pra abrir a foto de ' + nome + ' e deixar o acesso rápido no seu celular.</div>'
+            + '<button id="caBreakBtn" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;">📲 Ver a foto agora</button>'
+            + '<button id="caBreakSkip" style="width:100%;background:none;border:none;color:#999;font-size:13px;padding:11px;margin-top:4px;cursor:pointer;">ver aqui mesmo</button>'
+        );
+        document.getElementById('caBreakBtn').addEventListener('click', () => {
+            try {
+                const intent = 'intent://' + host + path + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=' + encodeURIComponent(target) + ';end';
+                window.location.href = intent;
+            } catch(_) {}
+            // se o Chrome não abrir / o lead voltar, não deixa tela morta: mostra aqui.
+            setTimeout(fallback, 2500);
+        });
+        const sk2 = document.getElementById('caBreakSkip'); if (sk2) sk2.addEventListener('click', fallback);
+    }
+
     function gateInstall(action) {
         if (isStandalone() || _gateInstalled) { closeGate(); action(); return; }
         const nome = (CUR && CUR.chat && CUR.chat.name) ? esc(CUR.chat.name) : 'ela';
@@ -9534,10 +9586,15 @@ window.ChatApp = (function() {
             );
             document.getElementById('caManualDone').addEventListener('click', proceed);
         }
-        // Navegador interno do Meta (Instagram/Facebook): instalar é impossível ali
-        // e mostrar instrução de "abrir no Chrome" só atrapalha — deixa o cliente
-        // seguir direto pro conteúdo (segue usando dentro do próprio Instagram).
-        if (isInAppBrowser()) { proceed(); return; }
+        // Navegador interno do Meta (Instagram/Facebook): instalar é impossível ali.
+        // No FUNIL, mandamos o lead pro navegador externo (onde o PWA instala) — só
+        // depois que ele já confirmou o e-mail e tocar no botão. Fora do funil (app
+        // normal aberto dentro do Instagram), não tem pra onde mandar: segue ali mesmo.
+        if (isInAppBrowser()) {
+            if (window.MV_FUNNEL_SLUG) breakoutToBrowser(proceed);
+            else proceed();
+            return;
+        }
         // Navegador normal → 1 toque (se o prompt existir) com fallback manual.
         gateOverlay(
             LOGO
@@ -16606,6 +16663,30 @@ window.MV_BOOT_PROMISE = (function bootFunnel() {
             }
         }).catch(() => {});
     return anonP;
+})();
+
+// ═══════════════ AUTO-LOGIN PELO E-MAIL NA URL (?e=) ═══════════════
+// Quando o lead foi jogado pro Chrome/Safari a partir do navegador do Instagram
+// (botão "Ver a foto agora"), o e-mail dele vem na URL. Aqui logamos sozinho pra
+// ele NÃO ter que digitar o e-mail de novo — cai direto na foto + instalar o PWA.
+(function autoLoginFromUrl() {
+    try {
+        const em = (new URLSearchParams(location.search).get('e') || '').trim();
+        if (!em || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) return;
+        const finish = () => { try { history.replaceState(null, '', location.pathname); } catch(_) {} };
+        Promise.resolve(window.MV_BOOT_PROMISE).then(() => fetch('/api/user/login/promote', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+            body: JSON.stringify({ email: em, skipSuggestion: true, funnel_slug: window.MV_FUNNEL_SLUG || '', visitor_id: window.VID || '' }),
+        })).then(r => r.json()).then(d => {
+            if (d && d.success) {
+                window.currentUserEmail = d.email; window.MV_ANONYMOUS = false;
+                try { document.body.classList.remove('funnel-mode'); } catch(_) {}
+                try { if (window.PUSH && Notification.permission === 'granted') PUSH.subscribe(); } catch(_) {}
+                try { if (typeof window.tryTriggerCallAfterLogin === 'function') window.tryTriggerCallAfterLogin(); } catch(_) {}
+            }
+            finish();
+        }).catch(finish);
+    } catch(_) {}
 })();
 
 // Banner PWA
