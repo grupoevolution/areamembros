@@ -408,8 +408,10 @@ router.post('/:id/steps', requireAdmin, async (req, res) => {
         const { type, delay_seconds, video_call_id, product_id, chat_id, title, message, link_url, step_order, active } = req.body || {};
         // Tipos: 'notification' (banner in-app) · 'chat' (inicia conversa) ·
         // 'navigate'/'open_product' (leva pra algo) · 'wait' (só espera) ·
-        // 'push' (web push do SERVIDOR) · 'video_call'.
-        const validTypes = ['video_call', 'notification', 'open_product', 'push', 'chat', 'navigate', 'wait', 'open_videos'];
+        // 'push' (web push do SERVIDOR) · 'video_call' ·
+        // 'show_chat' (revela a conversa na lista, SEM mensagem/notificação) ·
+        // 'wait_interaction' (fila pausa até o lead mandar a 1ª mensagem).
+        const validTypes = ['video_call', 'notification', 'open_product', 'push', 'chat', 'navigate', 'wait', 'open_videos', 'show_chat', 'wait_interaction'];
         const t = validTypes.includes(type) ? type : 'notification';
         const delay = Math.max(0, parseInt(delay_seconds, 10) || 0);
         const vcId = video_call_id ? parseInt(video_call_id, 10) : null;
@@ -435,7 +437,7 @@ router.put('/:id/steps/:stepId', requireAdmin, async (req, res) => {
         const { type, delay_seconds, video_call_id, product_id, chat_id, title, message, link_url, step_order, active } = req.body || {};
         const updates = []; const values = []; let p = 1;
         if (type !== undefined) {
-            const valid = ['video_call', 'notification', 'open_product', 'push', 'chat', 'navigate', 'wait', 'open_videos'];
+            const valid = ['video_call', 'notification', 'open_product', 'push', 'chat', 'navigate', 'wait', 'open_videos', 'show_chat', 'wait_interaction'];
             updates.push(`type = $${p++}`); values.push(valid.includes(type) ? type : 'notification');
         }
         if (delay_seconds !== undefined) { updates.push(`delay_seconds = $${p++}`); values.push(Math.max(0, parseInt(delay_seconds, 10) || 0)); }

@@ -6280,6 +6280,8 @@ a { color: inherit; text-decoration: none; }
                                 <select class="form-control" id="stepType" style="width:100%;" onchange="updateStepFields()">
                                     <option value="notification">🔔 Notificação dentro do app</option>
                                     <option value="chat">💬 Iniciar conversa (modelo manda mensagem)</option>
+                                    <option value="show_chat">👁 Mostrar conversa (aparece na lista, SEM mensagem)</option>
+                                    <option value="wait_interaction">🤝 Esperar 1ª interação do lead (pausa a fila)</option>
                                     <option value="navigate">➡️ Levar pra algo (produto / conversa / link)</option>
                                     <option value="wait">⏱️ Só espera (pausa entre os passos)</option>
                                     <option value="push">📲 Push no celular (chega com o app FECHADO)</option>
@@ -14939,11 +14941,14 @@ async function loadFunnelSteps(funnelId) {
         list.innerHTML = data.steps.map((s, idx) => {
             const icon = s.type === 'video_call' ? '📞' : s.type === 'open_product' ? '📦'
                        : s.type === 'push' ? '📲' : s.type === 'chat' ? '💬'
+                       : s.type === 'show_chat' ? '👁' : s.type === 'wait_interaction' ? '🤝'
                        : s.type === 'open_videos' ? '📹'
                        : s.type === 'navigate' ? '➡️' : s.type === 'wait' ? '⏱️' : '🔔';
             const sub = s.type === 'video_call' ? (s.video_call_name || 'Chamada')
                       : s.type === 'open_product' ? (s.product_name || 'Produto')
                       : s.type === 'chat' ? ('Conversa: ' + (s.chat_name || 'chat'))
+                      : s.type === 'show_chat' ? ('Mostrar na lista: ' + (s.chat_name || 'chat') + ' (sem mensagem)')
+                      : s.type === 'wait_interaction' ? 'Esperar 1ª interação do lead (a fila pausa aqui)'
                       : s.type === 'open_videos' ? 'Abrir aba de Vídeos'
                       : s.type === 'navigate' ? ('Levar pra ' + (s.product_name || s.chat_name || s.link_url || 'algo'))
                       : s.type === 'wait' ? 'Só espera'
@@ -14967,12 +14972,13 @@ window.updateStepFields = function() {
     const t = document.getElementById('stepType').value;
     const isMsg = (t === 'notification' || t === 'push');
     const isChat = (t === 'chat');
+    const isShow = (t === 'show_chat');
     const isNav = (t === 'navigate');
     document.getElementById('stepCallWrap').style.display = t === 'video_call' ? 'block' : 'none';
     document.getElementById('stepProductWrap').style.display = (t === 'open_product' || isNav) ? 'block' : 'none';
     document.getElementById('stepNotifWrap').style.display = isMsg ? 'block' : 'none';
-    document.getElementById('stepChatWrap').style.display = (isChat || isNav) ? 'block' : 'none';
-    // o campo "texto da notificação" só faz sentido pro tipo 'chat' (não pra navegar)
+    document.getElementById('stepChatWrap').style.display = (isChat || isShow || isNav) ? 'block' : 'none';
+    // o campo "texto da notificação" só faz sentido pro tipo 'chat' (não pra navegar/mostrar)
     const cmw = document.getElementById('stepChatMsgWrap'); if (cmw) cmw.style.display = isChat ? 'block' : 'none';
     document.getElementById('stepNavLinkWrap').style.display = isNav ? 'block' : 'none';
     // Popular dropdowns
@@ -14989,7 +14995,7 @@ window.updateStepFields = function() {
             const lsel = document.getElementById('stepLinkProductSelect'); if (lsel && isMsg) { const cur = lsel.value; lsel.innerHTML = '<option value="">— nenhum produto —</option>' + (data.products||[]).map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join(''); if (cur) lsel.value = cur; }
         });
     }
-    if (isChat || isNav) {
+    if (isChat || isShow || isNav) {
         fetch('/api/admin/chats', { credentials:'include' }).then(r => r.json()).then(data => {
             const sel = document.getElementById('stepChatSelect');
             const cur = sel.value;
@@ -15028,7 +15034,7 @@ function editStep(s) {
         if (s.video_call_id) document.getElementById('stepCallSelect').value = s.video_call_id;
         if (s.product_id && (s.type === 'open_product' || s.type === 'navigate')) document.getElementById('stepProductSelect').value = s.product_id;
         if (s.product_id && (s.type === 'notification' || s.type === 'push')) document.getElementById('stepLinkProductSelect').value = s.product_id;
-        if (s.chat_id && (s.type === 'chat' || s.type === 'navigate')) document.getElementById('stepChatSelect').value = s.chat_id;
+        if (s.chat_id && (s.type === 'chat' || s.type === 'show_chat' || s.type === 'navigate')) document.getElementById('stepChatSelect').value = s.chat_id;
     }, 300);
     document.getElementById('stepModalBackdrop').style.display = 'flex';
 }
@@ -15040,13 +15046,14 @@ async function saveStep(e) {
     const type = document.getElementById('stepType').value;
     const isMsg = (type === 'notification' || type === 'push');
     const isChat = (type === 'chat');
+    const isShow = (type === 'show_chat');
     const isNav = (type === 'navigate');
     if (isMsg && !document.getElementById('stepNotifTitle').value.trim()) {
         alert('Título é obrigatório pra notificação/push.');
         return false;
     }
-    if (isChat && !document.getElementById('stepChatSelect').value) {
-        alert('Escolha a conversa que vai iniciar.');
+    if ((isChat || isShow) && !document.getElementById('stepChatSelect').value) {
+        alert(isShow ? 'Escolha a conversa que vai aparecer na lista.' : 'Escolha a conversa que vai iniciar.');
         return false;
     }
     const payload = {
@@ -15057,7 +15064,7 @@ async function saveStep(e) {
                   : isNav ? (document.getElementById('stepProductSelect').value || null)
                   : isMsg ? (document.getElementById('stepLinkProductSelect').value || null)
                   : null,
-        chat_id: (isChat || isNav) ? (document.getElementById('stepChatSelect').value || null) : null,
+        chat_id: (isChat || isShow || isNav) ? (document.getElementById('stepChatSelect').value || null) : null,
         title: isMsg ? document.getElementById('stepNotifTitle').value.trim() : null,
         message: isMsg ? document.getElementById('stepNotifMsg').value.trim()
                : isChat ? (document.getElementById('stepChatMsg').value.trim() || null)

@@ -9370,7 +9370,10 @@ window.ChatApp = (function() {
         document.getElementById('caChoices').style.display = 'none';
         lastButtons = null;
         const { data } = await api('/api/user/chats/' + CUR.id + '/advance', { choice: i });
-        if (data.success) handleAdvance(data, true);
+        if (data.success) {
+            handleAdvance(data, true);
+            try { window.MVFunnelInteraction && MVFunnelInteraction(); } catch (_) {}
+        }
     }
 
     // Copy FIXA do popup de assinar (sem nome de modelo — o plano vale pra
@@ -9416,7 +9419,11 @@ window.ChatApp = (function() {
             openChatPaywall(data && data.unlock);
             return;
         }
-        if (data.success) { input.value = ''; handleAdvance(data, true); }
+        if (data.success) {
+            input.value = '';
+            handleAdvance(data, true);
+            try { window.MVFunnelInteraction && MVFunnelInteraction(); } catch (_) {}
+        }
     }
 
     function photo() {
@@ -16428,15 +16435,45 @@ window.tryTriggerCallAfterLogin = async function() {
                 }
                 const doneSet = new Set(saved.done || []);
                 const totalSteps = data.steps.length;
+                // Guard por página: quando a função roda de novo (ex.: a 1ª
+                // interação destravou a fila), não re-agenda o que já tem timer.
+                window._mvScheduledSteps = window._mvScheduledSteps || new Set();
+                const scheduled = window._mvScheduledSteps;
+                // Etapa 'Esperar interação': a fila PAUSA nela até o lead mandar
+                // a 1ª mensagem em qualquer conversa (MVFunnelInteraction). As
+                // etapas seguintes contam o delay a partir da interação.
+                const waitIdx = data.steps.findIndex(s => s.type === 'wait_interaction');
+                const waitCum = waitIdx >= 0 ? (Math.max(0, parseInt(data.steps[waitIdx].delay_seconds, 10) || 0) * 1000) : 0;
+                const interactedAt = saved.interactedAt || null;
                 let lateStagger = 400;
                 let pending = 0;
-                for (const step of data.steps) {
-                    if (doneSet.has(step.id)) continue;
+                for (let si = 0; si < data.steps.length; si++) {
+                    const step = data.steps[si];
+                    if (doneSet.has(step.id) || scheduled.has(step.id)) continue;
+                    if (waitIdx >= 0 && si === waitIdx) {
+                        if (interactedAt) {
+                            // interação já aconteceu: marca a espera como cumprida
+                            const cur = loadProgress() || saved;
+                            cur.done = Array.from(new Set([...(cur.done || []), step.id]));
+                            if (cur.done.length >= totalSteps) clearProgress(); else saveProgress(cur);
+                            doneSet.add(step.id);
+                            continue;
+                        }
+                        pending++; continue; // segura a fila até interagir
+                    }
+                    const afterWait = waitIdx >= 0 && si > waitIdx;
+                    if (afterWait && !interactedAt) { pending++; continue; } // aguardando interação
                     pending++;
-                    const dueAt = saved.startedAt + (Math.max(0, parseInt(step.delay_seconds, 10) || 0) * 1000);
+                    const delayMs = Math.max(0, parseInt(step.delay_seconds, 10) || 0) * 1000;
+                    // Após a espera: o delay acumulado desconta o trecho até a
+                    // espera e conta a partir do momento da interação.
+                    const dueAt = afterWait
+                        ? interactedAt + Math.max(0, delayMs - waitCum)
+                        : saved.startedAt + delayMs;
                     let wait = dueAt - Date.now();
                     if (wait <= 0) { wait = lateStagger; lateStagger += 1500; } // venceu offline: dispara já, escalonado
                     console.log('[funnel-trigger] step', step.id, step.type, 'em', Math.round(wait/1000), 's');
+                    scheduled.add(step.id);
                     setTimeout(() => {
                         executeFunnelStep(step, effectiveRef, email);
                         const cur = loadProgress() || saved;
@@ -16521,6 +16558,21 @@ function executeFunnelStep(step, funnelSlug, email) {
                     onClick: () => { if (window.ChatApp) ChatApp.open(cid); },
                 });
             }).catch(() => {});
+        } else if (step.type === 'show_chat' && step.chat_id) {
+            // Revela a conversa na LISTA (sem mensagem, sem notifica\u00e7\u00e3o, sem
+            // roteiro): o lead v\u00ea que ela existe e clica se quiser \u2014 a isca.
+            const cid = parseInt(step.chat_id, 10);
+            let vid = ''; try { vid = localStorage.getItem('mv_chat_visitor') || ''; } catch (_) {}
+            fetch('/api/user/chats/' + cid + '/reveal', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', body: JSON.stringify({ visitor_id: vid }),
+            }).then(() => {
+                // aba Conversas aberta \u2192 re-renderiza a lista na hora
+                try {
+                    const scr = document.getElementById('chat');
+                    if (scr && scr.classList.contains('active') && window.ChatApp) ChatApp.loadList();
+                } catch (_) {}
+            }).catch(() => {});
         } else if (step.type === 'notification') {
             // Notifica\u00e7\u00e3o in-app (banner estilo celular) com DESTINO ao clicar.
             const dest = step.link_url || (step.product_id ? '/?p=' + step.product_id : (step.chat_id ? '/?chat=' + step.chat_id : null));
@@ -16536,8 +16588,25 @@ function executeFunnelStep(step, funnelSlug, email) {
             }
         }
         // type === 'wait' \u2192 s\u00f3 o atraso, nenhuma a\u00e7\u00e3o
+        // type === 'wait_interaction' \u2192 tratado no agendador (pausa a fila)
     } catch(_) {}
 }
+
+// 1\u00aa intera\u00e7\u00e3o do lead (mandou mensagem ou clicou bot\u00e3o em qualquer conversa):
+// destrava a etapa 'Esperar intera\u00e7\u00e3o' do funil e reagenda o resto da fila,
+// com os delays contando a partir DESTE momento.
+window.MVFunnelInteraction = function() {
+    try {
+        const raw = localStorage.getItem('mv_funnel_progress');
+        if (!raw) return;
+        const cur = JSON.parse(raw);
+        if (!cur || cur.interactedAt) return;
+        cur.interactedAt = Date.now();
+        localStorage.setItem('mv_funnel_progress', JSON.stringify(cur));
+        console.log('[funnel-trigger] 1\u00aa intera\u00e7\u00e3o do lead \u2014 fila destravada');
+        if (typeof window.tryTriggerCallAfterLogin === 'function') window.tryTriggerCallAfterLogin();
+    } catch(_) {}
+};
 
 function showFunnelNotification(title, message, action) {
     const clickable = !!(action && (action.product_id || action.url));

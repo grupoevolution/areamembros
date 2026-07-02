@@ -415,9 +415,10 @@ router.get('/chats', optionalUser, async (req, res) => {
     try {
         const ident = getIdentity(req);
         // Lista os chats visíveis (listed=true) MAIS os ocultos que JÁ tiveram
-        // interação com este usuário (sessão com ≥1 mensagem) — assim um chat
-        // oculto só "aparece" depois que a conversa começou (mandou/recebeu msg),
-        // evitando poluir a aba com chats que o cliente nunca tocou.
+        // interação com este usuário (sessão com ≥1 mensagem) OU que foram
+        // REVELADOS pela etapa 'Mostrar conversa' do funil (revealed_at, sem
+        // mensagem/notificação) — assim um chat oculto só "aparece" quando o
+        // funil manda ou quando a conversa começou.
         const { rows: chats } = await db.query(
             `SELECT * FROM chats
              WHERE active = true AND (
@@ -426,7 +427,8 @@ router.get('/chats', optionalUser, async (req, res) => {
                     SELECT cs.chat_id FROM chat_sessions cs
                     WHERE ( ($1::text IS NOT NULL AND LOWER(cs.customer_email) = $1)
                          OR ($2::text IS NOT NULL AND cs.visitor_id = $2) )
-                      AND EXISTS (SELECT 1 FROM chat_messages cm WHERE cm.session_id = cs.id)
+                      AND ( cs.revealed_at IS NOT NULL
+                            OR EXISTS (SELECT 1 FROM chat_messages cm WHERE cm.session_id = cs.id) )
                 )
              )
              ORDER BY display_order, id`,
@@ -582,6 +584,27 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         });
     } catch (err) {
         logger.error('Erro abrindo chat:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// POST /chats/:id/reveal — torna a conversa VISÍVEL na lista deste lead
+// (etapa 'Mostrar conversa' do funil): cria a sessão vazia com revealed_at,
+// SEM mensagem, SEM notificação e SEM rodar o roteiro. O roteiro só roda
+// quando o lead abrir a conversa por vontade própria.
+router.post('/chats/:id/reveal', optionalUser, async (req, res) => {
+    const chatId = parseInt(req.params.id, 10);
+    if (!chatId) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const ident = getIdentity(req);
+        if (!ident.email && !ident.visitor) return res.status(400).json({ success: false, error: 'visitor_id obrigatório' });
+        const { rows: cr } = await db.query(`SELECT id FROM chats WHERE id = $1 AND active = true`, [chatId]);
+        if (!cr.length) return res.status(404).json({ success: false, error: 'Chat não encontrado' });
+        const session = await findOrCreateSession(chatId, ident, true);
+        await db.query(`UPDATE chat_sessions SET revealed_at = COALESCE(revealed_at, NOW()) WHERE id = $1`, [session.id]);
+        return res.json({ success: true });
+    } catch (err) {
+        logger.error('Erro revelando chat:', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
     }
 });
