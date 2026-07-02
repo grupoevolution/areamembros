@@ -8999,12 +8999,14 @@ window.ChatApp = (function() {
         const unlock = c.unlock || {};
         if (window.MVPaywall) {
             // Copy fixa (sem nome): o plano libera TODAS as conversas VIP.
+            try { window.TRACK && TRACK.event('chat_paywall_open', { chat_id: id, ctx: 'list' }); } catch (_) {}
             MVPaywall.openModal(unlock, {
                 icon: 'lock',
                 eyebrow: 'ACESSO EXCLUSIVO',
                 title: 'Conversa VIP 🔥',
                 subtitle: 'Libere o acesso e converse sem limite com todas as mulheres online.',
                 ctaText: 'QUERO SER VIP',
+                track: { type: 'chat_paywall_click', meta: { chat_id: id } },
             });
         } else {
             open(id);
@@ -9099,11 +9101,13 @@ window.ChatApp = (function() {
             // Banner VIP rico (planos do produto vinculado) — print "Conversa VIP"
             if (window.MVPaywall) {
                 // Copy fixa (sem nome): o plano libera TODAS as conversas VIP.
+                try { window.TRACK && TRACK.event('chat_paywall_open', { chat_id: id, ctx: 'open' }); } catch (_) {}
                 MVPaywall.renderInline(lk, data.permissions.unlock || {}, {
                     icon: 'lock',
                     title: 'Conversa VIP 🔥',
                     subtitle: 'Libere o acesso e converse sem limite com todas as mulheres online.',
                     ctaText: 'QUERO SER VIP',
+                    track: { type: 'chat_paywall_click', meta: { chat_id: id } },
                 });
             } else {
                 document.getElementById('caLockedName').textContent = 'Conversa exclusiva';
@@ -9381,12 +9385,15 @@ window.ChatApp = (function() {
     function openChatPaywall(unlock, subtitle) {
         const u = unlock || (CUR && CUR.perm && CUR.perm.unlock) || {};
         if (!window.MVPaywall) { vipToast(); return; }
+        const cid = (CUR && CUR.id) || null;
+        try { window.TRACK && TRACK.event('chat_paywall_open', { chat_id: cid, ctx: 'send' }); } catch (_) {}
         MVPaywall.openModal(u, {
             icon: 'lock',
             eyebrow: 'ACESSO EXCLUSIVO',
             title: 'Conversa VIP 🔥',
             subtitle: subtitle || 'Libere o acesso e converse sem limite com todas as mulheres online.',
             ctaText: 'QUERO SER VIP',
+            track: { type: 'chat_paywall_click', meta: { chat_id: cid } },
         });
     }
 
@@ -17923,7 +17930,15 @@ window.MVPaywall = (function () {
         }
     }
     function wire(root, unlock, opts) {
-        root.querySelectorAll('[data-mv-buy]').forEach(b => b.addEventListener('click', () => checkout(unlock, b.dataset.url || '')));
+        root.querySelectorAll('[data-mv-buy]').forEach(b => b.addEventListener('click', () => {
+            // métrica: clique num plano do paywall (opts.track = {type, meta})
+            try {
+                if (window.TRACK && opts && opts.track && opts.track.type) {
+                    TRACK.event(opts.track.type, Object.assign({ url: b.dataset.url || '' }, opts.track.meta || {}));
+                }
+            } catch (_) {}
+            checkout(unlock, b.dataset.url || '');
+        }));
         const c = root.querySelector('[data-mv-close]');
         if (c) c.addEventListener('click', () => { if (opts && typeof opts.onClose === 'function') opts.onClose(); else close(); });
     }
