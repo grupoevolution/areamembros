@@ -352,19 +352,6 @@ app.get('/f/:slug', async (req, res) => {
     res.sendFile(path.join(__dirname, 'public/app.html'));
 });
 
-// Rota "modo anúncio" — /ir/:slug (mantida como ALIAS dos anúncios já no ar).
-// IMPORTANTE: NÃO força mais abrir o Chrome via intent:// na landing. Esse redirect
-// forçado/automático (no 1º toque ou em 6s) era o que o crawler do Meta detectava
-// como "browser breakout" e punia bloqueando as contas de anúncio. Agora é só um
-// redirect simples pro funil /f/:slug. O passo de abrir no navegador externo (pra
-// instalar o PWA) acontece DENTRO do funil, DEPOIS do lead digitar o e-mail e tocar
-// num botão (gesto consciente) — em conformidade com as regras do Meta.
-app.get('/ir/:slug', (req, res) => {
-    const slug = String(req.params.slug || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 80);
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.redirect(302, '/f/' + slug);
-});
-
 // /app mantido como alias (compatibilidade com links antigos)
 app.get('/app', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
