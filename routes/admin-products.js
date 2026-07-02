@@ -94,6 +94,7 @@ router.get('/', requireAdmin, async (req, res) => {
                    ) as active_access_count
             FROM products p
             LEFT JOIN categories c ON c.id = p.category_id
+            WHERE COALESCE(p.is_chat_plan, false) = false
             ORDER BY p.display_order, p.created_at DESC
         `);
         

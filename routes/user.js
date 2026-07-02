@@ -865,6 +865,9 @@ router.get('/library', requireUser, async (req, res) => {
             WHERE LOWER(ua.email) = $1
               AND ua.status = 'active'
               AND p.is_active = true
+              -- Assinatura do Chat (produto interno do paywall): não vira card
+              -- na biblioteca — o "produto" dela é o próprio chat destravado.
+              AND COALESCE(p.is_chat_plan, false) = false
         `, [email, activeGateway]);
 
         // ──────────────────────────────────────────────────────────

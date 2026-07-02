@@ -75,6 +75,36 @@ async function ownsProduct(email, productId) {
     } catch (_) { return false; }
 }
 
+// ── Produto ÚNICO do chat ("Assinatura do Chat") ─────────────────────────────
+// Um produto oculto do catálogo (products.is_chat_plan = true) vale pra TODAS
+// as conversas: chats VIP e o bloco 🔒 Paywall do roteiro apontam pra ele por
+// padrão. Comprou qualquer plano dele (webhook grava em user_access) = destrava
+// tudo. O product_id por chat continua valendo como OVERRIDE opcional.
+let _chatPlanCache = { id: null, at: 0 };
+async function chatPlanProductId() {
+    if (Date.now() - _chatPlanCache.at < 60000) return _chatPlanCache.id;
+    try {
+        const { rows } = await db.query(
+            `SELECT id FROM products WHERE is_chat_plan = true AND is_active = true ORDER BY id LIMIT 1`
+        );
+        _chatPlanCache = { id: rows.length ? rows[0].id : null, at: Date.now() };
+    } catch (_) { _chatPlanCache = { id: null, at: Date.now() }; }
+    return _chatPlanCache.id;
+}
+// Produto efetivo de desbloqueio de um chat: o override do chat, senão o único.
+async function chatUnlockProductId(chat) {
+    return (chat && chat.product_id) || (await chatPlanProductId());
+}
+// O cliente é "VIP do chat"? Tem o produto do chat (override OU único).
+async function ownsChatVip(email, chat) {
+    if (!email) return false;
+    if (chat && chat.product_id && await ownsProduct(email, chat.product_id)) return true;
+    const globalId = await chatPlanProductId();
+    if (globalId && globalId !== (chat && chat.product_id)) return ownsProduct(email, globalId);
+    // sem produto nenhum configurado: cai no ownsProduct (que já trata preview)
+    return ownsProduct(email, (chat && chat.product_id) || null);
+}
+
 // Monta a info de desbloqueio (produto + planos) usada nos paywalls VIP
 // (conversa, stories). O frontend renderiza o banner com o nome/preço/planos.
 async function loadUnlock(productId, checkoutUrl) {
@@ -252,6 +282,24 @@ async function runScript(session, chat, steps, idx, ident) {
             awaiting = 'input';
             break;
         }
+        if (s.type === 'paywall') {
+            // 🔒 Ponto de paywall: VIP passa direto; sem assinatura o roteiro PARA
+            // aqui — a barra de digitar continua ativa, mas o envio "não entrega"
+            // (403 vip_required) e o app mostra o popup de assinar. Ao comprar e
+            // reabrir, o /open retoma DESTE bloco (que aí pula pra frente).
+            const vip = await ownsChatVip(ident.email, chat);
+            if (vip) { idx = idx + 1; continue; }
+            await db.query(
+                `UPDATE chat_sessions SET current_order = $2, awaiting = 'paywall',
+                 paywalled_at = COALESCE(paywalled_at, NOW()), current_flow = $3, updated_at = NOW()
+                 WHERE id = $1`,
+                [session.id, idx, session.current_flow || 'open']
+            );
+            session.current_order = idx;
+            session.awaiting = 'paywall';
+            if (!session.paywalled_at) session.paywalled_at = new Date();
+            return out;
+        }
         if (s.type === 'delay') {
             // PAUSA o roteiro: marca quando retomar. O worker (app fechado) ou
             // o poll (app aberto) seguem a partir do PRÓXIMO bloco no horário.
@@ -386,10 +434,10 @@ router.get('/chats', optionalUser, async (req, res) => {
         );
         const out = [];
         for (const c of chats) {
-            const owns = await ownsProduct(ident.email, c.product_id);
+            const owns = await ownsChatVip(ident.email, c);
             const perm = permissions(c, owns, ident);
             // enriquece o desbloqueio com produto + planos (banner VIP rico)
-            if (perm.locked) perm.unlock = await loadUnlock(c.product_id, c.checkout_url);
+            if (perm.locked) perm.unlock = await loadUnlock(await chatUnlockProductId(c), c.checkout_url);
             // motor de conversas: agenda a 1ª mensagem sozinha (auto_start_minutes)
             await ensureAutoStart(c, ident);
             // preview da última mensagem + não-lidas (bot, após last_seen_at)
@@ -454,10 +502,10 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
         if (!cr.length) return res.status(404).json({ success: false, error: 'Chat não encontrado' });
         const chat = cr[0];
-        const owns = await ownsProduct(ident.email, chat.product_id);
+        const owns = await ownsChatVip(ident.email, chat);
         const perm = permissions(chat, owns, ident);
         // enriquece o desbloqueio com produto + planos (banner VIP rico)
-        if (perm.locked) perm.unlock = await loadUnlock(chat.product_id, chat.checkout_url);
+        if (perm.locked) perm.unlock = await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url);
 
         const callPayload = await loadChatCall(chat.call_video_call_id);
         const persona = {
@@ -506,6 +554,13 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
                 const steps = await loadSteps(chatId, session.current_flow || 'open');
                 fresh = await runScript(session, chat, steps, session.current_order, ident);
             }
+        } else if (session.awaiting === 'paywall' && owns) {
+            // Assinou e voltou: destrava e retoma do próprio bloco paywall
+            // (que agora deixa passar, por ser VIP).
+            await db.query(`UPDATE chat_sessions SET paywalled_at = NULL WHERE id = $1`, [session.id]);
+            session.paywalled_at = null;
+            const steps = await loadSteps(chatId, session.current_flow || 'open');
+            fresh = await runScript(session, chat, steps, session.current_order, ident);
         }
         const all = history.concat(fresh).map(publicMsg);
         // histórico antigo não "re-digita": typing só nas mensagens novas
@@ -544,7 +599,7 @@ router.post('/chats/:id/start', optionalUser, async (req, res) => {
         const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
         if (!cr.length) return res.status(404).json({ success: false, error: 'Chat não encontrado' });
         const chat = cr[0];
-        const owns = await ownsProduct(ident.email, chat.product_id);
+        const owns = await ownsChatVip(ident.email, chat);
         const perm = permissions(chat, owns, ident);
         const info = { id: chat.id, name: chat.name, avatar_url: chat.avatar_url || null };
         // Chat bloqueado (VIP sem acesso): não cria sessão nem roda roteiro.
@@ -582,9 +637,14 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
         const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
         if (!cr.length) return res.status(404).json({ success: false, error: 'Chat não encontrado' });
         const chat = cr[0];
-        const owns = await ownsProduct(ident.email, chat.product_id);
+        const owns = await ownsChatVip(ident.email, chat);
         const perm = permissions(chat, owns, ident);
-        if (perm.locked) return res.status(403).json({ success: false, error: 'vip_required' });
+        if (perm.locked) {
+            return res.status(403).json({
+                success: false, error: 'vip_required',
+                unlock: await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url),
+            });
+        }
 
         const session = await findOrCreateSession(chatId, ident, true);
         await ensureSessionGeo(session, req);
@@ -642,9 +702,16 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
             const fresh = await runScript(session, chat, steps, nextIdx, ident);
             newMsgs.push(...fresh);
         } else if (text) {
-            // Mensagem LIVRE (fora do roteiro) — aqui mora o gate VIP do enviar
-            if (!perm.can_reply) {
-                return res.status(403).json({ success: false, error: 'vip_required' });
+            // Mensagem LIVRE (fora do roteiro) — aqui mora o gate VIP do enviar.
+            // Depois do bloco 🔒 Paywall (paywalled_at), digitar SEM assinatura
+            // devolve vip_required + unlock: o app mostra a bolha "não entregue"
+            // e reabre o popup de assinar.
+            const paywalled = (session.awaiting === 'paywall' || session.paywalled_at) && !perm.is_vip;
+            if (paywalled || !perm.can_reply) {
+                return res.status(403).json({
+                    success: false, error: 'vip_required',
+                    unlock: await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url),
+                });
             }
             newMsgs.push(await insertMsg(session.id, 'user', 'text', text, null, null, null));
         } else {
@@ -784,7 +851,7 @@ router.post('/chats/:id/photo', optionalUser, (req, res) => {
             const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
             if (!cr.length) return res.status(404).json({ success: false, error: 'Chat não encontrado' });
             const chat = cr[0];
-            const owns = await ownsProduct(ident.email, chat.product_id);
+            const owns = await ownsChatVip(ident.email, chat);
             const perm = permissions(chat, owns, ident);
             if (!perm.can_photo) return res.status(403).json({ success: false, error: 'vip_required' });
 

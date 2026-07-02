@@ -5655,6 +5655,10 @@ a { color: inherit; text-decoration: none; }
                         <button class="btn-primary" onclick="openChatModal()">+ Novo Chat</button>
                     </div>
                 </div>
+                <!-- PRODUTO ÚNICO DO CHAT: o popup VIP/PREMIUM de TODAS as conversas -->
+                <div id="chatPaywallCard" style="margin-top:20px; background:linear-gradient(135deg, rgba(229,9,20,.10), rgba(0,0,0,.25)); border:1px solid rgba(229,9,20,.35); border-radius:14px; padding:16px 18px;">
+                    <div style="color:rgba(255,255,255,.5); font-size:12px;">Carregando produto do chat…</div>
+                </div>
                 <div id="adminChatsList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:24px;">
                     <div style="color:rgba(255,255,255,.5)">Carregando...</div>
                 </div>
@@ -6025,6 +6029,7 @@ a { color: inherit; text-decoration: none; }
                                         <option value="delay">⏱ Esperar (tempo) — manda depois</option>
                                         <option value="call">📹 Ela liga pra ele (chamada recebida)</option>
                                         <option value="cta">💳 Botão de oferta (link)</option>
+                                        <option value="paywall">🔒 Paywall (digitar passa a exigir assinatura)</option>
                                     </select>
                                 </div>
                                 <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Ordem</label><input class="form-control" type="number" id="csOrder" min="0" max="999" value="0" style="width:100%;"/></div>
@@ -15192,7 +15197,44 @@ async function applyFunnelStats() {
 // ═══════════════ CHATS (estilo WhatsApp) ═══════════════
 let _curChatId = null;
 
+// ── Produto ÚNICO do chat (paywall VIP/PREMIUM de todas as conversas) ────────
+// O GET já cria o produto (com 2 planos padrão) na 1ª vez. A edição completa
+// (preços, benefícios, links de checkout, ofertas de gateway) usa o editor de
+// produto normal — o produto fica OCULTO do catálogo e das listas.
+async function loadChatPaywallCard() {
+    const box = document.getElementById('chatPaywallCard');
+    if (!box) return;
+    try {
+        const r = await fetch('/api/admin/chats/paywall-product', { credentials:'include' });
+        const d = await r.json();
+        if (!d.success) { box.innerHTML = '<div style="color:#f55">'+(d.error||'erro')+'</div>'; return; }
+        const plans = d.plans || [];
+        const fmt = v => (v == null || v === '') ? '—' : 'R$ ' + Number(v).toFixed(2).replace('.', ',');
+        const plansHtml = plans.map(p =>
+            '<div style="background:rgba(0,0,0,.3);border:1px solid '+(p.is_recommended?'rgba(229,9,20,.45)':'rgba(255,255,255,.08)')+';border-radius:10px;padding:10px 14px;min-width:150px;">'
+            + '<div style="font-size:11px;font-weight:700;color:'+(p.is_recommended?'#e50914':'#fff')+';">'+escHtmlAdmin(p.name)+(p.is_recommended?' · MAIS ESCOLHIDO':'')+'</div>'
+            + '<div style="font-size:16px;font-weight:800;color:#fff;">'+fmt(p.price)+'<span style="font-size:10px;color:rgba(255,255,255,.5);font-weight:400;"> /mês</span></div>'
+            + '<div style="font-size:10.5px;color:'+(p.checkout_url?'#4CD964':'#f5a623')+';margin-top:3px;">'+(p.checkout_url?'✓ link de checkout ok':'⚠ sem link de checkout')+'</div>'
+            + '</div>').join('');
+        const offersWarn = d.offers_count > 0
+            ? '<span style="color:#4CD964;">✓ '+d.offers_count+' oferta(s) de gateway — a compra libera as conversas sozinha via webhook</span>'
+            : '<span style="color:#f5a623;">⚠ Sem oferta de gateway cadastrada — cadastre o código da oferta (Kirvano/PerfectPay) pro webhook liberar o acesso automaticamente</span>';
+        box.innerHTML =
+            '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">'
+            + '<div style="flex:1;min-width:240px;">'
+            +   '<div style="font-weight:800;color:#fff;font-size:14px;">💎 Assinatura do Chat — paywall de TODAS as conversas</div>'
+            +   '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:4px;line-height:1.5;">Produto interno (fora do catálogo). É o popup que aparece quando o lead tenta abrir uma conversa VIP ou continuar digitando depois do bloco 🔒 Paywall do roteiro. Qualquer plano comprado libera todas as conversas.</div>'
+            +   '<div style="font-size:11px;margin-top:6px;">'+offersWarn+'</div>'
+            + '</div>'
+            + '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">'+plansHtml
+            +   '<button class="btn-primary" style="white-space:nowrap;" onclick="editProduct('+d.product.id+')">Editar planos & checkout</button>'
+            + '</div>'
+            + '</div>';
+    } catch(e) { box.innerHTML = '<div style="color:#f55">Erro: '+e.message+'</div>'; }
+}
+
 async function loadAdminChats() {
+    loadChatPaywallCard();
     const list = document.getElementById('adminChatsList');
     if (!list) return;
     try {
@@ -15448,6 +15490,7 @@ const CHAT_STEP_LABELS = {
     text: '💬 Texto', audio: '🎤 Áudio', image: '📷 Foto', video: '🎬 Vídeo',
     view_once_image: '👁 Foto 1x', view_once_video: '🎬 Vídeo 1x',
     buttons: '🔘 Botões', wait_input: '⌨️ Liberar resposta', delay: '⏱ Espera (tempo)', call: '📹 Ela liga', cta: '💳 Oferta',
+    paywall: '🔒 Paywall',
 };
 // Formata segundos em "10 min", "2 h", "30 s"
 function fmtDelay(secs) {
@@ -16065,6 +16108,7 @@ const CB_PALETTE = [
         { type: 'delay', ic: '⏱', c: '#b08a4a', nm: 'Esperar', ds: 'manda depois' },
         { type: 'call', ic: '📹', c: '#1fa855', nm: 'Ela liga', ds: 'chamada recebida' },
         { type: 'cta', ic: '💳', c: '#e50914', nm: 'Oferta', ds: 'botão de link' },
+        { type: 'paywall', ic: '🔒', c: '#e50914', nm: 'Paywall', ds: 'digitar exige assinar' },
     ]},
 ];
 function cbApply() {
@@ -16144,6 +16188,7 @@ function cbBubbleMeta(s) {
         delay: { ic: '⏱', c: '#b08a4a', l1: 'Aguardar ' + fmtDelay(s.delay_seconds), l2: 'manda o próximo depois' },
         call: { ic: '📹', c: '#1fa855', l1: 'Ela liga', l2: s.content || 'chamada recebida' },
         cta: { ic: '💳', c: '#e50914', l1: 'Oferta', l2: s.content || s.link_url || '' },
+        paywall: { ic: '🔒', c: '#e50914', l1: 'Paywall', l2: 'roteiro para; digitar vira "não entregue" + popup' },
     }[s.type] || { ic: '•', c: '#888', l1: s.type, l2: s.content || '' };
     return m;
 }

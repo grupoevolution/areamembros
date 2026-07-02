@@ -8163,6 +8163,10 @@ body.is-slowconn .prod-cta-fixed {
 .ca-bub .tm2 { font-size: 9.5px; color: #999; text-align: right; margin-top: 2px; display: flex; align-items: center; justify-content: flex-end; gap: 3px; }
 .ca-bub .tm2 .ticks { display: inline-flex; align-items: center; }
 .ca-bub img.photo { max-width: 100%; border-radius: 8px; display: block; }
+/* Mensagem NÃO ENTREGUE (paywall): aviso vermelho; tocar reabre o popup de assinar */
+.ca-bub.failed { cursor: pointer; }
+.ca-bub.failed .tm2 { color: #e50914; }
+.ca-failed-tag { font-size: 10.5px; color: #e50914; margin-top: 3px; font-weight: 600; }
 .ca-typing { align-self: flex-start; background: #fff; border-radius: 0 10px 10px 10px; padding: 12px 14px; box-shadow: 0 1px 1px rgba(0,0,0,.08); }
 .ca-typing i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #b5aea8; margin-right: 3px; animation: caTp 1.2s infinite; }
 .ca-typing i:nth-child(2) { animation-delay: .2s; } .ca-typing i:nth-child(3) { animation-delay: .4s; margin-right: 0; }
@@ -8994,11 +8998,12 @@ window.ChatApp = (function() {
         if (!c) { open(id); return; }
         const unlock = c.unlock || {};
         if (window.MVPaywall) {
+            // Copy fixa (sem nome): o plano libera TODAS as conversas VIP.
             MVPaywall.openModal(unlock, {
                 icon: 'lock',
                 eyebrow: 'ACESSO EXCLUSIVO',
                 title: 'Conversa VIP 🔥',
-                subtitle: 'Pra falar com ' + c.name + ' vira VIP. Libere o acesso e converse sem limite.',
+                subtitle: 'Libere o acesso e converse sem limite com todas as mulheres online.',
                 ctaText: 'QUERO SER VIP',
             });
         } else {
@@ -9093,14 +9098,15 @@ window.ChatApp = (function() {
             lk.style.display = 'flex';
             // Banner VIP rico (planos do produto vinculado) — print "Conversa VIP"
             if (window.MVPaywall) {
+                // Copy fixa (sem nome): o plano libera TODAS as conversas VIP.
                 MVPaywall.renderInline(lk, data.permissions.unlock || {}, {
                     icon: 'lock',
                     title: 'Conversa VIP 🔥',
-                    subtitle: 'Pra falar com ' + data.chat.name + ' vira VIP. Libere o acesso e converse sem limite.',
+                    subtitle: 'Libere o acesso e converse sem limite com todas as mulheres online.',
                     ctaText: 'QUERO SER VIP',
                 });
             } else {
-                document.getElementById('caLockedName').textContent = 'Conversa exclusiva com ' + data.chat.name;
+                document.getElementById('caLockedName').textContent = 'Conversa exclusiva';
             }
             return;
         }
@@ -9179,7 +9185,9 @@ window.ChatApp = (function() {
             return;
         }
         const mode = (CUR.chat && CUR.chat.input_mode) || 'always';
-        const canType = (mode !== 'gated') || aw === 'input' || (aw === 'buttons' && CUR.lastButtonsAllowInput);
+        // 'paywall': a barra fica ATIVA de propósito — o lead digita, a mensagem
+        // "não entrega" e o popup de assinar reaparece (investimento emocional).
+        const canType = (mode !== 'gated') || aw === 'input' || aw === 'paywall' || (aw === 'buttons' && CUR.lastButtonsAllowInput);
         if (canType) {
             // libera o input; esconde a barra de status
             bar.style.display = 'flex';
@@ -9365,13 +9373,49 @@ window.ChatApp = (function() {
         if (data.success) handleAdvance(data, true);
     }
 
+    // Copy FIXA do popup de assinar (sem nome de modelo — o plano vale pra
+    // TODAS as conversas). O unlock (planos/preços) vem do produto único do chat.
+    function openChatPaywall(unlock, subtitle) {
+        const u = unlock || (CUR && CUR.perm && CUR.perm.unlock) || {};
+        if (!window.MVPaywall) { vipToast(); return; }
+        MVPaywall.openModal(u, {
+            icon: 'lock',
+            eyebrow: 'ACESSO EXCLUSIVO',
+            title: 'Conversa VIP 🔥',
+            subtitle: subtitle || 'Libere o acesso e converse sem limite com todas as mulheres online.',
+            ctaText: 'QUERO SER VIP',
+        });
+    }
+
+    // Bolha do lead que NÃO foi entregue (paywall): fica no chat com o aviso
+    // vermelho estilo WhatsApp; tocar nela reabre o popup de assinar.
+    function renderFailedMsg(text, unlock) {
+        const body = document.getElementById('caBody');
+        if (!body) return;
+        const d = document.createElement('div');
+        d.className = 'ca-bub mine failed';
+        d.innerHTML = '<div class="tx">' + esc(text) + '</div>'
+            + '<div class="tm2">' + hhmm(new Date()) + ' <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e50914" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></div>'
+            + '<div class="ca-failed-tag">⚠️ Não entregue — assine pra liberar</div>';
+        d.addEventListener('click', () => openChatPaywall(unlock));
+        body.appendChild(d);
+        scrollChatToBottom();
+    }
+
     async function send() {
         if (!CUR) return;
         const input = document.getElementById('caInput');
         const text = input.value.trim();
         if (!text) { input.focus(); return; }
         const { status, data } = await api('/api/user/chats/' + CUR.id + '/advance', { text });
-        if (status === 403 || (data && data.error === 'vip_required')) { vipToast(); return; }
+        if (status === 403 || (data && data.error === 'vip_required')) {
+            // Paywall: mensagem vira "não entregue" e o popup de assinar abre —
+            // o lead já investiu digitando, agora encontra a parede.
+            input.value = '';
+            renderFailedMsg(text, data && data.unlock);
+            openChatPaywall(data && data.unlock);
+            return;
+        }
         if (data.success) { input.value = ''; handleAdvance(data, true); }
     }
 

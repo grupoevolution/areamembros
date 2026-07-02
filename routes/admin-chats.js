@@ -15,7 +15,7 @@ const db = require('../db');
 const { requireAdmin } = require('../lib/auth');
 const { logger } = require('../lib/logger');
 
-const STEP_TYPES = ['text', 'audio', 'image', 'video', 'view_once_image', 'view_once_video', 'buttons', 'wait_input', 'cta', 'delay', 'call'];
+const STEP_TYPES = ['text', 'audio', 'image', 'video', 'view_once_image', 'view_once_video', 'buttons', 'wait_input', 'cta', 'delay', 'call', 'paywall'];
 const REPLY_MODES = ['vip', 'all', 'none'];
 const INPUT_MODES = ['always', 'gated'];
 // Fluxos por gatilho (cada modelo tem um roteiro independente por fluxo)
@@ -38,6 +38,49 @@ router.get('/', requireAdmin, async (req, res) => {
         return res.json({ success: true, chats: rows });
     } catch (err) {
         logger.error('Erro listando chats:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// ── PRODUTO ÚNICO DO CHAT ("Assinatura do Chat") ─────────────────────────────
+// Produto oculto do catálogo (is_chat_plan=true) que vale pra TODAS as
+// conversas: chats VIP e o bloco 🔒 Paywall apontam pra ele por padrão.
+// GET garante que ele existe (cria com os 2 planos padrão na 1ª vez) e devolve
+// o resumo pro painel — a edição completa (planos/ofertas) usa o editor de
+// produto normal, via id retornado aqui.
+router.get('/paywall-product', requireAdmin, async (req, res) => {
+    try {
+        let { rows } = await db.query(
+            `SELECT id, name, is_active FROM products WHERE is_chat_plan = true ORDER BY id LIMIT 1`
+        );
+        if (!rows.length) {
+            const { rows: created } = await db.query(
+                `INSERT INTO products (name, description, is_published, is_active, is_chat_plan, price)
+                 VALUES ($1, $2, false, true, true, 29.90) RETURNING id, name, is_active`,
+                ['Assinatura do Chat 🔥',
+                 'Produto interno do paywall das conversas — NÃO aparece no catálogo nem na biblioteca. Configure aqui os planos (VIP/PREMIUM) e as ofertas de checkout: qualquer plano comprado libera todas as conversas VIP.']
+            );
+            rows = created;
+            await db.query(
+                `INSERT INTO product_plans (product_id, name, price, original_price, benefits, is_recommended, display_order)
+                 VALUES ($1, 'VIP', 29.90, 49.90, $2, false, 0),
+                        ($1, 'PREMIUM', 49.90, 97.90, $3, true, 1)`,
+                [rows[0].id,
+                 'Converse sem limite com todas as modelos\nFotos e vídeos exclusivos no chat\nRespostas prioritárias',
+                 'Tudo do VIP\nStories VIP liberados\nConteúdos exclusivos toda semana']
+            );
+            logger.info(`Produto único do chat criado (id ${rows[0].id})`);
+        }
+        const { rows: plans } = await db.query(
+            `SELECT id, name, price, original_price, benefits, checkout_url, is_recommended, active
+             FROM product_plans WHERE product_id = $1 ORDER BY display_order, id`, [rows[0].id]
+        );
+        const { rows: [{ n: offersCount }] } = await db.query(
+            `SELECT COUNT(*)::int AS n FROM product_offers WHERE product_id = $1 AND is_active = true`, [rows[0].id]
+        );
+        return res.json({ success: true, product: rows[0], plans, offers_count: offersCount });
+    } catch (err) {
+        logger.error('Erro no produto do chat (paywall):', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
     }
 });
