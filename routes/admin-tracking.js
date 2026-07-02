@@ -109,9 +109,18 @@ router.get('/funnel-analytics', requireAdmin, async (req, res) => {
     const A = winStart(from), B = winEnd(to);
     const hasCmp = isDate(req.query.cmp_from) && isDate(req.query.cmp_to);
     try {
-        const [totals, compare, byFunnel, byDay, purchasesByDay, byHour, byChat] = await Promise.all([
+        const [totals, compare, cmpByDay, byFunnel, byDay, purchasesByDay, byHour, byChat] = await Promise.all([
             periodStats(A, B),
             hasCmp ? periodStats(winStart(req.query.cmp_from), winEnd(req.query.cmp_to)) : Promise.resolve(null),
+            // série diária do período COMPARADO (linha tracejada no gráfico)
+            hasCmp ? db.query(`
+                SELECT to_char((visited_at - INTERVAL '3 hours')::date, 'YYYY-MM-DD') AS day,
+                       COUNT(*)::int AS clicks,
+                       COUNT(*) FILTER (WHERE converted)::int AS emails
+                FROM funnel_visits
+                WHERE visited_at >= $1::timestamptz AND visited_at < ($2::timestamptz + INTERVAL '1 day')
+                GROUP BY 1 ORDER BY 1
+            `, [winStart(req.query.cmp_from), winEnd(req.query.cmp_to)]) : Promise.resolve({ rows: [] }),
             db.query(`
                 SELECT v.funnel_slug AS slug, COALESCE(f.name, v.funnel_slug) AS name,
                        COUNT(*)::int AS clicks,
@@ -198,6 +207,7 @@ router.get('/funnel-analytics', requireAdmin, async (req, res) => {
             cmp_to: hasCmp ? req.query.cmp_to : null,
             by_funnel: byFunnel.rows,
             by_day: byDayMerged,
+            cmp_by_day: cmpByDay.rows,
             by_hour: byHour.rows,
             by_chat: byChat.rows,
             // compat: o card antigo de etapas lia d.steps

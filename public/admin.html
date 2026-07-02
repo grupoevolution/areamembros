@@ -14664,6 +14664,7 @@ async function loadFunnels() {
                 +     '<button class="btn-secondary" style="flex:1;min-width:70px" onclick=\'openFunnelMetrics('+f.id+', '+JSON.stringify(f.name||'').replace(/'/g,"&#39;")+')\'>📊 Métricas</button>'
                 +     '<button class="btn-secondary" style="flex:1;min-width:70px" onclick=\'editFunnel('+JSON.stringify(f).replace(/'/g,"&#39;")+')\'>Editar</button>'
                 +     '<button class="btn-secondary" style="flex:1;min-width:70px" onclick="toggleFunnel('+f.id+')">'+(f.active?'Desativar':'Ativar')+'</button>'
+                +     '<button class="btn-secondary" style="flex:1;min-width:70px" onclick="duplicateFunnel('+f.id+')">⧉ Duplicar</button>'
                 +     '<button class="btn-danger" style="flex:1;min-width:70px" onclick="deleteFunnel('+f.id+')">Excluir</button>'
                 +   '</div>'
                 + '</div>'
@@ -14732,6 +14733,17 @@ function openFunnelModal() {
     document.getElementById('funnelModalBackdrop').style.display = 'flex';
 }
 function closeFunnelModal() { document.getElementById('funnelModalBackdrop').style.display = 'none'; }
+
+// Duplica o funil inteiro (config + etapas). A cópia nasce INATIVA com slug -copia.
+async function duplicateFunnel(id) {
+    if (!confirm('Duplicar este funil com todas as etapas? A cópia nasce INATIVA (ative depois de ajustar).')) return;
+    try {
+        const r = await fetch('/api/admin/funnels/' + id + '/duplicate', { method: 'POST', credentials: 'include' });
+        const d = await r.json();
+        if (!d.success) { alert('Erro: ' + (d.error || '')); return; }
+        loadFunnels();
+    } catch (e) { alert('Erro: ' + e.message); }
+}
 // Métricas do funil: os modais antigos morreram — tudo vive na tela "Análises"
 // (menu lateral), que tem período, comparação, gráficos e análise por chat.
 function openFunnelMetrics() {
@@ -15129,6 +15141,7 @@ async function loadAdminChats() {
                 + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
                 +   '<button class="btn-secondary" style="flex:1;min-width:70px" onclick=\'editChatPersona('+JSON.stringify(c).replace(/'/g,"&#39;")+')\'>Editar</button>'
                 +   '<button class="btn-secondary" style="flex:1;min-width:70px" onclick="toggleChatPersona('+c.id+', '+(!c.active)+')">'+(c.active?'Desativar':'Ativar')+'</button>'
+                +   '<button class="btn-secondary" style="flex:1;min-width:70px" onclick="duplicateChatPersona('+c.id+')">⧉ Duplicar</button>'
                 +   '<button class="btn-danger" style="flex:1;min-width:70px" onclick="deleteChatPersona('+c.id+')">Excluir</button>'
                 + '</div></div>';
         }).join('');
@@ -15349,6 +15362,17 @@ async function deleteChatPersona(id) {
     if (!confirm('Excluir este chat? O roteiro e o histórico de conversas vão junto.')) return;
     await fetch('/api/admin/chats/'+id, { method:'DELETE', credentials:'include' });
     loadAdminChats();
+}
+
+// Duplica a modelo inteira (persona + roteiro de todos os fluxos). Nasce INATIVA.
+async function duplicateChatPersona(id) {
+    if (!confirm('Duplicar esta modelo com o roteiro completo? A cópia nasce INATIVA (ative depois de ajustar).')) return;
+    try {
+        const r = await fetch('/api/admin/chats/' + id + '/duplicate', { method: 'POST', credentials: 'include' });
+        const d = await r.json();
+        if (!d.success) { alert('Erro: ' + (d.error || '')); return; }
+        loadAdminChats();
+    } catch (e) { alert('Erro: ' + e.message); }
 }
 
 // ── Blocos do roteiro ──
@@ -16009,15 +16033,18 @@ async function loadFunnelAnalytics() {
         hh += '</div><div style="display:flex; justify-content:space-between; font-size:9px; color:rgba(255,255,255,.4); margin-top:4px;"><span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span></div>';
         document.getElementById('faByHour').innerHTML = hh;
 
-        // Por dia: gráfico SVG de ÁREA (chegadas) + linha (e-mails) + barras (compras)
+        // Por dia: gráfico SVG de ÁREA (chegadas) + linha (e-mails) + barras
+        // (compras). Comparando períodos: linha TRACEJADA branca = chegadas do
+        // período comparado, dia a dia (1º dia com 1º dia, e assim por diante).
         const days = d.by_day || [];
+        const cmpDays = d.cmp_by_day || [];
         const dayEl = document.getElementById('faByDay');
         if (!days.length) {
             dayEl.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:12px;">Sem chegadas no período.</div>';
         } else {
             const W = 720, H = 190, PL = 40, PR = 10, PT = 12, PB = 24;
             const iw = W - PL - PR, ih = H - PT - PB;
-            const maxY = Math.max(1, ...days.map(x => x.clicks));
+            const maxY = Math.max(1, ...days.map(x => x.clicks), ...cmpDays.map(x => x.clicks));
             const n = days.length;
             const X = i => PL + (n === 1 ? iw / 2 : (i / (n - 1)) * iw);
             const Y = v => PT + ih - (Math.max(0, v) / maxY) * ih;
@@ -16043,24 +16070,33 @@ async function loadFunnelAnalytics() {
                 const bh = Math.max(3, (x.purchases / maxY) * ih);
                 return '<rect x="' + (X(i) - bw / 2).toFixed(1) + '" y="' + (PT + ih - bh).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="2" fill="#13c08a" opacity=".95"><title>' + x.day + ': ' + x.purchases + ' compra(s) · ' + faMoney(x.revenue) + '</title></rect>';
             }).join('');
+            // linha TRACEJADA do período comparado (alinhada dia a dia: 1º com 1º)
+            const nCmp = Math.min(cmpDays.length, n);
+            const cmpLine = nCmp > 1
+                ? '<polyline points="' + cmpDays.slice(0, nCmp).map((x, i) => X(i).toFixed(1) + ',' + Y(x.clicks || 0).toFixed(1)).join(' ') + '" fill="none" stroke="rgba(255,255,255,.65)" stroke-width="1.6" stroke-dasharray="5 4" stroke-linejoin="round"/>'
+                : '';
             // áreas invisíveis de hover com o resumo do dia (tooltip nativo)
-            const dots = days.map((x, i) =>
-                '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(x.clicks).toFixed(1) + '" r="3" fill="#3b82f6"/>'
-                + '<rect x="' + (X(i) - (iw / n / 2)).toFixed(1) + '" y="' + PT + '" width="' + (iw / n).toFixed(1) + '" height="' + ih + '" fill="transparent"><title>' + x.day.slice(8) + '/' + x.day.slice(5, 7) + ' — ' + faNum(x.clicks) + ' chegadas · ' + faNum(x.emails || 0) + ' e-mails · ' + (x.purchases || 0) + ' compras · ' + faMoney(x.revenue) + '</title></rect>'
-            ).join('');
+            const dots = days.map((x, i) => {
+                const cmpTip = cmpDays[i] ? ' · comparado (' + cmpDays[i].day.slice(8) + '/' + cmpDays[i].day.slice(5, 7) + '): ' + faNum(cmpDays[i].clicks) + ' chegadas, ' + faNum(cmpDays[i].emails || 0) + ' e-mails' : '';
+                return '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(x.clicks).toFixed(1) + '" r="3" fill="#3b82f6"/>'
+                    + '<rect x="' + (X(i) - (iw / n / 2)).toFixed(1) + '" y="' + PT + '" width="' + (iw / n).toFixed(1) + '" height="' + ih + '" fill="transparent"><title>' + x.day.slice(8) + '/' + x.day.slice(5, 7) + ' — ' + faNum(x.clicks) + ' chegadas · ' + faNum(x.emails || 0) + ' e-mails · ' + (x.purchases || 0) + ' compras · ' + faMoney(x.revenue) + cmpTip + '</title></rect>';
+            }).join('');
             dayEl.innerHTML =
                 '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%; height:auto; display:block;" preserveAspectRatio="none">'
                 + '<defs><linearGradient id="faGradClicks" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity=".35"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/></linearGradient></defs>'
                 + grid
                 + '<path d="' + area + '" fill="url(#faGradClicks)"/>'
+                + cmpLine
                 + '<polyline points="' + pts('clicks') + '" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round"/>'
                 + '<polyline points="' + pts('emails') + '" fill="none" stroke="#facc15" stroke-width="2" stroke-linejoin="round"/>'
                 + buys + labels + dots
                 + '</svg>'
-                + '<div style="display:flex; gap:16px; font-size:10.5px; color:rgba(255,255,255,.55); margin-top:8px;">'
+                + '<div style="display:flex; gap:16px; font-size:10.5px; color:rgba(255,255,255,.55); margin-top:8px; flex-wrap:wrap;">'
                 + '<span><i style="display:inline-block;width:14px;height:3px;background:#3b82f6;border-radius:2px;margin-right:5px;vertical-align:middle;"></i>Chegadas</span>'
                 + '<span><i style="display:inline-block;width:14px;height:3px;background:#facc15;border-radius:2px;margin-right:5px;vertical-align:middle;"></i>E-mails</span>'
-                + '<span><i style="display:inline-block;width:9px;height:9px;background:#13c08a;border-radius:2px;margin-right:5px;vertical-align:middle;"></i>Compras</span></div>';
+                + '<span><i style="display:inline-block;width:9px;height:9px;background:#13c08a;border-radius:2px;margin-right:5px;vertical-align:middle;"></i>Compras</span>'
+                + (nCmp > 1 ? '<span><i style="display:inline-block;width:14px;height:0;border-top:2px dashed rgba(255,255,255,.65);margin-right:5px;vertical-align:middle;"></i>Chegadas do período comparado</span>' : '')
+                + '</div>';
         }
 
         // Por funil (com pressel quando houver)

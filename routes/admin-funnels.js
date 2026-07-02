@@ -407,6 +407,56 @@ router.get('/:id/steps', requireAdmin, async (req, res) => {
     }
 });
 
+// POST /:id/duplicate — duplica o funil INTEIRO (config + etapas), com slug
+// novo ("-copia") e INATIVO (pra ajustar antes de pôr no ar). Métricas não vão.
+router.post('/:id/duplicate', requireAdmin, async (req, res) => {
+    const funnelId = parseInt(req.params.id, 10);
+    if (!funnelId) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const { rows: [src] } = await db.query(`SELECT * FROM funnels WHERE id = $1`, [funnelId]);
+        if (!src) return res.status(404).json({ success: false, error: 'Funil não encontrado' });
+        // slug único: -copia, -copia2, -copia3...
+        let slug = (src.slug + '-copia').slice(0, 80), n = 2;
+        while ((await db.query(`SELECT 1 FROM funnels WHERE slug = $1`, [slug])).rows.length) {
+            slug = (src.slug + '-copia' + n++).slice(0, 80);
+        }
+        // cópia genérica de colunas (sobrevive a colunas novas): objetos/arrays
+        // são JSONB → stringify pro driver não virar array do Postgres
+        const SKIP = new Set(['id', 'created_at', 'updated_at', 'slug', 'name', 'active']);
+        const cols = Object.keys(src).filter(k => !SKIP.has(k));
+        const vals = cols.map(k => {
+            const v = src[k];
+            return (v !== null && typeof v === 'object') ? JSON.stringify(v) : v;
+        });
+        cols.push('slug', 'name', 'active');
+        vals.push(slug, (src.name + ' (cópia)').slice(0, 120), false);
+        const ph = cols.map((_, i) => '$' + (i + 1)).join(', ');
+        const { rows: [copy] } = await db.query(
+            `INSERT INTO funnels (${cols.join(', ')}) VALUES (${ph}) RETURNING *`, vals
+        );
+        // etapas
+        const { rows: steps } = await db.query(
+            `SELECT * FROM funnel_steps WHERE funnel_id = $1 ORDER BY step_order, id`, [funnelId]
+        );
+        for (const s of steps) {
+            const sSkip = new Set(['id', 'created_at', 'updated_at', 'funnel_id']);
+            const sCols = Object.keys(s).filter(k => !sSkip.has(k));
+            const sVals = sCols.map(k => {
+                const v = s[k];
+                return (v !== null && typeof v === 'object') ? JSON.stringify(v) : v;
+            });
+            sCols.push('funnel_id'); sVals.push(copy.id);
+            const sPh = sCols.map((_, i) => '$' + (i + 1)).join(', ');
+            await db.query(`INSERT INTO funnel_steps (${sCols.join(', ')}) VALUES (${sPh})`, sVals);
+        }
+        logger.info(`Funil ${funnelId} duplicado → ${copy.id} (${slug}, ${steps.length} etapas)`);
+        return res.json({ success: true, funnel: copy, steps_copied: steps.length });
+    } catch (err) {
+        logger.error('Erro duplicando funil:', err);
+        return res.status(500).json({ success: false, error: err.message || 'Erro interno' });
+    }
+});
+
 // POST /:id/steps — cria etapa
 router.post('/:id/steps', requireAdmin, async (req, res) => {
     const funnelId = parseInt(req.params.id, 10);

@@ -199,6 +199,50 @@ router.put('/paywall-product', requireAdmin, async (req, res) => {
     }
 });
 
+// POST /:id/duplicate — duplica a MODELO inteira (persona + roteiro de todos
+// os fluxos). Sessões/mensagens de leads não vão. Nasce INATIVA pra ajustar.
+router.post('/:id/duplicate', requireAdmin, async (req, res) => {
+    const chatId = parseInt(req.params.id, 10);
+    if (!chatId) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const { rows: [src] } = await db.query(`SELECT * FROM chats WHERE id = $1`, [chatId]);
+        if (!src) return res.status(404).json({ success: false, error: 'Chat não encontrado' });
+        // cópia genérica de colunas: objetos/arrays são JSONB → stringify
+        const SKIP = new Set(['id', 'created_at', 'updated_at', 'name', 'active']);
+        const cols = Object.keys(src).filter(k => !SKIP.has(k));
+        const vals = cols.map(k => {
+            const v = src[k];
+            return (v !== null && typeof v === 'object') ? JSON.stringify(v) : v;
+        });
+        cols.push('name', 'active');
+        vals.push((src.name + ' (cópia)').slice(0, 80), false);
+        const ph = cols.map((_, i) => '$' + (i + 1)).join(', ');
+        const { rows: [copy] } = await db.query(
+            `INSERT INTO chats (${cols.join(', ')}) VALUES (${ph}) RETURNING *`, vals
+        );
+        // roteiro completo (todos os fluxos: open, status_reply, call, inactive)
+        const { rows: steps } = await db.query(
+            `SELECT * FROM chat_steps WHERE chat_id = $1 ORDER BY step_order, id`, [chatId]
+        );
+        for (const s of steps) {
+            const sSkip = new Set(['id', 'created_at', 'updated_at', 'chat_id']);
+            const sCols = Object.keys(s).filter(k => !sSkip.has(k));
+            const sVals = sCols.map(k => {
+                const v = s[k];
+                return (v !== null && typeof v === 'object') ? JSON.stringify(v) : v;
+            });
+            sCols.push('chat_id'); sVals.push(copy.id);
+            const sPh = sCols.map((_, i) => '$' + (i + 1)).join(', ');
+            await db.query(`INSERT INTO chat_steps (${sCols.join(', ')}) VALUES (${sPh})`, sVals);
+        }
+        logger.info(`Chat ${chatId} duplicado → ${copy.id} (${steps.length} blocos)`);
+        return res.json({ success: true, chat: copy, steps_copied: steps.length });
+    } catch (err) {
+        logger.error('Erro duplicando chat:', err);
+        return res.status(500).json({ success: false, error: err.message || 'Erro interno' });
+    }
+});
+
 router.post('/', requireAdmin, async (req, res) => {
     try {
         const { name, avatar_url, section, status_label, show_online, access,
