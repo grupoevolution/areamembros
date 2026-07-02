@@ -352,6 +352,43 @@ app.get('/f/:slug', async (req, res) => {
     res.sendFile(path.join(__dirname, 'public/app.html'));
 });
 
+// PRESSEL — /p/:slug (página de pré-venda OPCIONAL do funil, pra anúncio).
+// Página estática ultraleve com visual de app de conversas (modelos reais do
+// banco). NADA acontece sozinho — sem redirect automático nem timer: o crawler
+// do Meta vê só uma página parada. No TOQUE do lead (gesto), o Android abre o
+// funil /f/:slug no Chrome via intent:// (fallback: navegação normal); iOS e
+// desktop navegam direto. UTMs/fbclid da URL são repassados pro /f/.
+app.get('/p/:slug', async (req, res) => {
+    const slug = String(req.params.slug || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 80);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    const qs = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+    try {
+        const db = require('./db');
+        const { rows: f } = await db.query(
+            `SELECT id, slug, pressel_config FROM funnels
+             WHERE slug = $1 AND active = true AND pressel_enabled = true LIMIT 1`, [slug]
+        );
+        // pressel desligada/funil inexistente → cai no funil direto (não perde o lead)
+        if (!f.length) return res.redirect(302, '/f/' + slug + qs);
+        const { rows: chats } = await db.query(
+            `SELECT id, name, avatar_url, status_label, show_online
+             FROM chats WHERE active = true ORDER BY display_order, id LIMIT 14`
+        );
+        // métrica: visita da pressel (não bloqueia a resposta)
+        db.query(
+            `INSERT INTO tracking_events (event_type, metadata) VALUES ('pressel_view', $1::jsonb)`,
+            [JSON.stringify({ funnel_slug: slug, ua: String(req.headers['user-agent'] || '').slice(0, 300) })]
+        ).catch(() => {});
+        const fs = require('fs');
+        let html = fs.readFileSync(path.join(__dirname, 'public/pressel.html'), 'utf8');
+        const data = { slug, chats, config: f[0].pressel_config || {} };
+        html = html.replace('__PRESSEL_DATA__', JSON.stringify(data).replace(/</g, '\\u003c'));
+        return res.send(html);
+    } catch (e) {
+        return res.redirect(302, '/f/' + slug + qs);
+    }
+});
+
 // /app mantido como alias (compatibilidade com links antigos)
 app.get('/app', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');

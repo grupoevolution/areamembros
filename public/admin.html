@@ -6174,6 +6174,21 @@ a { color: inherit; text-decoration: none; }
                             <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Nome do funíl *</label><input class="form-control" id="funnelName" required maxlength="120" placeholder="Ex: Funíl Gaby Amostra" style="width:100%;"/></div>
                             <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Slug (URL) *</label><input class="form-control" id="funnelSlug" required maxlength="80" placeholder="gaby" style="width:100%;"/><div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">URL gerada: <span id="funnelUrlPreview" style="color:#e50914;">/f/gaby</span></div></div>
                             <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Descrição (opcional)</label><textarea class="form-control" id="funnelDesc" maxlength="1000" placeholder="Notas internas..." style="width:100%; min-height:60px; resize:vertical;"></textarea></div>
+                            <!-- PRESSEL: página de pré-venda opcional (/p/slug) pra anúncio -->
+                            <div style="background:rgba(76,217,100,.05); border:1px solid rgba(76,217,100,.25); border-radius:10px; padding:12px;">
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; font-weight:700;">
+                                    <input type="checkbox" id="funnelPresselEnabled" style="width:16px; height:16px;" onchange="document.getElementById('funnelPresselFields').style.display = this.checked ? 'block' : 'none'">
+                                    📄 Pressel — página de pré-venda (/p/<span id="funnelPresselSlug">slug</span>)
+                                </label>
+                                <div style="font-size:11px; color:rgba(255,255,255,.55); margin-top:5px; line-height:1.5;">Página com visual de app de conversas (usa as modelos reais cadastradas). Nada acontece sozinho — o robô do Meta vê uma página parada. Qualquer TOQUE do lead abre o funil no Chrome (Android). Use ESTE link no anúncio pra testar.</div>
+                                <div id="funnelPresselFields" style="display:none; margin-top:10px;">
+                                    <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Título da página (opcional)</label>
+                                    <input class="form-control" id="funnelPresselHeadline" maxlength="60" placeholder="Conversas" style="width:100%; margin-bottom:8px;"/>
+                                    <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Prévias de mensagem (1 por linha — a 1ª vai pra 1ª conversa, e assim por diante)</label>
+                                    <textarea class="form-control" id="funnelPresselPreviews" maxlength="1000" placeholder="vamo se conhecer melhor? 🔥&#10;te mandei uma foto 👀" style="width:100%; min-height:64px; resize:vertical;"></textarea>
+                                    <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">Conversas sem prévia aparecem como "online". As prévias criam desejo — é a 1ª dobra da conversão.</div>
+                                </div>
+                            </div>
 
                             <!-- DESTINO DE ENTRADA: pra onde o cliente cai ao abrir o link -->
                             <div style="background:rgba(229,9,20,.06); border:1px solid rgba(229,9,20,.25); border-radius:10px; padding:12px;">
@@ -14662,6 +14677,13 @@ async function loadFunnels() {
                 +     '<input type="text" readonly value="'+url+'" style="background:transparent;border:none;color:#e50914;font-family:monospace;font-size:11px;flex:1;outline:none" onclick="this.select()"/>'
                 +     '<button onclick="navigator.clipboard.writeText(\''+url+'\');this.textContent=\'✓\'" style="background:rgba(255,255,255,.1);border:none;color:#fff;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px">Copiar</button>'
                 +   '</div>'
+                +   (f.pressel_enabled ? '<div style="background:rgba(76,217,100,.08);border:1px solid rgba(76,217,100,.25);padding:8px 10px;border-radius:6px;margin-bottom:6px">'
+                +     '<div style="font-size:10px;color:#4CD964;font-weight:700;letter-spacing:.5px;margin-bottom:4px">📄 PRESSEL (TESTE PRO ANÚNCIO) — toque leva pro funil no Chrome</div>'
+                +     '<div style="display:flex;align-items:center;gap:8px">'
+                +       '<input type="text" readonly value="'+origin+'/p/'+f.slug+'" style="background:transparent;border:none;color:#4CD964;font-family:monospace;font-size:11px;flex:1;outline:none" onclick="this.select()"/>'
+                +       '<button onclick="navigator.clipboard.writeText(\''+origin+'/p/'+f.slug+'\');this.textContent=\'✓\'" style="background:rgba(76,217,100,.18);border:none;color:#fff;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px">Copiar</button>'
+                +     '</div>'
+                +   '</div>' : '')
                 +   '<div style="display:flex;gap:8px;font-size:11px;color:rgba(255,255,255,.6);margin-bottom:10px">'
                 +     '<div style="flex:1;background:rgba(0,0,0,.3);padding:8px;border-radius:6px;text-align:center"><div style="font-size:18px;color:#fff;font-weight:700">'+f.visits_total+'</div>Visitas</div>'
                 +     '<div style="flex:1;background:rgba(0,0,0,.3);padding:8px;border-radius:6px;text-align:center"><div style="font-size:18px;color:#4CD964;font-weight:700">'+f.conversions+'</div>Conversões</div>'
@@ -14727,6 +14749,8 @@ function openFunnelModal() {
     document.getElementById('funnelId').value = '';
     document.getElementById('funnelForm').reset();
     document.getElementById('funnelUrlPreview').textContent = '/f/...';
+    document.getElementById('funnelPresselFields').style.display = 'none';
+    document.getElementById('funnelPresselSlug').textContent = 'slug';
     document.getElementById('funnelEntryType').value = 'home';
     updateFunnelEntryFields();
     loadFunnelDropdowns();
@@ -14846,6 +14870,13 @@ function editFunnel(f) {
     document.getElementById('funnelSlug').value = f.slug || '';
     document.getElementById('funnelDesc').value = f.description || '';
     document.getElementById('funnelUrlPreview').textContent = '/f/' + (f.slug || '');
+    // Pressel
+    const pcfg = f.pressel_config || {};
+    document.getElementById('funnelPresselEnabled').checked = f.pressel_enabled === true;
+    document.getElementById('funnelPresselFields').style.display = f.pressel_enabled === true ? 'block' : 'none';
+    document.getElementById('funnelPresselSlug').textContent = f.slug || 'slug';
+    document.getElementById('funnelPresselHeadline').value = pcfg.headline || '';
+    document.getElementById('funnelPresselPreviews').value = Array.isArray(pcfg.previews) ? pcfg.previews.join('\n') : '';
     document.getElementById('funnelEntryType').value = f.entry_type || 'home';
     updateFunnelEntryFields();
     loadFunnelDropdowns().then(() => {
@@ -14868,6 +14899,7 @@ document.addEventListener('input', e => {
     if (e.target && e.target.id === 'funnelSlug') {
         const slug = e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
         document.getElementById('funnelUrlPreview').textContent = '/f/' + (slug || '...');
+        const ps = document.getElementById('funnelPresselSlug'); if (ps) ps.textContent = slug || 'slug';
     }
 });
 async function saveFunnel(e) {
@@ -14899,6 +14931,11 @@ async function saveFunnel(e) {
                         : null,
         entry_category_id: entryType === 'category' ? document.getElementById('funnelEntryCategory').value : null,
         entry_chat_id: (entryType === 'chat' || entryType === 'chat_list') ? document.getElementById('funnelEntryChat').value : null,
+        pressel_enabled: document.getElementById('funnelPresselEnabled').checked,
+        pressel_config: {
+            headline: document.getElementById('funnelPresselHeadline').value.trim() || null,
+            previews: document.getElementById('funnelPresselPreviews').value.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 12),
+        },
     };
     try {
         const url = id ? '/api/admin/funnels/'+id : '/api/admin/funnels';

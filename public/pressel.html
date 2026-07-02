@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<title>Conversas</title>
+<style>
+/* ============================================================================
+   PRESSEL — página de pré-venda do funil (/p/:slug)
+   Visual de app de conversas. NADA acontece sozinho (sem redirect automático,
+   sem timer de navegação — o crawler do Meta vê uma página parada). Qualquer
+   TOQUE do lead abre o funil /f/:slug no navegador externo (Android: intent://
+   pro Chrome com fallback; iOS/desktop: navegação normal). UTMs preservadas.
+   ============================================================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f6f5f3; color: #1b1b1b; cursor: pointer;
+    overflow-x: hidden;
+}
+.hdr { background: #fff; padding: 18px 20px 14px; border-bottom: 1px solid #eceae6; }
+.hdr h1 { font-size: 26px; font-weight: 800; letter-spacing: -.5px; }
+.sec { padding: 16px 20px 6px; font-size: 12px; font-weight: 700; letter-spacing: 2px; color: #9a958d; text-transform: uppercase; }
+/* Status (stories) */
+.statuses { display: flex; gap: 18px; padding: 10px 20px 18px; overflow-x: auto; background: #fff; scrollbar-width: none; }
+.statuses::-webkit-scrollbar { display: none; }
+.st { display: flex; flex-direction: column; align-items: center; gap: 7px; flex-shrink: 0; }
+.st .ring { width: 68px; height: 68px; border-radius: 50%; padding: 3px; background: linear-gradient(45deg, #25a55f, #4CD964); }
+.st .ring .ph { width: 100%; height: 100%; border-radius: 50%; border: 2px solid #fff; background: #ddd center/cover no-repeat; }
+.st .nm { font-size: 13.5px; color: #444; }
+.gap { height: 10px; background: #e9e6e0; }
+/* Lista de conversas */
+.list { background: #fff; }
+.row { display: flex; align-items: center; gap: 14px; padding: 13px 20px; border-bottom: 1px solid #f0eeea; }
+.row .av { position: relative; width: 62px; height: 62px; border-radius: 50%; background: #ddd center/cover no-repeat; flex-shrink: 0; }
+.row .av .dot { position: absolute; right: 2px; bottom: 2px; width: 14px; height: 14px; border-radius: 50%; background: #4CD964; border: 2.5px solid #fff; }
+.row .mid { flex: 1; min-width: 0; }
+.row .nm { font-size: 17.5px; font-weight: 700; color: #111; margin-bottom: 3px; }
+.row .pv { font-size: 14.5px; color: #8a857d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .pv.online { color: #25a55f; }
+.row .pv.typing { color: #25a55f; font-style: italic; }
+.row .end { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+.row .tm { font-size: 12.5px; color: #25a55f; font-weight: 600; }
+.row .badge { min-width: 21px; height: 21px; border-radius: 999px; background: #4CD964; color: #fff; font-size: 11.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 6px; }
+.foot { text-align: center; padding: 22px 20px 30px; font-size: 12px; color: #b7b2a9; }
+</style>
+</head>
+<body>
+<div class="hdr"><h1 id="headline">Conversas</h1></div>
+<div class="sec">Status</div>
+<div class="statuses" id="statuses"></div>
+<div class="gap"></div>
+<div class="sec">Minhas conversas</div>
+<div class="list" id="list"></div>
+<div class="foot">🔒 Suas conversas são protegidas</div>
+<script>
+var DATA = __PRESSEL_DATA__;
+(function () {
+    var cfg = DATA.config || {};
+    var chats = DATA.chats || [];
+    if (cfg.headline) document.getElementById('headline').textContent = cfg.headline;
+    var previews = Array.isArray(cfg.previews) ? cfg.previews.filter(Boolean) : [];
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function hhmmAgo(minAgo) {
+        var d = new Date(Date.now() - minAgo * 60000);
+        return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    }
+
+    // Status (stories) — todas as modelos com anel verde
+    document.getElementById('statuses').innerHTML = chats.map(function (c) {
+        var bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
+        return '<div class="st"><div class="ring"><div class="ph"' + bg + '></div></div><div class="nm">' + esc(c.name) + '</div></div>';
+    }).join('');
+
+    // Conversas: as primeiras com preview de mensagem + não lidas; o resto online
+    document.getElementById('list').innerHTML = chats.map(function (c, i) {
+        var bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
+        var hasMsg = i < previews.length;
+        var pv = hasMsg
+            ? '<div class="pv" data-pv="' + i + '">' + esc(previews[i]) + '</div>'
+            : '<div class="pv online" data-pv="' + i + '">' + esc(c.status_label || 'online') + '</div>';
+        var end = hasMsg
+            ? '<div class="end"><span class="tm">' + hhmmAgo(1 + i * 4) + '</span><span class="badge">' + (i === 0 ? (2 + ((chats.length + 3) % 8)) : (1 + (i % 3))) + '</span></div>'
+            : '';
+        return '<div class="row"><div class="av"' + bg + '>' + (c.show_online !== false ? '<span class="dot"></span>' : '') + '</div>'
+            + '<div class="mid"><div class="nm">' + esc(c.name) + '</div>' + pv + '</div>' + end + '</div>';
+    }).join('');
+
+    // "digitando..." rodando entre as conversas (só visual — nada navega sozinho)
+    var typingIdx = -1, typingOld = '';
+    setInterval(function () {
+        var els = document.querySelectorAll('[data-pv]');
+        if (!els.length) return;
+        if (typingIdx >= 0 && els[typingIdx]) {
+            els[typingIdx].textContent = typingOld;
+            els[typingIdx].className = els[typingIdx].dataset.cls || els[typingIdx].className.replace(' typing', '');
+        }
+        typingIdx = Math.floor(Math.random() * els.length);
+        var el = els[typingIdx];
+        el.dataset.cls = el.className;
+        typingOld = el.textContent;
+        el.textContent = 'digitando…';
+        el.className = 'pv typing';
+    }, 2600);
+
+    // ── QUALQUER toque leva pro funil (gesto do lead = permitido no webview) ──
+    var went = false;
+    function go() {
+        if (went) return; went = true;
+        try {
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon('/api/user/pressel/click',
+                    new Blob([JSON.stringify({ funnel_slug: DATA.slug })], { type: 'application/json' }));
+            }
+        } catch (_) {}
+        var qs = location.search || '';               // UTMs/fbclid seguem pro funil
+        var path = '/f/' + DATA.slug + qs;
+        var target = location.protocol + '//' + location.host + path;
+        var isAndroid = /android/i.test(navigator.userAgent || '');
+        if (isAndroid) {
+            // Chrome via intent:// (funciona no webview do Insta/Face E no Chrome).
+            // Se não abrir em ~1.8s (intent bloqueado), segue navegação normal.
+            try {
+                window.location.href = 'intent://' + location.host + path
+                    + '#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='
+                    + encodeURIComponent(target) + ';end';
+            } catch (_) {}
+            setTimeout(function () { window.location.href = target; }, 1800);
+        } else {
+            window.location.href = target;
+        }
+        setTimeout(function () { went = false; }, 3000); // deixa tentar de novo se voltar
+    }
+    document.addEventListener('click', go, true);
+    document.addEventListener('touchend', function (e) { e.preventDefault(); go(); }, { passive: false });
+})();
+</script>
+</body>
+</html>

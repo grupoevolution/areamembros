@@ -2188,6 +2188,19 @@ router.post('/login/anon', async (req, res) => {
 // =============================================================================
 
 // GET /api/user/funnel/:slug — dados públicos da landing
+// POST /api/user/pressel/click — clique na pressel (o toque que dispara o
+// breakout pro Chrome). Enviado via sendBeacon antes da navegação.
+router.post('/pressel/click', async (req, res) => {
+    const slug = String(req.body?.funnel_slug || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 80);
+    try {
+        await db.query(
+            `INSERT INTO tracking_events (event_type, metadata) VALUES ('pressel_click', $1::jsonb)`,
+            [JSON.stringify({ funnel_slug: slug })]
+        );
+    } catch (_) {}
+    return res.json({ success: true });
+});
+
 router.get('/funnel/:slug', async (req, res) => {
     const slug = String(req.params.slug || '').toLowerCase().slice(0, 80);
     if (!slug) return res.status(400).json({ success: false, error: 'Slug inválido' });
