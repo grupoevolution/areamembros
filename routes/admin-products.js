@@ -95,6 +95,7 @@ router.get('/', requireAdmin, async (req, res) => {
             FROM products p
             LEFT JOIN categories c ON c.id = p.category_id
             WHERE COALESCE(p.is_chat_plan, false) = false
+              AND COALESCE(p.is_story_plan, false) = false
             ORDER BY p.display_order, p.created_at DESC
         `);
         

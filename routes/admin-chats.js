@@ -42,46 +42,160 @@ router.get('/', requireAdmin, async (req, res) => {
     }
 });
 
-// ── PRODUTO ÚNICO DO CHAT ("Assinatura do Chat") ─────────────────────────────
-// Produto oculto do catálogo (is_chat_plan=true) que vale pra TODAS as
-// conversas: chats VIP e o bloco 🔒 Paywall apontam pra ele por padrão.
-// GET garante que ele existe (cria com os 2 planos padrão na 1ª vez) e devolve
-// o resumo pro painel — a edição completa (planos/ofertas) usa o editor de
-// produto normal, via id retornado aqui.
+// ── PRODUTOS ÚNICOS DO CHAT ("Assinatura do Chat" + "Status VIP") ────────────
+// Dois produtos ocultos do catálogo, configurados de forma SIMPLES na tela de
+// Chats (preço + link de checkout + código da oferta — nada de editor completo):
+//   is_chat_plan  → paywall das conversas (planos VIP e PREMIUM; qualquer um
+//                   comprado libera todas as conversas VIP)
+//   is_story_plan → destrava os stories VIP de todas as modelos (fallback
+//                   quando o chat não tem produto de story próprio)
+// O código da oferta é o offer_id do gateway: o webhook casa a venda por ele
+// (product_offers) e libera o acesso sozinho.
+
+// Garante que um produto interno existe; devolve { id, name }
+async function ensureInternalProduct(flagCol, name, description, defaultPrice) {
+    let { rows } = await db.query(
+        `SELECT id, name FROM products WHERE ${flagCol} = true ORDER BY id LIMIT 1`
+    );
+    if (rows.length) return rows[0];
+    const { rows: created } = await db.query(
+        `INSERT INTO products (name, description, is_published, is_active, ${flagCol}, price)
+         VALUES ($1, $2, false, true, true, $3) RETURNING id, name`,
+        [name, description, defaultPrice]
+    );
+    logger.info(`Produto interno criado: ${name} (id ${created[0].id})`);
+    return created[0];
+}
+
+async function loadPaywallState() {
+    const chatProd = await ensureInternalProduct(
+        'is_chat_plan', 'Assinatura do Chat 🔥',
+        'Produto interno do paywall das conversas — não aparece no catálogo. Configurado na tela de Chats.', 29.90
+    );
+    // planos padrão na 1ª vez
+    const { rows: existing } = await db.query(
+        `SELECT id FROM product_plans WHERE product_id = $1 LIMIT 1`, [chatProd.id]
+    );
+    if (!existing.length) {
+        await db.query(
+            `INSERT INTO product_plans (product_id, name, price, original_price, benefits, is_recommended, display_order)
+             VALUES ($1, 'VIP', 29.90, 49.90, $2, false, 0),
+                    ($1, 'PREMIUM', 49.90, 97.90, $3, true, 1)`,
+            [chatProd.id,
+             'Converse sem limite com todas as modelos\nFotos e vídeos exclusivos no chat\nRespostas prioritárias',
+             'Tudo do VIP\nStories VIP liberados\nConteúdos exclusivos toda semana']
+        );
+    }
+    const storyProd = await ensureInternalProduct(
+        'is_story_plan', 'Status VIP 🔥',
+        'Produto interno que destrava os stories VIP de todas as modelos — não aparece no catálogo. Configurado na tela de Chats.', 19.90
+    );
+    const { rows: storyPlanRows } = await db.query(
+        `SELECT id FROM product_plans WHERE product_id = $1 LIMIT 1`, [storyProd.id]
+    );
+    if (!storyPlanRows.length) {
+        await db.query(
+            `INSERT INTO product_plans (product_id, name, price, original_price, benefits, is_recommended, display_order)
+             VALUES ($1, 'STATUS VIP', 19.90, 39.90, 'Veja todos os status VIP das modelos\nConteúdo novo toda semana', true, 0)`,
+            [storyProd.id]
+        );
+    }
+    const { rows: plans } = await db.query(
+        `SELECT id, name, price, original_price, checkout_url, is_recommended
+         FROM product_plans WHERE product_id = $1 AND active = true ORDER BY display_order, id`, [chatProd.id]
+    );
+    const { rows: storyPlans } = await db.query(
+        `SELECT id, name, price, original_price, checkout_url, is_recommended
+         FROM product_plans WHERE product_id = $1 AND active = true ORDER BY display_order, id`, [storyProd.id]
+    );
+    const { rows: offers } = await db.query(
+        `SELECT product_id, gateway, offer_id, offer_name FROM product_offers
+         WHERE product_id = ANY($1::int[]) AND is_active = true ORDER BY id`,
+        [[chatProd.id, storyProd.id]]
+    );
+    // casa o código com o plano pelo offer_name (gravado no PUT = nome do plano)
+    const codeFor = (productId, planName) => {
+        const o = offers.find(x => x.product_id === productId && (x.offer_name || '').toLowerCase() === String(planName).toLowerCase());
+        return o ? o.offer_id : '';
+    };
+    const gateway = offers.length ? offers[0].gateway : 'kirvano';
+    return {
+        gateway,
+        chat: {
+            product_id: chatProd.id,
+            plans: plans.map(p => ({ ...p, offer_code: codeFor(chatProd.id, p.name) })),
+        },
+        story: {
+            product_id: storyProd.id,
+            plan: storyPlans[0] ? { ...storyPlans[0], offer_code: codeFor(storyProd.id, storyPlans[0].name) } : null,
+        },
+    };
+}
+
 router.get('/paywall-product', requireAdmin, async (req, res) => {
     try {
-        let { rows } = await db.query(
-            `SELECT id, name, is_active FROM products WHERE is_chat_plan = true ORDER BY id LIMIT 1`
-        );
-        if (!rows.length) {
-            const { rows: created } = await db.query(
-                `INSERT INTO products (name, description, is_published, is_active, is_chat_plan, price)
-                 VALUES ($1, $2, false, true, true, 29.90) RETURNING id, name, is_active`,
-                ['Assinatura do Chat 🔥',
-                 'Produto interno do paywall das conversas — NÃO aparece no catálogo nem na biblioteca. Configure aqui os planos (VIP/PREMIUM) e as ofertas de checkout: qualquer plano comprado libera todas as conversas VIP.']
-            );
-            rows = created;
-            await db.query(
-                `INSERT INTO product_plans (product_id, name, price, original_price, benefits, is_recommended, display_order)
-                 VALUES ($1, 'VIP', 29.90, 49.90, $2, false, 0),
-                        ($1, 'PREMIUM', 49.90, 97.90, $3, true, 1)`,
-                [rows[0].id,
-                 'Converse sem limite com todas as modelos\nFotos e vídeos exclusivos no chat\nRespostas prioritárias',
-                 'Tudo do VIP\nStories VIP liberados\nConteúdos exclusivos toda semana']
-            );
-            logger.info(`Produto único do chat criado (id ${rows[0].id})`);
-        }
-        const { rows: plans } = await db.query(
-            `SELECT id, name, price, original_price, benefits, checkout_url, is_recommended, active
-             FROM product_plans WHERE product_id = $1 ORDER BY display_order, id`, [rows[0].id]
-        );
-        const { rows: [{ n: offersCount }] } = await db.query(
-            `SELECT COUNT(*)::int AS n FROM product_offers WHERE product_id = $1 AND is_active = true`, [rows[0].id]
-        );
-        return res.json({ success: true, product: rows[0], plans, offers_count: offersCount });
+        const state = await loadPaywallState();
+        return res.json({ success: true, ...state });
     } catch (err) {
         logger.error('Erro no produto do chat (paywall):', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// PUT /paywall-product — salva a config simples (preço + link + código por plano).
+// body: { gateway, plans: [{id, price, original_price, checkout_url, offer_code}],
+//         story: {price, original_price, checkout_url, offer_code} }
+router.put('/paywall-product', requireAdmin, async (req, res) => {
+    try {
+        const state = await loadPaywallState();
+        const gateway = ['kirvano', 'perfectpay'].includes(req.body?.gateway) ? req.body.gateway : 'kirvano';
+        const money = (v) => {
+            if (v == null || v === '') return null;
+            const n = parseFloat(String(v).replace(',', '.'));
+            return isNaN(n) ? null : n;
+        };
+        // Atualiza um plano + sincroniza a oferta do gateway (código → webhook)
+        async function savePlan(productId, planId, planName, input) {
+            const price = money(input.price);
+            const orig = money(input.original_price);
+            const url = (input.checkout_url || '').trim().slice(0, 1000) || null;
+            await db.query(
+                `UPDATE product_plans SET price = COALESCE($2, price), original_price = $3, checkout_url = $4
+                 WHERE id = $1 AND product_id = $5`,
+                [planId, price, orig, url, productId]
+            );
+            const code = (input.offer_code || '').trim().slice(0, 100);
+            // desativa ofertas ANTIGAS deste produto/plano que não são mais o código atual
+            await db.query(
+                `UPDATE product_offers SET is_active = false, updated_at = NOW()
+                 WHERE product_id = $1 AND LOWER(offer_name) = LOWER($2) AND ($3 = '' OR offer_id <> $3)`,
+                [productId, planName, code]
+            );
+            if (code) {
+                await db.query(
+                    `INSERT INTO product_offers (product_id, gateway, offer_id, offer_name, checkout_url, price, is_active)
+                     VALUES ($1, $2, $3, $4, $5, $6, true)
+                     ON CONFLICT (gateway, offer_id) DO UPDATE SET
+                        product_id = EXCLUDED.product_id, offer_name = EXCLUDED.offer_name,
+                        checkout_url = EXCLUDED.checkout_url, price = EXCLUDED.price,
+                        is_active = true, updated_at = NOW()`,
+                    [productId, gateway, code, planName, url, price]
+                );
+            }
+        }
+        const plansIn = Array.isArray(req.body?.plans) ? req.body.plans : [];
+        for (const p of state.chat.plans) {
+            const input = plansIn.find(x => parseInt(x.id, 10) === p.id);
+            if (input) await savePlan(state.chat.product_id, p.id, p.name, input);
+        }
+        if (req.body?.story && state.story.plan) {
+            await savePlan(state.story.product_id, state.story.plan.id, state.story.plan.name, req.body.story);
+        }
+        const fresh = await loadPaywallState();
+        return res.json({ success: true, ...fresh });
+    } catch (err) {
+        logger.error('Erro salvando paywall do chat:', err);
+        return res.status(500).json({ success: false, error: err.message || 'Erro interno' });
     }
 });
 

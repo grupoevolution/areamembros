@@ -5912,11 +5912,11 @@ a { color: inherit; text-decoration: none; }
                             <!-- Stories VIP (close friends pago) -->
                             <div style="background:rgba(245,197,66,.06); border:1px solid rgba(245,197,66,.3); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:10px;">
                                 <div style="font-size:12px; color:#f5c542; font-weight:700;">👑 Stories VIP (close friends pago)</div>
-                                <div class="form-help" style="margin-top:-4px;">Marque um story como VIP no editor de Status. Quem NÃO tiver o produto abaixo vê o story borrado + aviso pra assinar. Pagar libera TODOS os stories VIP desta modelo.</div>
-                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Produto que libera os Stories VIP desta modelo</label>
-                                    <select class="form-control" id="cpStoryVipProduct" style="width:100%;"><option value="">— nenhum —</option></select>
+                                <div class="form-help" style="margin-top:-4px;">Marque um story como VIP no editor de Status. Por padrão, o desbloqueio usa o produto GLOBAL "Status VIP" (configurado no card 💎 da tela de Chats) — deixe os campos abaixo vazios. Só preencha se ESTA modelo tiver um produto próprio diferente.</div>
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Produto próprio desta modelo (opcional — vazio = usa o global)</label>
+                                    <select class="form-control" id="cpStoryVipProduct" style="width:100%;"><option value="">— usar o Status VIP global —</option></select>
                                 </div>
-                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link de checkout dos Stories VIP</label>
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link de checkout próprio (opcional)</label>
                                     <input class="form-control" id="cpStoryVipCheckout" maxlength="1000" placeholder="https://pay..." style="width:100%;"/>
                                 </div>
                             </div>
@@ -15262,10 +15262,23 @@ async function applyFunnelStats() {
 // ═══════════════ CHATS (estilo WhatsApp) ═══════════════
 let _curChatId = null;
 
-// ── Produto ÚNICO do chat (paywall VIP/PREMIUM de todas as conversas) ────────
-// O GET já cria o produto (com 2 planos padrão) na 1ª vez. A edição completa
-// (preços, benefícios, links de checkout, ofertas de gateway) usa o editor de
-// produto normal — o produto fica OCULTO do catálogo e das listas.
+// ── Paywall do chat + Status VIP (config SIMPLES, estilo aba Vídeos) ─────────
+// Dois produtos internos (fora do catálogo), criados sozinhos pelo GET. Aqui só
+// se configura o essencial: preço, link do checkout e código da oferta do
+// gateway (o código é o que faz o webhook liberar o acesso automaticamente).
+function cpwField(label, id, value, placeholder, width) {
+    return '<div style="' + (width ? 'width:' + width + ';' : 'flex:1;min-width:120px;') + '">'
+        + '<label style="display:block;font-size:11px;color:rgba(255,255,255,.55);margin-bottom:3px;">' + label + '</label>'
+        + '<input class="form-control" id="' + id + '" value="' + escHtmlAdmin(value == null ? '' : String(value)) + '" placeholder="' + (placeholder || '') + '" style="width:100%;height:34px;font-size:12.5px;"/></div>';
+}
+function cpwMoney(v) { return (v == null || v === '') ? '' : Number(v).toFixed(2).replace('.', ','); }
+function cpwStatus(p) {
+    const okL = !!(p.checkout_url), okC = !!(p.offer_code);
+    return '<div style="font-size:10.5px;margin-top:4px;">'
+        + '<span style="color:' + (okL ? '#4CD964' : '#f5a623') + ';">' + (okL ? '✓ link ok' : '⚠ sem link') + '</span> · '
+        + '<span style="color:' + (okC ? '#4CD964' : '#f5a623') + ';">' + (okC ? '✓ código ok (webhook libera sozinho)' : '⚠ sem código — o webhook não vai liberar sozinho') + '</span></div>';
+}
+let _cpwState = null;
 async function loadChatPaywallCard() {
     const box = document.getElementById('chatPaywallCard');
     if (!box) return;
@@ -15273,29 +15286,69 @@ async function loadChatPaywallCard() {
         const r = await fetch('/api/admin/chats/paywall-product', { credentials:'include' });
         const d = await r.json();
         if (!d.success) { box.innerHTML = '<div style="color:#f55">'+(d.error||'erro')+'</div>'; return; }
-        const plans = d.plans || [];
-        const fmt = v => (v == null || v === '') ? '—' : 'R$ ' + Number(v).toFixed(2).replace('.', ',');
-        const plansHtml = plans.map(p =>
-            '<div style="background:rgba(0,0,0,.3);border:1px solid '+(p.is_recommended?'rgba(229,9,20,.45)':'rgba(255,255,255,.08)')+';border-radius:10px;padding:10px 14px;min-width:150px;">'
-            + '<div style="font-size:11px;font-weight:700;color:'+(p.is_recommended?'#e50914':'#fff')+';">'+escHtmlAdmin(p.name)+(p.is_recommended?' · MAIS ESCOLHIDO':'')+'</div>'
-            + '<div style="font-size:16px;font-weight:800;color:#fff;">'+fmt(p.price)+'<span style="font-size:10px;color:rgba(255,255,255,.5);font-weight:400;"> /mês</span></div>'
-            + '<div style="font-size:10.5px;color:'+(p.checkout_url?'#4CD964':'#f5a623')+';margin-top:3px;">'+(p.checkout_url?'✓ link de checkout ok':'⚠ sem link de checkout')+'</div>'
-            + '</div>').join('');
-        const offersWarn = d.offers_count > 0
-            ? '<span style="color:#4CD964;">✓ '+d.offers_count+' oferta(s) de gateway — a compra libera as conversas sozinha via webhook</span>'
-            : '<span style="color:#f5a623;">⚠ Sem oferta de gateway cadastrada — cadastre o código da oferta (Kirvano/PerfectPay) pro webhook liberar o acesso automaticamente</span>';
+        _cpwState = d;
+        const plans = (d.chat && d.chat.plans) || [];
+        const story = (d.story && d.story.plan) || null;
+        const planRow = (p, i) =>
+            '<div style="background:rgba(0,0,0,.25);border:1px solid ' + (p.is_recommended ? 'rgba(229,9,20,.4)' : 'rgba(255,255,255,.08)') + ';border-radius:10px;padding:10px 12px;margin-top:8px;">'
+            + '<div style="font-size:12px;font-weight:800;color:' + (p.is_recommended ? '#e50914' : '#fff') + ';margin-bottom:7px;">' + escHtmlAdmin(p.name) + (p.is_recommended ? ' · MAIS ESCOLHIDO' : '') + '</div>'
+            + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+            + cpwField('Preço (R$)', 'cpwPrice' + i, cpwMoney(p.price), '29,90', '90px')
+            + cpwField('De (riscado)', 'cpwOrig' + i, cpwMoney(p.original_price), '49,90', '90px')
+            + cpwField('Link do checkout', 'cpwUrl' + i, p.checkout_url || '', 'https://pay...')
+            + cpwField('Código da oferta', 'cpwCode' + i, p.offer_code || '', 'ex: a1b2c3', '150px')
+            + '</div>' + cpwStatus(p) + '</div>';
         box.innerHTML =
-            '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">'
-            + '<div style="flex:1;min-width:240px;">'
-            +   '<div style="font-weight:800;color:#fff;font-size:14px;">💎 Assinatura do Chat — paywall de TODAS as conversas</div>'
-            +   '<div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:4px;line-height:1.5;">Produto interno (fora do catálogo). É o popup que aparece quando o lead tenta abrir uma conversa VIP ou continuar digitando depois do bloco 🔒 Paywall do roteiro. Qualquer plano comprado libera todas as conversas.</div>'
-            +   '<div style="font-size:11px;margin-top:6px;">'+offersWarn+'</div>'
+            '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">'
+            + '<div><div style="font-weight:800;color:#fff;font-size:14px;">💎 Assinatura do Chat — paywall de TODAS as conversas</div>'
+            + '<div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-top:3px;line-height:1.5;">Popup que aparece na conversa VIP e depois do bloco 🔒 Paywall. Qualquer plano comprado libera todas as conversas. Só preencher link + código da oferta.</div></div>'
+            + '<div style="width:150px;"><label style="display:block;font-size:11px;color:rgba(255,255,255,.55);margin-bottom:3px;">Gateway</label>'
+            + '<select class="form-control" id="cpwGateway" style="width:100%;height:34px;font-size:12.5px;"><option value="kirvano"' + (d.gateway === 'kirvano' ? ' selected' : '') + '>Kirvano</option><option value="perfectpay"' + (d.gateway === 'perfectpay' ? ' selected' : '') + '>PerfectPay</option></select></div>'
             + '</div>'
-            + '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">'+plansHtml
-            +   '<button class="btn-primary" style="white-space:nowrap;" onclick="editProduct('+d.product.id+')">Editar planos & checkout</button>'
-            + '</div>'
-            + '</div>';
+            + plans.map(planRow).join('')
+            + (story
+                ? '<div style="font-weight:800;color:#fff;font-size:13px;margin-top:16px;">📸 Status VIP — destrava os stories borrados de todas as modelos</div>'
+                + '<div style="background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;margin-top:8px;">'
+                + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+                + cpwField('Preço (R$)', 'cpwStPrice', cpwMoney(story.price), '19,90', '90px')
+                + cpwField('De (riscado)', 'cpwStOrig', cpwMoney(story.original_price), '39,90', '90px')
+                + cpwField('Link do checkout', 'cpwStUrl', story.checkout_url || '', 'https://pay...')
+                + cpwField('Código da oferta', 'cpwStCode', story.offer_code || '', 'ex: d4e5f6', '150px')
+                + '</div>' + cpwStatus(story) + '</div>'
+                : '')
+            + '<div style="display:flex;justify-content:flex-end;margin-top:12px;"><button class="btn-primary" id="cpwSave" onclick="saveChatPaywall()">Salvar</button></div>';
     } catch(e) { box.innerHTML = '<div style="color:#f55">Erro: '+e.message+'</div>'; }
+}
+async function saveChatPaywall() {
+    if (!_cpwState) return;
+    const btn = document.getElementById('cpwSave');
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    const val = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+    const payload = {
+        gateway: val('cpwGateway') || 'kirvano',
+        plans: (_cpwState.chat.plans || []).map((p, i) => ({
+            id: p.id,
+            price: val('cpwPrice' + i),
+            original_price: val('cpwOrig' + i),
+            checkout_url: val('cpwUrl' + i),
+            offer_code: val('cpwCode' + i),
+        })),
+        story: _cpwState.story && _cpwState.story.plan ? {
+            price: val('cpwStPrice'),
+            original_price: val('cpwStOrig'),
+            checkout_url: val('cpwStUrl'),
+            offer_code: val('cpwStCode'),
+        } : null,
+    };
+    try {
+        const r = await fetch('/api/admin/chats/paywall-product', {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+            body: JSON.stringify(payload),
+        });
+        const d = await r.json();
+        if (!d.success) { alert('Erro: ' + (d.error || '')); btn.disabled = false; btn.textContent = 'Salvar'; return; }
+        loadChatPaywallCard();
+    } catch (e) { alert('Erro: ' + e.message); btn.disabled = false; btn.textContent = 'Salvar'; }
 }
 
 async function loadAdminChats() {

@@ -95,6 +95,19 @@ async function chatPlanProductId() {
 async function chatUnlockProductId(chat) {
     return (chat && chat.product_id) || (await chatPlanProductId());
 }
+// Produto ÚNICO dos Stories VIP (products.is_story_plan) — fallback quando a
+// modelo não tem story_vip_product_id próprio. Mesmo padrão do chat.
+let _storyPlanCache = { id: null, at: 0 };
+async function storyPlanProductId() {
+    if (Date.now() - _storyPlanCache.at < 60000) return _storyPlanCache.id;
+    try {
+        const { rows } = await db.query(
+            `SELECT id FROM products WHERE is_story_plan = true AND is_active = true ORDER BY id LIMIT 1`
+        );
+        _storyPlanCache = { id: rows.length ? rows[0].id : null, at: Date.now() };
+    } catch (_) { _storyPlanCache = { id: null, at: Date.now() }; }
+    return _storyPlanCache.id;
+}
 // O cliente é "VIP do chat"? Tem o produto do chat (override OU único).
 async function ownsChatVip(email, chat) {
     if (!email) return false;
@@ -1053,21 +1066,24 @@ router.get('/chats/status', optionalUser, async (req, res) => {
             ownsVipCache.set(productId, ok);
             return ok;
         }
+        // Produto global de Status VIP: fallback pras modelos sem produto próprio
+        const globalStoryId = await storyPlanProductId();
         const map = new Map();
         for (const r of rows) {
+            const effStoryProd = r.story_vip_product_id || globalStoryId || null;
             if (!map.has(r.chat_id)) {
                 map.set(r.chat_id, {
                     chat_id: r.chat_id, name: r.name, avatar_url: r.avatar_url,
                     has_unseen: false, has_vip_locked: false, vip_unlock: null,
-                    story_vip_product_id: r.story_vip_product_id || null,
+                    story_vip_product_id: effStoryProd,
                     story_vip_checkout_url: r.story_vip_checkout_url || null,
                     items: [],
                 });
             }
             const g = map.get(r.chat_id);
-            // Só trava se o story é VIP E a modelo tem produto de desbloqueio configurado.
-            // Sem produto → degrada pra story normal (evita paywall sem saída).
-            const vipLocked = r.is_vip === true && !!r.story_vip_product_id && !(await ownsStoryVip(r.story_vip_product_id));
+            // Só trava se o story é VIP E existe produto de desbloqueio (próprio da
+            // modelo OU o global). Sem produto nenhum → degrada pra story normal.
+            const vipLocked = r.is_vip === true && !!effStoryProd && !(await ownsStoryVip(effStoryProd));
             g.items.push({ id: r.id, type: r.type, media_url: r.media_url, caption: r.caption, bg_color: r.bg_color, created_at: r.created_at, is_vip: r.is_vip === true, vip_locked: vipLocked });
             if (!r.seen && !vipLocked) g.has_unseen = true;
             if (vipLocked) g.has_vip_locked = true;
@@ -1116,12 +1132,14 @@ router.post('/chats/status/:sid/reply', optionalUser, async (req, res) => {
         const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1`, [st.chat_id]);
         if (!cr.length) return res.status(404).json({ success: false, error: 'Chat não encontrado' });
         const chat = cr[0];
-        // Story VIP: só responde/destrava quem pagou os stories dessa modelo.
-        // Sem produto configurado, o story não é travado (degrada pra normal).
-        if (st.is_vip === true && chat.story_vip_product_id && !(await ownsProduct(ident.email, chat.story_vip_product_id))) {
+        // Story VIP: só responde/destrava quem pagou os stories dessa modelo
+        // (produto próprio OU o global de Status VIP). Sem produto nenhum
+        // configurado, o story não é travado (degrada pra normal).
+        const effStoryProd = chat.story_vip_product_id || (await storyPlanProductId());
+        if (st.is_vip === true && effStoryProd && !(await ownsProduct(ident.email, effStoryProd))) {
             return res.status(403).json({
                 success: false, error: 'vip_required',
-                unlock: await loadUnlock(chat.story_vip_product_id, chat.story_vip_checkout_url),
+                unlock: await loadUnlock(effStoryProd, chat.story_vip_checkout_url),
             });
         }
         const session = await findOrCreateSession(st.chat_id, ident, true);
