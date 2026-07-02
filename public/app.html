@@ -8122,6 +8122,12 @@ body.is-slowconn .prod-cta-fixed {
 #caStory .scap { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px; color: #fff; font-size: 15px; background: linear-gradient(transparent, rgba(0,0,0,.6)); text-align: center; }
 #caStory .snav { position: absolute; top: 0; bottom: 0; width: 35%; }
 #caStory .snav.left { left: 0; } #caStory .snav.right { right: 0; }
+/* Setinhas discretas de avançar/voltar (ficam ACIMA do paywall VIP: z 10 > 9) */
+#caStory .sgnav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 10;
+    width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.12);
+    color: rgba(255,255,255,.85); font-size: 22px; line-height: 32px; text-align: center;
+    cursor: pointer; user-select: none; -webkit-user-select: none; backdrop-filter: blur(4px); }
+#caStory .sgnav.prev { left: 8px; } #caStory .sgnav.next { right: 8px; }
 #caStory .sreply { display: flex; gap: 8px; padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); background: #000; }
 #caStory .sreply input { flex: 1; border: 1.5px solid rgba(255,255,255,.35); background: rgba(255,255,255,.08); color: #fff; border-radius: 999px; padding: 11px 16px; font-size: 14px; outline: none; }
 #caStory .sreply button { background: #25D366; border: none; color: #fff; border-radius: 50%; width: 44px; height: 44px; cursor: pointer; flex-shrink: 0; }
@@ -8826,7 +8832,7 @@ window.ChatApp = (function() {
         const group = STORIES.find(g => g.chat_id === chatId);
         if (!group || !group.items.length) return;
         // Gate de PWA pra ver stories (se ligado no painel e ainda não instalou)
-        pwaGate('gate_stories', () => { STORY = { group, idx: 0 }; renderStory(); });
+        pwaGate('gate_stories', () => { STORY = { group, gIdx: STORIES.indexOf(group), idx: 0 }; renderStory(); });
     }
     function renderStory() {
         if (!STORY) return;
@@ -8852,18 +8858,44 @@ window.ChatApp = (function() {
             + '<button class="x" onclick="ChatApp.closeStory()" aria-label="Fechar">×</button></div>'
             + '<div class="smedia">' + media + cap
             + (locked ? '' : '<div class="snav left" onclick="ChatApp.storyNav(-1)"></div><div class="snav right" onclick="ChatApp.storyNav(1)"></div>') + '</div>'
-            + reply + vipOv;
+            + reply + vipOv
+            // setinhas discretas (funcionam também no story VIP travado — z acima do paywall)
+            + '<div class="sgnav prev" onclick="ChatApp.storyNav(-1)">‹</div>'
+            + '<div class="sgnav next" onclick="ChatApp.storyNav(1)">›</div>';
         el.classList.add('show');
+        // Arrastar pro lado = troca de MODELO (igual Instagram). Vale inclusive
+        // no story VIP travado (o gesto é no container, acima do overlay).
+        el.ontouchstart = (e) => { const t = e.touches[0]; el._sx = t.clientX; el._sy = t.clientY; };
+        el.ontouchend = (e) => {
+            if (el._sx == null) return;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - el._sx, dy = t.clientY - el._sy;
+            el._sx = null;
+            if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) storyGroupNav(dx < 0 ? 1 : -1);
+        };
         // VIP travado: mostra o paywall (mídia segue rodando borrada atrás), NÃO marca
         // visto e NÃO auto-avança — fica até o cliente pagar ou fechar.
         if (locked) {
             const ov = document.getElementById('caStoryVip');
             if (ov && window.MVPaywall) {
-                MVPaywall.renderInline(ov, g.vip_unlock || {}, {
+                // Layout do STORY é o dourado "de X por Y" + 1 botão (referência) —
+                // NUNCA os cards de plano (quebram dentro do viewer). O preço e o
+                // checkout vêm do 1º plano do produto (Status VIP global ou próprio).
+                const u = g.vip_unlock || {};
+                const plan = (Array.isArray(u.plans) && u.plans[0]) || null;
+                const eff = Object.assign({}, u, {
+                    plans: [],
+                    checkout_url: (plan && plan.checkout_url) || u.checkout_url || null,
+                });
+                const offer = plan
+                    ? { price: plan.price, original_price: plan.original_price }
+                    : (u.price != null ? { price: u.price } : null);
+                MVPaywall.renderInline(ov, eff, {
                     icon: 'crown',
                     title: 'Conteúdo só pra assinantes 🔥',
                     subtitle: 'A ' + g.name + ' posta o conteúdo mais quente só pros assinantes. Vira assinante e desbloqueia tudo dela.',
                     ctaText: 'VIRAR ASSINANTE',
+                    offer: offer,
                     onClose: () => closeStory(),
                 });
             }
@@ -8893,14 +8925,27 @@ window.ChatApp = (function() {
     function storyNav(dir) {
         if (!STORY) return;
         const next = STORY.idx + dir;
-        if (next < 0) { STORY.idx = 0; renderStory(); return; }
+        if (next < 0) { storyGroupNav(-1, true); return; } // voltou do 1º → modelo anterior
         if (next >= STORY.group.items.length) {
             STORY.group.has_unseen = false; // viu tudo → anel apaga
-            closeStory();
             renderStripInline();
+            storyGroupNav(1); // igual Instagram: emenda na PRÓXIMA modelo
             return;
         }
         STORY.idx = next;
+        renderStory();
+    }
+    // Pula pro grupo (modelo) anterior/seguinte — só fecha quando acabam TODAS.
+    // lastItem=true: entrando de ré, cai no ÚLTIMO story da modelo anterior.
+    function storyGroupNav(dir, lastItem) {
+        if (!STORY) return;
+        stopStoryTimer();
+        let gi = (typeof STORY.gIdx === 'number' ? STORY.gIdx : STORIES.indexOf(STORY.group)) + dir;
+        while (gi >= 0 && gi < STORIES.length && !(STORIES[gi].items || []).length) gi += dir;
+        if (gi < 0) { STORY.idx = 0; renderStory(); return; } // já era a primeira: recomeça
+        if (gi >= STORIES.length) { closeStory(); renderStripInline(); return; } // acabou tudo
+        const g = STORIES[gi];
+        STORY = { group: g, gIdx: gi, idx: (lastItem && dir < 0) ? g.items.length - 1 : 0 };
         renderStory();
     }
     function closeStory() {

@@ -6367,56 +6367,6 @@ a { color: inherit; text-decoration: none; }
                 </div>
             </div>
 
-            <!-- MODAL: Métricas DETALHADAS do funil -->
-            <div id="funnelMetricsBackdrop" style="position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:310; display:none; align-items:flex-start; justify-content:center; padding:16px; overflow-y:auto;">
-                <div style="background:var(--card,#1a1a1a); border-radius:16px; width:100%; max-width:760px; margin:16px auto;">
-                    <div style="padding:18px 22px; border-bottom:1px solid rgba(255,255,255,.1); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:var(--card,#1a1a1a); border-radius:16px 16px 0 0; z-index:2;">
-                        <span style="font-size:16px; font-weight:700; color:#fff;">📊 Métricas — <span id="fmName"></span></span>
-                        <button onclick="document.getElementById('funnelMetricsBackdrop').style.display='none'" style="background:none; border:none; color:#fff; font-size:22px; cursor:pointer;">×</button>
-                    </div>
-                    <div style="padding:14px 22px; display:flex; gap:8px; flex-wrap:wrap; border-bottom:1px solid rgba(255,255,255,.07);">
-                        <button class="btn-secondary" style="font-size:12px;" onclick="fmPreset(0)">Hoje</button>
-                        <button class="btn-secondary" style="font-size:12px;" onclick="fmPreset(6)">7 dias</button>
-                        <button class="btn-secondary" style="font-size:12px;" onclick="fmPreset(29)">30 dias</button>
-                        <button class="btn-secondary" style="font-size:12px;" onclick="fmPreset(null)">Tudo</button>
-                    </div>
-                    <div id="funnelMetricsBody" style="padding:18px 22px;"><div style="color:rgba(255,255,255,.5);">Carregando...</div></div>
-                </div>
-            </div>
-
-            <!-- MODAL: Métricas do funil (período + comparação) -->
-            <div id="funnelStatsBackdrop" style="position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:300; display:none; align-items:center; justify-content:center; padding:16px;">
-                <div style="background:var(--card,#1a1a1a); border-radius:16px; width:100%; max-width:680px; max-height:92vh; overflow-y:auto;">
-                    <div style="padding:20px 24px; border-bottom:1px solid var(--border,rgba(255,255,255,.1)); display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:16px; font-weight:700; color:#fff;">📊 Métricas — <span id="fStatsName"></span></span>
-                        <button onclick="closeFunnelStats()" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">×</button>
-                    </div>
-                    <div style="padding:18px 24px;">
-                        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-bottom:10px;">
-                            <div><label style="display:block; font-size:11px; color:rgba(255,255,255,.6); margin-bottom:3px;">De</label>
-                                <input class="form-control" type="date" id="fStatsFromA" style="width:150px;"/></div>
-                            <div><label style="display:block; font-size:11px; color:rgba(255,255,255,.6); margin-bottom:3px;">Até</label>
-                                <input class="form-control" type="date" id="fStatsToA" style="width:150px;"/></div>
-                            <button type="button" class="btn-secondary" style="font-size:11px;" onclick="fStatsPreset(0)">Hoje</button>
-                            <button type="button" class="btn-secondary" style="font-size:11px;" onclick="fStatsPreset(6)">7 dias</button>
-                            <button type="button" class="btn-secondary" style="font-size:11px;" onclick="fStatsPreset(29)">30 dias</button>
-                        </div>
-                        <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:rgba(255,255,255,.7); cursor:pointer; margin-bottom:10px;">
-                            <input type="checkbox" id="fStatsCompare" onchange="document.getElementById('fStatsPeriodB').style.display = this.checked ? 'flex' : 'none'" style="width:15px;height:15px;">
-                            Comparar com outro período (ex: hoje × melhor dia da semana passada)
-                        </label>
-                        <div id="fStatsPeriodB" style="display:none; gap:8px; flex-wrap:wrap; align-items:flex-end; margin-bottom:10px;">
-                            <div><label style="display:block; font-size:11px; color:rgba(255,255,255,.6); margin-bottom:3px;">Comparar de</label>
-                                <input class="form-control" type="date" id="fStatsFromB" style="width:150px;"/></div>
-                            <div><label style="display:block; font-size:11px; color:rgba(255,255,255,.6); margin-bottom:3px;">até</label>
-                                <input class="form-control" type="date" id="fStatsToB" style="width:150px;"/></div>
-                        </div>
-                        <button type="button" class="btn-primary" style="margin-bottom:16px;" onclick="applyFunnelStats()">Aplicar</button>
-                        <div id="fStatsResults" style="color:rgba(255,255,255,.5); font-size:12px;">—</div>
-                    </div>
-                </div>
-            </div>
-
             <div class="screen-content" id="screen-ofertas">
                 <div class="page-header">
                     <div>
@@ -14782,106 +14732,12 @@ function openFunnelModal() {
     document.getElementById('funnelModalBackdrop').style.display = 'flex';
 }
 function closeFunnelModal() { document.getElementById('funnelModalBackdrop').style.display = 'none'; }
-// ═══════════════ MÉTRICAS DETALHADAS DO FUNIL ═══════════════
-let _fmId = null;
-function openFunnelMetrics(id, name) {
-    _fmId = id;
-    document.getElementById('fmName').textContent = name || '';
-    document.getElementById('funnelMetricsBackdrop').style.display = 'flex';
-    fmPreset(6);
-}
-function fmPreset(daysBack) {
-    let from = '', to = '';
-    if (daysBack !== null) {
-        const now = new Date();
-        const d = new Date(now.getTime() - daysBack * 86400000);
-        const fmt = x => x.toISOString().slice(0, 10);
-        from = fmt(d); to = fmt(now);
-    }
-    loadFunnelMetrics(from, to);
-}
-async function loadFunnelMetrics(from, to) {
-    const body = document.getElementById('funnelMetricsBody');
-    body.innerHTML = '<div style="color:rgba(255,255,255,.5);">Carregando...</div>';
-    try {
-        const qs = [];
-        if (from) qs.push('from=' + from);
-        if (to) qs.push('to=' + to);
-        const r = await fetch('/api/admin/funnels/' + _fmId + '/metrics' + (qs.length ? ('?' + qs.join('&')) : ''), { credentials: 'include' });
-        const d = await r.json();
-        if (!d.success) { body.innerHTML = '<div style="color:#f55">Erro ao carregar.</div>'; return; }
-        renderFunnelMetrics(d);
-    } catch (e) { body.innerHTML = '<div style="color:#f55">Erro: ' + e.message + '</div>'; }
-}
-function renderFunnelMetrics(d) {
-    const s = d.summary || {};
-    const visits = s.visits || 0, emails = s.emails || 0, pwa = s.pwa_installs || 0, buyers = s.buyers || 0;
-    const revenue = parseFloat(s.revenue || 0);
-    const pct = (a, b) => b > 0 ? Math.round(a / b * 100) : 0;
-    const money = v => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',');
-    const card = (label, val, sub, color) => '<div style="flex:1; min-width:130px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:12px; padding:14px;">'
-        + '<div style="font-size:11px; color:rgba(255,255,255,.55); text-transform:uppercase; letter-spacing:.5px;">' + label + '</div>'
-        + '<div style="font-size:24px; font-weight:800; color:' + (color || '#fff') + '; margin-top:4px;">' + val + '</div>'
-        + (sub ? '<div style="font-size:11px; color:rgba(255,255,255,.5); margin-top:2px;">' + sub + '</div>' : '') + '</div>';
-
-    let html = '<div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:10px;">Funil de conversão</div>';
-    html += '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px;">'
-        + card('Chegaram', visits, (s.unique_ips || 0) + ' IPs únicos')
-        + card('Colocaram e-mail', emails, pct(emails, visits) + '% das chegadas', '#3b82f6')
-        + card('Instalaram o app', pwa, pct(pwa, emails) + '% dos e-mails', '#a855f7')
-        + card('Compraram', buyers, pct(buyers, visits) + '% das chegadas', '#13c08a')
-        + '</div>';
-    html += '<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px;">'
-        + card('Receita', money(revenue), 'vendas atribuídas', '#13c08a')
-        + card('Ticket médio', money(buyers > 0 ? revenue / buyers : 0), 'por comprador')
-        + '</div>';
-
-    const hourly = d.hourly || [];
-    if (hourly.length) {
-        const byHour = {}; hourly.forEach(h => byHour[h.hour] = h.visits);
-        const maxH = Math.max.apply(null, hourly.map(h => h.visits).concat([1]));
-        let bars = '';
-        for (let h = 0; h < 24; h++) {
-            const v = byHour[h] || 0;
-            const hgt = Math.max(Math.round(v / maxH * 60), 2);
-            bars += '<div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;" title="' + h + 'h: ' + v + '">'
-                + '<div style="width:100%; max-width:14px; height:' + hgt + 'px; background:' + (v ? '#e50914' : 'rgba(255,255,255,.1)') + '; border-radius:3px;"></div>'
-                + (h % 3 === 0 ? '<div style="font-size:8px; color:rgba(255,255,255,.4);">' + h + '</div>' : '<div style="height:10px;"></div>') + '</div>';
-        }
-        html += '<div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:8px;">Chegadas por hora (Brasília)</div>'
-            + '<div style="display:flex; align-items:flex-end; gap:2px; height:80px; margin-bottom:18px;">' + bars + '</div>';
-    }
-
-    const cp = d.chat_progress || [];
-    if (cp.length) {
-        html += '<div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:8px;">Progresso no chat</div><div style="display:flex; flex-direction:column; gap:8px; margin-bottom:18px;">';
-        cp.forEach(c => {
-            const total = c.total_steps || 0, mx = c.max_step || 0;
-            const prog = total > 0 ? Math.min(100, Math.round(mx / total * 100)) : 0;
-            html += '<div style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:12px;">'
-                + '<div style="display:flex; justify-content:space-between; font-size:13px; color:#fff;"><b>' + escHtmlAdmin(c.name) + '</b><span>' + c.sessions + ' conversas</span></div>'
-                + '<div style="font-size:11px; color:rgba(255,255,255,.5); margin:4px 0 6px;">chegaram em média ao passo ' + c.avg_step + ' de ' + total + ' (máx ' + mx + ')</div>'
-                + '<div style="height:6px; background:rgba(255,255,255,.1); border-radius:3px; overflow:hidden;"><div style="height:100%; width:' + prog + '%; background:#25D366;"></div></div>'
-                + '</div>';
-        });
-        html += '</div>';
-    }
-
-    const leads = d.leads || [];
-    html += '<div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:8px;">Últimos leads (' + leads.length + ')</div>';
-    if (!leads.length) html += '<div style="color:rgba(255,255,255,.4); font-size:12px;">Nenhum lead com e-mail ainda.</div>';
-    else {
-        const badge = (txt, col) => '<span style="font-size:10px; font-weight:700; padding:2px 7px; border-radius:999px; background:' + col + '22; color:' + col + ';">' + txt + '</span>';
-        html += '<div style="display:flex; flex-direction:column; gap:6px;">';
-        leads.forEach(l => {
-            html += '<div style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,.25); border-radius:8px; padding:8px 10px;">'
-                + '<div style="flex:1; min-width:0; font-size:12.5px; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escHtmlAdmin(l.email) + '</div>'
-                + badge('e-mail', '#3b82f6') + (l.installed ? badge('app', '#a855f7') : '') + (l.bought ? badge('comprou', '#13c08a') : '')
-                + '</div>';
-        });
-        html += '</div>';
-    }
-    document.getElementById('funnelMetricsBody').innerHTML = html;
+// Métricas do funil: os modais antigos morreram — tudo vive na tela "Análises"
+// (menu lateral), que tem período, comparação, gráficos e análise por chat.
+function openFunnelMetrics() {
+    const nav = document.querySelector('[data-screen="funnel-analytics"]');
+    switchAdminScreen(nav, 'funnel-analytics', 'Análise de Funis');
+    loadFunnelAnalytics();
 }
 
 function editFunnel(f) {
@@ -15150,114 +15006,6 @@ async function deleteStep(id) {
     await fetch('/api/admin/funnels/'+_currentFunnelId+'/steps/'+id, { method:'DELETE', credentials:'include' });
     loadFunnelSteps(_currentFunnelId);
 }
-
-// ═══════════════ MÉTRICAS DO FUNIL (período + comparação) ═══════════════
-let _statsFunnelId = null;
-
-function fStatsIso(d) { return d.toISOString().slice(0, 10); }
-function fStatsPreset(daysBack) {
-    const to = new Date();
-    const from = new Date(Date.now() - daysBack * 86400000);
-    document.getElementById('fStatsFromA').value = fStatsIso(from);
-    document.getElementById('fStatsToA').value = fStatsIso(to);
-    applyFunnelStats();
-}
-
-function openFunnelStats(id, name) {
-    _statsFunnelId = id;
-    document.getElementById('fStatsName').textContent = name || ('#' + id);
-    document.getElementById('fStatsFromA').value = fStatsIso(new Date(Date.now() - 6 * 86400000));
-    document.getElementById('fStatsToA').value = fStatsIso(new Date());
-    document.getElementById('fStatsCompare').checked = false;
-    document.getElementById('fStatsPeriodB').style.display = 'none';
-    document.getElementById('fStatsFromB').value = fStatsIso(new Date(Date.now() - 13 * 86400000));
-    document.getElementById('fStatsToB').value = fStatsIso(new Date(Date.now() - 7 * 86400000));
-    document.getElementById('funnelStatsBackdrop').style.display = 'flex';
-    applyFunnelStats();
-}
-function closeFunnelStats() { document.getElementById('funnelStatsBackdrop').style.display = 'none'; }
-
-async function fetchFunnelStats(from, to) {
-    const qs = [];
-    if (from) qs.push('from=' + from);
-    if (to) qs.push('to=' + to);
-    const r = await fetch('/api/admin/funnels/' + _statsFunnelId + '/stats' + (qs.length ? '?' + qs.join('&') : ''), { credentials: 'include' });
-    return r.json();
-}
-
-async function applyFunnelStats() {
-    const out = document.getElementById('fStatsResults');
-    if (!out || !_statsFunnelId) return;
-    out.innerHTML = '<div style="color:rgba(255,255,255,.4);">Carregando...</div>';
-    const fromA = document.getElementById('fStatsFromA').value;
-    const toA = document.getElementById('fStatsToA').value;
-    const comparing = document.getElementById('fStatsCompare').checked;
-    const fromB = document.getElementById('fStatsFromB').value;
-    const toB = document.getElementById('fStatsToB').value;
-    try {
-        const [ra, rb] = await Promise.all([
-            fetchFunnelStats(fromA, toA),
-            comparing ? fetchFunnelStats(fromB, toB) : Promise.resolve(null),
-        ]);
-        if (!ra.success) { out.innerHTML = '<div style="color:#f55">Erro carregando métricas</div>'; return; }
-        const sa = ra.stats;
-        const sb = rb && rb.success ? rb.stats : null;
-        const taxa = (s) => s.visits_total > 0 ? (s.conversions / s.visits_total * 100) : 0;
-
-        const delta = (a, b) => {
-            if (b === null || b === undefined) return '';
-            const diff = a - b;
-            if (b === 0) return a > 0 ? '<span style="color:#4CD964;font-size:10px;"> ▲ novo</span>' : '';
-            const pct = (diff / b * 100);
-            if (Math.abs(pct) < 0.05) return '<span style="color:rgba(255,255,255,.4);font-size:10px;"> =</span>';
-            const up = pct > 0;
-            return '<span style="color:' + (up ? '#4CD964' : '#FF3B30') + ';font-size:10px;"> ' + (up ? '▲' : '▼') + ' ' + Math.abs(pct).toFixed(0) + '%</span>';
-        };
-        const card = (label, va, vb, dHtml) => '<div style="background:rgba(0,0,0,.3); padding:10px; border-radius:8px; text-align:center;">'
-            + '<div style="font-size:19px; color:#fff; font-weight:700;">' + va + (dHtml || '') + '</div>'
-            + (vb !== null && vb !== undefined ? '<div style="font-size:11px; color:rgba(255,255,255,.45);">antes: ' + vb + '</div>' : '')
-            + '<div style="font-size:10px; color:rgba(255,255,255,.55); margin-top:2px; text-transform:uppercase; letter-spacing:.04em;">' + label + '</div>'
-            + '</div>';
-
-        let html = '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(105px,1fr)); gap:8px; margin-bottom:16px;">'
-            + card('Visitas', sa.visits_total, sb ? sb.visits_total : null, sb ? delta(sa.visits_total, sb.visits_total) : '')
-            + card('Únicos (IP)', sa.unique_ips, sb ? sb.unique_ips : null, sb ? delta(sa.unique_ips, sb.unique_ips) : '')
-            + card('E-mails', sa.unique_emails, sb ? sb.unique_emails : null, sb ? delta(sa.unique_emails, sb.unique_emails) : '')
-            + card('Conversões', sa.conversions, sb ? sb.conversions : null, sb ? delta(sa.conversions, sb.conversions) : '')
-            + card('Taxa', taxa(sa).toFixed(1) + '%', sb ? taxa(sb).toFixed(1) + '%' : null, sb ? delta(taxa(sa), taxa(sb)) : '')
-            + '</div>';
-
-        // Barras por dia (visitas; conversões em verde por cima)
-        const daily = Array.isArray(ra.daily) ? ra.daily : [];
-        if (daily.length > 0) {
-            const max = Math.max(...daily.map(d => d.visits), 1);
-            html += '<div style="font-size:11px; color:rgba(255,255,255,.5); margin-bottom:6px;">Por dia — <span style="color:#fff;">visitas</span> · <span style="color:#4CD964;">conversões</span></div>';
-            html += '<div style="display:flex; align-items:flex-end; gap:3px; height:90px; background:rgba(0,0,0,.2); border-radius:8px; padding:8px;">'
-                + daily.map(d => {
-                    const hv = Math.max(3, Math.round(d.visits / max * 74));
-                    const hc = Math.max(d.conversions > 0 ? 3 : 0, Math.round(d.conversions / max * 74));
-                    const dia = d.day.slice(8, 10) + '/' + d.day.slice(5, 7);
-                    return '<div title="' + dia + ': ' + d.visits + ' visitas, ' + d.conversions + ' conversões" style="flex:1; min-width:0; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:0; height:100%; position:relative; cursor:default;">'
-                        + '<div style="width:100%; max-width:26px; background:rgba(229,9,20,.55); border-radius:3px 3px 0 0; height:' + hv + 'px; position:relative;">'
-                        + (hc > 0 ? '<div style="position:absolute; bottom:0; left:0; right:0; background:#4CD964; border-radius:0 0 0 0; height:' + hc + 'px;"></div>' : '')
-                        + '</div>'
-                        + '</div>';
-                }).join('')
-                + '</div>';
-            if (daily.length <= 14) {
-                html += '<div style="display:flex; gap:3px; padding:4px 8px 0;">'
-                    + daily.map(d => '<div style="flex:1; text-align:center; font-size:9px; color:rgba(255,255,255,.4);">' + d.day.slice(8, 10) + '</div>').join('')
-                    + '</div>';
-            }
-        } else {
-            html += '<div style="color:rgba(255,255,255,.4); font-size:12px;">Sem visitas no período.</div>';
-        }
-        out.innerHTML = html;
-    } catch (e) {
-        out.innerHTML = '<div style="color:#f55">Erro: ' + e.message + '</div>';
-    }
-}
-
 
 // ═══════════════ CHATS (estilo WhatsApp) ═══════════════
 let _curChatId = null;
@@ -16194,24 +15942,33 @@ async function loadFunnelAnalytics() {
         _faLast = d;
         const t = d.totals || {}, c = d.compare || null;
 
-        // KPIs com delta vs comparação
-        const card = (label, val, color, key, fmt) => {
-            const shown = fmt ? fmt(val) : faNum(val);
+        // KPIs com delta vs comparação + taxa de conversão da etapa
+        const pctOf = (a, b) => (Number(b) > 0 ? Math.round(Number(a || 0) / Number(b) * 100) : null);
+        const card = (label, val, color, key, opts) => {
+            opts = opts || {};
+            const shown = opts.fmt ? opts.fmt(val) : faNum(val);
             const delta = c ? faDelta(t[key], c[key]) : '';
-            const prev = c ? '<div style="font-size:10px; color:rgba(255,255,255,.35); margin-top:1px;">antes: ' + (fmt ? fmt(c[key]) : faNum(c[key])) + '</div>' : '';
-            return '<div style="background:var(--card,#1a1a1a); border:1px solid var(--border,rgba(255,255,255,.08)); border-radius:12px; padding:14px 16px;">'
-                + '<div style="display:flex; align-items:baseline; gap:8px;"><span style="font-size:24px; font-weight:800; color:'+(color||'#fff')+';">'+shown+'</span>'+delta+'</div>'
-                + '<div style="font-size:11.5px; color:rgba(255,255,255,.55); margin-top:2px;">'+label+'</div>' + prev + '</div>';
+            const prev = c ? '<div style="font-size:10px; color:rgba(255,255,255,.35); margin-top:3px;">antes: ' + (opts.fmt ? opts.fmt(c[key]) : faNum(c[key])) + '</div>' : '';
+            const rate = opts.rate != null
+                ? '<div style="font-size:11px; font-weight:700; color:' + color + '; margin-top:3px;">' + opts.rate + '%<span style="color:rgba(255,255,255,.4); font-weight:400;"> ' + opts.rateLabel + '</span></div>'
+                : (opts.sub ? '<div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:3px;">' + opts.sub + '</div>' : '');
+            return '<div style="position:relative; overflow:hidden; background:var(--card,#1a1a1a); border:1px solid var(--border,rgba(255,255,255,.08)); border-radius:14px; padding:14px 16px;">'
+                + '<div style="position:absolute; left:0; top:0; bottom:0; width:3px; background:' + color + ';"></div>'
+                + '<div style="font-size:10.5px; letter-spacing:.7px; text-transform:uppercase; color:rgba(255,255,255,.5);">' + label + '</div>'
+                + '<div style="display:flex; align-items:baseline; gap:8px; margin-top:5px;"><span style="font-size:26px; font-weight:800; color:#fff;">' + shown + '</span>' + delta + '</div>'
+                + rate + prev + '</div>';
         };
+        const ticket = t.purchases > 0 ? t.revenue / t.purchases : 0;
+        const cTicket = c ? (c.purchases > 0 ? c.revenue / c.purchases : 0) : null;
         kpis.innerHTML =
               card('Chegadas no funil', t.clicks, '#3b82f6', 'clicks')
-            + card('E-mails capturados', t.emails, '#facc15', 'emails')
-            + card('Instalaram o app', t.pwa_installs, '#25D366', 'pwa_installs')
-            + card('1ª interação no chat', t.first_interactions, '#06b6d4', 'first_interactions')
-            + card('Popup de assinar aberto', t.paywall_opens, '#f59e0b', 'paywall_opens')
-            + card('Clicaram num plano', t.paywall_clicks, '#a855f7', 'paywall_clicks')
-            + card('Compras', t.purchases, '#e50914', 'purchases')
-            + card('Receita', t.revenue, '#13c08a', 'revenue', faMoney);
+            + card('E-mails', t.emails, '#facc15', 'emails', { rate: pctOf(t.emails, t.clicks), rateLabel: 'das chegadas' })
+            + card('Instalaram o app', t.pwa_installs, '#25D366', 'pwa_installs', { rate: pctOf(t.pwa_installs, t.emails), rateLabel: 'dos e-mails' })
+            + card('1ª interação', t.first_interactions, '#06b6d4', 'first_interactions', { rate: pctOf(t.first_interactions, t.emails), rateLabel: 'dos e-mails' })
+            + card('Popup aberto', t.paywall_opens, '#f59e0b', 'paywall_opens', { rate: pctOf(t.paywall_opens, t.first_interactions), rateLabel: 'das interações' })
+            + card('Clicou no plano', t.paywall_clicks, '#a855f7', 'paywall_clicks', { rate: pctOf(t.paywall_clicks, t.paywall_opens), rateLabel: 'dos popups' })
+            + card('Compras', t.purchases, '#e50914', 'purchases', { rate: pctOf(t.purchases, t.paywall_clicks), rateLabel: 'dos cliques' })
+            + card('Receita', t.revenue, '#13c08a', 'revenue', { fmt: faMoney, sub: 'ticket médio ' + faMoney(ticket) + (cTicket != null ? ' · antes ' + faMoney(cTicket) : '') });
 
         // Funil completo (queda etapa a etapa) — % sempre sobre a etapa base
         const hasPressel = (t.pressel_views || 0) > 0 || (c && (c.pressel_views || 0) > 0);
@@ -16245,34 +16002,64 @@ async function loadFunnelAnalytics() {
         for (let i = 0; i < 24; i++) {
             const v = hourMap[i] || 0; const ph = Math.round((v / maxH) * 100);
             hh += '<div title="'+i+'h: '+v+'" style="flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%;">'
-                + '<div style="width:100%; height:'+ph+'%; min-height:'+(v>0?'3px':'0')+'; background:#3b82f6; border-radius:3px 3px 0 0;"></div></div>';
+                + '<div style="width:100%; height:'+ph+'%; min-height:'+(v>0?'3px':'0')+'; background:linear-gradient(180deg,#e50914,#8B0000); border-radius:3px 3px 0 0;"></div></div>';
         }
         hh += '</div><div style="display:flex; justify-content:space-between; font-size:9px; color:rgba(255,255,255,.4); margin-top:4px;"><span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span></div>';
         document.getElementById('faByHour').innerHTML = hh;
 
-        // Por dia: barras de chegadas + e-mails, com compras/receita no rótulo
+        // Por dia: gráfico SVG de ÁREA (chegadas) + linha (e-mails) + barras (compras)
         const days = d.by_day || [];
-        const maxD = Math.max(1, ...days.map(x => x.clicks), 1);
-        document.getElementById('faByDay').innerHTML = days.length
-            ? '<div style="display:flex; align-items:flex-end; gap:6px; height:150px;">' + days.map(x => {
-                const ph = Math.round((x.clicks / maxD) * 100);
-                const pe = Math.round(((x.emails || 0) / maxD) * 100);
-                const lbl = x.day.slice(8) + '/' + x.day.slice(5,7);
-                const buys = x.purchases ? '<div style="font-size:9px; color:#13c08a; font-weight:700;">' + x.purchases + '🛒</div>' : '<div style="height:12px;"></div>';
-                return '<div title="'+x.day+': '+x.clicks+' chegadas · '+x.emails+' e-mails · '+(x.purchases||0)+' compras · '+faMoney(x.revenue)+'" style="flex:1; min-width:20px; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; height:100%;">'
-                    + buys
-                    + '<div style="font-size:10px; color:rgba(255,255,255,.6); margin-bottom:2px;">'+x.clicks+'</div>'
-                    + '<div style="width:100%; display:flex; gap:1px; align-items:flex-end; height:'+Math.max(ph,3)+'%;">'
-                    +   '<div style="flex:2; height:100%; background:linear-gradient(180deg,#3b82f6,#1e40af); border-radius:3px 3px 0 0;"></div>'
-                    +   '<div style="flex:1; height:'+(ph>0?Math.round(pe/Math.max(ph,1)*100):0)+'%; background:#facc15; border-radius:3px 3px 0 0;"></div>'
-                    + '</div>'
-                    + '<div style="font-size:9px; color:rgba(255,255,255,.4); margin-top:3px;">'+lbl+'</div></div>';
-            }).join('') + '</div>'
-              + '<div style="display:flex; gap:14px; font-size:10px; color:rgba(255,255,255,.5); margin-top:8px;">'
-              + '<span><i style="display:inline-block;width:9px;height:9px;background:#3b82f6;border-radius:2px;margin-right:4px;"></i>Chegadas</span>'
-              + '<span><i style="display:inline-block;width:9px;height:9px;background:#facc15;border-radius:2px;margin-right:4px;"></i>E-mails</span>'
-              + '<span><i style="display:inline-block;width:9px;height:9px;background:#13c08a;border-radius:2px;margin-right:4px;"></i>🛒 Compras</span></div>'
-            : '<div style="color:rgba(255,255,255,.4); font-size:12px;">Sem chegadas no período.</div>';
+        const dayEl = document.getElementById('faByDay');
+        if (!days.length) {
+            dayEl.innerHTML = '<div style="color:rgba(255,255,255,.4); font-size:12px;">Sem chegadas no período.</div>';
+        } else {
+            const W = 720, H = 190, PL = 40, PR = 10, PT = 12, PB = 24;
+            const iw = W - PL - PR, ih = H - PT - PB;
+            const maxY = Math.max(1, ...days.map(x => x.clicks));
+            const n = days.length;
+            const X = i => PL + (n === 1 ? iw / 2 : (i / (n - 1)) * iw);
+            const Y = v => PT + ih - (Math.max(0, v) / maxY) * ih;
+            const pts = k => days.map((x, i) => X(i).toFixed(1) + ',' + Y(x[k] || 0).toFixed(1)).join(' ');
+            const area = 'M' + X(0).toFixed(1) + ',' + Y(days[0].clicks).toFixed(1)
+                + days.map((x, i) => 'L' + X(i).toFixed(1) + ',' + Y(x.clicks).toFixed(1)).join('')
+                + 'L' + X(n - 1).toFixed(1) + ',' + (PT + ih) + ' L' + X(0).toFixed(1) + ',' + (PT + ih) + ' Z';
+            let grid = '';
+            for (let gi = 0; gi <= 4; gi++) {
+                const v = Math.round(maxY / 4 * gi), gy = Y(v);
+                grid += '<line x1="' + PL + '" y1="' + gy + '" x2="' + (W - PR) + '" y2="' + gy + '" stroke="rgba(255,255,255,.06)"/>'
+                    + '<text x="' + (PL - 6) + '" y="' + (gy + 3) + '" text-anchor="end" font-size="9" fill="rgba(255,255,255,.4)">' + faNum(v) + '</text>';
+            }
+            let labels = '';
+            const lstep = Math.ceil(n / 10);
+            days.forEach((x, i) => {
+                if (i % lstep !== 0 && i !== n - 1) return;
+                labels += '<text x="' + X(i).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.45)">' + x.day.slice(8) + '/' + x.day.slice(5, 7) + '</text>';
+            });
+            const bw = Math.max(4, Math.min(16, iw / n * 0.3));
+            const buys = days.map((x, i) => {
+                if (!x.purchases) return '';
+                const bh = Math.max(3, (x.purchases / maxY) * ih);
+                return '<rect x="' + (X(i) - bw / 2).toFixed(1) + '" y="' + (PT + ih - bh).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + bh.toFixed(1) + '" rx="2" fill="#13c08a" opacity=".95"><title>' + x.day + ': ' + x.purchases + ' compra(s) · ' + faMoney(x.revenue) + '</title></rect>';
+            }).join('');
+            // áreas invisíveis de hover com o resumo do dia (tooltip nativo)
+            const dots = days.map((x, i) =>
+                '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(x.clicks).toFixed(1) + '" r="3" fill="#3b82f6"/>'
+                + '<rect x="' + (X(i) - (iw / n / 2)).toFixed(1) + '" y="' + PT + '" width="' + (iw / n).toFixed(1) + '" height="' + ih + '" fill="transparent"><title>' + x.day.slice(8) + '/' + x.day.slice(5, 7) + ' — ' + faNum(x.clicks) + ' chegadas · ' + faNum(x.emails || 0) + ' e-mails · ' + (x.purchases || 0) + ' compras · ' + faMoney(x.revenue) + '</title></rect>'
+            ).join('');
+            dayEl.innerHTML =
+                '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%; height:auto; display:block;" preserveAspectRatio="none">'
+                + '<defs><linearGradient id="faGradClicks" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#3b82f6" stop-opacity=".35"/><stop offset="100%" stop-color="#3b82f6" stop-opacity="0"/></linearGradient></defs>'
+                + grid
+                + '<path d="' + area + '" fill="url(#faGradClicks)"/>'
+                + '<polyline points="' + pts('clicks') + '" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round"/>'
+                + '<polyline points="' + pts('emails') + '" fill="none" stroke="#facc15" stroke-width="2" stroke-linejoin="round"/>'
+                + buys + labels + dots
+                + '</svg>'
+                + '<div style="display:flex; gap:16px; font-size:10.5px; color:rgba(255,255,255,.55); margin-top:8px;">'
+                + '<span><i style="display:inline-block;width:14px;height:3px;background:#3b82f6;border-radius:2px;margin-right:5px;vertical-align:middle;"></i>Chegadas</span>'
+                + '<span><i style="display:inline-block;width:14px;height:3px;background:#facc15;border-radius:2px;margin-right:5px;vertical-align:middle;"></i>E-mails</span>'
+                + '<span><i style="display:inline-block;width:9px;height:9px;background:#13c08a;border-radius:2px;margin-right:5px;vertical-align:middle;"></i>Compras</span></div>';
+        }
 
         // Por funil (com pressel quando houver)
         const bf = d.by_funnel || [];
