@@ -15967,7 +15967,8 @@ async function loadFunnelAnalytics() {
             + card('1ª interação', t.first_interactions, '#06b6d4', 'first_interactions', { rate: pctOf(t.first_interactions, t.emails), rateLabel: 'dos e-mails' })
             + card('Popup aberto', t.paywall_opens, '#f59e0b', 'paywall_opens', { rate: pctOf(t.paywall_opens, t.first_interactions), rateLabel: 'das interações' })
             + card('Clicou no plano', t.paywall_clicks, '#a855f7', 'paywall_clicks', { rate: pctOf(t.paywall_clicks, t.paywall_opens), rateLabel: 'dos popups' })
-            + card('Compras', t.purchases, '#e50914', 'purchases', { rate: pctOf(t.purchases, t.paywall_clicks), rateLabel: 'dos cliques' })
+            + card('Oferta do chat clicada', t.cta_clicks, '#ff6b35', 'cta_clicks', { rate: pctOf(t.cta_clicks, t.first_interactions), rateLabel: 'das interações' })
+            + card('Compras', t.purchases, '#e50914', 'purchases', { rate: pctOf(t.purchases, (Number(t.paywall_clicks || 0) + Number(t.cta_clicks || 0)) || null), rateLabel: 'dos cliques no checkout' })
             + card('Receita', t.revenue, '#13c08a', 'revenue', { fmt: faMoney, sub: 'ticket médio ' + faMoney(ticket) + (cTicket != null ? ' · antes ' + faMoney(cTicket) : '') });
 
         // Funil completo (queda etapa a etapa) — % sempre sobre a etapa base
@@ -15983,6 +15984,7 @@ async function loadFunnelAnalytics() {
         stages.push(['Mandou a 1ª mensagem', t.first_interactions, '#06b6d4']);
         stages.push(['Viu o popup de assinar', t.paywall_opens, '#f59e0b']);
         stages.push(['Clicou num plano', t.paywall_clicks, '#a855f7']);
+        stages.push(['Clicou na oferta do chat (link do checkout)', t.cta_clicks, '#ff6b35']);
         stages.push(['Comprou', t.purchases, '#e50914']);
         const base = Math.max(1, ...stages.map(s => s[1] || 0));
         document.getElementById('faSteps').innerHTML = stages.map((s, i) => {
@@ -16077,11 +16079,11 @@ async function loadFunnelAnalytics() {
             : '<div style="color:rgba(255,255,255,.4); font-size:12px;">Nenhum funil com chegadas no período.</div>';
 
         // Por conversa (chat)
-        const bc = (d.by_chat || []).filter(ch => (ch.sessions || 0) > 0 || (ch.paywall_opens || 0) > 0);
+        const bc = (d.by_chat || []).filter(ch => (ch.sessions || 0) > 0 || (ch.paywall_opens || 0) > 0 || (ch.cta_clicks || 0) > 0);
         document.getElementById('faByChat').innerHTML = bc.length
             ? '<table style="width:100%; border-collapse:collapse; font-size:12.5px;"><thead><tr style="color:rgba(255,255,255,.5); text-align:left;">'
                 + '<th style="padding:6px 8px;">Conversa</th><th style="padding:6px 8px;">Sessões</th><th style="padding:6px 8px;">Interagiram</th>'
-                + '<th style="padding:6px 8px;">Progresso no roteiro</th><th style="padding:6px 8px;">Popup aberto</th><th style="padding:6px 8px;">Clicou no plano</th><th style="padding:6px 8px;"></th></tr></thead><tbody>'
+                + '<th style="padding:6px 8px;">Progresso no roteiro</th><th style="padding:6px 8px;">Popup aberto</th><th style="padding:6px 8px;">Clicou no plano</th><th style="padding:6px 8px;">Oferta clicada</th><th style="padding:6px 8px;"></th></tr></thead><tbody>'
                 + bc.map(ch => {
                     const prog = ch.total_steps > 0 ? Math.min(100, Math.round(ch.avg_step / ch.total_steps * 100)) : 0;
                     const eng = ch.sessions > 0 ? Math.round(ch.engaged / ch.sessions * 100) : 0;
@@ -16093,6 +16095,7 @@ async function loadFunnelAnalytics() {
                         + '<td style="padding:7px 8px; min-width:130px;"><div style="display:flex; align-items:center; gap:6px;"><div style="flex:1; height:6px; background:rgba(255,255,255,.1); border-radius:3px; overflow:hidden;"><div style="height:100%; width:'+prog+'%; background:#25D366;"></div></div><span style="font-size:11px; color:rgba(255,255,255,.55);">'+ch.avg_step+'/'+ch.total_steps+'</span></div></td>'
                         + '<td style="padding:7px 8px;">'+faNum(ch.paywall_opens)+'</td>'
                         + '<td style="padding:7px 8px;">'+faNum(ch.paywall_clicks)+' <span style="color:rgba(255,255,255,.45);">('+pwRate+'%)</span></td>'
+                        + '<td style="padding:7px 8px; color:#ff6b35; font-weight:600;">'+faNum(ch.cta_clicks)+'</td>'
                         + '<td style="padding:7px 8px;"><button class="btn-secondary" style="font-size:11px; padding:4px 10px;" onclick="faLoadDropoff('+ch.id+', \''+escHtmlAdmin(ch.name).replace(/'/g,'&#39;')+'\')">Queda por bloco</button></td>'
                         + '</tr>';
                 }).join('') + '</tbody></table>'

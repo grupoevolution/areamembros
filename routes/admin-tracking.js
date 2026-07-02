@@ -87,6 +87,8 @@ async function periodStats(A, B) {
           ) AS first_interactions,
           (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'chat_paywall_open' AND created_at >= $1::timestamptz AND created_at < ($2::timestamptz + INTERVAL '1 day')) AS paywall_opens,
           (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'chat_paywall_click' AND created_at >= $1::timestamptz AND created_at < ($2::timestamptz + INTERVAL '1 day')) AS paywall_clicks,
+          -- clique no botão de OFERTA do roteiro (o link do checkout no chat)
+          (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'chat_cta_click' AND created_at >= $1::timestamptz AND created_at < ($2::timestamptz + INTERVAL '1 day')) AS cta_clicks,
           (SELECT COUNT(*)::int FROM user_access WHERE status = 'active' AND granted_by = 'webhook' AND granted_at >= $1::timestamptz AND granted_at < ($2::timestamptz + INTERVAL '1 day')) AS purchases,
           (SELECT COALESCE(SUM(sale_amount), 0)::float FROM user_access WHERE status = 'active' AND granted_by = 'webhook' AND granted_at >= $1::timestamptz AND granted_at < ($2::timestamptz + INTERVAL '1 day')) AS revenue
     `, [A, B]);
@@ -167,7 +169,10 @@ router.get('/funnel-analytics', requireAdmin, async (req, res) => {
                           AND te.created_at >= $1::timestamptz AND te.created_at < ($2::timestamptz + INTERVAL '1 day')) AS paywall_opens,
                        (SELECT COUNT(*)::int FROM tracking_events te
                         WHERE te.event_type = 'chat_paywall_click' AND (te.metadata->>'chat_id')::int = c.id
-                          AND te.created_at >= $1::timestamptz AND te.created_at < ($2::timestamptz + INTERVAL '1 day')) AS paywall_clicks
+                          AND te.created_at >= $1::timestamptz AND te.created_at < ($2::timestamptz + INTERVAL '1 day')) AS paywall_clicks,
+                       (SELECT COUNT(*)::int FROM tracking_events te
+                        WHERE te.event_type = 'chat_cta_click' AND (te.metadata->>'chat_id')::int = c.id
+                          AND te.created_at >= $1::timestamptz AND te.created_at < ($2::timestamptz + INTERVAL '1 day')) AS cta_clicks
                 FROM chats c
                 WHERE c.active = true
                 ORDER BY sessions DESC, c.display_order

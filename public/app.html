@@ -8122,6 +8122,23 @@ body.is-slowconn .prod-cta-fixed {
 #caStory .scap { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px; color: #fff; font-size: 15px; background: linear-gradient(transparent, rgba(0,0,0,.6)); text-align: center; }
 #caStory .snav { position: absolute; top: 0; bottom: 0; width: 35%; }
 #caStory .snav.left { left: 0; } #caStory .snav.right { right: 0; }
+/* Paywall do STORY (design dourado da referência): coluna centrada, coroa com
+   brilho, "de X por Y/mês" e CTA âmbar. NÃO usa o MVPaywall (o container do
+   story é flex-row e quebrava o banner genérico em linha). */
+#caStory .spay { position: absolute; inset: 0; z-index: 9; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 28px 26px; background: linear-gradient(to bottom, rgba(10,7,4,.55), rgba(10,7,4,.9)); }
+#caStory .spay .crown { width: 96px; height: 96px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 42px; background: radial-gradient(circle, rgba(245,197,66,.28), rgba(245,197,66,.04) 72%); box-shadow: 0 0 0 1.5px rgba(245,197,66,.4), 0 0 46px rgba(245,197,66,.22); margin-bottom: 24px; position: relative; }
+#caStory .spay .crown::after { content: ''; position: absolute; inset: -12px; border-radius: 50%; border: 1px solid rgba(245,197,66,.22); }
+#caStory .spay h2 { font-size: 26px; line-height: 1.22; font-weight: 900; letter-spacing: .6px; text-transform: uppercase; color: #fff; margin: 0 0 14px; }
+#caStory .spay h2 b { color: #f5c542; }
+#caStory .spay .sub { font-size: 15px; color: rgba(255,255,255,.82); line-height: 1.55; max-width: 330px; margin-bottom: 22px; }
+#caStory .spay .sub b { color: #fff; }
+#caStory .spay .price { display: flex; align-items: baseline; gap: 10px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
+#caStory .spay .price .de { font-size: 17px; color: rgba(255,255,255,.45); text-decoration: line-through; }
+#caStory .spay .price .por { font-size: 32px; font-weight: 900; color: #f5c542; }
+#caStory .spay .price .mes { font-size: 17px; font-weight: 800; color: #f5c542; }
+#caStory .spay .cta { width: 100%; max-width: 340px; background: linear-gradient(180deg, #fbbf24, #f59e0b); color: #241a05; border: none; border-radius: 16px; padding: 17px 14px; font-size: 16px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; cursor: pointer; box-shadow: 0 10px 30px rgba(245,158,11,.35); }
+#caStory .spay .safe { font-size: 12.5px; color: rgba(255,255,255,.5); margin-top: 14px; }
+#caStory .spay .later { background: none; border: none; color: rgba(255,255,255,.65); font-size: 15px; margin-top: 20px; cursor: pointer; padding: 8px; }
 /* Setinhas discretas de avançar/voltar (ficam ACIMA do paywall VIP: z 10 > 9) */
 #caStory .sgnav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 10;
     width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.12);
@@ -8852,7 +8869,7 @@ window.ChatApp = (function() {
         const cap = (!locked && it.type !== 'text' && it.caption) ? '<div class="scap">' + esc(it.caption) + '</div>' : '';
         const reply = locked ? '' : ('<div class="sreply"><input id="caStoryReply" type="text" placeholder="Responder ' + esc(g.name) + '..." autocomplete="off">'
             + '<button onclick="ChatApp.storyReply()" aria-label="Enviar"><svg viewBox="0 0 24 24" fill="#fff"><path d="M3.4 20.4l17.45-7.48a1 1 0 000-1.84L3.4 3.6a.993.993 0 00-1.39.91L2 9.12c0 .5.37.93.87.99L17 12 2.87 13.88c-.5.07-.87.5-.87 1l.01 4.61c0 .71.73 1.2 1.39.91z"/></svg></button></div>');
-        const vipOv = locked ? '<div class="tk-vip-overlay" id="caStoryVip"></div>' : '';
+        const vipOv = locked ? '<div class="spay" id="caStoryVip"></div>' : '';
         el.innerHTML = '<div class="bars">' + bars + '</div>'
             + '<div class="shead"><div class="av"' + avbg + '></div><div class="nm">' + esc(g.name) + '</div>'
             + '<button class="x" onclick="ChatApp.closeStory()" aria-label="Fechar">×</button></div>'
@@ -8877,27 +8894,32 @@ window.ChatApp = (function() {
         // visto e NÃO auto-avança — fica até o cliente pagar ou fechar.
         if (locked) {
             const ov = document.getElementById('caStoryVip');
-            if (ov && window.MVPaywall) {
-                // Layout do STORY é o dourado "de X por Y" + 1 botão (referência) —
-                // NUNCA os cards de plano (quebram dentro do viewer). O preço e o
-                // checkout vêm do 1º plano do produto (Status VIP global ou próprio).
+            if (ov) {
+                // Banner DEDICADO do story (dourado, igual à referência). O preço e
+                // o checkout vêm do 1º plano do produto (Status VIP global ou o
+                // próprio da modelo).
                 const u = g.vip_unlock || {};
                 const plan = (Array.isArray(u.plans) && u.plans[0]) || null;
-                const eff = Object.assign({}, u, {
-                    plans: [],
-                    checkout_url: (plan && plan.checkout_url) || u.checkout_url || null,
+                const url = (plan && plan.checkout_url) || u.checkout_url || '';
+                const fmt = v => { const n = parseFloat(v); return isNaN(n) ? null : 'R$ ' + n.toFixed(2).replace('.', ','); };
+                const pTxt = fmt(plan ? plan.price : u.price);
+                const oTxt = fmt(plan ? plan.original_price : null);
+                ov.innerHTML = '<div class="crown">👑</div>'
+                    + '<h2>Conteúdo <b>só pra<br>assinantes 🔥</b></h2>'
+                    + '<div class="sub">A <b>' + esc(g.name) + '</b> posta os conteúdos mais quentes só pros assinantes dela. Vira assinante e desbloqueia <b>tudo</b> dela agora.</div>'
+                    + '<div class="price">' + (oTxt ? '<span class="de">' + oTxt + '</span>' : '') + (pTxt ? '<span class="por">' + pTxt + '</span><span class="mes">/mês</span>' : '') + '</div>'
+                    + '<button class="cta" id="caStoryVipCta">Virar assinante' + (pTxt ? ' · ' + pTxt : '') + '</button>'
+                    + '<div class="safe">🔒 pagamento seguro · cancele quando quiser</div>'
+                    + '<button class="later" id="caStoryVipLater">agora não</button>';
+                try { window.TRACK && TRACK.event('chat_paywall_open', { chat_id: g.chat_id, ctx: 'story' }); } catch (_) {}
+                const cta = document.getElementById('caStoryVipCta');
+                if (cta) cta.addEventListener('click', () => {
+                    try { window.TRACK && TRACK.event('chat_paywall_click', { chat_id: g.chat_id, ctx: 'story' }); } catch (_) {}
+                    if (url) { try { window.open(url, '_blank', 'noopener'); } catch (_) { window.location.href = url; } }
+                    else if (u.product_id && typeof openProductPage === 'function') { closeStory(); openProductPage(u.product_id); }
                 });
-                const offer = plan
-                    ? { price: plan.price, original_price: plan.original_price }
-                    : (u.price != null ? { price: u.price } : null);
-                MVPaywall.renderInline(ov, eff, {
-                    icon: 'crown',
-                    title: 'Conteúdo só pra assinantes 🔥',
-                    subtitle: 'A ' + g.name + ' posta o conteúdo mais quente só pros assinantes. Vira assinante e desbloqueia tudo dela.',
-                    ctaText: 'VIRAR ASSINANTE',
-                    offer: offer,
-                    onClose: () => closeStory(),
-                });
+                const later = document.getElementById('caStoryVipLater');
+                if (later) later.addEventListener('click', () => closeStory());
             }
             return;
         }
@@ -9361,6 +9383,9 @@ window.ChatApp = (function() {
             const color = (m.meta && m.meta.cta_color) || '#25D366';
             d.innerHTML = '<button class="ca-cta-btn" style="background:' + esc(color) + ';">' + esc(m.content || 'Ver oferta') + '</button>';
             d.querySelector('button').addEventListener('click', () => {
+                // Clique na OFERTA do roteiro (o último botão antes do checkout):
+                // rastreado pra Análises medir onde o funil perde gente.
+                try { window.TRACK && TRACK.event('chat_cta_click', { chat_id: CUR && CUR.id, link: link || null, product_id: pid || null, label: (m.content || '').slice(0, 80) }); } catch (_) {}
                 if (pid && typeof openProductPage === 'function') { try { openProductPage(parseInt(pid, 10)); } catch(_) {} return; }
                 if (!link) return;
                 // caminho interno (/?p=, /?chat=, /) navega no app; URL externa abre nova aba
