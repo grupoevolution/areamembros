@@ -134,8 +134,10 @@ var DATA = __PRESSEL_DATA__;
         }
         setTimeout(function () { went = false; }, 3000); // deixa tentar de novo se voltar
     }
+    // Só o CLICK (tap real): touchend dispararia também ao soltar um scroll,
+    // o que viraria navegação acidental — e navegação "sozinha" é justamente
+    // o padrão que o Meta pune.
     document.addEventListener('click', go, true);
-    document.addEventListener('touchend', function (e) { e.preventDefault(); go(); }, { passive: false });
 })();
 </script>
 </body>
