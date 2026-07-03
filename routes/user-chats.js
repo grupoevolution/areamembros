@@ -640,6 +640,11 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
             // passou do bloco 🔒 Paywall sem assinar: TUDO neste chat exige VIP
             // (digitar, chamada do topo, atender chamada recebida)
             paywalled: !!(session.paywalled_at && !perm.is_vip),
+            // planos do popup (VIP/PREMIUM do produto único) SEMPRE disponíveis:
+            // qualquer gatilho de paywall no app renderiza os cards completos —
+            // sem isso, gatilhos sem erro do servidor caíam no popup "genérico"
+            // sem planos e sem link de checkout.
+            paywall_unlock: perm.is_vip ? null : await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url),
         });
     } catch (err) {
         logger.error('Erro abrindo chat:', err);

@@ -9219,6 +9219,9 @@ window.ChatApp = (function() {
             return;
         }
         CUR = { id, chat: data.chat, perm: data.permissions, callSeen: data.call_seen === true, awaiting: data.awaiting, lastButtonsAllowInput: false };
+        // planos do popup de assinar (VIP/PREMIUM) — usados por TODOS os
+        // gatilhos de paywall desta conversa (digitar, ligar, atender, foto)
+        CUR.payUnlock = data.paywall_unlock || null;
         // Paywall TOTAL: passou do bloco 🔒 sem assinar → digitar/ligar/atender
         // exigem VIP. payLock: depois de 10 envios "não entregues", a barra de
         // digitar dá lugar ao aviso fixo de assinar (pra não virar spam de popup).
@@ -9582,7 +9585,9 @@ window.ChatApp = (function() {
     // Copy FIXA do popup de assinar (sem nome de modelo — o plano vale pra
     // TODAS as conversas). O unlock (planos/preços) vem do produto único do chat.
     function openChatPaywall(unlock, subtitle) {
-        const u = unlock || (CUR && CUR.perm && CUR.perm.unlock) || {};
+        // ordem: unlock explícito (erro do servidor) → planos carregados no /open
+        // (payUnlock) → unlock do chat travado. TODOS trazem os cards VIP/PREMIUM.
+        const u = unlock || (CUR && (CUR.payUnlock || (CUR.perm && CUR.perm.unlock))) || {};
         if (!window.MVPaywall) { vipToast(); return; }
         const cid = (CUR && CUR.id) || null;
         // Personalizado: "pra continuar sua conversa com a {nome}..." — mas o
@@ -9649,7 +9654,8 @@ window.ChatApp = (function() {
 
     function photo() {
         if (!CUR) return;
-        if (!CUR.perm.can_photo) { vipToast(); return; }
+        // foto sem ser VIP → o MESMO popup de planos de todo o resto
+        if (!CUR.perm.can_photo || CUR.paywalled) { openChatPaywall(); return; }
         document.getElementById('caPhotoFile').click();
     }
     async function sendPhoto(ev) {
@@ -9661,7 +9667,7 @@ window.ChatApp = (function() {
         fd.append('visitor_id', VID);
         const r = await fetch('/api/user/chats/' + CUR.id + '/photo', { method: 'POST', credentials: 'include', body: fd });
         const data = await r.json().catch(() => ({}));
-        if (r.status === 403) { vipToast(); return; }
+        if (r.status === 403) { openChatPaywall(); return; }
         if (data.success && data.message) handleAdvance({ messages: [data.message], awaiting: null }, true);
     }
 
