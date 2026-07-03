@@ -9258,8 +9258,9 @@ window.ChatApp = (function() {
             // durante TODA a espera configurada no bloco
             CUR.nextSoon = !!(data.awaiting === 'delay' && data.resume_at &&
                 (new Date(data.resume_at).getTime() - Date.now()) < 32000);
-            // roteiro parou no paywall → dali em diante TUDO neste chat exige VIP
-            if (data.awaiting === 'paywall') CUR.paywalled = true;
+            // passou do paywall → dali em diante TUDO neste chat exige VIP
+            // (o roteiro CONTINUA rodando; só o lead fica travado)
+            if (data.awaiting === 'paywall' || data.paywalled === true) CUR.paywalled = true;
         }
         if (!RENDERING) drain();
     }
@@ -9326,9 +9327,9 @@ window.ChatApp = (function() {
             return;
         }
         const mode = (CUR.chat && CUR.chat.input_mode) || 'always';
-        // 'paywall': a barra fica ATIVA de propósito — o lead digita, a mensagem
-        // "não entrega" e o popup de assinar reaparece (investimento emocional).
-        const canType = (mode !== 'gated') || aw === 'input' || aw === 'paywall' || (aw === 'buttons' && CUR.lastButtonsAllowInput);
+        // Pós-paywall: a barra fica SEMPRE ativa de propósito (mesmo no modo
+        // gated) — o lead digita, a mensagem "não entrega" e o popup reaparece.
+        const canType = (mode !== 'gated') || aw === 'input' || aw === 'paywall' || CUR.paywalled === true || (aw === 'buttons' && CUR.lastButtonsAllowInput);
         if (canType) {
             // libera o input; esconde a barra de status
             bar.style.display = 'flex';
@@ -9480,7 +9481,12 @@ window.ChatApp = (function() {
             if (m._fresh && CUR && CUR.paywalled) {
                 setTimeout(() => { try { openChatPaywall(); } catch (_) {} }, 600);
             } else if (m._fresh && CUR && CUR.chat.video_call && window.VideoCall) {
-                setTimeout(() => { try { window.VideoCall.open(CUR.chat.video_call, { skipSeenGuard: true }); } catch(_) {} }, 600);
+                setTimeout(() => {
+                    try {
+                        window.VideoCall.open(CUR.chat.video_call, { skipSeenGuard: true });
+                        watchCallEnd(); // quando a chamada fechar: destrava o chat na hora
+                    } catch(_) {}
+                }, 600);
             }
         } else {
             return;
@@ -9975,8 +9981,8 @@ window.ChatApp = (function() {
             }).catch(() => {});
         }
         const isVip = !!(CUR.perm && CUR.perm.is_vip);
-        // não-VIP que já tentou: vai direto pro popup (sem repetir o "chamando")
-        if (!isVip && CUR.callSeen) { showCallVipPopup(chat); return; }
+        // não-VIP que já tentou: vai direto pro popup de planos (sem repetir o "chamando")
+        if (!isVip && CUR.callSeen) { openChatPaywall(); return; }
         outgoingCall(chat, isVip);
     }
 
@@ -10034,36 +10040,39 @@ window.ChatApp = (function() {
             stopRingback();
             if (isVip) {
                 closeCallScreen();
-                try { window.VideoCall.open(chat.video_call, { skipSeenGuard: true }); } catch (_) {}
+                try { window.VideoCall.open(chat.video_call, { skipSeenGuard: true }); watchCallEnd(); } catch (_) {}
             } else {
                 CUR.callSeen = true;
                 try { api('/api/user/chats/' + CUR.id + '/call-seen'); } catch (_) {}
                 closeCallScreen();
                 // não atendeu → fica a "chamada perdida" no chat (igual WhatsApp).
                 // O gatilho de ligação (call_goto_key) já roda no onCall e a modelo
-                // "reage" pelo roteiro. O popup VIP entra como nudge logo depois.
+                // "reage" pelo roteiro. O popup de PLANOS entra como nudge logo depois.
                 renderMissedCall();
-                setTimeout(() => showCallVipPopup(chat), 700);
+                setTimeout(() => openChatPaywall(), 700);
             }
         }, 6200);
     }
-    // Popup VIP da chamada — limpo, com cara de app, sem emoji
-    function showCallVipPopup(chat) {
-        closeCallScreen();
-        let o = document.getElementById('caCallPop');
-        if (!o) { o = document.createElement('div'); o.id = 'caCallPop'; document.body.appendChild(o); }
-        o.style.cssText = 'position:fixed;inset:0;z-index:740;background:rgba(13,5,6,.82);display:flex;align-items:flex-end;justify-content:center;padding:0;';
-        o.innerHTML = '<div style="background:#15090b;border-top:1px solid rgba(229,9,20,.35);border-radius:22px 22px 0 0;width:100%;max-width:520px;padding:26px 22px calc(26px + env(safe-area-inset-bottom));text-align:center;box-shadow:0 -16px 50px rgba(0,0,0,.6);">'
-            + '<div style="width:58px;height:58px;border-radius:50%;background:rgba(229,9,20,.14);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;"><svg width="28" height="28" fill="none" stroke="#e50914" stroke-width="2" viewBox="0 0 24 24"><path d="M15 10l4.55-2.27A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 6h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg></div>'
-            + '<div style="font-size:18px;font-weight:700;color:#fff;margin-bottom:8px;">Chamada exclusiva</div>'
-            + '<div style="font-size:13.5px;color:rgba(255,255,255,.7);line-height:1.55;margin-bottom:20px;">Só assinantes VIP podem falar com a ' + esc(chat.name) + ' ao vivo. Libere o acesso e ligue quando quiser.</div>'
-            + '<button id="caCallPopVip" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:15px;border-radius:12px;cursor:pointer;">Liberar acesso VIP</button>'
-            + '<button id="caCallPopClose" style="width:100%;background:none;border:none;color:rgba(255,255,255,.55);font-size:13px;padding:12px;margin-top:4px;cursor:pointer;">Agora não</button>'
-            + '</div>';
-        o.style.display = 'flex';
-        o.querySelector('#caCallPopVip').onclick = () => { o.style.display = 'none'; const url = chat.checkout_url; if (url) window.open(url, '_blank', 'noopener'); else unlock(); };
-        o.querySelector('#caCallPopClose').onclick = () => { o.style.display = 'none'; };
-        o.onclick = (ev) => { if (ev.target === o) o.style.display = 'none'; };
+    // Popup antigo "Chamada exclusiva" REMOVIDO — o chat usa um popup só:
+    // o de planos VIP/PREMIUM (openChatPaywall), em toda ação travada.
+
+    // Vigia o overlay da chamada de vídeo: quando ela FECHA, sincroniza a
+    // conversa na hora (busca as mensagens que o roteiro mandou enquanto isso
+    // e re-renderiza a barra de digitar). Sem isso o chat parecia "congelado"
+    // depois da ligação — só destravava saindo e voltando.
+    let _callWatch = null;
+    function watchCallEnd() {
+        if (_callWatch) clearInterval(_callWatch);
+        _callWatch = setInterval(() => {
+            const ov = document.getElementById('videoCallOverlay');
+            const open = ov && ov.classList.contains('is-open');
+            if (open) return;
+            clearInterval(_callWatch); _callWatch = null;
+            if (!CUR) return;
+            try { pollOnce(); } catch (_) {}
+            try { updateInputBar(); } catch (_) {}
+            try { scrollChatToBottom(); } catch (_) {}
+        }, 800);
     }
 
     // Entrada de "Ligação de vídeo · perdida" no chat (estilo WhatsApp)

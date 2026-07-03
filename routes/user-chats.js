@@ -299,22 +299,20 @@ async function runScript(session, chat, steps, idx, ident) {
             break;
         }
         if (s.type === 'paywall') {
-            // 🔒 Ponto de paywall: VIP passa direto; sem assinatura o roteiro PARA
-            // aqui — a barra de digitar continua ativa, mas o envio "não entrega"
-            // (403 vip_required) e o app mostra o popup de assinar. Ao comprar e
-            // reabrir, o /open retoma DESTE bloco (que aí pula pra frente).
+            // 🔒 Marca o PONTO do paywall e SEGUE o roteiro: a modelo continua
+            // mandando mensagens/ligações normalmente — é o LEAD que não consegue
+            // mais responder, ligar nem atender sem assinar (digitar vira "não
+            // entregue" + popup). VIP passa sem marca.
             const vip = await ownsChatVip(ident.email, chat);
-            if (vip) { idx = idx + 1; continue; }
-            await db.query(
-                `UPDATE chat_sessions SET current_order = $2, awaiting = 'paywall',
-                 paywalled_at = COALESCE(paywalled_at, NOW()), current_flow = $3, updated_at = NOW()
-                 WHERE id = $1`,
-                [session.id, idx, session.current_flow || 'open']
-            );
-            session.current_order = idx;
-            session.awaiting = 'paywall';
-            if (!session.paywalled_at) session.paywalled_at = new Date();
-            return out;
+            if (!vip && !session.paywalled_at) {
+                await db.query(
+                    `UPDATE chat_sessions SET paywalled_at = NOW(), updated_at = NOW() WHERE id = $1`,
+                    [session.id]
+                );
+                session.paywalled_at = new Date();
+            }
+            idx = idx + 1;
+            continue;
         }
         if (s.type === 'delay') {
             // PAUSA o roteiro: marca quando retomar. O worker (app fechado) ou
@@ -577,11 +575,13 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
                 const steps = await loadSteps(chatId, session.current_flow || 'open');
                 fresh = await runScript(session, chat, steps, session.current_order, ident);
             }
-        } else if (session.awaiting === 'paywall' && owns) {
-            // Assinou e voltou: destrava e retoma do próprio bloco paywall
-            // (que agora deixa passar, por ser VIP).
-            await db.query(`UPDATE chat_sessions SET paywalled_at = NULL WHERE id = $1`, [session.id]);
-            session.paywalled_at = null;
+        } else if (session.awaiting === 'paywall') {
+            // MIGRAÇÃO: sessões paradas no paywall antigo (que travava o roteiro)
+            // retomam daqui — o bloco agora só marca e segue. VIP: limpa a marca.
+            if (owns) {
+                await db.query(`UPDATE chat_sessions SET paywalled_at = NULL WHERE id = $1`, [session.id]);
+                session.paywalled_at = null;
+            }
             const steps = await loadSteps(chatId, session.current_flow || 'open');
             fresh = await runScript(session, chat, steps, session.current_order, ident);
         }
@@ -773,6 +773,7 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
             messages: newMsgs.map(publicMsg),
             awaiting: session.awaiting,
             resume_at: session.awaiting === 'delay' ? session.resume_at : null,
+            paywalled: !!(session.paywalled_at && !perm.is_vip),
         });
     } catch (err) {
         logger.error('Erro no advance do chat:', err);
@@ -808,11 +809,19 @@ router.get('/chats/:id/poll', optionalUser, async (req, res) => {
         if (msgs.length) {
             await db.query(`UPDATE chat_sessions SET last_seen_at = NOW() WHERE id = $1`, [session.id]);
         }
+        // avisa o app que a sessão passou do paywall (o roteiro CONTINUA rodando;
+        // é o lead que fica travado — digitar/ligar/atender exigem VIP)
+        let paywalled = false;
+        if (session.paywalled_at) {
+            const { rows: pc } = await db.query(`SELECT id, product_id FROM chats WHERE id = $1`, [chatId]);
+            paywalled = !(await ownsChatVip(ident.email, pc[0] || {}));
+        }
         return res.json({
             success: true,
             messages: msgs.map(publicMsg),
             awaiting: session.awaiting,
             resume_at: session.awaiting === 'delay' ? session.resume_at : null,
+            paywalled,
         });
     } catch (err) {
         return res.json({ success: false });
