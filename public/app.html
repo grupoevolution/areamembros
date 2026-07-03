@@ -8845,8 +8845,10 @@ window.ChatApp = (function() {
     let RENDERING = false;
     let lastButtons = null;
 
-    const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     const hhmm = (iso) => { try { const d = new Date(iso); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); } catch(_) { return ''; } };
+    // ícone da pílula de chamada (usado no render e no callDone ao vivo)
+    const callPillIco = (c) => '<svg width="13" height="13" fill="none" stroke="' + c + '" stroke-width="2" viewBox="0 0 24 24"><path d="M15 10l4.55-2.27A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 6h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg>';
     async function api(path, body) {
         const r = await fetch(path, {
             method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
@@ -9029,12 +9031,23 @@ window.ChatApp = (function() {
         }
     }
 
+    // Slug do funil ativo (lead ainda SEM e-mail): o servidor restringe a lista
+    // às conversas marcadas no funil. Depois do e-mail volta ao normal.
+    function funnelParam() {
+        try {
+            if (window.currentUserEmail && window.MV_ANONYMOUS !== true) return '';
+            const m = document.cookie.match(/(?:^|; )mv_funnel=([^;]*)/);
+            const slug = window.MV_FUNNEL_SLUG || (m ? decodeURIComponent(m[1]) : '');
+            return slug ? '&funnel=' + encodeURIComponent(slug) : '';
+        } catch (_) { return ''; }
+    }
+
     async function loadList() {
         const scroll = document.getElementById('caListScroll');
         if (!scroll) return;
         try {
             const [r, sr] = await Promise.all([
-                fetch('/api/user/chats?visitor_id=' + VID, { credentials: 'include' }),
+                fetch('/api/user/chats?visitor_id=' + VID + funnelParam(), { credentials: 'include' }),
                 fetch('/api/user/chats/status?visitor_id=' + VID, { credentials: 'include' }).catch(() => null),
             ]);
             const data = await r.json();
@@ -9120,7 +9133,7 @@ window.ChatApp = (function() {
     // Mostra QUANTAS conversas têm mensagem nova.
     async function refreshUnreadDot() {
         try {
-            const r = await fetch('/api/user/chats?visitor_id=' + VID, { credentials: 'include' });
+            const r = await fetch('/api/user/chats?visitor_id=' + VID + funnelParam(), { credentials: 'include' });
             const data = await r.json();
             if (!data.success) return;
             const convsUnread = (data.chats || []).filter(c => (c.unread || 0) > 0).length;
@@ -9489,28 +9502,32 @@ window.ChatApp = (function() {
             });
         } else if (m.type === 'call') {
             // "Ela liga": pílula no chat + dispara a chamada recebida (VideoCall).
-            // No HISTÓRICO (conversa recarregada) a pílula vira "Chamada de vídeo
-            // encerrada" — a ligação já aconteceu, não fica "te ligando..." pra sempre.
+            // Pílula AO VIVO ganha a classe ca-call-live: quando a ligação encerra
+            // (callDone), ela vira "Chamada de vídeo encerrada" na hora.
             d.style.alignSelf = 'center';
-            const CALL_ICO = (c) => '<svg width="13" height="13" fill="none" stroke="' + c + '" stroke-width="2" viewBox="0 0 24 24"><path d="M15 10l4.55-2.27A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 6h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg>';
             if (m._fresh) {
-                d.innerHTML = '<div style="font-size:11px;color:#1fa855;background:#e7f8ee;padding:5px 12px;border-radius:999px;display:flex;align-items:center;gap:6px;">' + CALL_ICO('#1fa855') + esc((CUR && CUR.chat.name) || 'Ela') + ' está te ligando...</div>';
+                d.innerHTML = '<div class="ca-call-live" style="font-size:11px;color:#1fa855;background:#e7f8ee;padding:5px 12px;border-radius:999px;display:flex;align-items:center;gap:6px;">' + callPillIco('#1fa855') + esc((CUR && CUR.chat.name) || 'Ela') + ' está te ligando...</div>';
             } else {
-                d.innerHTML = '<div style="font-size:11px;color:#7c8790;background:rgba(0,0,0,.06);padding:5px 12px;border-radius:999px;display:flex;align-items:center;gap:6px;">' + CALL_ICO('#7c8790') + 'Chamada de vídeo encerrada · ' + hhmm(m.created_at) + '</div>';
+                d.innerHTML = '<div style="font-size:11px;color:#7c8790;background:rgba(0,0,0,.06);padding:5px 12px;border-radius:999px;display:flex;align-items:center;gap:6px;">' + callPillIco('#7c8790') + 'Chamada de vídeo encerrada · ' + hhmm(m.created_at) + '</div>';
             }
             // só dispara em mensagens NOVAS (não ao recarregar histórico).
-            // Depois do paywall, ATENDER também exige VIP → abre o popup.
-            if (m._fresh && CUR && CUR.paywalled) {
-                setTimeout(() => { try { openChatPaywall(); } catch (_) {} }, 600);
-            } else if (m._fresh && CUR && CUR.chat.video_call && window.VideoCall) {
+            // A chamada TOCA normal mesmo pós-paywall — o gate entra no clique:
+            // atender OU recusar abre o popup de planos (gateAnswer).
+            if (m._fresh && CUR && CUR.chat.video_call && window.VideoCall) {
+                const gated = CUR.paywalled === true;
                 setTimeout(() => {
                     try {
-                        // onClose: quando a chamada fechar, retoma o roteiro e a
-                        // barra de digitar NA HORA (+ vigia de reserva)
-                        window.VideoCall.open(CUR.chat.video_call, { skipSeenGuard: true, onClose: callDone });
+                        window.VideoCall.open(CUR.chat.video_call, {
+                            skipSeenGuard: true,
+                            onClose: callDone,
+                            gateAnswer: gated ? function () { try { openChatPaywall(); } catch (_) {} } : null,
+                        });
                         watchCallEnd();
                     } catch(_) {}
                 }, 600);
+            } else if (m._fresh && CUR && CUR.paywalled) {
+                // chat sem chamada configurada: só o popup de planos
+                setTimeout(() => { try { openChatPaywall(); } catch (_) {} }, 600);
             }
         } else {
             return;
@@ -9681,8 +9698,12 @@ window.ChatApp = (function() {
     function identified() { return !!(window.currentUserEmail && window.MV_ANONYMOUS !== true && !String(window.currentUserEmail).endsWith('@preview.local')); }
     let _gateInstalled = false;
     function gateThen(needsGate, action) {
-        if (!needsGate || identified()) { action(); return; }
-        gateEmail(action);
+        if (!needsGate) { action(); return; }
+        // Já tem e-mail (veio do login/funil)? AINDA falta instalar o app: o
+        // gate de PWA aparece do mesmo jeito (antes ele era pulado por completo
+        // pra lead identificado — o popup de instalar nunca aparecia).
+        if (identified()) { gateInstall(action); return; }
+        gateEmail(action); // pede e-mail → instalar → libera
     }
     function gateOverlay(inner) {
         let o = document.getElementById('caGate');
@@ -10099,6 +10120,15 @@ window.ChatApp = (function() {
             }
         } catch (_) {}
         _callDoneBusy = false;
+        // pílula "está te ligando..." vira "encerrada" NA HORA (sem recarregar)
+        try {
+            document.querySelectorAll('.ca-call-live').forEach(p => {
+                p.classList.remove('ca-call-live');
+                p.style.color = '#7c8790';
+                p.style.background = 'rgba(0,0,0,.06)';
+                p.innerHTML = callPillIco('#7c8790') + 'Chamada de vídeo encerrada';
+            });
+        } catch (_) {}
         try { updateInputBar(); } catch (_) {}
         try { scrollChatToBottom(); } catch (_) {}
     }
@@ -16379,6 +16409,15 @@ body.is-logged #pwaLandingBanner, body.pwa-installed #pwaLandingBanner { display
         tocarRingtone(call && call.ringtone_url);
     }
     function answer() {
+        // Paywall do chat: ATENDER abre o popup de planos em vez de conectar
+        // (a chamada toca normal — o gate entra só na hora do clique).
+        if (currentOpts && currentOpts.gateAnswer) {
+            const g = currentOpts.gateAnswer;
+            pararRingtone();
+            closeOverlay();
+            try { g(); } catch (_) {}
+            return;
+        }
         // Fase F: cliente atendeu — para o toque.
         pararRingtone();
         show('connecting');
@@ -16459,7 +16498,16 @@ body.is-logged #pwaLandingBanner, body.pwa-installed #pwaLandingBanner { display
         }
     }
 
-    function decline() { closeOverlay(); }
+    function decline() {
+        // Paywall do chat: recusar também abre o popup de planos (via gateAnswer)
+        if (currentOpts && currentOpts.gateAnswer) {
+            const g = currentOpts.gateAnswer;
+            closeOverlay();
+            try { g(); } catch (_) {}
+            return;
+        }
+        closeOverlay();
+    }
     function endCall() {
         // Fase J1: dispara cleanup IMEDIATO. Antes o cleanup completo só rolava
         // em closeOverlay (1.6s depois) — durante esse tempo hls.js continuava

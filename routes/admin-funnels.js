@@ -82,7 +82,7 @@ router.post('/', requireAdmin, async (req, res) => {
     try {
         const { slug, name, description, featured_product_id, video_call_id, active,
                 entry_type, entry_product_id, entry_category_id, entry_chat_id,
-                pressel_enabled, pressel_config } = req.body || {};
+                pressel_enabled, pressel_config, visible_chat_ids } = req.body || {};
         const cleanSlug = sanitizeSlug(slug || name);
         if (!cleanSlug) return res.status(400).json({ success: false, error: 'Slug inválido' });
         if (!name || name.trim().length < 1) return res.status(400).json({ success: false, error: 'Nome obrigatório' });
@@ -97,11 +97,16 @@ router.post('/', requireAdmin, async (req, res) => {
         const entryC = entry_category_id ? parseInt(entry_category_id, 10) : null;
         const entryCh = entry_chat_id ? parseInt(entry_chat_id, 10) : null;
 
+        // conversas visíveis ANTES do e-mail (array de ids; vazio = sem restrição)
+        const visIds = Array.isArray(visible_chat_ids)
+            ? visible_chat_ids.map(v => parseInt(v, 10)).filter(Boolean).slice(0, 100)
+            : null;
+
         const { rows } = await db.query(`
             INSERT INTO funnels (slug, name, description, featured_product_id, video_call_id, active,
                                  entry_type, entry_product_id, entry_category_id, entry_chat_id,
-                                 pressel_enabled, pressel_config)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *
+                                 pressel_enabled, pressel_config, visible_chat_ids)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *
         `, [
             cleanSlug,
             name.trim().slice(0, 120),
@@ -115,6 +120,7 @@ router.post('/', requireAdmin, async (req, res) => {
             entryCh,
             pressel_enabled === true,
             pressel_config ? JSON.stringify(pressel_config) : null,
+            visIds && visIds.length ? JSON.stringify(visIds) : null,
         ]);
 
         return res.json({ success: true, funnel: rows[0] });
@@ -132,7 +138,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
     try {
         const { slug, name, description, featured_product_id, video_call_id, active,
                 entry_type, entry_product_id, entry_category_id, entry_chat_id,
-                pressel_enabled, pressel_config } = req.body || {};
+                pressel_enabled, pressel_config, visible_chat_ids } = req.body || {};
         const updates = [];
         const values = [];
         let p = 1;
@@ -174,6 +180,13 @@ router.put('/:id', requireAdmin, async (req, res) => {
         if (active !== undefined) { updates.push(`active = $${p++}`); values.push(!!active); }
         if (pressel_enabled !== undefined) { updates.push(`pressel_enabled = $${p++}`); values.push(pressel_enabled === true); }
         if (pressel_config !== undefined) { updates.push(`pressel_config = $${p++}::jsonb`); values.push(pressel_config ? JSON.stringify(pressel_config) : null); }
+        if (visible_chat_ids !== undefined) {
+            const visIds = Array.isArray(visible_chat_ids)
+                ? visible_chat_ids.map(v => parseInt(v, 10)).filter(Boolean).slice(0, 100)
+                : null;
+            updates.push(`visible_chat_ids = $${p++}::jsonb`);
+            values.push(visIds && visIds.length ? JSON.stringify(visIds) : null);
+        }
 
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
         updates.push('updated_at = NOW()');

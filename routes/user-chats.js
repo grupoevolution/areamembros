@@ -441,6 +441,20 @@ function publicMsg(m) {
 router.get('/chats', optionalUser, async (req, res) => {
     try {
         const ident = getIdentity(req);
+        // FUNIL com conversas restritas: lead ANÔNIMO (ainda sem e-mail) que
+        // entrou por um funil com visible_chat_ids vê SÓ essas conversas.
+        // Depois do e-mail a lista volta ao normal.
+        let onlyIds = null;
+        const funnelSlug = String(req.query.funnel || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 80);
+        if (!ident.email && funnelSlug) {
+            try {
+                const { rows: fr } = await db.query(
+                    `SELECT visible_chat_ids FROM funnels WHERE slug = $1 AND active = true LIMIT 1`, [funnelSlug]
+                );
+                const ids = fr.length && Array.isArray(fr[0].visible_chat_ids) ? fr[0].visible_chat_ids.map(Number).filter(Boolean) : null;
+                if (ids && ids.length) onlyIds = ids;
+            } catch (_) {}
+        }
         // Lista os chats visíveis (listed=true) MAIS os ocultos que JÁ tiveram
         // interação com este usuário (sessão com ≥1 mensagem) OU que foram
         // REVELADOS pela etapa 'Mostrar conversa' do funil (revealed_at, sem
@@ -448,8 +462,9 @@ router.get('/chats', optionalUser, async (req, res) => {
         // funil manda ou quando a conversa começou.
         const { rows: chats } = await db.query(
             `SELECT * FROM chats
-             WHERE active = true AND (
+             WHERE active = true AND ($3::int[] IS NULL OR id = ANY($3::int[])) AND (
                 listed = true
+                OR ($3::int[] IS NOT NULL AND id = ANY($3::int[]))
                 OR id IN (
                     SELECT cs.chat_id FROM chat_sessions cs
                     WHERE ( ($1::text IS NOT NULL AND LOWER(cs.customer_email) = $1)
@@ -459,7 +474,7 @@ router.get('/chats', optionalUser, async (req, res) => {
                 )
              )
              ORDER BY display_order, id`,
-            [ident.email, ident.visitor]
+            [ident.email, ident.visitor, onlyIds]
         );
         const out = [];
         for (const c of chats) {

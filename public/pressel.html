@@ -62,6 +62,12 @@ var DATA = __PRESSEL_DATA__;
     var chats = DATA.chats || [];
     if (cfg.headline) document.getElementById('headline').textContent = cfg.headline;
     var previews = Array.isArray(cfg.previews) ? cfg.previews.filter(Boolean) : [];
+    // Sem prévias configuradas no funil? Usa um conjunto padrão — a página
+    // NUNCA fica parada: as mensagens começam a chegar assim que abre.
+    if (!previews.length) {
+        previews = ['oi amor, tá aí? 🥺', 'te mandei uma coisa... 👀', 'vamo conversar? 🔥'];
+    }
+    previews = previews.slice(0, chats.length);
 
     function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
     function hhmmAgo(minAgo) {
@@ -100,17 +106,24 @@ var DATA = __PRESSEL_DATA__;
             if (b) b.textContent = String((parseInt(b.textContent, 10) || 0) + 1);
         }
     }
+    // contador de "novas mensagens" no título da aba (reforça a chegada)
+    var _arrived = 0, _baseTitle = document.title;
+    function bumpTitle() {
+        _arrived++;
+        try { document.title = '(' + _arrived + ') ' + _baseTitle; } catch (e) {}
+    }
     function seqChat(i, finalText, startMs) {
         var el = document.querySelector('[data-pv="' + i + '"]');
         if (!el) return;
         function typing() { el.textContent = 'digitando…'; el.className = 'pv typing'; }
         setTimeout(typing, startMs);
-        setTimeout(function () { el.textContent = '📷 Foto'; el.className = 'pv'; bumpBadge(i); }, startMs + 2400);
-        setTimeout(typing, startMs + 4600);
-        setTimeout(function () { el.textContent = finalText; el.className = 'pv'; el.dataset.fixed = '1'; bumpBadge(i); }, startMs + 7000);
+        setTimeout(function () { el.textContent = '📷 Foto'; el.className = 'pv'; bumpBadge(i); bumpTitle(); }, startMs + 1700);
+        setTimeout(typing, startMs + 3100);
+        setTimeout(function () { el.textContent = finalText; el.className = 'pv'; el.dataset.fixed = '1'; bumpBadge(i); bumpTitle(); }, startMs + 4800);
     }
+    // COMEÇA NA HORA: 1ª conversa digita em 400ms; as outras entram em fila
     for (var pi = 0; pi < previews.length && pi < chats.length; pi++) {
-        seqChat(pi, previews[pi], 900 + pi * 3600);
+        seqChat(pi, previews[pi], 400 + pi * 2600);
     }
 
     // Nas conversas SEM mensagem configurada: "digitando…" sutil de vez em
