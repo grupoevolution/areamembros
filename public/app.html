@@ -17043,15 +17043,15 @@ function showFunnelNotification(title, message, action) {
                 }, 300);
             } else if (entry.type === 'videos') {
                 if (typeof openExploreTab === 'function') openExploreTab();
-            } else if ((entry.type === 'chat' || entry.type === 'chat_list') && entry.chat_id && window.ChatApp) {
-                if (entry.type === 'chat_list') {
-                    // cai na lista de conversas (a mensagem dela aparece como não-lida)
-                    if (typeof switchScreen === 'function') switchScreen('chat');
-                    ChatApp.loadList();
-                } else {
-                    // cai DIRETO na conversa
-                    ChatApp.open(entry.chat_id);
-                }
+            } else if (entry.type === 'chat_list' && window.ChatApp) {
+                // cai na LISTA de conversas. Conversa de destino é OPCIONAL:
+                // com ela, a mensagem aparece como não-lida; SEM ela, ninguém
+                // manda nada — o lead vê só as conversas visíveis do funil.
+                if (typeof switchScreen === 'function') switchScreen('chat');
+                ChatApp.loadList();
+            } else if (entry.type === 'chat' && entry.chat_id && window.ChatApp) {
+                // cai DIRETO na conversa
+                ChatApp.open(entry.chat_id);
             }
             // 'home' → não navega (hero já destaca o produto do funil, se configurado)
         } catch(_) {}

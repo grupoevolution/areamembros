@@ -14732,6 +14732,14 @@ window.updateFunnelEntryFields = function() {
     document.getElementById('funnelEntryProductWrap').style.display = t === 'product' ? 'block' : 'none';
     document.getElementById('funnelEntryCategoryWrap').style.display = t === 'category' ? 'block' : 'none';
     document.getElementById('funnelEntryChatWrap').style.display = (t === 'chat' || t === 'chat_list') ? 'block' : 'none';
+    // Lista de conversas: a conversa que manda mensagem é OPCIONAL — vazio =
+    // ninguém manda nada, o lead só vê as conversas visíveis marcadas acima.
+    const chSel = document.getElementById('funnelEntryChat');
+    if (chSel && chSel.options.length) {
+        chSel.options[0].textContent = t === 'chat_list'
+            ? '— ninguém manda mensagem (só a lista) —'
+            : '— selecione —';
+    }
 };
 
 function openFunnelModal() {
@@ -14826,7 +14834,9 @@ async function saveFunnel(e) {
         alert('Escolha a categoria de destino.');
         return false;
     }
-    if ((entryType === 'chat' || entryType === 'chat_list') && !document.getElementById('funnelEntryChat').value) {
+    // 'chat' (cai DENTRO da conversa) exige destino; 'chat_list' não — vazio =
+    // ninguém manda mensagem, o lead vê só as conversas visíveis do funil.
+    if (entryType === 'chat' && !document.getElementById('funnelEntryChat').value) {
         alert('Escolha a conversa de destino.');
         return false;
     }
