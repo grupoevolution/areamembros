@@ -279,6 +279,9 @@ async function runScript(session, chat, steps, idx, ident) {
     const out = [];
     let guard = MAX_STEPS_PER_RUN;
     let awaiting = null;
+    // 1ª mensagem do run: o "digitando..." usa o tempo REAL configurado no
+    // bloco (as seguintes pegam pacing server-side, que já espera esse tempo).
+    let firstOut = true;
     while (idx >= 0 && idx < steps.length && guard-- > 0) {
         const s = steps[idx];
         const typing = Math.max(0, Math.min(10000, parseInt(s.typing_ms, 10) || 3000));
@@ -334,7 +337,10 @@ async function runScript(session, chat, steps, idx, ident) {
         // O "tempo de digitar" vira a ESPERA no servidor (pacing) — então a
         // mensagem em si renderiza rápido no cliente (settle curto). O "digitando…"
         // aparece durante a espera (awaiting='delay'), não em cima da mensagem.
-        let type = s.type, content = null, media = null, meta = { typing_ms: 500 };
+        // Exceção: a 1ª mensagem do run não teve pacing antes — ela carrega o
+        // typing REAL do bloco pro cliente mostrar "digitando..." pelo tempo certo.
+        let type = s.type, content = null, media = null, meta = { typing_ms: firstOut ? typing : 500 };
+        firstOut = false;
         if (s.type === 'text') content = await fillVars(s.content, ident);
         else if (s.type === 'audio') { media = s.media_url; }
         else if (s.type === 'image') { media = s.media_url; content = await fillVars(s.content, ident); }
@@ -382,7 +388,9 @@ async function runScript(session, chat, steps, idx, ident) {
             const nx = steps[idx];
             const PASSIVE = ['text', 'audio', 'image', 'video', 'view_once_image', 'view_once_video', 'cta', 'call'];
             if (nx && PASSIVE.indexOf(nx.type) >= 0) {
-                const gapMs = Math.max(800, Math.min(8000, parseInt(nx.typing_ms, 10) || 3000));
+                // respeita o "digitando" configurado no bloco (até 30s — antes o
+                // teto de 8s comia o tempo e as mensagens chegavam rápido demais)
+                const gapMs = Math.max(800, Math.min(30000, parseInt(nx.typing_ms, 10) || 3000));
                 const secs = Math.max(1, Math.round(gapMs / 1000));
                 const { rows: rr } = await db.query(
                     `UPDATE chat_sessions SET current_order = $2, awaiting = 'delay', current_flow = $4,
@@ -594,6 +602,9 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
             messages: all,
             awaiting: session.awaiting,
             resume_at: session.awaiting === 'delay' ? session.resume_at : null,
+            // passou do bloco 🔒 Paywall sem assinar: TUDO neste chat exige VIP
+            // (digitar, chamada do topo, atender chamada recebida)
+            paywalled: !!(session.paywalled_at && !perm.is_vip),
         });
     } catch (err) {
         logger.error('Erro abrindo chat:', err);

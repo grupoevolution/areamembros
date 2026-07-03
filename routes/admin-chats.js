@@ -503,7 +503,9 @@ router.put('/:id/steps/:stepId', requireAdmin, async (req, res) => {
         const b = req.body || {};
         const updates = []; const values = []; let p = 1;
         const set = (col, val) => { updates.push(`${col} = $${p++}`); values.push(val); };
-        if (b.step_order !== undefined) set('step_order', parseInt(b.step_order, 10) || 0);
+        // step_order NÃO entra no UPDATE direto: a posição é aplicada pelo
+        // repositionStep no final — e SÓ quando um número > 0 foi digitado.
+        // (Sem isso, editar um bloco sem mexer na posição jogava ele pro fim.)
         if (b.step_key !== undefined) set('step_key', (b.step_key || '').trim().slice(0, 40) || null);
         if (b.type !== undefined) set('type', STEP_TYPES.includes(b.type) ? b.type : 'text');
         if (b.content !== undefined) set('content', (b.content || '').trim().slice(0, 2000) || null);
@@ -521,15 +523,25 @@ router.put('/:id/steps/:stepId', requireAdmin, async (req, res) => {
         if (b.cta_color !== undefined) set('cta_color', (b.cta_color || '').trim().slice(0, 20) || null);
         if (b.wait_open !== undefined) set('wait_open', !!b.wait_open);
         if (b.active !== undefined) set('active', !!b.active);
-        if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
-        values.push(stepId);
-        const { rows } = await db.query(`UPDATE chat_steps SET ${updates.join(', ')} WHERE id = $${p} RETURNING *`, values);
-        if (!rows.length) return res.status(404).json({ success: false, error: 'Não encontrado' });
-        // POSIÇÃO informada → reposiciona no fluxo e renumera (10, 20, 30...)
-        if (b.step_order !== undefined) {
-            await repositionStep(rows[0].chat_id, rows[0].flow || 'open', stepId, parseInt(b.step_order, 10) || 0);
+        const wantsMove = parseInt(b.step_order, 10) > 0;
+        if (!updates.length && !wantsMove) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
+        let row;
+        if (updates.length) {
+            values.push(stepId);
+            const { rows } = await db.query(`UPDATE chat_steps SET ${updates.join(', ')} WHERE id = $${p} RETURNING *`, values);
+            if (!rows.length) return res.status(404).json({ success: false, error: 'Não encontrado' });
+            row = rows[0];
+        } else {
+            const { rows } = await db.query(`SELECT * FROM chat_steps WHERE id = $1`, [stepId]);
+            if (!rows.length) return res.status(404).json({ success: false, error: 'Não encontrado' });
+            row = rows[0];
         }
-        return res.json({ success: true, step: rows[0] });
+        // POSIÇÃO digitada (> 0) → move pra lá e renumera o fluxo (10, 20, 30...).
+        // Campo vazio/0 = NÃO mexe na ordem.
+        if (wantsMove) {
+            await repositionStep(row.chat_id, row.flow || 'open', stepId, parseInt(b.step_order, 10));
+        }
+        return res.json({ success: true, step: row });
     } catch (err) {
         return res.status(500).json({ success: false, error: err.message || 'Erro interno' });
     }

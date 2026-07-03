@@ -6762,6 +6762,30 @@ body.is-slowconn .prod-cta-fixed {
     background: rgba(255,255,255,0.06);
 }
 
+/* Botão FIXO de instalar o PWA no perfil (referência: card vermelho com ícone) */
+.p3-install-btn {
+    width: calc(100% - 32px);
+    margin: 24px 16px 0;
+    padding: 15px 16px;
+    background: linear-gradient(135deg, #ff2d43, #c3070f);
+    border: none;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    cursor: pointer;
+    text-align: left;
+    box-shadow: 0 10px 30px rgba(229,9,20,.3);
+}
+.p3-install-btn:active { filter: brightness(.92); }
+.p3-install-btn .ic {
+    width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+    background: rgba(255,255,255,.18);
+    display: flex; align-items: center; justify-content: center;
+}
+.p3-install-btn .t1 { font-size: 15px; font-weight: 800; color: #fff; font-family: inherit; }
+.p3-install-btn .t2 { font-size: 12px; color: rgba(255,255,255,.85); margin-top: 2px; font-family: inherit; }
+
 .p3-version {
     text-align: center;
     font-size: 10px;
@@ -7372,6 +7396,11 @@ body.is-slowconn .prod-cta-fixed {
             </div>
 
             <!-- FOOTER ACTIONS -->
+            <!-- Instalar o PWA (fixo no perfil; some sozinho quando já instalado) -->
+            <button class="p3-install-btn" id="p3InstallBtn" onclick="profileInstallApp()">
+                <span class="ic"><svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg></span>
+                <span><span class="t1">Instalar o app no celular</span><br><span class="t2">Acesso com 1 toque · nunca mais perca o login</span></span>
+            </button>
             <button class="p3-logout-btn" onclick="doLogout()" style="margin-top:14px;">
                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
                 Sair da conta
@@ -9168,6 +9197,11 @@ window.ChatApp = (function() {
             return;
         }
         CUR = { id, chat: data.chat, perm: data.permissions, callSeen: data.call_seen === true, awaiting: data.awaiting, lastButtonsAllowInput: false };
+        // Paywall TOTAL: passou do bloco 🔒 sem assinar → digitar/ligar/atender
+        // exigem VIP. payLock: depois de 10 envios "não entregues", a barra de
+        // digitar dá lugar ao aviso fixo de assinar (pra não virar spam de popup).
+        CUR.paywalled = data.paywalled === true || data.awaiting === 'paywall';
+        try { CUR.payLock = CUR.paywalled && (parseInt(localStorage.getItem('mv_payfail_' + id), 10) || 0) >= 10; } catch (_) { CUR.payLock = false; }
 
         document.getElementById('caName').innerHTML = '<span>' + esc(data.chat.name) + '</span>'
             + (data.chat.tag ? '<span style="font-size:11px;font-weight:600;color:#5b6b73;background:rgba(0,0,0,.07);padding:2px 9px;border-radius:999px;">' + esc(data.chat.tag) + '</span>' : '');
@@ -9220,8 +9254,12 @@ window.ChatApp = (function() {
             CUR.awaiting = data.awaiting;
             // próxima mensagem vem LOGO? (delay curto = pacing automático entre msgs).
             // Usado pra mostrar "digitando…" no intervalo (não em espera longa).
+            // janela acompanha o teto do pacing (30s): o "digitando…" fica visível
+            // durante TODA a espera configurada no bloco
             CUR.nextSoon = !!(data.awaiting === 'delay' && data.resume_at &&
-                (new Date(data.resume_at).getTime() - Date.now()) < 12000);
+                (new Date(data.resume_at).getTime() - Date.now()) < 32000);
+            // roteiro parou no paywall → dali em diante TUDO neste chat exige VIP
+            if (data.awaiting === 'paywall') CUR.paywalled = true;
         }
         if (!RENDERING) drain();
     }
@@ -9264,6 +9302,21 @@ window.ChatApp = (function() {
         const ch = document.getElementById('caChoices');
         if (!bar) return;
         if (!CUR || (CUR.perm && CUR.perm.locked)) { bar.style.display = 'none'; if (sb) sb.style.display = 'none'; return; }
+        // 10+ envios "não entregues" no paywall: some a barra de digitar e fica
+        // o aviso fixo — tocar nele reabre o popup de assinar.
+        if (CUR.payLock) {
+            bar.style.display = 'none';
+            if (ch) ch.style.display = 'none';
+            if (sb) {
+                sb.dataset.live = '';
+                sb.textContent = '🔒 Assine o VIP pra continuar conversando';
+                sb.style.display = 'block';
+                sb.style.cursor = 'pointer';
+                sb.onclick = () => openChatPaywall();
+            }
+            scrollChatToBottom();
+            return;
+        }
         const aw = CUR.awaiting;
         // Ponto de decisão por botões (sem digitar liberado): só os botões no rodapé.
         if (aw === 'buttons' && !CUR.lastButtonsAllowInput) {
@@ -9293,6 +9346,8 @@ window.ChatApp = (function() {
         if (sb) {
             if (!sb.dataset.live) sb.textContent = '';
             sb.style.display = 'block';
+            sb.style.cursor = '';
+            sb.onclick = null; // limpa o clique do estado de paywall
         }
         scrollChatToBottom();
     }
@@ -9410,11 +9465,21 @@ window.ChatApp = (function() {
                 else window.open(link, '_blank', 'noopener');
             });
         } else if (m.type === 'call') {
-            // "Ela liga": pílula no chat + dispara a chamada recebida (VideoCall)
+            // "Ela liga": pílula no chat + dispara a chamada recebida (VideoCall).
+            // No HISTÓRICO (conversa recarregada) a pílula vira "Chamada de vídeo
+            // encerrada" — a ligação já aconteceu, não fica "te ligando..." pra sempre.
             d.style.alignSelf = 'center';
-            d.innerHTML = '<div style="font-size:11px;color:#1fa855;background:#e7f8ee;padding:5px 12px;border-radius:999px;display:flex;align-items:center;gap:6px;"><svg width="13" height="13" fill="none" stroke="#1fa855" stroke-width="2" viewBox="0 0 24 24"><path d="M15 10l4.55-2.27A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 6h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg>' + esc((CUR && CUR.chat.name) || 'Ela') + ' está te ligando...</div>';
-            // só dispara em mensagens NOVAS (não ao recarregar histórico)
-            if (m._fresh && CUR && CUR.chat.video_call && window.VideoCall) {
+            const CALL_ICO = (c) => '<svg width="13" height="13" fill="none" stroke="' + c + '" stroke-width="2" viewBox="0 0 24 24"><path d="M15 10l4.55-2.27A1 1 0 0121 8.62v6.76a1 1 0 01-1.45.9L15 14M5 6h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z"/></svg>';
+            if (m._fresh) {
+                d.innerHTML = '<div style="font-size:11px;color:#1fa855;background:#e7f8ee;padding:5px 12px;border-radius:999px;display:flex;align-items:center;gap:6px;">' + CALL_ICO('#1fa855') + esc((CUR && CUR.chat.name) || 'Ela') + ' está te ligando...</div>';
+            } else {
+                d.innerHTML = '<div style="font-size:11px;color:#7c8790;background:rgba(0,0,0,.06);padding:5px 12px;border-radius:999px;display:flex;align-items:center;gap:6px;">' + CALL_ICO('#7c8790') + 'Chamada de vídeo encerrada · ' + hhmm(m.created_at) + '</div>';
+            }
+            // só dispara em mensagens NOVAS (não ao recarregar histórico).
+            // Depois do paywall, ATENDER também exige VIP → abre o popup.
+            if (m._fresh && CUR && CUR.paywalled) {
+                setTimeout(() => { try { openChatPaywall(); } catch (_) {} }, 600);
+            } else if (m._fresh && CUR && CUR.chat.video_call && window.VideoCall) {
                 setTimeout(() => { try { window.VideoCall.open(CUR.chat.video_call, { skipSeenGuard: true }); } catch(_) {} }, 600);
             }
         } else {
@@ -9515,8 +9580,17 @@ window.ChatApp = (function() {
             // Paywall: mensagem vira "não entregue" e o popup de assinar abre —
             // o lead já investiu digitando, agora encontra a parede.
             input.value = '';
+            CUR.paywalled = true;
             renderFailedMsg(text, data && data.unlock);
             openChatPaywall(data && data.unlock);
+            // Depois de 10 tentativas falhas, a barra dá lugar ao aviso fixo de
+            // assinar (o lead já entendeu — chega de digitar no vazio).
+            try {
+                const k = 'mv_payfail_' + CUR.id;
+                const cnt = (parseInt(localStorage.getItem(k), 10) || 0) + 1;
+                localStorage.setItem(k, String(cnt));
+                if (cnt >= 10) { CUR.payLock = true; updateInputBar(); }
+            } catch (_) {}
             return;
         }
         if (data.success) {
@@ -9887,6 +9961,8 @@ window.ChatApp = (function() {
 
     function onCall() {
         if (!CUR) return;
+        // Depois do paywall, ligar também exige VIP: o botão vira porta do popup.
+        if (CUR.paywalled) { openChatPaywall(); return; }
         const chat = CUR.chat;
         if (!chat.has_call || !chat.video_call) { showSoonToast('Ela não pode atender agora'); return; }
         // gatilho de ligação: a modelo "reage" no roteiro (pula pro call_goto_key).
@@ -16707,6 +16783,28 @@ window.MVFunnelInteraction = function() {
         if (typeof window.tryTriggerCallAfterLogin === 'function') window.tryTriggerCallAfterLogin();
     } catch(_) {}
 };
+
+// Bot\u00e3o "Instalar o app" fixo no PERFIL: usa o mesmo fluxo de instala\u00e7\u00e3o do
+// funil (prompt nativo \u2192 instru\u00e7\u00e3o manual \u2192 breakout do Instagram). Some
+// sozinho quando o app j\u00e1 est\u00e1 instalado (standalone).
+window.profileInstallApp = function() {
+    try {
+        if (window.ChatApp && ChatApp.isStandalone && ChatApp.isStandalone()) {
+            const b = document.getElementById('p3InstallBtn');
+            if (b) b.style.display = 'none';
+            return;
+        }
+        if (window.ChatApp && ChatApp.gateInstall) ChatApp.gateInstall(function () {});
+    } catch (_) {}
+};
+document.addEventListener('DOMContentLoaded', function () {
+    try {
+        if (window.ChatApp && ChatApp.isStandalone && ChatApp.isStandalone()) {
+            const b = document.getElementById('p3InstallBtn');
+            if (b) b.style.display = 'none';
+        }
+    } catch (_) {}
+});
 
 function showFunnelNotification(title, message, action) {
     const clickable = !!(action && (action.product_id || action.url));
