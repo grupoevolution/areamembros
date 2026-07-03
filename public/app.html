@@ -18246,9 +18246,22 @@ window.MVPaywall = (function () {
         if (c) c.addEventListener('click', () => { if (opts && typeof opts.onClose === 'function') opts.onClose(); else close(); });
     }
 
+    // O popup só existe se tiver PRA ONDE levar: planos com checkout, oferta
+    // ou link/produto de destino. Sem nada disso, NÃO renderiza (o modo
+    // "genérico" com botão morto foi extinto — era só confusão sem conversão).
+    function isActionable(unlock, opts) {
+        const u = unlock || {};
+        if (Array.isArray(u.plans) && u.plans.length) return true;
+        return !!(u.checkout_url || u.product_id);
+    }
+
     // Injeta o banner num container já existente (ex.: #caLocked do chat, overlay do story)
     function renderInline(el, unlock, opts) {
         if (!el) return;
+        if (!isActionable(unlock, opts)) {
+            try { console.warn('[paywall] sem planos/checkout configurados — banner não renderizado. Configure o card 💎 na tela de Chats.'); } catch (_) {}
+            return;
+        }
         el.classList.add('mvpw-inline');
         el.innerHTML = bannerHTML(unlock, opts);
         wire(el, unlock, opts);
@@ -18257,6 +18270,10 @@ window.MVPaywall = (function () {
     // Modal de tela cheia (tiktok / uso genérico)
     function openModal(unlock, opts) {
         opts = opts || {};
+        if (!isActionable(unlock, opts)) {
+            try { console.warn('[paywall] sem planos/checkout configurados — popup não aberto. Configure o card 💎 na tela de Chats.'); } catch (_) {}
+            return;
+        }
         let m = document.getElementById('mvPaywall');
         if (!m) { m = document.createElement('div'); m.id = 'mvPaywall'; document.body.appendChild(m); }
         const userClose = opts.onClose;
