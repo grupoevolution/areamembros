@@ -1379,12 +1379,16 @@ body.is-slowconn .prod-cta-fixed {
 .nav-item-hi:active .nav-fab { transform: scale(.94); }
 .nav-icon { width: 20px; height: 20px; }
 .nav-label { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+/* Badge de não-lidas na aba Conversas: bolinha vermelha COM o número de
+   conversas com mensagem nova (estilo WhatsApp), não só um ponto. */
 .nav-dot {
-    position: absolute; top: 2px; right: calc(50% - 20px);
-    width: 11px; height: 11px;
+    position: absolute; top: 0; right: calc(50% - 26px);
+    min-width: 16px; height: 16px; padding: 0 4px;
     background: var(--red-bright);
-    border-radius: 50%;
+    border-radius: 999px;
     border: 2px solid #000;
+    color: #fff; font-size: 10px; font-weight: 700; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
     box-shadow: 0 0 0 0 rgba(229,9,20,.6);
     animation: navDotPulse 1.6s ease-out infinite;
 }
@@ -9050,10 +9054,13 @@ window.ChatApp = (function() {
                 html += '</div>';
             }
             scroll.innerHTML = html;
-            // bolinha de não-lidas na aba Conversas
-            const totalUnread = chats.reduce((s, c) => s + (c.unread || 0), 0);
+            // badge na aba Conversas: QUANTAS conversas têm mensagem nova
+            const convsUnread = chats.filter(c => (c.unread || 0) > 0).length;
             const dot = document.getElementById('chatNavDot');
-            if (dot) dot.style.display = totalUnread > 0 ? '' : 'none';
+            if (dot) {
+                dot.textContent = convsUnread > 9 ? '9+' : String(convsUnread);
+                dot.style.display = convsUnread > 0 ? 'flex' : 'none';
+            }
         } catch (e) {
             scroll.innerHTML = '<div class="ca-empty">Erro carregando conversas.</div>';
         }
@@ -9065,13 +9072,13 @@ window.ChatApp = (function() {
         if (!c) { open(id); return; }
         const unlock = c.unlock || {};
         if (window.MVPaywall) {
-            // Copy fixa (sem nome): o plano libera TODAS as conversas VIP.
+            // Personalizado com o nome — mas o plano libera TODAS as conversas VIP.
             try { window.TRACK && TRACK.event('chat_paywall_open', { chat_id: id, ctx: 'list' }); } catch (_) {}
             MVPaywall.openModal(unlock, {
                 icon: 'lock',
                 eyebrow: 'ACESSO EXCLUSIVO',
                 title: 'Conversa VIP 🔥',
-                subtitle: 'Libere o acesso e converse sem limite com todas as mulheres online.',
+                subtitle: 'Pra conversar com a ' + c.name + ', libere seu acesso VIP — e fale sem limite com todas as mulheres online.',
                 ctaText: 'QUERO SER VIP',
                 track: { type: 'chat_paywall_click', meta: { chat_id: id } },
             });
@@ -9080,15 +9087,19 @@ window.ChatApp = (function() {
         }
     }
 
-    // Atualiza só a bolinha da aba (sem re-render da lista) — usado no boot/poll
+    // Atualiza só o badge da aba (sem re-render da lista) — usado no boot/poll.
+    // Mostra QUANTAS conversas têm mensagem nova.
     async function refreshUnreadDot() {
         try {
             const r = await fetch('/api/user/chats?visitor_id=' + VID, { credentials: 'include' });
             const data = await r.json();
             if (!data.success) return;
-            const total = (data.chats || []).reduce((s, c) => s + (c.unread || 0), 0);
+            const convsUnread = (data.chats || []).filter(c => (c.unread || 0) > 0).length;
             const dot = document.getElementById('chatNavDot');
-            if (dot) dot.style.display = total > 0 ? '' : 'none';
+            if (dot) {
+                dot.textContent = convsUnread > 9 ? '9+' : String(convsUnread);
+                dot.style.display = convsUnread > 0 ? 'flex' : 'none';
+            }
         } catch (_) {}
     }
 
@@ -9150,7 +9161,12 @@ window.ChatApp = (function() {
         document.getElementById('caInputBar').style.display = 'none';
 
         const { data } = await api('/api/user/chats/' + id + '/open');
-        if (!data.success) { body.innerHTML += '<div class="ca-day">erro ao abrir</div>'; return; }
+        if (!data.success) {
+            // mostra o motivo real (ex.: "Chat não encontrado" = conversa
+            // desativada no painel) em vez de um erro genérico
+            body.innerHTML += '<div class="ca-day">' + esc(data.error || 'erro ao abrir') + '</div>';
+            return;
+        }
         CUR = { id, chat: data.chat, perm: data.permissions, callSeen: data.call_seen === true, awaiting: data.awaiting, lastButtonsAllowInput: false };
 
         document.getElementById('caName').innerHTML = '<span>' + esc(data.chat.name) + '</span>'
@@ -9167,12 +9183,13 @@ window.ChatApp = (function() {
             lk.style.display = 'flex';
             // Banner VIP rico (planos do produto vinculado) — print "Conversa VIP"
             if (window.MVPaywall) {
-                // Copy fixa (sem nome): o plano libera TODAS as conversas VIP.
+                // Personalizado com o nome — mas o plano libera TODAS as conversas VIP.
                 try { window.TRACK && TRACK.event('chat_paywall_open', { chat_id: id, ctx: 'open' }); } catch (_) {}
                 MVPaywall.renderInline(lk, data.permissions.unlock || {}, {
                     icon: 'lock',
+                    eyebrow: 'ACESSO EXCLUSIVO',
                     title: 'Conversa VIP 🔥',
-                    subtitle: 'Libere o acesso e converse sem limite com todas as mulheres online.',
+                    subtitle: 'Pra conversar com a ' + data.chat.name + ', libere seu acesso VIP — e fale sem limite com todas as mulheres online.',
                     ctaText: 'QUERO SER VIP',
                     track: { type: 'chat_paywall_click', meta: { chat_id: id } },
                 });
@@ -9456,12 +9473,18 @@ window.ChatApp = (function() {
         const u = unlock || (CUR && CUR.perm && CUR.perm.unlock) || {};
         if (!window.MVPaywall) { vipToast(); return; }
         const cid = (CUR && CUR.id) || null;
+        // Personalizado: "pra continuar sua conversa com a {nome}..." — mas o
+        // plano libera TODAS as conversas.
+        const nome = (CUR && CUR.chat && CUR.chat.name) || '';
+        const sub = subtitle || (nome
+            ? 'Pra continuar sua conversa com a ' + nome + ', libere seu acesso VIP — e fale sem limite com todas as mulheres online.'
+            : 'Libere o acesso e converse sem limite com todas as mulheres online.');
         try { window.TRACK && TRACK.event('chat_paywall_open', { chat_id: cid, ctx: 'send' }); } catch (_) {}
         MVPaywall.openModal(u, {
             icon: 'lock',
             eyebrow: 'ACESSO EXCLUSIVO',
             title: 'Conversa VIP 🔥',
-            subtitle: subtitle || 'Libere o acesso e converse sem limite com todas as mulheres online.',
+            subtitle: sub,
             ctaText: 'QUERO SER VIP',
             track: { type: 'chat_paywall_click', meta: { chat_id: cid } },
         });
@@ -17877,12 +17900,13 @@ document.addEventListener('keydown', function(e) {
 <style>
 #mvPaywall{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(6,4,5,.92);}
 #mvPaywall.open{display:flex;}
-#mvPaywall .mvpw-card{background:#141013;border:1px solid rgba(255,255,255,.08);border-radius:22px;max-width:360px;width:100%;padding:26px 22px 18px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.6);max-height:92vh;overflow-y:auto;}
-.mvpw-inline{width:100%;max-width:360px;margin:0 auto;text-align:center;color:#fff;}
-.mvpw-icon{width:62px;height:62px;border-radius:18px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 8px 26px rgba(229,9,20,.42);}
-.mvpw-eyebrow{font-size:11px;font-weight:800;letter-spacing:2px;color:#e50914;text-transform:uppercase;margin-bottom:5px;}
-.mvpw-title{font-size:21px;font-weight:800;letter-spacing:-.02em;color:#fff;line-height:1.2;margin-bottom:8px;}
-.mvpw-sub{font-size:14px;color:#a8a2a5;line-height:1.5;margin:0 auto 16px;max-width:300px;}
+#mvPaywall .mvpw-card{background:#141013;border:1px solid rgba(255,255,255,.08);border-radius:18px;max-width:320px;width:100%;padding:18px 16px 12px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.6);max-height:92vh;overflow-y:auto;}
+.mvpw-inline{width:100%;max-width:320px;margin:0 auto;text-align:center;color:#fff;}
+.mvpw-icon{width:46px;height:46px;border-radius:14px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;box-shadow:0 8px 26px rgba(229,9,20,.42);}
+.mvpw-icon svg{width:22px;height:22px;}
+.mvpw-eyebrow{font-size:10px;font-weight:800;letter-spacing:2px;color:#e50914;text-transform:uppercase;margin-bottom:4px;}
+.mvpw-title{font-size:18px;font-weight:800;letter-spacing:-.02em;color:#fff;line-height:1.2;margin-bottom:6px;}
+.mvpw-sub{font-size:12.5px;color:#a8a2a5;line-height:1.5;margin:0 auto 12px;max-width:270px;}
 .mvpw-bigprice{font-size:26px;font-weight:800;color:#fff;margin-bottom:12px;}
 .mvpw-offer{margin:4px auto 14px;}
 .mvpw-offer-de{font-size:13px;color:#9a9398;}
@@ -17890,25 +17914,25 @@ document.addEventListener('keydown', function(e) {
 .mvpw-offer-por{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:3px;}
 .mvpw-offer-price{font-size:36px;font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1;}
 .mvpw-offer-note{font-size:12.5px;color:#ff6482;font-weight:700;margin-top:6px;}
-.mvpw-buy{width:100%;border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:800;cursor:pointer;background:#2a2530;color:#fff;margin-top:8px;}
+.mvpw-buy{width:100%;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;background:#2a2530;color:#fff;margin-top:6px;}
 .mvpw-buy.rec{background:linear-gradient(90deg,#ff1f3d,#e50914);color:#fff;box-shadow:0 8px 26px rgba(229,9,20,.4);}
 .mvpw-bigcta{letter-spacing:.02em;}
-.mvpw-plans{display:flex;flex-direction:column;gap:12px;margin-bottom:6px;text-align:left;}
-.mvpw-plan{position:relative;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:15px 16px;background:rgba(255,255,255,.03);}
+.mvpw-plans{display:flex;flex-direction:column;gap:11px;margin-bottom:4px;text-align:center;}
+.mvpw-plan{position:relative;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px 14px 11px;background:rgba(255,255,255,.03);}
 .mvpw-plan.rec{border-color:rgba(229,9,20,.7);background:rgba(229,9,20,.06);}
-.mvpw-tag{position:absolute;top:-9px;left:14px;background:#e50914;color:#fff;font-size:10px;font-weight:800;letter-spacing:.5px;padding:3px 9px;border-radius:999px;}
-.mvpw-pname{font-size:15px;font-weight:800;color:#fff;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px;}
-.mvpw-prow{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px;}
-.mvpw-price{font-size:23px;font-weight:800;color:#fff;}
+.mvpw-tag{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#e50914;color:#fff;font-size:10px;font-weight:800;letter-spacing:.5px;padding:3px 9px;border-radius:999px;white-space:nowrap;}
+.mvpw-pname{font-size:13.5px;font-weight:800;color:#fff;letter-spacing:.04em;text-transform:uppercase;margin-bottom:3px;}
+.mvpw-prow{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;margin-bottom:2px;justify-content:center;}
+.mvpw-price{font-size:21px;font-weight:800;color:#fff;}
 .mvpw-permes{font-size:13px;color:#8a8288;font-weight:600;margin-left:-4px;}
 .mvpw-incl{font-size:12.5px;color:#a8a2a5;cursor:pointer;margin-bottom:10px;user-select:none;}
 .mvpw-incl i{font-style:normal;}
 .mvpw-orig{font-size:13px;color:#8a8288;text-decoration:line-through;}
 .mvpw-off{font-size:11px;font-weight:800;color:#fff;background:#e50914;border-radius:6px;padding:2px 7px;}
 .mvpw-benef{font-size:12.5px;color:#a8a2a5;line-height:1.45;margin-bottom:10px;white-space:pre-line;}
-.mvpw-foot{font-size:11.5px;color:#8a8288;margin-top:14px;}
-.mvpw-social{font-size:12px;color:#b9b3b6;margin-top:8px;}
-.mvpw-ghost{margin-top:8px;background:none;border:none;color:#8a8288;font-size:13px;padding:9px;cursor:pointer;text-decoration:underline;}
+.mvpw-foot{font-size:11px;color:#8a8288;margin-top:10px;}
+.mvpw-social{font-size:12px;color:#b9b3b6;margin-top:6px;}
+.mvpw-ghost{margin-top:4px;background:none;border:none;color:#8a8288;font-size:13px;padding:8px;cursor:pointer;text-decoration:underline;}
 /* overlay de story VIP (mídia segue rodando borrada por trás) */
 .tk-vip-overlay{position:absolute;inset:0;z-index:9;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(to bottom,rgba(8,6,7,.55),rgba(8,6,7,.82));}
 .tk-vip-overlay .mvpw-inline{max-width:330px;}
@@ -17940,10 +17964,8 @@ window.MVPaywall = (function () {
         const off = discount(p.price, p.original_price);
         const rec = p.is_recommended === true;
         const nm = (p.name || (rec ? 'PREMIUM' : 'VIP'));
-        const incl = p.benefits
-            ? '<div class="mvpw-incl" onclick="var b=this.nextElementSibling;var open=b.style.display!==\'block\';b.style.display=open?\'block\':\'none\';this.querySelector(\'i\').textContent=open?\'⌃\':\'⌄\';">ver o que está incluído <i>⌄</i></div>'
-              + '<div class="mvpw-benef" style="display:none;">' + esc(p.benefits) + '</div>'
-            : '';
+        // popup compacto: sem o "ver o que está incluído" (benefícios ficam fora)
+        const incl = '';
         return '<div class="mvpw-plan' + (rec ? ' rec' : '') + '">'
             + (rec ? '<div class="mvpw-tag">MAIS ESCOLHIDO</div>' : '')
             + '<div class="mvpw-pname">' + esc(nm) + '</div>'

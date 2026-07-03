@@ -439,6 +439,24 @@ function parseButtons(raw) {
     return out.length ? JSON.stringify(out) : null;
 }
 
+// "Ordem" no painel é POSIÇÃO (1 = primeiro bloco). Vazio/0 = fim da fila.
+// Reposiciona o bloco dentro do fluxo e renumera todos (10, 20, 30...) — assim
+// o número digitado SEMPRE vale, sem depender da numeração interna antiga.
+async function repositionStep(chatId, flow, stepId, position) {
+    const { rows } = await db.query(
+        `SELECT id FROM chat_steps
+         WHERE chat_id = $1 AND COALESCE(flow, 'open') = $2 AND active = true
+         ORDER BY step_order, id`,
+        [chatId, flow || 'open']
+    );
+    const ids = rows.map(r => r.id).filter(i => i !== stepId);
+    const pos = (position && position > 0) ? Math.min(position - 1, ids.length) : ids.length;
+    ids.splice(pos, 0, stepId);
+    for (let i = 0; i < ids.length; i++) {
+        await db.query(`UPDATE chat_steps SET step_order = $2 WHERE id = $1`, [ids[i], (i + 1) * 10]);
+    }
+}
+
 router.post('/:id/steps', requireAdmin, async (req, res) => {
     const chatId = parseInt(req.params.id, 10);
     if (!chatId) return res.status(400).json({ success: false, error: 'ID inválido' });
@@ -469,6 +487,8 @@ router.post('/:id/steps', requireAdmin, async (req, res) => {
             (b.cta_color || '').trim().slice(0, 20) || null,
             b.wait_open === true,
         ]);
+        // aplica a POSIÇÃO escolhida (vazio = fim) e renumera o fluxo inteiro
+        await repositionStep(chatId, cleanFlow(b.flow), rows[0].id, parseInt(b.step_order, 10) || 0);
         return res.json({ success: true, step: rows[0] });
     } catch (err) {
         logger.error('Erro criando bloco do chat:', err);
@@ -505,6 +525,10 @@ router.put('/:id/steps/:stepId', requireAdmin, async (req, res) => {
         values.push(stepId);
         const { rows } = await db.query(`UPDATE chat_steps SET ${updates.join(', ')} WHERE id = $${p} RETURNING *`, values);
         if (!rows.length) return res.status(404).json({ success: false, error: 'Não encontrado' });
+        // POSIÇÃO informada → reposiciona no fluxo e renumera (10, 20, 30...)
+        if (b.step_order !== undefined) {
+            await repositionStep(rows[0].chat_id, rows[0].flow || 'open', stepId, parseInt(b.step_order, 10) || 0);
+        }
         return res.json({ success: true, step: rows[0] });
     } catch (err) {
         return res.status(500).json({ success: false, error: err.message || 'Erro interno' });

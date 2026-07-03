@@ -6053,7 +6053,7 @@ a { color: inherit; text-decoration: none; }
                                         <option value="paywall">🔒 Paywall (digitar passa a exigir assinatura)</option>
                                     </select>
                                 </div>
-                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Ordem</label><input class="form-control" type="number" id="csOrder" min="0" max="999" value="0" style="width:100%;"/></div>
+                                <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Posição</label><input class="form-control" type="number" id="csOrder" min="0" max="999" placeholder="vazio = último" style="width:100%;"/><div style="font-size:10.5px; color:rgba(255,255,255,.4); margin-top:3px;">1 = primeiro bloco, 2 = segundo... Vazio = entra por último.</div></div>
                             </div>
                             <div id="csContentWrap"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Texto <span style="color:rgba(255,255,255,.4)">(use {nome} pro nome do cliente)</span></label>
                                 <textarea class="form-control" id="csContent" maxlength="2000" placeholder="oii {nome}, que bom que você veio 😏" style="width:100%; min-height:64px;"></textarea>
@@ -14702,7 +14702,7 @@ async function loadFunnelDropdowns() {
         if (ech) {
             try {
                 const chs = await fetch('/api/admin/chats', { credentials:'include' }).then(r => r.json());
-                ech.innerHTML = '<option value="">— selecione —</option>' + ((chs.chats)||[]).map(c => '<option value="'+c.id+'">'+escHtmlAdmin(c.name)+'</option>').join('');
+                ech.innerHTML = '<option value="">— selecione —</option>' + ((chs.chats)||[]).map(c => '<option value="'+c.id+'">'+escHtmlAdmin(c.name)+(c.active === false ? ' ⚠ INATIVA — ative antes de usar' : '')+'</option>').join('');
             } catch(_) {}
         }
     } catch(e) {}
@@ -14925,7 +14925,7 @@ window.updateStepFields = function() {
         fetch('/api/admin/chats', { credentials:'include' }).then(r => r.json()).then(data => {
             const sel = document.getElementById('stepChatSelect');
             const cur = sel.value;
-            sel.innerHTML = '<option value="">— selecione —</option>' + (data.chats||[]).map(c => '<option value="'+c.id+'">'+escHtmlAdmin(c.name || ('Chat '+c.id))+(c.listed === false ? ' (oculto)' : '')+'</option>').join('');
+            sel.innerHTML = '<option value="">— selecione —</option>' + (data.chats||[]).map(c => '<option value="'+c.id+'">'+escHtmlAdmin(c.name || ('Chat '+c.id))+(c.listed === false ? ' (oculto)' : '')+(c.active === false ? ' ⚠ INATIVA — ative antes de usar' : '')+'</option>').join('');
             if (cur) sel.value = cur;
         });
     }
@@ -15621,7 +15621,13 @@ function editChatStep(s) {
     document.getElementById('chatStepModalTitle').textContent = 'Editar Bloco';
     document.getElementById('csId').value = s.id;
     document.getElementById('csType').value = s.type || 'text';
-    document.getElementById('csOrder').value = s.step_order || 0;
+    // Mostra a POSIÇÃO atual (1 = primeiro) dentro do fluxo — salvar sem mexer
+    // mantém o bloco onde está; trocar o número move ele pra lá.
+    const flowSteps = (_curChatSteps || [])
+        .filter(x => x.active !== false && (x.flow || 'open') === (s.flow || 'open'))
+        .sort((a, b) => (a.step_order - b.step_order) || (a.id - b.id));
+    const pos = flowSteps.findIndex(x => x.id === s.id) + 1;
+    document.getElementById('csOrder').value = pos > 0 ? pos : '';
     document.getElementById('csContent').value = s.content || '';
     document.getElementById('csMedia').value = s.media_url || '';
     document.getElementById('csLink').value = s.link_url || '';
@@ -16296,7 +16302,7 @@ function addBuilderBlock(type) {
     openChatStepModal();
     // pré-seleciona o tipo e ajusta a ordem pro fim
     document.getElementById('csType').value = type;
-    document.getElementById('csOrder').value = (CB.steps.length + 1) * 10;
+    document.getElementById('csOrder').value = ''; // vazio = entra por último
     updateChatStepFields();
 }
 function builderEditStep(id) {
