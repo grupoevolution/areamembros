@@ -377,6 +377,14 @@ async function runScript(session, chat, steps, idx, ident) {
             awaiting = 'view_once';
             break;
         }
+        // "Ela liga" TAMBÉM pausa o fluxo: os próximos blocos só saem quando a
+        // ligação ENCERRAR e o lead voltar pra conversa (/call-done). Sem isso,
+        // as mensagens chegavam DURANTE a chamada. Fallbacks: /open (saiu e
+        // voltou) e /poll (chamada abandonada há 4+ min) também retomam.
+        if (s.type === 'call') {
+            awaiting = 'call';
+            break;
+        }
         // PACING AUTOMÁTICO: entrega UMA mensagem por vez. Se o próximo bloco também
         // é mensagem (passivo), agenda ele via 'delay' (= o tempo de digitar dele) e
         // retorna agora. Assim as mensagens chegam ESPAÇADAS no servidor: o worker
@@ -584,6 +592,18 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
             }
             const steps = await loadSteps(chatId, session.current_flow || 'open');
             fresh = await runScript(session, chat, steps, session.current_order, ident);
+        } else if (session.awaiting === 'call') {
+            // Saiu no meio da ligação e voltou pra conversa: a chamada acabou —
+            // retoma o roteiro pausado (mesma reivindicação atômica do /call-done).
+            const claim = await db.query(
+                `UPDATE chat_sessions SET awaiting = 'resuming', updated_at = NOW()
+                 WHERE id = $1 AND awaiting = 'call' RETURNING id`,
+                [session.id]
+            );
+            if (claim.rows.length) {
+                const steps = await loadSteps(chatId, session.current_flow || 'open');
+                fresh = await runScript(session, chat, steps, session.current_order, ident);
+            }
         }
         const all = history.concat(fresh).map(publicMsg);
         // histórico antigo não "re-digita": typing só nas mensagens novas
@@ -802,6 +822,25 @@ router.get('/chats/:id/poll', optionalUser, async (req, res) => {
                 await runScript(session, cr[0], steps, session.current_order, ident);
             }
         }
+        // Chamada abandonada (fechou o app/tela no meio): se o roteiro ficou
+        // pausado em 'call' por 4+ min, retoma sozinho no próximo poll.
+        if (session.awaiting === 'call' && session.updated_at &&
+            (Date.now() - new Date(session.updated_at).getTime()) > 4 * 60000) {
+            const claim = await db.query(
+                `UPDATE chat_sessions SET awaiting = 'resuming', updated_at = NOW()
+                 WHERE id = $1 AND awaiting = 'call' RETURNING id`,
+                [session.id]
+            );
+            if (claim.rows.length) {
+                const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
+                if (cr.length) {
+                    ident.city = session.city;
+                    ident.cityFallback = cr[0].city_fallback;
+                    const steps = await loadSteps(chatId, session.current_flow || 'open');
+                    await runScript(session, cr[0], steps, session.current_order, ident);
+                }
+            }
+        }
         const { rows: msgs } = await db.query(
             `SELECT * FROM chat_messages WHERE session_id = $1 AND id > $2 ORDER BY id`,
             [session.id, after]
@@ -873,6 +912,47 @@ router.post('/chats/messages/:id/viewed', optionalUser, async (req, res) => {
         return res.json({ success: true, consumed: rowCount > 0, messages: newMessages });
     } catch (err) {
         return res.json({ success: false });
+    }
+});
+
+// POST /chats/:id/call-done — a ligação do roteiro ENCERROU e o lead voltou
+// pra conversa: retoma o fluxo pausado em awaiting='call' e devolve as
+// mensagens novas (o app injeta direto, sem esperar o poll).
+router.post('/chats/:id/call-done', optionalUser, async (req, res) => {
+    const chatId = parseInt(req.params.id, 10);
+    if (!chatId) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const ident = getIdentity(req);
+        const session = await findOrCreateSession(chatId, ident, false);
+        if (!session) return res.json({ success: true, messages: [], awaiting: null });
+        const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
+        if (!cr.length) return res.status(404).json({ success: false, error: 'Chat não encontrado' });
+        const chat = cr[0];
+        let fresh = [];
+        // reivindica atomicamente (call → resuming) pra não rodar 2x (onClose +
+        // vigia disparando juntos, ou junto com o /open)
+        const claim = await db.query(
+            `UPDATE chat_sessions SET awaiting = 'resuming', updated_at = NOW()
+             WHERE id = $1 AND awaiting = 'call' RETURNING id`,
+            [session.id]
+        );
+        if (claim.rows.length) {
+            ident.city = session.city;
+            ident.cityFallback = chat.city_fallback;
+            const steps = await loadSteps(chatId, session.current_flow || 'open');
+            fresh = await runScript(session, chat, steps, session.current_order, ident);
+        }
+        const owns = await ownsChatVip(ident.email, chat);
+        return res.json({
+            success: true,
+            messages: fresh.map(publicMsg),
+            awaiting: session.awaiting,
+            resume_at: session.awaiting === 'delay' ? session.resume_at : null,
+            paywalled: !!(session.paywalled_at && !owns),
+        });
+    } catch (err) {
+        logger.error('Erro no call-done do chat:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
     }
 });
 

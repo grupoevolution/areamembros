@@ -75,36 +75,61 @@ var DATA = __PRESSEL_DATA__;
         return '<div class="st"><div class="ring"><div class="ph"' + bg + '></div></div><div class="nm">' + esc(c.name) + '</div></div>';
     }).join('');
 
-    // Conversas: as primeiras com preview de mensagem + não lidas; o resto online
+    // Conversas: todas começam "online"; as mensagens CHEGAM ao vivo (sequência
+    // abaixo) e ficam FIXAS — nada de aparecer e sumir.
     document.getElementById('list').innerHTML = chats.map(function (c, i) {
         var bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
-        var hasMsg = i < previews.length;
-        var pv = hasMsg
-            ? '<div class="pv" data-pv="' + i + '">' + esc(previews[i]) + '</div>'
-            : '<div class="pv online" data-pv="' + i + '">' + esc(c.status_label || 'online') + '</div>';
-        var end = hasMsg
-            ? '<div class="end"><span class="tm">' + hhmmAgo(1 + i * 4) + '</span><span class="badge">' + (i === 0 ? (2 + ((chats.length + 3) % 8)) : (1 + (i % 3))) + '</span></div>'
-            : '';
-        return '<div class="row"><div class="av"' + bg + '>' + (c.show_online !== false ? '<span class="dot"></span>' : '') + '</div>'
-            + '<div class="mid"><div class="nm">' + esc(c.name) + '</div>' + pv + '</div>' + end + '</div>';
+        return '<div class="row" data-row="' + i + '"><div class="av"' + bg + '>' + (c.show_online !== false ? '<span class="dot"></span>' : '') + '</div>'
+            + '<div class="mid"><div class="nm">' + esc(c.name) + '</div><div class="pv online" data-pv="' + i + '">' + esc(c.status_label || 'online') + '</div></div></div>';
     }).join('');
 
-    // "digitando..." rodando entre as conversas (só visual — nada navega sozinho)
+    // Sequência VIVA por conversa (só visual — nada navega sozinho):
+    // digitando… → 📷 Foto (+1 não lida) → digitando… → mensagem configurada,
+    // que fica FIXA com o contador. Uma conversa de cada vez, em fila.
+    function bumpBadge(i) {
+        var row = document.querySelector('[data-row="' + i + '"]');
+        if (!row) return;
+        var end = row.querySelector('.end');
+        if (!end) {
+            end = document.createElement('div');
+            end.className = 'end';
+            end.innerHTML = '<span class="tm">' + hhmmAgo(0) + '</span><span class="badge">1</span>';
+            row.appendChild(end);
+        } else {
+            var b = end.querySelector('.badge');
+            if (b) b.textContent = String((parseInt(b.textContent, 10) || 0) + 1);
+        }
+    }
+    function seqChat(i, finalText, startMs) {
+        var el = document.querySelector('[data-pv="' + i + '"]');
+        if (!el) return;
+        function typing() { el.textContent = 'digitando…'; el.className = 'pv typing'; }
+        setTimeout(typing, startMs);
+        setTimeout(function () { el.textContent = '📷 Foto'; el.className = 'pv'; bumpBadge(i); }, startMs + 2400);
+        setTimeout(typing, startMs + 4600);
+        setTimeout(function () { el.textContent = finalText; el.className = 'pv'; el.dataset.fixed = '1'; bumpBadge(i); }, startMs + 7000);
+    }
+    for (var pi = 0; pi < previews.length && pi < chats.length; pi++) {
+        seqChat(pi, previews[pi], 900 + pi * 3600);
+    }
+
+    // Nas conversas SEM mensagem configurada: "digitando…" sutil de vez em
+    // quando, voltando pro online — não mexe nas que já têm mensagem fixa.
     var typingIdx = -1, typingOld = '';
     setInterval(function () {
-        var els = document.querySelectorAll('[data-pv]');
+        var els = Array.prototype.filter.call(document.querySelectorAll('[data-pv]'), function (e, idx) {
+            return idx >= previews.length && e.dataset.fixed !== '1';
+        });
         if (!els.length) return;
-        if (typingIdx >= 0 && els[typingIdx]) {
+        if (typingIdx >= 0 && typingOld && els[typingIdx]) {
             els[typingIdx].textContent = typingOld;
-            els[typingIdx].className = els[typingIdx].dataset.cls || els[typingIdx].className.replace(' typing', '');
+            els[typingIdx].className = 'pv online';
         }
         typingIdx = Math.floor(Math.random() * els.length);
-        var el = els[typingIdx];
-        el.dataset.cls = el.className;
-        typingOld = el.textContent;
-        el.textContent = 'digitando…';
-        el.className = 'pv typing';
-    }, 2600);
+        typingOld = els[typingIdx].textContent;
+        els[typingIdx].textContent = 'digitando…';
+        els[typingIdx].className = 'pv typing';
+    }, 3200);
 
     // ── QUALQUER toque leva pro funil (gesto do lead = permitido no webview) ──
     var went = false;

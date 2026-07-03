@@ -9141,8 +9141,17 @@ window.ChatApp = (function() {
         try {
             const r = await fetch('/api/user/chats/' + CUR.id + '/poll?after=' + LAST_ID + '&visitor_id=' + VID, { credentials: 'include' });
             const data = await r.json();
-            if (data.success && Array.isArray(data.messages) && data.messages.length) {
-                handleAdvance({ messages: data.messages, awaiting: data.awaiting }, true);
+            if (data.success) {
+                // consome o estado SEMPRE (mesmo sem mensagem nova): era isso que
+                // deixava o chat "congelado" — o paywall ativava no servidor mas o
+                // app só ficava sabendo se chegasse mensagem junto.
+                if (data.paywalled === true) setPaywalled();
+                if (Array.isArray(data.messages) && data.messages.length) {
+                    handleAdvance({ messages: data.messages, awaiting: data.awaiting, resume_at: data.resume_at, paywalled: data.paywalled }, true);
+                } else if (data.awaiting !== undefined && CUR && CUR.awaiting !== data.awaiting) {
+                    CUR.awaiting = data.awaiting;
+                    updateInputBar();
+                }
             }
             return data;
         } catch (_) {}
@@ -9233,6 +9242,16 @@ window.ChatApp = (function() {
             return;
         }
         handleAdvance(data);
+        // Conversa VAZIA que espera o LEAD começar: instrução discreta no fundo
+        // (estilo WhatsApp) pra ele entender que é só digitar. Some na 1ª mensagem.
+        if ((!data.messages || !data.messages.length)) {
+            const hint = document.createElement('div');
+            hint.id = 'caFirstHint';
+            hint.className = 'ca-day';
+            hint.style.marginTop = '18px';
+            hint.textContent = 'Envie a primeira mensagem pra ela 👇';
+            body.appendChild(hint);
+        }
     }
 
     function handleAdvance(data, isFresh) {
@@ -9259,8 +9278,9 @@ window.ChatApp = (function() {
             CUR.nextSoon = !!(data.awaiting === 'delay' && data.resume_at &&
                 (new Date(data.resume_at).getTime() - Date.now()) < 32000);
             // passou do paywall → dali em diante TUDO neste chat exige VIP
-            // (o roteiro CONTINUA rodando; só o lead fica travado)
-            if (data.awaiting === 'paywall' || data.paywalled === true) CUR.paywalled = true;
+            // (o roteiro CONTINUA rodando; só o lead fica travado). setPaywalled
+            // mostra o popup 1x na ativação; se já estava marcado, não repete.
+            if (data.awaiting === 'paywall' || data.paywalled === true) setPaywalled();
         }
         if (!RENDERING) drain();
     }
@@ -9396,6 +9416,8 @@ window.ChatApp = (function() {
 
     function renderMsg(m) {
         const body = document.getElementById('caBody');
+        // some com a instrução "envie a primeira mensagem" na 1ª mensagem real
+        try { const h = document.getElementById('caFirstHint'); if (h) h.remove(); } catch (_) {}
         const mine = m.sender === 'user';
         const d = document.createElement('div');
         const ticks = mine ? '<span class="ticks"><svg width="16" height="11" viewBox="0 0 16 11" fill="none" stroke="#53bdeb" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.2 5.6l2.4 2.4 4.6-5.6"/><path d="M6 8l4.6-5.6"/></svg></span>' : '';
@@ -9483,8 +9505,10 @@ window.ChatApp = (function() {
             } else if (m._fresh && CUR && CUR.chat.video_call && window.VideoCall) {
                 setTimeout(() => {
                     try {
-                        window.VideoCall.open(CUR.chat.video_call, { skipSeenGuard: true });
-                        watchCallEnd(); // quando a chamada fechar: destrava o chat na hora
+                        // onClose: quando a chamada fechar, retoma o roteiro e a
+                        // barra de digitar NA HORA (+ vigia de reserva)
+                        window.VideoCall.open(CUR.chat.video_call, { skipSeenGuard: true, onClose: callDone });
+                        watchCallEnd();
                     } catch(_) {}
                 }, 600);
             }
@@ -10040,7 +10064,7 @@ window.ChatApp = (function() {
             stopRingback();
             if (isVip) {
                 closeCallScreen();
-                try { window.VideoCall.open(chat.video_call, { skipSeenGuard: true }); watchCallEnd(); } catch (_) {}
+                try { window.VideoCall.open(chat.video_call, { skipSeenGuard: true, onClose: callDone }); watchCallEnd(); } catch (_) {}
             } else {
                 CUR.callSeen = true;
                 try { api('/api/user/chats/' + CUR.id + '/call-seen'); } catch (_) {}
@@ -10056,23 +10080,49 @@ window.ChatApp = (function() {
     // Popup antigo "Chamada exclusiva" REMOVIDO — o chat usa um popup só:
     // o de planos VIP/PREMIUM (openChatPaywall), em toda ação travada.
 
-    // Vigia o overlay da chamada de vídeo: quando ela FECHA, sincroniza a
-    // conversa na hora (busca as mensagens que o roteiro mandou enquanto isso
-    // e re-renderiza a barra de digitar). Sem isso o chat parecia "congelado"
-    // depois da ligação — só destravava saindo e voltando.
+    // A ligação ENCERROU e o lead voltou pro chat: avisa o servidor (retoma o
+    // roteiro pausado em 'call') e injeta as mensagens novas + barra de digitar
+    // NA HORA. Guard: onClose e o vigia podem disparar juntos — roda 1x.
+    let _callDoneBusy = false;
+    async function callDone() {
+        if (_callDoneBusy || !CUR) return;
+        _callDoneBusy = true;
+        try {
+            const { data } = await api('/api/user/chats/' + CUR.id + '/call-done');
+            if (data && data.success) {
+                if (data.paywalled === true) setPaywalled();
+                if (Array.isArray(data.messages) && data.messages.length) {
+                    handleAdvance(data, true);
+                } else if (data.awaiting !== undefined) {
+                    CUR.awaiting = data.awaiting;
+                }
+            }
+        } catch (_) {}
+        _callDoneBusy = false;
+        try { updateInputBar(); } catch (_) {}
+        try { scrollChatToBottom(); } catch (_) {}
+    }
+    // Vigia de RESERVA (caso o onClose da chamada não dispare): detecta o
+    // overlay fechar e chama o callDone do mesmo jeito.
     let _callWatch = null;
     function watchCallEnd() {
         if (_callWatch) clearInterval(_callWatch);
         _callWatch = setInterval(() => {
             const ov = document.getElementById('videoCallOverlay');
-            const open = ov && ov.classList.contains('is-open');
-            if (open) return;
+            if (ov && ov.classList.contains('is-open')) return;
             clearInterval(_callWatch); _callWatch = null;
-            if (!CUR) return;
-            try { pollOnce(); } catch (_) {}
-            try { updateInputBar(); } catch (_) {}
-            try { scrollChatToBottom(); } catch (_) {}
+            callDone();
         }, 800);
+    }
+
+    // O paywall ACABOU de ativar com a conversa aberta: trava as ações, mostra
+    // o popup UMA vez e libera a barra de digitar (fechou o popup → digita,
+    // a mensagem "não entrega" e o popup volta).
+    function setPaywalled() {
+        if (!CUR || CUR.paywalled) return;
+        CUR.paywalled = true;
+        try { updateInputBar(); } catch (_) {}
+        try { openChatPaywall(); } catch (_) {}
     }
 
     // Entrada de "Ligação de vídeo · perdida" no chat (estilo WhatsApp)
