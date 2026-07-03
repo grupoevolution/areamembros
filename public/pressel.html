@@ -45,6 +45,19 @@ body {
 .row .tm { font-size: 12.5px; color: #25a55f; font-weight: 600; }
 .row .badge { min-width: 21px; height: 21px; border-radius: 999px; background: #4CD964; color: #fff; font-size: 11.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 6px; }
 .foot { text-align: center; padding: 22px 20px 30px; font-size: 12px; color: #b7b2a9; }
+/* Banner flutuante "N novas mensagens" (pulsa a cada chegada) */
+.newmsgs {
+    position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+    background: #1fa855; color: #fff; font-size: 14px; font-weight: 700;
+    padding: 11px 20px; border-radius: 999px; white-space: nowrap;
+    box-shadow: 0 8px 26px rgba(31,168,85,.45); z-index: 5;
+    animation: nmPulse 1.8s ease-out infinite;
+}
+@keyframes nmPulse {
+    0%   { box-shadow: 0 8px 26px rgba(31,168,85,.45), 0 0 0 0 rgba(31,168,85,.5); }
+    70%  { box-shadow: 0 8px 26px rgba(31,168,85,.45), 0 0 0 14px rgba(31,168,85,0); }
+    100% { box-shadow: 0 8px 26px rgba(31,168,85,.45), 0 0 0 0 rgba(31,168,85,0); }
+}
 </style>
 </head>
 <body>
@@ -55,6 +68,7 @@ body {
 <div class="sec">Minhas conversas</div>
 <div class="list" id="list"></div>
 <div class="foot">🔒 Suas conversas são protegidas</div>
+<div class="newmsgs" id="newMsgs" style="display:none;">🔥 <span id="newMsgsN">1</span> nova mensagem</div>
 <script>
 var DATA = __PRESSEL_DATA__;
 (function () {
@@ -99,25 +113,44 @@ var DATA = __PRESSEL_DATA__;
         if (!end) {
             end = document.createElement('div');
             end.className = 'end';
-            end.innerHTML = '<span class="tm">' + hhmmAgo(0) + '</span><span class="badge">1</span>';
+            end.innerHTML = '<span class="tm" data-ts="' + Date.now() + '">agora</span><span class="badge">1</span>';
             row.appendChild(end);
         } else {
             var b = end.querySelector('.badge');
             if (b) b.textContent = String((parseInt(b.textContent, 10) || 0) + 1);
+            var t = end.querySelector('.tm');
+            if (t) { t.dataset.ts = String(Date.now()); t.textContent = 'agora'; }
         }
     }
-    // contador de "novas mensagens" no título da aba (reforça a chegada)
+    // Horários VIVOS: "agora" → "1 min" → "2 min"… atualiza a cada 20s
+    setInterval(function () {
+        var tms = document.querySelectorAll('.tm[data-ts]');
+        for (var ti = 0; ti < tms.length; ti++) {
+            var mins = Math.floor((Date.now() - parseInt(tms[ti].dataset.ts, 10)) / 60000);
+            tms[ti].textContent = mins < 1 ? 'agora' : (mins + ' min');
+        }
+    }, 20000);
+    // Contador de "novas mensagens": título da aba + banner verde pulsando
     var _arrived = 0, _baseTitle = document.title;
     function bumpTitle() {
         _arrived++;
         try { document.title = '(' + _arrived + ') ' + _baseTitle; } catch (e) {}
+        try {
+            var nm = document.getElementById('newMsgs');
+            nm.innerHTML = '🔥 ' + _arrived + (_arrived > 1 ? ' novas mensagens' : ' nova mensagem');
+            nm.style.display = 'block';
+        } catch (e) {}
     }
     function seqChat(i, finalText, startMs) {
         var el = document.querySelector('[data-pv="' + i + '"]');
         if (!el) return;
         function typing() { el.textContent = 'digitando…'; el.className = 'pv typing'; }
+        // varia o estímulo: conversas ímpares mandam ÁUDIO, pares mandam FOTO
+        var midTxt = (i % 2 === 1)
+            ? '🎤 Áudio 0:' + ('0' + (9 + (i * 7) % 39)).slice(-2)
+            : '📷 Foto';
         setTimeout(typing, startMs);
-        setTimeout(function () { el.textContent = '📷 Foto'; el.className = 'pv'; bumpBadge(i); bumpTitle(); }, startMs + 1700);
+        setTimeout(function () { el.textContent = midTxt; el.className = 'pv'; bumpBadge(i); bumpTitle(); }, startMs + 1700);
         setTimeout(typing, startMs + 3100);
         setTimeout(function () { el.textContent = finalText; el.className = 'pv'; el.dataset.fixed = '1'; bumpBadge(i); bumpTitle(); }, startMs + 4800);
     }
