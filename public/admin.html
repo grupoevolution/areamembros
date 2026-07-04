@@ -4996,8 +4996,8 @@ a { color: inherit; text-decoration: none; }
                             </select>
                         </div>
                         <div>
-                            <label class="form-label" id="pushDestIdLabel" style="opacity:.5;">ID do destino</label>
-                            <input type="number" class="form-input" id="pushDestId" placeholder="ex: 12" oninput="applyPushDest()" disabled>
+                            <label class="form-label" id="pushDestIdLabel" style="opacity:.5;">Qual?</label>
+                            <select class="form-input" id="pushDestPick" onchange="applyPushDest()" disabled></select>
                         </div>
                     </div>
                     <div class="form-row" style="margin-bottom:14px;">
@@ -5049,10 +5049,8 @@ a { color: inherit; text-decoration: none; }
                             </div>
                             <div>
                                 <label class="form-label">Ao clicar, abre…</label>
-                                <div style="display:flex;gap:8px;">
-                                    <select class="form-input" id="routineDest" onchange="applyDestUI('routine')" style="flex:1;"></select>
-                                    <input type="number" class="form-input" id="routineDestId" placeholder="ID" style="width:90px;display:none;">
-                                </div>
+                                <select class="form-input" id="routineDest" onchange="applyDestUI('routine')"></select>
+                                <select class="form-input" id="routineDestPick" style="margin-top:8px;display:none;"></select>
                                 <input type="text" class="form-input" id="routineUrl" value="/" placeholder="/caminho ou https://..." style="margin-top:8px;display:none;">
                             </div>
                         </div>
@@ -5087,10 +5085,8 @@ a { color: inherit; text-decoration: none; }
                             </div>
                             <div>
                                 <label class="form-label">Ao clicar, abre…</label>
-                                <div style="display:flex;gap:8px;">
-                                    <select class="form-input" id="istDest" onchange="applyDestUI('ist')" style="flex:1;"></select>
-                                    <input type="number" class="form-input" id="istDestId" placeholder="ID" style="width:90px;display:none;">
-                                </div>
+                                <select class="form-input" id="istDest" onchange="applyDestUI('ist')"></select>
+                                <select class="form-input" id="istDestPick" style="margin-top:8px;display:none;"></select>
                                 <input type="text" class="form-input" id="istUrl" value="/" placeholder="/caminho ou https://..." style="margin-top:8px;display:none;">
                             </div>
                         </div>
@@ -11928,18 +11924,30 @@ async function loadGrowth() {
 }
 
 // Destino rápido: preenche a URL de clique conforme o preset escolhido
-function applyPushDest() {
+async function applyPushDest() {
     const dest = document.getElementById('pushDest').value;
-    const idEl = document.getElementById('pushDestId');
+    const pick = document.getElementById('pushDestPick');
     const lbl = document.getElementById('pushDestIdLabel');
     const urlEl = document.getElementById('pushUrl');
-    const needsId = (dest === 'product' || dest === 'chat' || dest === 'group');
-    idEl.disabled = !needsId;
-    lbl.style.opacity = needsId ? '1' : '.5';
+    const needsPick = (dest === 'product' || dest === 'chat' || dest === 'group');
+    pick.disabled = !needsPick;
+    lbl.style.opacity = needsPick ? '1' : '.5';
+    if (needsPick) {
+        // dropdown com os NOMES reais (conversas/grupos/produtos) — sem ID
+        const lists = await loadDestLists();
+        const items = lists[dest] || [];
+        const cur = pick.value;
+        pick.innerHTML = items.length
+            ? items.map(i => '<option value="' + i.id + '">' + escHtmlAdmin(i.name) + '</option>').join('')
+            : '<option value="">— nenhum criado ainda —</option>';
+        if (cur && items.some(i => String(i.id) === cur)) pick.value = cur;
+    } else {
+        pick.innerHTML = '';
+    }
     if (dest === '/') urlEl.value = '/';
-    else if (dest === 'product') urlEl.value = idEl.value ? '/?p=' + parseInt(idEl.value, 10) : '/?p=';
-    else if (dest === 'chat') urlEl.value = idEl.value ? '/?chat=' + parseInt(idEl.value, 10) : '/?chat=';
-    else if (dest === 'group') urlEl.value = idEl.value ? '/?group=' + parseInt(idEl.value, 10) : '/?group=';
+    else if (dest === 'product') urlEl.value = pick.value ? '/?p=' + parseInt(pick.value, 10) : '/';
+    else if (dest === 'chat') urlEl.value = pick.value ? '/?chat=' + parseInt(pick.value, 10) : '/';
+    else if (dest === 'group') urlEl.value = pick.value ? '/?group=' + parseInt(pick.value, 10) : '/';
     else if (dest === 'chats_tab') urlEl.value = '/?go=chats';
     else if (dest === 'groups_tab') urlEl.value = '/?go=groups';
     else if (dest === 'videos') urlEl.value = '/?go=videos';
@@ -12028,29 +12036,60 @@ window.showPreviewQR = showPreviewQR;
 // ============================================================================
 const DEST_OPTS = [
     ['/',          '🏠 Início (catálogo)'],
-    ['chat',       '💬 Conversa específica… (ID)'],
+    ['chat',       '💬 Uma conversa…'],
     ['chats_tab',  '🗨️ Aba Conversas'],
-    ['group',      '👥 Grupo específico… (ID)'],
+    ['group',      '👥 Um grupo…'],
     ['groups_tab', '👥 Aba Grupos'],
     ['videos',     '🎬 Aba Vídeos'],
-    ['product',    '📦 Produto específico… (ID)'],
+    ['product',    '📦 Um produto…'],
     ['custom',     '✏️ URL personalizada'],
 ];
-const DEST_NEEDS_ID = { chat: 1, group: 1, product: 1 };
+const DEST_NEEDS_PICK = { chat: 1, group: 1, product: 1 };
+
+// Listas reais (nome, não ID) — carregadas 1x e usadas nos dropdowns "Qual?"
+let _destLists = null;
+async function loadDestLists() {
+    if (_destLists) return _destLists;
+    const out = { chat: [], group: [], product: [] };
+    try { const r = await fetch('/api/admin/chats', { credentials: 'include' }).then(r => r.json()); out.chat = (r.chats || []).map(c => ({ id: c.id, name: c.name })); } catch (_) {}
+    try { const r = await fetch('/api/admin/groups', { credentials: 'include' }).then(r => r.json()); out.group = (r.groups || []).map(g => ({ id: g.id, name: g.name })); } catch (_) {}
+    try { const r = await fetch('/api/admin/products', { credentials: 'include' }).then(r => r.json()); out.product = (r.products || r.data || []).map(p => ({ id: p.id, name: p.name })); } catch (_) {}
+    _destLists = out;
+    return out;
+}
+
 function destFillSelect(prefix) {
     const sel = document.getElementById(prefix + 'Dest');
     if (!sel || sel.options.length) return;
     sel.innerHTML = DEST_OPTS.map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('');
 }
-function applyDestUI(prefix) {
+// Preenche o dropdown "Qual?" com a lista certa (conversas/grupos/produtos).
+// keepId: tenta manter selecionado (edição).
+async function destFillPick(prefix, dest, keepId) {
+    const pick = document.getElementById(prefix + 'DestPick');
+    if (!pick) return;
+    const lists = await loadDestLists();
+    const items = lists[dest] || [];
+    pick.innerHTML = items.length
+        ? items.map(i => '<option value="' + i.id + '">' + escHtmlAdmin(i.name) + '</option>').join('')
+        : '<option value="">— nenhum criado ainda —</option>';
+    if (keepId && items.some(i => String(i.id) === String(keepId))) pick.value = String(keepId);
+}
+async function applyDestUI(prefix, keepId) {
     destFillSelect(prefix);
     const dest = document.getElementById(prefix + 'Dest').value;
-    document.getElementById(prefix + 'DestId').style.display = DEST_NEEDS_ID[dest] ? '' : 'none';
+    const pick = document.getElementById(prefix + 'DestPick');
+    if (DEST_NEEDS_PICK[dest]) {
+        pick.style.display = '';
+        await destFillPick(prefix, dest, keepId);
+    } else if (pick) {
+        pick.style.display = 'none';
+    }
     document.getElementById(prefix + 'Url').style.display = dest === 'custom' ? '' : 'none';
 }
 function getDestUrl(prefix) {
     const dest = document.getElementById(prefix + 'Dest').value;
-    const id = parseInt(document.getElementById(prefix + 'DestId').value, 10) || 0;
+    const id = parseInt(document.getElementById(prefix + 'DestPick')?.value, 10) || 0;
     const custom = (document.getElementById(prefix + 'Url').value || '').trim();
     if (dest === 'chat') return id ? '/?chat=' + id : '/';
     if (dest === 'group') return id ? '/?group=' + id : '/';
@@ -12074,19 +12113,23 @@ function setDestUrl(prefix, url) {
     else if (/[?&]go=groups/.test(url)) dest = 'groups_tab';
     else if (/[?&](go=videos|videos=)/.test(url)) dest = 'videos';
     document.getElementById(prefix + 'Dest').value = dest;
-    document.getElementById(prefix + 'DestId').value = id;
     document.getElementById(prefix + 'Url').value = dest === 'custom' ? url : '/';
-    applyDestUI(prefix);
+    applyDestUI(prefix, id);
 }
 window.applyDestUI = applyDestUI;
-// rótulo amigável do destino pra listagem ("Aba Vídeos" em vez de /?go=videos)
+// rótulo amigável do destino pra listagem — usa o NOME real quando a lista
+// já carregou ("💬 Gaby 🔥" em vez de /?chat=1)
+function destName(kind, id) {
+    const item = _destLists && (_destLists[kind] || []).find(i => String(i.id) === String(id));
+    return item ? item.name : '#' + id;
+}
 function destLabel(url) {
     url = String(url || '/');
     let m;
     if (url === '/' || url === '') return '🏠 Início';
-    if ((m = url.match(/[?&]chat=(\d+)/))) return '💬 Conversa #' + m[1];
-    if ((m = url.match(/[?&]group=(\d+)/))) return '👥 Grupo #' + m[1];
-    if ((m = url.match(/[?&]p=(\d+)/))) return '📦 Produto #' + m[1];
+    if ((m = url.match(/[?&]chat=(\d+)/))) return '💬 ' + destName('chat', m[1]);
+    if ((m = url.match(/[?&]group=(\d+)/))) return '👥 ' + destName('group', m[1]);
+    if ((m = url.match(/[?&]p=(\d+)/))) return '📦 ' + destName('product', m[1]);
     if (/[?&]go=chats/.test(url)) return '🗨️ Aba Conversas';
     if (/[?&]go=groups/.test(url)) return '👥 Aba Grupos';
     if (/[?&](go=videos|videos=)/.test(url)) return '🎬 Aba Vídeos';
@@ -12102,6 +12145,7 @@ const ROUTINE_AUD = { all: '👥 Todos', leads: '🎯 Não compraram', buyers: '
 async function loadPushRoutine() {
     const list = document.getElementById('routineList');
     if (!list) return;
+    await loadDestLists(); // nomes prontos pros rótulos da lista
     applyDestUI('routine');
     try {
         const r = await fetch('/api/admin/push/routine', { credentials: 'include' }).then(r => r.json());
@@ -12219,6 +12263,7 @@ function fmtInstallDelay(min) {
 async function loadInstallSteps() {
     const list = document.getElementById('installStepsList');
     if (!list) return;
+    await loadDestLists(); // nomes prontos pros rótulos da lista
     applyDestUI('ist');
     try {
         const r = await fetch('/api/admin/push/install-steps', { credentials: 'include' }).then(r => r.json());
