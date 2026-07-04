@@ -571,6 +571,11 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
             has_call: !!callPayload,
             call_trigger: !!chat.call_goto_key,
             video_call: callPayload,
+            // chat de SUPORTE com WhatsApp configurado → o app mostra a faixa
+            // fixa "Falar no WhatsApp" no topo (estilo banner de mídias do grupo)
+            support_whatsapp: chat.is_support === true
+                ? ((await getSupportConfig()).whatsapp_link || null)
+                : null,
         };
         // identificado = e-mail real capturado (gate de mídia só vale pra anônimo)
         const identified = !!ident.email;
@@ -1209,7 +1214,6 @@ async function deliverPurchaseToSupport(email, productIds) {
         await insertMsg(session.id, 'bot', 'cta', '📲 Instalar o app no celular', null,
             { action: 'install_pwa', cta_color: RED }, null);
     } catch (_) {}
-    await appendHelpCta(session.id, cfg);
     await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [session.id]);
     return firstMsg ? [{ chat, messages: [firstMsg], email: e }] : [];
 }
@@ -1220,7 +1224,7 @@ async function deliverPurchaseToSupport(email, productIds) {
 // {valor} (produto/valor só onde fazem sentido).
 const SUPPORT_DEFAULTS = {
     whatsapp_link: '',
-    pix_template: 'Oi {nome}! Vi aqui que você gerou o Pix{valor} pra garantir {produto} 👀 Ele fica reservado por pouco tempo — paga agora pra não perder!',
+    pix_template: 'Oi {nome}. Vi aqui que você gerou o Pix{valor} pra liberar {produto} — o pagamento ainda não caiu.',
     purchase_template: 'Parabéns, {nome}! 🎉 Sua compra de {produto} foi APROVADA e o acesso JÁ TÁ liberado em Minhas Compras. Corre lá 😈 Qualquer dúvida, me chama aqui!',
     welcome_enabled: true,
     welcome_template: '{saudacao}, {nome}! 👋 Eu sou o suporte oficial do app. Qualquer dúvida, pagamento ou problema, me chama AQUI nessa conversa que eu resolvo rapidinho. Bom proveito 🔥',
@@ -1251,14 +1255,8 @@ function invalidateSupportConfig() { _supportCfgCache = { at: 0, cfg: null }; }
 // "boa tarde, ..." — feio na abertura da conversa)
 function capFirst(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
 
-// Botão "Preciso de ajuda" (WhatsApp) — anexado ao fim das entregas do suporte
-async function appendHelpCta(sessionId, cfg) {
-    if (!cfg.whatsapp_link) return;
-    try {
-        await insertMsg(sessionId, 'bot', 'cta', '💬 Preciso de ajuda (WhatsApp)', null,
-            { link_url: cfg.whatsapp_link, cta_color: '#1fa855' }, null);
-    } catch (_) {}
-}
+// (O WhatsApp de ajuda NÃO vai mais como botão no meio da conversa — vira a
+// faixa fixa no topo do chat de suporte, via persona.support_whatsapp.)
 
 // BOAS-VINDAS ao instalar o app (welcome_enabled): 1 mensagem no suporte,
 // chega não-lida (badge chama atenção). Dedupe fica no caller (user.js,
@@ -1274,7 +1272,6 @@ async function deliverInstallWelcome(email) {
     const session = await findOrCreateSession(chat.id, { email: e, visitor: null }, true);
     const ctx = { email: e, city: session.city || null, cityFallback: chat.city_fallback };
     const msg = await insertMsg(session.id, 'bot', 'text', capFirst(await fillVars(cfg.welcome_template, ctx)), null, { typing_ms: 0 }, null);
-    await appendHelpCta(session.id, cfg);
     await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [session.id]);
     return { chat, messages: [msg], email: e };
 }
@@ -1307,17 +1304,20 @@ async function deliverPixPendingToSupport(email, info) {
 
     if (info && info.pix_code) {
         await insertMsg(session.id, 'bot', 'text',
-            'É rapidinho: toca no botão aqui embaixo pra COPIAR o código, abre o app do seu banco, escolhe Pix → "Copia e Cola", cola o código e confirma ✅', null, { typing_ms: 0 }, null);
-        await insertMsg(session.id, 'bot', 'cta', '📋 Copiar código Pix', null,
+            'O código vence em pouco tempo. Pagar é rápido:\n\n'
+            + '1. Toca no botão verde aqui embaixo — o código copia sozinho\n\n'
+            + '2. Abre o app do seu banco\n\n'
+            + '3. Escolhe Pix e depois "Copia e Cola"\n\n'
+            + '4. Cola o código e confirma', null, { typing_ms: 0 }, null);
+        await insertMsg(session.id, 'bot', 'cta', 'Copiar código Pix', null,
             { action: 'copy_pix', pix_code: String(info.pix_code), cta_color: GREEN }, null);
     } else if (info && info.pix_url) {
-        await insertMsg(session.id, 'bot', 'cta', '💰 Abrir a tela de pagamento', null,
+        await insertMsg(session.id, 'bot', 'cta', 'Abrir a tela de pagamento', null,
             { link_url: String(info.pix_url), cta_color: GREEN }, null);
     }
 
     await insertMsg(session.id, 'bot', 'text',
-        'Assim que o pagamento cair, seu acesso libera AUTOMÁTICO aqui no app — eu te aviso na hora 😉 Qualquer dúvida, fala comigo aqui.', null, { typing_ms: 0 }, null);
-    await appendHelpCta(session.id, cfg);
+        'Assim que o pagamento cair, seu acesso libera automático aqui no app.\n\nEu te aviso na hora — qualquer dúvida, fala comigo por aqui.', null, { typing_ms: 0 }, null);
 
     await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [session.id]);
     return [{ chat, messages: [first], email: e }];

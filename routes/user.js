@@ -1880,6 +1880,39 @@ async function loadExploreUnlock(productId, checkoutUrl) {
     return info;
 }
 
+// PIX PENDENTE do cliente pra um produto: alimenta o popup "termina de pagar
+// seu Pix" (em vez de oferecer checkout novo pra quem JÁ gerou o código).
+// Validade de exibição: 30 minutos a partir do webhook de pendente.
+const PIX_PENDING_MINUTES = 30;
+router.get('/pix/pending', optionalUser, async (req, res) => {
+    try {
+        const email = req.user?.email || null;
+        const productId = parseInt(req.query.product_id, 10) || null;
+        if (!email || !productId) return res.json({ success: true, pending: null });
+        const { rows } = await db.query(
+            `SELECT pix_code, amount,
+                    GREATEST(0, ${PIX_PENDING_MINUTES * 60} - EXTRACT(EPOCH FROM (NOW() - created_at)))::int AS expires_in_s
+             FROM pix_pending_notices
+             WHERE LOWER(customer_email) = $1 AND product_id = $2
+               AND pix_code IS NOT NULL
+               AND created_at > NOW() - INTERVAL '${PIX_PENDING_MINUTES} minutes'
+             ORDER BY id DESC LIMIT 1`,
+            [email.toLowerCase().trim(), productId]
+        );
+        if (!rows.length) return res.json({ success: true, pending: null });
+        return res.json({
+            success: true,
+            pending: {
+                pix_code: rows[0].pix_code,
+                amount: rows[0].amount != null ? parseFloat(rows[0].amount) : null,
+                expires_in_s: rows[0].expires_in_s,
+            },
+        });
+    } catch (err) {
+        return res.json({ success: true, pending: null });
+    }
+});
+
 // Checagem LEVE de acesso ao Explorar (sem montar o feed). O app consulta isso
 // enquanto o paywall está aberto pra destravar SOZINHO assim que o webhook da
 // compra liberar o acesso (sem o cliente precisar fechar/reabrir o app).
