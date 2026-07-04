@@ -3133,6 +3133,10 @@ a { color: inherit; text-decoration: none; }
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/><path d="M12 8v4l3 2"/></svg>
                     Rotina de Status
                 </div>
+                <div class="nav-item" data-screen="groups" onclick="switchAdminScreen(this, 'groups', 'Grupos'); loadAdminGroups();">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                    Grupos
+                </div>
                 <div class="nav-item" data-screen="chat-ranking" onclick="switchAdminScreen(this, 'chat-ranking', 'Ranking de Chats'); loadChatRanking();">
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 21h8M12 17v4M7 4h10v5a5 5 0 01-10 0V4zM7 6H4v2a3 3 0 003 3M17 6h3v2a3 3 0 01-3 3"/></svg>
                     Ranking de Chats
@@ -4416,6 +4420,13 @@ a { color: inherit; text-decoration: none; }
                         <div id="pPublishWarning" style="margin-top:10px;padding:8px 10px;background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.3);border-radius:6px;font-size:12px;color:#ffaa33;display:none;">
                             Não é possível publicar sem ao menos 1 gateway (Kirvano ou PerfectPay) configurado.
                         </div>
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:12px;">
+                            <input type="checkbox" id="pIsGroupPass" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
+                            <div>
+                                <div style="font-weight:600;color:#f5c542;">👑 Passe Vitalício dos GRUPOS</div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Quem compra este produto libera TODOS os grupos, atuais e futuros (deixe a oferta SEM validade)</div>
+                            </div>
+                        </label>
                     </div>
 
                     <div class="new-product-footer">
@@ -5664,6 +5675,106 @@ a { color: inherit; text-decoration: none; }
                 </div>
             </div>
 
+            <!-- TELA: GRUPOS -->
+            <div class="screen-content" id="screen-groups">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Grupos</h1>
+                        <p class="page-subtitle">Grupos-bot com cenas importadas por JSON. Cada grupo pago é um produto; o Passe Vitalício (produto com a flag no editor) libera todos.</p>
+                    </div>
+                    <div class="page-actions">
+                        <button class="btn-primary" onclick="openGroupModal()">+ Novo Grupo</button>
+                    </div>
+                </div>
+                <div id="adminGroupsList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:24px;">
+                    <div style="color:rgba(255,255,255,.5)">Carregando...</div>
+                </div>
+            </div>
+
+            <!-- MODAL: editor de GRUPO -->
+            <div id="groupModalBackdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:320; align-items:flex-start; justify-content:center; padding:16px; overflow-y:auto;">
+                <div style="background:var(--card,#1a1a1a); border-radius:16px; width:100%; max-width:720px; margin:16px auto;">
+                    <div style="padding:18px 22px; border-bottom:1px solid rgba(255,255,255,.1); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:var(--card,#1a1a1a); border-radius:16px 16px 0 0; z-index:2;">
+                        <span id="groupModalTitle" style="font-size:16px; font-weight:700; color:#fff;">Novo Grupo</span>
+                        <button onclick="closeGroupModal()" style="background:none; border:none; color:#fff; font-size:22px; cursor:pointer;">×</button>
+                    </div>
+                    <div style="padding:20px 24px; display:flex; flex-direction:column; gap:14px;">
+                        <input type="hidden" id="gId"/>
+                        <div style="display:grid; grid-template-columns:2fr 1fr; gap:10px;">
+                            <div><label class="g-lbl">Nome do grupo *</label><input class="form-control" id="gName" maxlength="120" placeholder="Só as Solteiras" style="width:100%;"/></div>
+                            <div><label class="g-lbl">Ordem</label><input class="form-control" type="number" id="gOrder" min="0" value="0" style="width:100%;"/></div>
+                        </div>
+                        <div><label class="g-lbl">Foto do grupo (URL)</label><input class="form-control" id="gAvatar" maxlength="1000" placeholder="https://..." style="width:100%;"/></div>
+                        <div><label class="g-lbl">Descrição (interna)</label><input class="form-control" id="gDesc" maxlength="1000" style="width:100%;"/></div>
+                        <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="gIsFree" style="width:15px;height:15px;"> 📢 Grupo GRATUITO (canal: ninguém digita, CTA fixo)</label>
+                            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="gPinned" style="width:15px;height:15px;"> 📌 Fixado no topo</label>
+                            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="gActive" checked style="width:15px;height:15px;"> Ativo</label>
+                        </div>
+                        <div style="background:rgba(37,165,95,.06); border:1px solid rgba(37,165,95,.3); border-radius:10px; padding:12px;">
+                            <label class="g-lbl" style="color:#4CD964; font-weight:700;">💰 Produto do grupo (planos mensal/trimestral com link + código)</label>
+                            <select class="form-control" id="gProduct" style="width:100%;"><option value="">— nenhum (só faz sentido no gratuito) —</option></select>
+                            <div style="font-size:11px; color:rgba(255,255,255,.45); margin-top:5px;">Crie o produto no catálogo (categoria Grupos) com os planos e códigos de oferta — validade: mensal 33 dias, trimestral 95. O Passe Vitalício é OUTRO produto com a flag "Passe de grupos" no editor.</div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
+                            <div><label class="g-lbl">Msgs por hora</label><input class="form-control" type="number" id="gMsgsHour" min="10" max="600" value="60" style="width:100%;"/></div>
+                            <div><label class="g-lbl">Trial (segundos)</label><input class="form-control" type="number" id="gTrial" min="15" max="3600" value="60" style="width:100%;"/></div>
+                            <div><label class="g-lbl">Apagar após (horas)</label><input class="form-control" type="number" id="gRetention" min="1" max="720" value="24" style="width:100%;"/></div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                            <div><label class="g-lbl">Nº de membros (exibido)</label><input class="form-control" type="number" id="gMembers" min="2" value="248" style="width:100%;"/></div>
+                            <div><label class="g-lbl">Nº online (exibido)</label><input class="form-control" type="number" id="gOnline" min="1" value="25" style="width:100%;"/></div>
+                        </div>
+                        <div style="background:rgba(42,171,238,.06); border:1px solid rgba(42,171,238,.3); border-radius:10px; padding:12px;">
+                            <label class="g-lbl">CTA fixo do canal GRATUITO + Telegram (opcionais)</label>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px;">
+                                <input class="form-control" id="gCtaLabel" maxlength="120" placeholder="Texto do botão (ex: Entrar nos grupos VIP)"/>
+                                <input class="form-control" id="gCtaLink" maxlength="1000" placeholder="Link (/?group=2 · /?p=12 · https://...)"/>
+                            </div>
+                            <input class="form-control" id="gTelegram" maxlength="500" placeholder="Link do canal do Telegram (banner azul no topo)" style="width:100%; margin-top:8px;"/>
+                        </div>
+                        <div style="background:rgba(245,197,66,.05); border:1px solid rgba(245,197,66,.3); border-radius:10px; padding:12px;">
+                            <label class="g-lbl" style="color:#f5c542; font-weight:700;">📁 Mídias do grupo (galeria)</label>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:6px;">
+                                <input class="form-control" id="gBunnyLib" maxlength="20" placeholder="Bunny Library ID (vídeos)"/>
+                                <input class="form-control" id="gBunnyCol" maxlength="60" placeholder="Bunny Collection ID (vídeos)"/>
+                            </div>
+                            <label class="g-lbl" style="margin-top:8px;">Fotos da galeria (1 URL por linha) — também usadas nas cenas tipo "image"</label>
+                            <textarea class="form-control" id="gMediaImgs" style="width:100%; min-height:56px;" placeholder="https://cdn.../foto1.jpg"></textarea>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:8px;">
+                                <div><label class="g-lbl">Fotos de APRESENTAÇÃO — homens (1/linha)</label><textarea class="form-control" id="gPresM" style="width:100%; min-height:48px;"></textarea></div>
+                                <div><label class="g-lbl">Fotos de APRESENTAÇÃO — mulheres (1/linha)</label><textarea class="form-control" id="gPresF" style="width:100%; min-height:48px;"></textarea></div>
+                            </div>
+                        </div>
+                        <div style="background:rgba(229,9,20,.05); border:1px solid rgba(229,9,20,.3); border-radius:10px; padding:12px;">
+                            <label class="g-lbl" style="color:#e50914; font-weight:700;">💬 Entrou no grupo → modelo chama no privado (1x por lead)</label>
+                            <div id="gInviteChats" style="display:flex; flex-wrap:wrap; gap:8px; margin:8px 0;"></div>
+                            <label class="g-lbl">Depois de quantos segundos</label>
+                            <input class="form-control" type="number" id="gInviteDelay" min="5" max="86400" value="120" style="width:140px;"/>
+                        </div>
+                        <div style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:12px;">
+                            <label class="g-lbl" style="font-weight:700;">🎭 Elenco (personas) — 1 por linha: <span style="color:#4CD964;">Nome|f</span> ou <span style="color:#3b82f6;">Nome|m</span></label>
+                            <textarea class="form-control" id="gPersonas" style="width:100%; min-height:80px;" placeholder="Amanda|f&#10;Paty|f&#10;Marcos|m"></textarea>
+                        </div>
+                        <div style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:12px;">
+                            <label class="g-lbl" style="font-weight:700;">🎬 Cenas (JSON) — gere fora e cole aqui</label>
+                            <div id="gScenesSummary" style="font-size:11.5px; color:rgba(255,255,255,.55); margin:6px 0;">—</div>
+                            <textarea class="form-control" id="gScenesJson" style="width:100%; min-height:90px;" placeholder='[{"category":"papo","period":"noite","messages":[{"p":1,"g":"f","t":"text","text":"gente, que tédio hoje","gap_s":6}]}]'></textarea>
+                            <div style="display:flex; gap:10px; align-items:center; margin-top:8px; flex-wrap:wrap;">
+                                <label style="display:flex; align-items:center; gap:7px; font-size:12px; color:#fff; cursor:pointer;"><input type="checkbox" id="gScenesReplace" style="width:14px;height:14px;"> substituir as existentes</label>
+                                <button type="button" class="btn-secondary" style="font-size:12px;" onclick="importGroupScenes()">Importar cenas</button>
+                                <button type="button" class="btn-danger" style="font-size:12px;" onclick="clearGroupScenes()">Limpar todas</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="padding:16px 24px; border-top:1px solid rgba(255,255,255,.1); display:flex; gap:10px; justify-content:flex-end; position:sticky; bottom:0; background:var(--card,#1a1a1a);">
+                        <button type="button" class="btn-secondary" onclick="closeGroupModal()">Cancelar</button>
+                        <button type="button" class="btn-primary" onclick="saveGroup()">Salvar grupo</button>
+                    </div>
+                </div>
+            </div>
+            <style>.g-lbl{display:block;font-size:12px;color:rgba(255,255,255,.7);margin-bottom:4px;}</style>
+
             <!-- MODAL: VIP único (1 produto libera todas as conversas VIP) -->
             <div id="vipUnicoBackdrop" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:1000; align-items:center; justify-content:center; padding:20px;">
                 <div style="background:#1a1620; border:1px solid rgba(255,255,255,.12); border-radius:16px; max-width:480px; width:100%; padding:24px;">
@@ -6227,8 +6338,14 @@ a { color: inherit; text-decoration: none; }
                                     <option value="category">🗂 Numa categoria específica</option>
                                     <option value="chat">💬 Direto numa conversa (abre o chat)</option>
                                     <option value="chat_list">📨 Lista de conversas (chega mensagem dela)</option>
+                                    <option value="group">👥 Direto num grupo</option>
+                                    <option value="group_list">👥 Aba de grupos</option>
                                     <option value="videos">📹 Aba de Vídeos (feed)</option>
                                 </select>
+                                <div id="funnelEntryGroupWrap" style="display:none; margin-top:10px;">
+                                    <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Grupo de destino</label>
+                                    <select class="form-control" id="funnelEntryGroup" style="width:100%;"><option value="">— selecione —</option></select>
+                                </div>
                                 <div id="funnelEntryProductWrap" style="display:none; margin-top:10px;">
                                     <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Produto de destino</label>
                                     <select class="form-control" id="funnelEntryProduct" style="width:100%;"><option value="">— selecione —</option></select>
@@ -8164,10 +8281,11 @@ async function editProduct(id) {
     const ko = kOffers[0];
     const ppo = ppOffers[0];
 
-    set('pKirvanoOfferId', kOffers.map(o => o.offer_id).filter(Boolean).join(', '));
+    const codeDays = (o) => o.offer_id + (o.duration_days ? ':' + o.duration_days : '');
+    set('pKirvanoOfferId', kOffers.filter(o => o.offer_id).map(codeDays).join(', '));
     set('pKirvanoOfferName', ko?.offer_name || '');
     set('pKirvanoCheckout', ko?.checkout_url || '');
-    set('pPerfectPayOfferId', ppOffers.map(o => o.offer_id).filter(Boolean).join(', '));
+    set('pPerfectPayOfferId', ppOffers.filter(o => o.offer_id).map(codeDays).join(', '));
     set('pPerfectPayOfferName', ppo?.offer_name || '');
     set('pPerfectPayCheckout', ppo?.checkout_url || '');
 
@@ -8185,6 +8303,8 @@ async function editProduct(id) {
     // Preenche estado do toggle Publicar/Rascunho
     const publishCb = document.getElementById('pIsPublished');
     if (publishCb) publishCb.checked = !!p.is_published;
+    const gpCb = document.getElementById('pIsGroupPass');
+    if (gpCb) gpCb.checked = p.is_group_pass === true;
     const warnEl = document.getElementById('pPublishWarning');
     if (warnEl) warnEl.style.display = 'none';
 
@@ -8321,19 +8441,25 @@ async function saveProduct() {
     const offers = [];
     // Vários códigos por gateway, separados por vírgula → uma oferta por código
     // (todos liberam o MESMO produto). Ótimo p/ planos diferentes do mesmo conteúdo.
-    const splitCodes = (s) => (s || '').split(',').map(x => x.trim()).filter(Boolean);
+    // ASSINATURA: sufixo :dias no código define a VALIDADE renovável do acesso.
+    // Ex.: "cod-mensal:33, cod-trimestral:95, cod-vitalicio" (sem sufixo = pra sempre).
+    const splitCodes = (s) => (s || '').split(',').map(x => x.trim()).filter(Boolean).map(x => {
+        const m = x.match(/^(.*?):(\d{1,4})$/);
+        return m ? { code: m[1].trim(), days: parseInt(m[2], 10) || null } : { code: x, days: null };
+    });
     const kIds = splitCodes(get('pKirvanoOfferId'));
     if (kIds.length) {
         const kIsAcq = document.getElementById('pKirvanoIsAcquisition')?.checked || false;
         const kRole = kIsAcq ? (document.getElementById('pKirvanoAcquisitionRole')?.value || 'frontend') : null;
-        for (const code of kIds) {
+        for (const c of kIds) {
             offers.push({
                 gateway: 'kirvano',
-                offer_id: code,
+                offer_id: c.code,
                 offer_name: get('pKirvanoOfferName') || null,
                 checkout_url: get('pKirvanoCheckout') || null,
                 is_acquisition: kIsAcq,
                 acquisition_role: kRole,
+                duration_days: c.days,
             });
         }
     }
@@ -8341,14 +8467,15 @@ async function saveProduct() {
     if (ppIds.length) {
         const ppIsAcq = document.getElementById('pPerfectPayIsAcquisition')?.checked || false;
         const ppRole = ppIsAcq ? (document.getElementById('pPerfectPayAcquisitionRole')?.value || 'frontend') : null;
-        for (const code of ppIds) {
+        for (const c of ppIds) {
             offers.push({
                 gateway: 'perfectpay',
-                offer_id: code,
+                offer_id: c.code,
                 offer_name: get('pPerfectPayOfferName') || null,
                 checkout_url: get('pPerfectPayCheckout') || null,
                 is_acquisition: ppIsAcq,
                 acquisition_role: ppRole,
+                duration_days: c.days,
             });
         }
     }
@@ -8434,6 +8561,7 @@ async function saveProduct() {
         extra_data,
         offers,
         is_published,
+        is_group_pass: document.getElementById('pIsGroupPass')?.checked === true,
         preview_enabled: document.getElementById('pPreviewEnabled')?.checked === true,
     };
 
@@ -14704,6 +14832,14 @@ async function loadFunnelDropdowns() {
             const list = (cats && cats.categories) || [];
             ec.innerHTML = '<option value="">— selecione —</option>' + list.map(c => '<option value="'+c.id+'">'+escHtmlAdmin(c.name)+'</option>').join('');
         }
+        // Grupos (entrada 'group')
+        try {
+            const egr = document.getElementById('funnelEntryGroup');
+            if (egr) {
+                const grs = await fetch('/api/admin/groups', { credentials:'include' }).then(r => r.json());
+                egr.innerHTML = '<option value="">— selecione —</option>' + ((grs.groups)||[]).map(g => '<option value="'+g.id+'">'+escHtmlAdmin(g.name)+(g.active === false ? ' ⚠ INATIVO' : '')+'</option>').join('');
+            }
+        } catch(_) {}
         // Conversas (entrada chat/chat_list + checkboxes de "visíveis antes do e-mail")
         const ech = document.getElementById('funnelEntryChat');
         try {
@@ -14732,6 +14868,8 @@ window.updateFunnelEntryFields = function() {
     document.getElementById('funnelEntryProductWrap').style.display = t === 'product' ? 'block' : 'none';
     document.getElementById('funnelEntryCategoryWrap').style.display = t === 'category' ? 'block' : 'none';
     document.getElementById('funnelEntryChatWrap').style.display = (t === 'chat' || t === 'chat_list') ? 'block' : 'none';
+    const gw = document.getElementById('funnelEntryGroupWrap');
+    if (gw) gw.style.display = t === 'group' ? 'block' : 'none';
     // Lista de conversas: a conversa que manda mensagem é OPCIONAL — vazio =
     // ninguém manda nada, o lead só vê as conversas visíveis marcadas acima.
     const chSel = document.getElementById('funnelEntryChat');
@@ -14805,6 +14943,10 @@ function editFunnel(f) {
         if ((f.entry_type === 'chat' || f.entry_type === 'chat_list') && f.entry_chat_id) {
             document.getElementById('funnelEntryChat').value = f.entry_chat_id;
         }
+        if (f.entry_type === 'group' && f.entry_group_id) {
+            const eg = document.getElementById('funnelEntryGroup');
+            if (eg) eg.value = f.entry_group_id;
+        }
         // conversas visíveis antes do e-mail
         const visIds = Array.isArray(f.visible_chat_ids) ? f.visible_chat_ids.map(Number) : [];
         document.querySelectorAll('#funnelVisibleChats [data-vis-chat]').forEach(cb => {
@@ -14840,6 +14982,10 @@ async function saveFunnel(e) {
         alert('Escolha a conversa de destino.');
         return false;
     }
+    if (entryType === 'group' && !document.getElementById('funnelEntryGroup').value) {
+        alert('Escolha o grupo de destino.');
+        return false;
+    }
     const payload = {
         name: document.getElementById('funnelName').value.trim(),
         slug: document.getElementById('funnelSlug').value.trim(),
@@ -14853,6 +14999,7 @@ async function saveFunnel(e) {
                         : null,
         entry_category_id: entryType === 'category' ? document.getElementById('funnelEntryCategory').value : null,
         entry_chat_id: (entryType === 'chat' || entryType === 'chat_list') ? document.getElementById('funnelEntryChat').value : null,
+        entry_group_id: entryType === 'group' ? document.getElementById('funnelEntryGroup').value : null,
         pressel_enabled: document.getElementById('funnelPresselEnabled').checked,
         pressel_config: {
             headline: document.getElementById('funnelPresselHeadline').value.trim() || null,
@@ -15059,6 +15206,225 @@ async function deleteStep(id) {
 
 // ═══════════════ CHATS (estilo WhatsApp) ═══════════════
 let _curChatId = null;
+
+// ═══════════════ GRUPOS (admin) ═══════════════
+async function loadAdminGroups() {
+    const list = document.getElementById('adminGroupsList');
+    if (!list) return;
+    try {
+        const r = await fetch('/api/admin/groups', { credentials: 'include' });
+        const data = await r.json();
+        if (!data.success) { list.innerHTML = '<div style="color:#f55">' + (data.error || 'erro') + '</div>'; return; }
+        if (!data.groups.length) {
+            list.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:rgba(255,255,255,.5)">Nenhum grupo. Clique em "+ Novo Grupo".</div>';
+            return;
+        }
+        list.innerHTML = data.groups.map(g => {
+            const status = g.active ? '<span style="background:rgba(76,217,100,.15);color:#4CD964;padding:3px 8px;border-radius:8px;font-size:11px;font-weight:600">Ativo</span>' : '<span style="background:rgba(255,59,48,.15);color:#FF3B30;padding:3px 8px;border-radius:8px;font-size:11px;font-weight:600">Inativo</span>';
+            const av = g.avatar_url ? 'background-image:url(\'' + escHtmlAdmin(g.avatar_url) + '\');background-size:cover;background-position:center;' : '';
+            const kind = g.is_free ? '📢 Canal gratuito' : ('💰 ' + (g.product_name ? escHtmlAdmin(g.product_name) : '⚠ SEM produto'));
+            return '<div style="background:var(--card,#1a1a1a);border:1px solid var(--border,rgba(255,255,255,.08));border-radius:14px;padding:14px 16px;">'
+                + '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">'
+                +   '<div style="width:46px;height:46px;border-radius:50%;background:#2a3a2c;' + av + 'flex-shrink:0;"></div>'
+                +   '<div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:14px;color:#fff;">' + (g.pinned ? '📌 ' : '') + escHtmlAdmin(g.name) + '</div>'
+                +     '<div style="font-size:11px;color:rgba(255,255,255,.5);">' + kind + '</div></div>'
+                +   status
+                + '</div>'
+                + '<div style="display:flex;gap:8px;font-size:11px;color:rgba(255,255,255,.6);margin-bottom:10px;">'
+                +   '<div style="flex:1;background:rgba(0,0,0,.3);padding:8px;border-radius:6px;text-align:center"><div style="font-size:17px;color:#fff;font-weight:700">' + g.personas_count + '</div>Personas</div>'
+                +   '<div style="flex:1;background:rgba(0,0,0,.3);padding:8px;border-radius:6px;text-align:center"><div style="font-size:17px;color:#4CD964;font-weight:700">' + g.scenes_count + '</div>Cenas</div>'
+                +   '<div style="flex:1;background:rgba(0,0,0,.3);padding:8px;border-radius:6px;text-align:center"><div style="font-size:17px;color:#e50914;font-weight:700">' + g.sessions_count + '</div>Leads</div>'
+                + '</div>'
+                + '<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+                +   '<button class="btn-secondary" style="flex:1;min-width:70px" onclick=\'editGroup(' + JSON.stringify(g).replace(/'/g, '&#39;') + ')\'>Editar</button>'
+                +   '<button class="btn-secondary" style="flex:1;min-width:70px" onclick="toggleGroup(' + g.id + ', ' + (!g.active) + ')">' + (g.active ? 'Desativar' : 'Ativar') + '</button>'
+                +   '<button class="btn-danger" style="flex:1;min-width:70px" onclick="deleteGroup(' + g.id + ')">Excluir</button>'
+                + '</div></div>';
+        }).join('');
+    } catch (e) { list.innerHTML = '<div style="color:#f55">Erro: ' + e.message + '</div>'; }
+}
+
+async function loadGroupDropdowns(productId, inviteIds) {
+    try {
+        const [pr, ch] = await Promise.all([
+            fetch('/api/admin/products', { credentials: 'include' }).then(r => r.json()),
+            fetch('/api/admin/chats', { credentials: 'include' }).then(r => r.json()),
+        ]);
+        const sel = document.getElementById('gProduct');
+        if (sel) {
+            sel.innerHTML = '<option value="">— nenhum (só faz sentido no gratuito) —</option>'
+                + ((pr.products) || []).map(p => '<option value="' + p.id + '">' + escHtmlAdmin(p.name) + '</option>').join('');
+            if (productId) sel.value = productId;
+        }
+        const box = document.getElementById('gInviteChats');
+        if (box) {
+            const ids = Array.isArray(inviteIds) ? inviteIds.map(Number) : [];
+            box.innerHTML = ((ch.chats) || []).map(c =>
+                '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#fff;cursor:pointer;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:5px 11px;">'
+                + '<input type="checkbox" data-ginvite="' + c.id + '"' + (ids.indexOf(c.id) >= 0 ? ' checked' : '') + ' style="width:13px;height:13px;"> ' + escHtmlAdmin(c.name)
+                + '</label>').join('') || '<span style="font-size:11px;color:rgba(255,255,255,.4);">Nenhuma conversa cadastrada.</span>';
+        }
+    } catch (_) {}
+}
+
+function openGroupModal() {
+    document.getElementById('groupModalTitle').textContent = 'Novo Grupo';
+    ['gId','gName','gAvatar','gDesc','gCtaLabel','gCtaLink','gTelegram','gBunnyLib','gBunnyCol','gMediaImgs','gPresM','gPresF','gPersonas','gScenesJson'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('gOrder').value = 0;
+    document.getElementById('gMsgsHour').value = 60;
+    document.getElementById('gTrial').value = 60;
+    document.getElementById('gRetention').value = 24;
+    document.getElementById('gMembers').value = 248;
+    document.getElementById('gOnline').value = 25;
+    document.getElementById('gInviteDelay').value = 120;
+    document.getElementById('gIsFree').checked = false;
+    document.getElementById('gPinned').checked = false;
+    document.getElementById('gActive').checked = true;
+    document.getElementById('gScenesReplace').checked = false;
+    document.getElementById('gScenesSummary').textContent = 'Salve o grupo primeiro pra importar cenas.';
+    loadGroupDropdowns('', []);
+    document.getElementById('groupModalBackdrop').style.display = 'flex';
+}
+function closeGroupModal() { document.getElementById('groupModalBackdrop').style.display = 'none'; }
+
+async function editGroup(g) {
+    document.getElementById('groupModalTitle').textContent = 'Editar Grupo';
+    document.getElementById('gId').value = g.id;
+    document.getElementById('gName').value = g.name || '';
+    document.getElementById('gAvatar').value = g.avatar_url || '';
+    document.getElementById('gDesc').value = g.description || '';
+    document.getElementById('gOrder').value = g.display_order || 0;
+    document.getElementById('gIsFree').checked = g.is_free === true;
+    document.getElementById('gPinned').checked = g.pinned === true;
+    document.getElementById('gActive').checked = g.active !== false;
+    document.getElementById('gCtaLabel').value = g.cta_label || '';
+    document.getElementById('gCtaLink').value = g.cta_link || '';
+    document.getElementById('gTelegram').value = g.telegram_url || '';
+    document.getElementById('gBunnyLib').value = g.media_video_library_id || '';
+    document.getElementById('gBunnyCol').value = g.media_video_collection_id || '';
+    document.getElementById('gMediaImgs').value = (Array.isArray(g.media_image_urls) ? g.media_image_urls : []).join('\n');
+    document.getElementById('gPresM').value = (Array.isArray(g.presentation_male_urls) ? g.presentation_male_urls : []).join('\n');
+    document.getElementById('gPresF').value = (Array.isArray(g.presentation_female_urls) ? g.presentation_female_urls : []).join('\n');
+    document.getElementById('gMsgsHour').value = g.msgs_per_hour || 60;
+    document.getElementById('gTrial').value = g.trial_seconds || 60;
+    document.getElementById('gRetention').value = g.retention_hours || 24;
+    document.getElementById('gMembers').value = g.members_count || 248;
+    document.getElementById('gOnline').value = g.online_count || 25;
+    document.getElementById('gInviteDelay').value = g.invite_delay_seconds || 120;
+    document.getElementById('gScenesJson').value = '';
+    document.getElementById('gScenesReplace').checked = false;
+    loadGroupDropdowns(g.product_id || '', g.invite_chat_ids || []);
+    loadGroupScenesSummary(g.id);
+    try {
+        const r = await fetch('/api/admin/groups/' + g.id + '/personas', { credentials: 'include' });
+        const d = await r.json();
+        document.getElementById('gPersonas').value = (d.personas || []).map(p => p.name + '|' + p.gender).join('\n');
+    } catch (_) {}
+    document.getElementById('groupModalBackdrop').style.display = 'flex';
+}
+
+async function loadGroupScenesSummary(id) {
+    const el = document.getElementById('gScenesSummary');
+    if (!el || !id) return;
+    try {
+        const r = await fetch('/api/admin/groups/' + id + '/scenes', { credentials: 'include' });
+        const d = await r.json();
+        const s = d.summary || [];
+        el.textContent = s.length
+            ? s.map(x => x.category + ': ' + x.n + ' cena(s) / ' + x.msgs + ' msg' ).join(' · ')
+            : 'Nenhuma cena importada ainda.';
+    } catch (_) { el.textContent = '—'; }
+}
+
+function groupFormPayload() {
+    const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+    return {
+        name: val('gName').trim(),
+        avatar_url: val('gAvatar').trim() || null,
+        description: val('gDesc').trim() || null,
+        is_free: document.getElementById('gIsFree').checked,
+        pinned: document.getElementById('gPinned').checked,
+        active: document.getElementById('gActive').checked,
+        product_id: val('gProduct') || null,
+        telegram_url: val('gTelegram').trim() || null,
+        cta_label: val('gCtaLabel').trim() || null,
+        cta_link: val('gCtaLink').trim() || null,
+        media_video_library_id: val('gBunnyLib').trim() || null,
+        media_video_collection_id: val('gBunnyCol').trim() || null,
+        media_image_urls: val('gMediaImgs'),
+        presentation_male_urls: val('gPresM'),
+        presentation_female_urls: val('gPresF'),
+        msgs_per_hour: parseInt(val('gMsgsHour'), 10) || 60,
+        trial_seconds: parseInt(val('gTrial'), 10) || 60,
+        retention_hours: parseInt(val('gRetention'), 10) || 24,
+        members_count: parseInt(val('gMembers'), 10) || 248,
+        online_count: parseInt(val('gOnline'), 10) || 25,
+        invite_chat_ids: Array.prototype.map.call(document.querySelectorAll('#gInviteChats [data-ginvite]:checked'), cb => parseInt(cb.dataset.ginvite, 10)),
+        invite_delay_seconds: parseInt(val('gInviteDelay'), 10) || 120,
+        display_order: parseInt(val('gOrder'), 10) || 0,
+    };
+}
+
+async function saveGroup() {
+    const id = document.getElementById('gId').value;
+    const payload = groupFormPayload();
+    if (!payload.name) { alert('Nome obrigatório.'); return; }
+    if (!payload.is_free && !payload.product_id) {
+        if (!confirm('Grupo PAGO sem produto vinculado: ninguém vai conseguir comprar. Salvar mesmo assim?')) return;
+    }
+    try {
+        const url = id ? '/api/admin/groups/' + id : '/api/admin/groups';
+        const method = id ? 'PUT' : 'POST';
+        const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) });
+        const d = await r.json();
+        if (!d.success) { alert('Erro: ' + (d.error || '')); return; }
+        const gid = d.group.id;
+        document.getElementById('gId').value = gid;
+        // elenco (substitui)
+        await fetch('/api/admin/groups/' + gid + '/personas', {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+            body: JSON.stringify({ lines: document.getElementById('gPersonas').value }),
+        });
+        closeGroupModal();
+        loadAdminGroups();
+    } catch (e) { alert('Erro: ' + e.message); }
+}
+
+async function importGroupScenes() {
+    const id = document.getElementById('gId').value;
+    if (!id) { alert('Salve o grupo primeiro.'); return; }
+    const raw = document.getElementById('gScenesJson').value.trim();
+    if (!raw) { alert('Cole o JSON das cenas.'); return; }
+    try {
+        const r = await fetch('/api/admin/groups/' + id + '/scenes/import', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+            body: JSON.stringify({ scenes: raw, replace: document.getElementById('gScenesReplace').checked }),
+        });
+        const d = await r.json();
+        if (!d.success) { alert('Erro: ' + (d.error || '')); return; }
+        document.getElementById('gScenesJson').value = '';
+        alert(d.imported + ' cena(s) importada(s) ✅');
+        loadGroupScenesSummary(id);
+    } catch (e) { alert('Erro: ' + e.message); }
+}
+
+async function clearGroupScenes() {
+    const id = document.getElementById('gId').value;
+    if (!id) return;
+    if (!confirm('Apagar TODAS as cenas deste grupo?')) return;
+    await fetch('/api/admin/groups/' + id + '/scenes', { method: 'DELETE', credentials: 'include' });
+    loadGroupScenesSummary(id);
+}
+
+async function toggleGroup(id, active) {
+    await fetch('/api/admin/groups/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ active }) });
+    loadAdminGroups();
+}
+async function deleteGroup(id) {
+    if (!confirm('Excluir este grupo? Cenas, personas e conversas dos leads vão junto.')) return;
+    await fetch('/api/admin/groups/' + id, { method: 'DELETE', credentials: 'include' });
+    loadAdminGroups();
+}
 
 // ── Paywall do chat + Status VIP (config SIMPLES, estilo aba Vídeos) ─────────
 // Dois produtos internos (fora do catálogo), criados sozinhos pelo GET. Aqui só

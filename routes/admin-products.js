@@ -340,13 +340,14 @@ router.post('/', requireAdmin, async (req, res) => {
                         ? offer.acquisition_role : null;
                     await client.query(`
                         INSERT INTO product_offers
-                        (product_id, gateway, offer_id, offer_name, checkout_url, price, is_acquisition, acquisition_role)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                        (product_id, gateway, offer_id, offer_name, checkout_url, price, is_acquisition, acquisition_role, duration_days)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                     `, [
                         created.id, offer.gateway, offer.offer_id,
                         offer.offer_name || null, offer.checkout_url || null,
                         parseFloat(offer.price) || null,
                         isAcq, acqRole,
+                        offer.duration_days ? parseInt(offer.duration_days, 10) : null,
                     ]);
                 }
             }
@@ -367,6 +368,10 @@ router.post('/', requireAdmin, async (req, res) => {
             return created;
         });
         
+        // Passe Vitalício dos GRUPOS: flag simples fora do transaction principal
+        if (req.body.is_group_pass !== undefined) {
+            try { await db.query(`UPDATE products SET is_group_pass = $1 WHERE id = $2`, [req.body.is_group_pass === true, product.id]); } catch (_) {}
+        }
         logger.info(`Produto criado: ${product.name} (ID ${product.id})`);
         return res.status(201).json({ success: true, product });
     } catch (err) {
@@ -598,13 +603,14 @@ router.put('/:id', requireAdmin, async (req, res) => {
                         ? offer.acquisition_role : null;
                     await client.query(`
                         INSERT INTO product_offers
-                        (product_id, gateway, offer_id, offer_name, checkout_url, price, is_acquisition, acquisition_role)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                        (product_id, gateway, offer_id, offer_name, checkout_url, price, is_acquisition, acquisition_role, duration_days)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
                     `, [
                         productId, offer.gateway, offer.offer_id,
                         offer.offer_name || null, offer.checkout_url || null,
                         parseFloat(offer.price) || null,
                         isAcq, acqRole,
+                        offer.duration_days ? parseInt(offer.duration_days, 10) : null,
                     ]);
                 }
             }
@@ -626,6 +632,10 @@ router.put('/:id', requireAdmin, async (req, res) => {
             return updated;
         });
         
+        // Passe Vitalício dos GRUPOS: flag simples fora do transaction principal
+        if (req.body.is_group_pass !== undefined) {
+            try { await db.query(`UPDATE products SET is_group_pass = $1 WHERE id = $2`, [req.body.is_group_pass === true, productId]); } catch (_) {}
+        }
         logger.info(`Produto editado: ${product.name} (ID ${productId})`);
         return res.json({ success: true, product });
     } catch (err) {
