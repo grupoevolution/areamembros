@@ -2010,12 +2010,48 @@ router.post('/push/subscribe', optionalUser, async (req, res) => {
                 user_agent = EXCLUDED.user_agent,
                 last_used_at = NOW()
         `, [email, endpoint, keys.p256dh, keys.auth, (userAgent || '').slice(0, 300)]);
+
+        // SEQUÊNCIA DE BOAS-VINDAS (1x por e-mail): instalou + permitiu
+        // notificação → agenda os passos da install_push_steps (+5min/+1h/+3h,
+        // editáveis no painel) na fila do push-worker e manda a mensagem de
+        // boas-vindas no chat de Suporte. Compra aprovada cancela o restante
+        // (sales-processor já cancela os pushes pendentes do e-mail).
+        if (email) scheduleInstallSequence(email).catch(() => {});
+
         return res.json({ success: true });
     } catch (err) {
         logger.error('push/subscribe falhou:', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
     }
 });
+
+// Agenda a sequência pós-instalação. Trava install_sequence_sent garante 1x
+// por e-mail (re-subscribe, troca de aparelho ou reinstalação não duplicam).
+async function scheduleInstallSequence(email) {
+    const e = String(email).toLowerCase().trim();
+    const { rows: claim } = await db.query(
+        `INSERT INTO install_sequence_sent (email) VALUES ($1) ON CONFLICT (email) DO NOTHING RETURNING email`,
+        [e]
+    );
+    if (!claim.length) return; // já rodou pra este e-mail
+    try {
+        const { rows: steps } = await db.query(
+            `SELECT * FROM install_push_steps WHERE active = true ORDER BY delay_minutes, id`
+        );
+        for (const s of steps) {
+            await db.query(
+                `INSERT INTO funnel_scheduled_pushes (customer_email, title, message, url, icon_url, send_at)
+                 VALUES ($1, $2, $3, $4, $5, NOW() + make_interval(mins => $6))`,
+                [e, s.title, s.body || '', s.url || '/', s.icon_url || null, Math.max(1, s.delay_minutes | 0)]
+            );
+        }
+    } catch (err) { logger.warn('sequência pós-instalação falhou: ' + err.message); }
+    // Boas-vindas no chat de Suporte (welcome_enabled na Central de Suporte)
+    try {
+        const chatsApi = require('./user-chats');
+        if (typeof chatsApi.deliverInstallWelcome === 'function') await chatsApi.deliverInstallWelcome(e);
+    } catch (err) { logger.warn('boas-vindas do suporte falhou: ' + err.message); }
+}
 
 router.post('/push/unsubscribe', async (req, res) => {
     try {

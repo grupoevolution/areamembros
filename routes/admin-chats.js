@@ -199,6 +199,116 @@ router.put('/paywall-product', requireAdmin, async (req, res) => {
     }
 });
 
+// =============================================================================
+// CENTRAL DE SUPORTE — config editável (system_settings 'support_config')
+// =============================================================================
+// IMPORTANTE: registrado ANTES das rotas /:id (senão PUT /support-config
+// casaria com PUT /:id).
+
+router.get('/support-config', requireAdmin, async (req, res) => {
+    try {
+        const chatsApi = require('./user-chats');
+        const { rows } = await db.query(`SELECT value FROM system_settings WHERE key = 'support_config'`);
+        const saved = rows[0]?.value || {};
+        // devolve saved + defaults resolvidos (pro painel mostrar o que vale)
+        const { rows: sc } = await db.query(`SELECT id, name, avatar_url FROM chats WHERE is_support = true AND active = true ORDER BY id LIMIT 1`);
+        return res.json({
+            success: true,
+            config: saved,
+            support_chat: sc[0] || null,
+            defaults: {
+                pix_template: 'Oi {nome}! Vi aqui que você gerou o Pix{valor} pra garantir {produto} 👀 Ele fica reservado por pouco tempo — paga agora pra não perder!',
+                purchase_template: 'Parabéns, {nome}! 🎉 Sua compra de {produto} foi APROVADA e o acesso JÁ TÁ liberado em Minhas Compras. Corre lá 😈 Qualquer dúvida, me chama aqui!',
+                welcome_template: '{saudacao}, {nome}! 👋 Eu sou o suporte oficial do app. Qualquer dúvida, pagamento ou problema, me chama AQUI nessa conversa que eu resolvo rapidinho. Bom proveito 🔥',
+            },
+        });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+router.put('/support-config', requireAdmin, async (req, res) => {
+    try {
+        const b = req.body || {};
+        const cfg = {
+            whatsapp_link: String(b.whatsapp_link || '').trim().slice(0, 500),
+            pix_template: String(b.pix_template || '').trim().slice(0, 1000),
+            purchase_template: String(b.purchase_template || '').trim().slice(0, 1000),
+            welcome_enabled: b.welcome_enabled === true,
+            welcome_template: String(b.welcome_template || '').trim().slice(0, 1000),
+            default_offer_ids: (Array.isArray(b.default_offer_ids) ? b.default_offer_ids : [])
+                .map(x => parseInt(x, 10)).filter(Boolean).slice(0, 3),
+        };
+        await db.query(
+            `INSERT INTO system_settings (key, value, description)
+             VALUES ('support_config', $1::jsonb, 'Central de Suporte (templates + WhatsApp + ofertas padrão)')
+             ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+            [JSON.stringify(cfg)]
+        );
+        try { require('./user-chats').invalidateSupportConfig(); } catch (_) {}
+        return res.json({ success: true, config: cfg });
+    } catch (err) {
+        logger.error('Erro salvando support-config:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// POST /support-broadcast — aviso manual pelo chat de Suporte: injeta a
+// mensagem na conversa de suporte de todo mundo que JÁ tem essa conversa
+// (audience 'buyers' = só quem tem compra) + dispara push.
+router.post('/support-broadcast', requireAdmin, async (req, res) => {
+    try {
+        const message = String(req.body?.message || '').trim().slice(0, 1000);
+        if (!message) return res.status(400).json({ success: false, error: 'Mensagem obrigatória' });
+        const audience = req.body?.audience === 'buyers' ? 'buyers' : 'all';
+        const { rows: sc } = await db.query(`SELECT * FROM chats WHERE active = true AND is_support = true ORDER BY id LIMIT 1`);
+        if (!sc.length) return res.status(400).json({ success: false, error: 'Nenhum chat marcado como Suporte' });
+        const chat = sc[0];
+
+        const { rows: sessions } = await db.query(
+            audience === 'buyers'
+                ? `SELECT s.id, s.customer_email FROM chat_sessions s
+                   JOIN customers c ON LOWER(c.email) = LOWER(s.customer_email) AND c.total_purchases > 0
+                   WHERE s.chat_id = $1 AND s.customer_email IS NOT NULL`
+                : `SELECT s.id, s.customer_email FROM chat_sessions s
+                   WHERE s.chat_id = $1 AND s.customer_email IS NOT NULL`,
+            [chat.id]
+        );
+
+        let delivered = 0;
+        for (const s of sessions) {
+            try {
+                await db.query(
+                    `INSERT INTO chat_messages (session_id, sender, type, content, meta)
+                     VALUES ($1, 'bot', 'text', $2, '{"typing_ms":0}'::jsonb)`,
+                    [s.id, message]
+                );
+                await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [s.id]);
+                delivered++;
+            } catch (_) {}
+        }
+
+        // push pro mesmo público (foto/nome do suporte, clique abre a conversa)
+        let pushed = 0;
+        try {
+            const { sendChatPush } = require('../lib/chat-worker');
+            if (typeof sendChatPush === 'function') {
+                for (const s of sessions) {
+                    try {
+                        const ok = await sendChatPush(s.customer_email, chat, { type: 'text', content: message });
+                        if (ok) pushed++;
+                    } catch (_) {}
+                }
+            }
+        } catch (_) {}
+
+        return res.json({ success: true, delivered, pushed, total: sessions.length });
+    } catch (err) {
+        logger.error('Erro no broadcast do suporte:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
 // POST /:id/duplicate — duplica a MODELO inteira (persona + roteiro de todos
 // os fluxos). Sessões/mensagens de leads não vão. Nasce INATIVA pra ajustar.
 router.post('/:id/duplicate', requireAdmin, async (req, res) => {

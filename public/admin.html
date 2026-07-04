@@ -5064,6 +5064,44 @@ a { color: inherit; text-decoration: none; }
                     </div>
                 </div>
 
+                <!-- ===== SEQUÊNCIA DE BOAS-VINDAS (APÓS INSTALAR) ===== -->
+                <div class="form-card" style="padding:20px;margin-bottom:18px;">
+                    <div class="form-card-head" style="margin-bottom:6px;">
+                        <div class="form-card-title">🚀 Sequência de boas-vindas (após instalar o app)</div>
+                        <div class="form-card-sub">Assim que o cliente instala e permite notificação, esses passos disparam UMA vez, contando do momento da instalação (+5 min, +1h, +3h…). Se ele COMPRAR no meio, o resto é cancelado sozinho. Depois disso, quem segura ele é a rotina diária ali de cima.</div>
+                    </div>
+                    <div id="installStepsList" style="margin:14px 0;font-size:13px;color:var(--text-muted);">Carregando…</div>
+                    <div style="border-top:1px solid var(--border);padding-top:14px;">
+                        <div class="form-row-grid-2" style="gap:14px;margin-bottom:12px;">
+                            <div>
+                                <label class="form-label">Depois de quantos MINUTOS da instalação</label>
+                                <input type="number" class="form-input" id="istDelay" min="1" value="5" placeholder="ex: 5, 60, 180">
+                            </div>
+                            <div>
+                                <label class="form-label">URL ao clicar (ex: /, /?chat=2, /?p=5)</label>
+                                <input type="text" class="form-input" id="istUrl" value="/">
+                            </div>
+                        </div>
+                        <div class="form-row" style="margin-bottom:12px;">
+                            <label class="form-label">Título</label>
+                            <input type="text" class="form-input" id="istTitle" placeholder="Ex: Elas já sabem que você chegou 😏">
+                        </div>
+                        <div class="form-row" style="margin-bottom:12px;">
+                            <label class="form-label">Mensagem</label>
+                            <input type="text" class="form-input" id="istBody" placeholder="Ex: Tem gente online querendo falar com você agora…">
+                        </div>
+                        <div class="form-row" style="margin-bottom:12px;">
+                            <label class="form-label">Ícone/foto (URL, opcional)</label>
+                            <input type="text" class="form-input" id="istIcon" placeholder="https://... (foto da modelo fica redonda no push)">
+                        </div>
+                        <div id="istAlert" style="display:none;padding:10px;border-radius:8px;font-size:13px;margin-bottom:10px;"></div>
+                        <div style="display:flex;gap:10px;">
+                            <button class="btn-primary" id="istSaveBtn" onclick="saveInstallStep()">Adicionar passo</button>
+                            <button class="btn-secondary" id="istCancelBtn" onclick="cancelInstallStepEdit()" style="display:none;">Cancelar edição</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- ===== QR PREVIEW MODAL ===== -->
                 <div id="previewQrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;padding:20px;">
                     <div style="background:#1a0a0a;border:1px solid var(--border);border-radius:14px;max-width:360px;width:100%;padding:24px;text-align:center;">
@@ -5717,6 +5755,58 @@ a { color: inherit; text-decoration: none; }
                 <!-- PRODUTO ÚNICO DO CHAT: o popup VIP/PREMIUM de TODAS as conversas -->
                 <div id="chatPaywallCard" style="margin-top:20px; background:linear-gradient(135deg, rgba(229,9,20,.10), rgba(0,0,0,.25)); border:1px solid rgba(229,9,20,.35); border-radius:14px; padding:16px 18px;">
                     <div style="color:rgba(255,255,255,.5); font-size:12px;">Carregando produto do chat…</div>
+                </div>
+
+                <!-- CENTRAL DE SUPORTE: templates automáticos + WhatsApp + ofertas padrão + aviso manual -->
+                <div style="margin-top:16px; background:linear-gradient(135deg, rgba(31,168,85,.08), rgba(0,0,0,.25)); border:1px solid rgba(31,168,85,.35); border-radius:14px; padding:16px 18px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                        <div>
+                            <div style="font-size:15px; font-weight:800; color:#fff;">🎧 Central de Suporte</div>
+                            <div style="font-size:12px; color:rgba(255,255,255,.55); margin-top:3px;" id="supportChatInfo">As mensagens automáticas (Pix gerado, compra aprovada, boas-vindas) saem pelo chat marcado como Suporte. Nome e foto você edita no card do chat, na lista abaixo.</div>
+                        </div>
+                        <button class="btn-secondary" onclick="toggleSupportPanel()" id="supportPanelBtn">Configurar ▾</button>
+                    </div>
+                    <div id="supportPanel" style="display:none; margin-top:14px; border-top:1px solid rgba(255,255,255,.08); padding-top:14px;">
+                        <div class="form-row" style="margin-bottom:12px;">
+                            <label class="form-label">💬 WhatsApp de ajuda (link — ex: https://wa.me/5511999999999)</label>
+                            <input type="text" class="form-input" id="supWhats" placeholder="https://wa.me/55...">
+                            <div class="form-help" style="margin-top:4px;">Preenchido = toda mensagem automática do suporte ganha o botão "💬 Preciso de ajuda (WhatsApp)". Vazio = sem botão.</div>
+                        </div>
+                        <div class="form-row" style="margin-bottom:12px;">
+                            <label class="form-label">🟡 Mensagem de PIX GERADO — variáveis: {nome} {produto} {valor}</label>
+                            <textarea class="form-textarea" id="supPix" style="min-height:64px;"></textarea>
+                        </div>
+                        <div class="form-row" style="margin-bottom:12px;">
+                            <label class="form-label">🟢 Mensagem de COMPRA APROVADA (padrão global) — variáveis: {nome} {produto}</label>
+                            <textarea class="form-textarea" id="supPurchase" style="min-height:64px;"></textarea>
+                            <div class="form-help" style="margin-top:4px;">Vale pra TODOS os produtos. Se um produto tiver a própria "Mensagem de pós-compra" no editor dele, a do produto vence.</div>
+                        </div>
+                        <div class="form-row" style="margin-bottom:12px;">
+                            <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="supWelcomeOn" style="width:15px;height:15px;"> 👋 Mandar boas-vindas quando o cliente INSTALAR o app</label>
+                            <textarea class="form-textarea" id="supWelcome" style="min-height:56px; margin-top:8px;"></textarea>
+                        </div>
+                        <div class="form-row" style="margin-bottom:12px;">
+                            <label class="form-label">🛒 Ofertas padrão (até 3 — o suporte oferece quando o produto comprado não tem recomendados próprios)</label>
+                            <select id="supOffers" class="form-input" multiple style="min-height:84px;"></select>
+                            <div class="form-help" style="margin-top:4px;">Segura Ctrl/Cmd pra escolher mais de um.</div>
+                        </div>
+                        <div id="supAlert" style="display:none;padding:10px;border-radius:8px;font-size:13px;margin-bottom:10px;"></div>
+                        <button class="btn-primary" onclick="saveSupportConfig()">Salvar Central de Suporte</button>
+
+                        <div style="margin-top:18px; border-top:1px dashed rgba(255,255,255,.14); padding-top:14px;">
+                            <div style="font-size:13px; font-weight:800; color:#fff; margin-bottom:8px;">📢 Mandar AVISO pelo suporte (manual)</div>
+                            <div class="form-help" style="margin-bottom:8px;">Cai na conversa de suporte de todo mundo que já tem essa conversa + push. Use pra "conteúdo novo", promoção do dia etc.</div>
+                            <textarea class="form-textarea" id="supBroadcastMsg" style="min-height:56px;" placeholder="Ex: 🔥 Acabou de entrar conteúdo novo — corre lá em Minhas Compras!"></textarea>
+                            <div style="display:flex; gap:10px; align-items:center; margin-top:10px; flex-wrap:wrap;">
+                                <select class="form-input" id="supBroadcastAud" style="max-width:240px;">
+                                    <option value="all">👥 Todos com conversa de suporte</option>
+                                    <option value="buyers">💎 Só quem já comprou</option>
+                                </select>
+                                <button class="btn-secondary" id="supBroadcastBtn" onclick="sendSupportBroadcast()" style="font-weight:700;">Enviar aviso</button>
+                            </div>
+                            <div id="supBroadcastAlert" style="display:none;padding:10px;border-radius:8px;font-size:13px;margin-top:10px;"></div>
+                        </div>
+                    </div>
                 </div>
                 <div id="adminChatsList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:24px;">
                     <div style="color:rgba(255,255,255,.5)">Carregando...</div>
@@ -11820,8 +11910,9 @@ async function loadGrowth() {
         document.getElementById('growthPushStatus').textContent = '⚠️ Erro carregando status';
     }
 
-    // Rotina diária de notificações (card abaixo do push manual)
+    // Rotina diária + sequência pós-instalação (cards abaixo do push manual)
     try { loadPushRoutine(); } catch (_) {}
+    try { loadInstallSteps(); } catch (_) {}
 }
 
 // Destino rápido: preenche a URL de clique conforme o preset escolhido
@@ -12021,6 +12112,113 @@ window.editRoutineSlot = editRoutineSlot;
 window.cancelRoutineEdit = cancelRoutineEdit;
 window.toggleRoutineSlot = toggleRoutineSlot;
 window.deleteRoutineSlot = deleteRoutineSlot;
+
+// ============================================================================
+// SEQUÊNCIA PÓS-INSTALAÇÃO (install_push_steps)
+// ============================================================================
+let _istEditId = null;
+// nome próprio: já existem outros fmtDelay no arquivo (min/segundos)
+function fmtInstallDelay(min) {
+    if (min < 60) return '+' + min + ' min';
+    if (min % 60 === 0 && min < 1440) return '+' + (min / 60) + 'h';
+    if (min >= 1440 && min % 1440 === 0) return '+' + (min / 1440) + 'd';
+    return '+' + min + ' min';
+}
+async function loadInstallSteps() {
+    const list = document.getElementById('installStepsList');
+    if (!list) return;
+    try {
+        const r = await fetch('/api/admin/push/install-steps', { credentials: 'include' }).then(r => r.json());
+        if (!r.success) { list.textContent = 'Erro ao carregar.'; return; }
+        if (!r.steps.length) { list.innerHTML = '<span style="color:var(--text-dim);">Nenhum passo — adiciona o primeiro aí embaixo. 👇</span>'; return; }
+        list.innerHTML = r.steps.map(s =>
+            `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);${s.active ? '' : 'opacity:.45;'}">
+                <span style="font-weight:800;font-size:13px;min-width:60px;color:#4CD964;">${fmtInstallDelay(s.delay_minutes)}</span>
+                <span style="flex:1;min-width:0;">
+                    <span style="display:block;font-weight:600;color:var(--text);">${escHtmlAdmin(s.title)}</span>
+                    <span style="display:block;font-size:11.5px;color:var(--text-dim);">${escHtmlAdmin(s.body || '')} · ${escHtmlAdmin(s.url || '/')}</span>
+                </span>
+                <button class="btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="toggleInstallStep(${s.id})">${s.active ? 'Pausar' : 'Ativar'}</button>
+                <button class="btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="editInstallStep(${s.id})">Editar</button>
+                <button class="btn-secondary" style="padding:5px 10px;font-size:11px;color:var(--danger);" onclick="deleteInstallStep(${s.id})">✕</button>
+            </div>`
+        ).join('');
+        window.__installSteps = r.steps;
+    } catch (_) { list.textContent = 'Erro de rede.'; }
+}
+async function saveInstallStep() {
+    const get = id => document.getElementById(id)?.value?.trim() || '';
+    const payload = {
+        delay_minutes: parseInt(get('istDelay'), 10) || 0,
+        title: get('istTitle'),
+        body: get('istBody'),
+        url: get('istUrl') || '/',
+        icon_url: get('istIcon'),
+        active: true,
+    };
+    if (!payload.delay_minutes || !payload.title) return _alertModal('istAlert', 'Minutos e título são obrigatórios', 'error');
+    if (_istEditId) {
+        const cur = (window.__installSteps || []).find(s => s.id === _istEditId);
+        if (cur) payload.active = cur.active;
+    }
+    const url = _istEditId ? '/api/admin/push/install-steps/' + _istEditId : '/api/admin/push/install-steps';
+    try {
+        const r = await fetch(url, {
+            method: _istEditId ? 'PUT' : 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
+        }).then(r => r.json());
+        if (!r.success) return _alertModal('istAlert', r.error || 'Erro', 'error');
+        _alertModal('istAlert', _istEditId ? '✅ Passo atualizado' : '✅ Passo adicionado — vale pras PRÓXIMAS instalações', 'success');
+        cancelInstallStepEdit();
+        loadInstallSteps();
+    } catch (err) { _alertModal('istAlert', err.message || 'Erro de rede', 'error'); }
+}
+function editInstallStep(id) {
+    const s = (window.__installSteps || []).find(x => x.id === id);
+    if (!s) return;
+    _istEditId = id;
+    document.getElementById('istDelay').value = s.delay_minutes;
+    document.getElementById('istTitle').value = s.title || '';
+    document.getElementById('istBody').value = s.body || '';
+    document.getElementById('istUrl').value = s.url || '/';
+    document.getElementById('istIcon').value = s.icon_url || '';
+    document.getElementById('istSaveBtn').textContent = 'Salvar alterações';
+    document.getElementById('istCancelBtn').style.display = '';
+}
+function cancelInstallStepEdit() {
+    _istEditId = null;
+    document.getElementById('istTitle').value = '';
+    document.getElementById('istBody').value = '';
+    document.getElementById('istIcon').value = '';
+    document.getElementById('istDelay').value = '5';
+    document.getElementById('istUrl').value = '/';
+    document.getElementById('istSaveBtn').textContent = 'Adicionar passo';
+    document.getElementById('istCancelBtn').style.display = 'none';
+}
+async function toggleInstallStep(id) {
+    const s = (window.__installSteps || []).find(x => x.id === id);
+    if (!s) return;
+    try {
+        await fetch('/api/admin/push/install-steps/' + id, {
+            method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...s, active: !s.active }),
+        });
+        loadInstallSteps();
+    } catch (_) {}
+}
+async function deleteInstallStep(id) {
+    if (!confirm('Excluir este passo da sequência?')) return;
+    try {
+        await fetch('/api/admin/push/install-steps/' + id, { method: 'DELETE', credentials: 'include' });
+        loadInstallSteps();
+    } catch (_) {}
+}
+window.loadInstallSteps = loadInstallSteps;
+window.saveInstallStep = saveInstallStep;
+window.editInstallStep = editInstallStep;
+window.cancelInstallStepEdit = cancelInstallStepEdit;
+window.toggleInstallStep = toggleInstallStep;
+window.deleteInstallStep = deleteInstallStep;
 
 // ============================================================================
 // LIVE NOTIFICATIONS (ticker fake/real)
@@ -15700,8 +15898,92 @@ async function saveChatPaywall() {
     } catch (e) { alert('Erro: ' + e.message); btn.disabled = false; btn.textContent = 'Salvar'; }
 }
 
+// ============================================================================
+// CENTRAL DE SUPORTE (support_config)
+// ============================================================================
+function toggleSupportPanel() {
+    const p = document.getElementById('supportPanel');
+    const b = document.getElementById('supportPanelBtn');
+    const open = p.style.display === 'none';
+    p.style.display = open ? 'block' : 'none';
+    b.textContent = open ? 'Fechar ▴' : 'Configurar ▾';
+}
+window.toggleSupportPanel = toggleSupportPanel;
+
+async function loadSupportConfig() {
+    try {
+        const r = await fetch('/api/admin/chats/support-config', { credentials: 'include' }).then(r => r.json());
+        if (!r.success) return;
+        const cfg = r.config || {}, def = r.defaults || {};
+        const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+        set('supWhats', cfg.whatsapp_link);
+        set('supPix', cfg.pix_template || def.pix_template);
+        set('supPurchase', cfg.purchase_template || def.purchase_template);
+        set('supWelcome', cfg.welcome_template || def.welcome_template);
+        const on = document.getElementById('supWelcomeOn');
+        if (on) on.checked = cfg.welcome_enabled !== false; // default ligado
+        if (r.support_chat) {
+            const info = document.getElementById('supportChatInfo');
+            if (info) info.innerHTML = 'Chat de suporte atual: <b style="color:#4CD964;">' + escHtmlAdmin(r.support_chat.name) + '</b> — nome e foto você edita no card dele, na lista abaixo. As mensagens automáticas (Pix gerado, compra aprovada, boas-vindas) saem por ele.';
+        }
+        // ofertas padrão: multi-select de produtos
+        try {
+            const pr = await fetch('/api/admin/products', { credentials: 'include' }).then(r => r.json());
+            const prods = (pr.products || pr.data || []);
+            const want = (Array.isArray(cfg.default_offer_ids) ? cfg.default_offer_ids : []).map(String);
+            const sel = document.getElementById('supOffers');
+            if (sel) sel.innerHTML = prods.map(p => '<option value="' + p.id + '"' + (want.indexOf(String(p.id)) >= 0 ? ' selected' : '') + '>' + escHtmlAdmin(p.name) + '</option>').join('');
+        } catch (_) {}
+    } catch (_) {}
+}
+window.loadSupportConfig = loadSupportConfig;
+
+async function saveSupportConfig() {
+    const get = id => document.getElementById(id)?.value?.trim() || '';
+    const sel = document.getElementById('supOffers');
+    const offerIds = sel ? Array.from(sel.selectedOptions || []).map(o => parseInt(o.value, 10)).filter(Boolean).slice(0, 3) : [];
+    try {
+        const r = await fetch('/api/admin/chats/support-config', {
+            method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                whatsapp_link: get('supWhats'),
+                pix_template: get('supPix'),
+                purchase_template: get('supPurchase'),
+                welcome_enabled: document.getElementById('supWelcomeOn')?.checked === true,
+                welcome_template: get('supWelcome'),
+                default_offer_ids: offerIds,
+            }),
+        }).then(r => r.json());
+        _alertModal('supAlert', r.success ? '✅ Central de Suporte salva' : (r.error || 'Erro'), r.success ? 'success' : 'error');
+    } catch (err) { _alertModal('supAlert', err.message || 'Erro de rede', 'error'); }
+}
+window.saveSupportConfig = saveSupportConfig;
+
+async function sendSupportBroadcast() {
+    const msg = document.getElementById('supBroadcastMsg')?.value?.trim();
+    if (!msg) return _alertModal('supBroadcastAlert', 'Escreve a mensagem primeiro', 'error');
+    const aud = document.getElementById('supBroadcastAud')?.value || 'all';
+    if (!confirm('Mandar este aviso pelo chat de Suporte' + (aud === 'buyers' ? ' (só compradores)' : ' (todos)') + '?')) return;
+    const btn = document.getElementById('supBroadcastBtn');
+    btn.disabled = true; const t0 = btn.textContent; btn.textContent = 'Enviando...';
+    try {
+        const r = await fetch('/api/admin/chats/support-broadcast', {
+            method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: msg, audience: aud }),
+        }).then(r => r.json());
+        if (!r.success) _alertModal('supBroadcastAlert', r.error || 'Erro', 'error');
+        else {
+            _alertModal('supBroadcastAlert', `📢 Aviso entregue em ${r.delivered} conversa(s) · ${r.pushed} push(es)`, 'success');
+            document.getElementById('supBroadcastMsg').value = '';
+        }
+    } catch (err) { _alertModal('supBroadcastAlert', err.message || 'Erro de rede', 'error'); }
+    btn.disabled = false; btn.textContent = t0;
+}
+window.sendSupportBroadcast = sendSupportBroadcast;
+
 async function loadAdminChats() {
     loadChatPaywallCard();
+    loadSupportConfig();
     const list = document.getElementById('adminChatsList');
     if (!list) return;
     try {

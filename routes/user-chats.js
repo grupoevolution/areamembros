@@ -1162,6 +1162,7 @@ async function deliverPurchaseToSupport(email, productIds) {
     if (!prods.length) return [];
     const session = await findOrCreateSession(chat.id, { email: e, visitor: null }, true);
     const ctx = { email: e, city: session.city || null, cityFallback: chat.city_fallback };
+    const cfg = await getSupportConfig();
     const GREEN = '#1fa855', RED = '#e50914';
     let firstMsg = null;
     // Saudação pelo horário de Brasília (abre a entrega com calor humano)
@@ -1171,10 +1172,12 @@ async function deliverPurchaseToSupport(email, productIds) {
         firstMsg = await insertMsg(session.id, 'bot', 'text', await fillVars(sauda + ', {nome}! 👋', ctx), null, { typing_ms: 0 }, null);
     } catch (_) {}
     for (const p of prods) {
+        // ordem: mensagem do PRODUTO (exceção) → template GLOBAL editável no
+        // painel (Central de Suporte) → default do código
         const base = (p.post_purchase_message && p.post_purchase_message.trim())
-            || 'Oi {nome}! Parabéns pela compra de {produto} 🎉 Seu acesso já está liberado em Minhas Compras. Qualquer dúvida, é só falar aqui 💬';
+            || cfg.purchase_template;
         let text = base.replace(/\{produto\}/gi, p.name || 'seu produto');
-        text = await fillVars(text, ctx);
+        text = capFirst(await fillVars(text, ctx));
         const m1 = await insertMsg(session.id, 'bot', 'text', text, null, { typing_ms: 0 }, null);
         if (!firstMsg) firstMsg = m1;
         if (p.post_purchase_link && p.post_purchase_link.trim()) {
@@ -1183,6 +1186,13 @@ async function deliverPurchaseToSupport(email, productIds) {
         let rec = [];
         try { rec = Array.isArray(p.post_purchase_recommended_ids) ? p.post_purchase_recommended_ids : JSON.parse(p.post_purchase_recommended_ids || '[]'); } catch (_) {}
         rec = rec.map(x => parseInt(x, 10)).filter(Boolean).slice(0, 3);
+        // produto sem recomendados próprios → OFERTAS PADRÃO da Central de
+        // Suporte (cross-sell no piloto automático), sem oferecer o que ele
+        // acabou de comprar
+        if (!rec.length && Array.isArray(cfg.default_offer_ids)) {
+            rec = cfg.default_offer_ids.map(x => parseInt(x, 10))
+                .filter(x => x && !ids.includes(x)).slice(0, 3);
+        }
         if (rec.length) {
             const { rows: recProds } = await db.query(`SELECT id, name FROM products WHERE id = ANY($1) AND is_active = true`, [rec]);
             if (recProds.length) {
@@ -1199,8 +1209,74 @@ async function deliverPurchaseToSupport(email, productIds) {
         await insertMsg(session.id, 'bot', 'cta', '📲 Instalar o app no celular', null,
             { action: 'install_pwa', cta_color: RED }, null);
     } catch (_) {}
+    await appendHelpCta(session.id, cfg);
     await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [session.id]);
     return firstMsg ? [{ chat, messages: [firstMsg], email: e }] : [];
+}
+
+// ── CENTRAL DE SUPORTE: configuração editável no painel ─────────────────────
+// system_settings key 'support_config'. Tudo tem default no código — o painel
+// só sobrescreve o que o dono editar. Variáveis: {nome} {saudacao} {produto}
+// {valor} (produto/valor só onde fazem sentido).
+const SUPPORT_DEFAULTS = {
+    whatsapp_link: '',
+    pix_template: 'Oi {nome}! Vi aqui que você gerou o Pix{valor} pra garantir {produto} 👀 Ele fica reservado por pouco tempo — paga agora pra não perder!',
+    purchase_template: 'Parabéns, {nome}! 🎉 Sua compra de {produto} foi APROVADA e o acesso JÁ TÁ liberado em Minhas Compras. Corre lá 😈 Qualquer dúvida, me chama aqui!',
+    welcome_enabled: true,
+    welcome_template: '{saudacao}, {nome}! 👋 Eu sou o suporte oficial do app. Qualquer dúvida, pagamento ou problema, me chama AQUI nessa conversa que eu resolvo rapidinho. Bom proveito 🔥',
+    default_offer_ids: [],
+};
+let _supportCfgCache = { at: 0, cfg: null };
+async function getSupportConfig() {
+    if (_supportCfgCache.cfg && Date.now() - _supportCfgCache.at < 60000) return _supportCfgCache.cfg;
+    let cfg = { ...SUPPORT_DEFAULTS };
+    try {
+        const { rows } = await db.query(`SELECT value FROM system_settings WHERE key = 'support_config'`);
+        const saved = rows[0]?.value;
+        if (saved && typeof saved === 'object') {
+            for (const k of Object.keys(SUPPORT_DEFAULTS)) {
+                if (saved[k] !== undefined && saved[k] !== null && saved[k] !== '') cfg[k] = saved[k];
+                // strings vazias mantêm default, EXCETO whatsapp_link (vazio = sem botão)
+            }
+            if (saved.whatsapp_link !== undefined) cfg.whatsapp_link = String(saved.whatsapp_link || '');
+            if (saved.welcome_enabled !== undefined) cfg.welcome_enabled = saved.welcome_enabled === true;
+        }
+    } catch (_) {}
+    _supportCfgCache = { at: Date.now(), cfg };
+    return cfg;
+}
+function invalidateSupportConfig() { _supportCfgCache = { at: 0, cfg: null }; }
+
+// Primeira letra maiúscula (mensagens que começam com {saudacao} viravam
+// "boa tarde, ..." — feio na abertura da conversa)
+function capFirst(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
+
+// Botão "Preciso de ajuda" (WhatsApp) — anexado ao fim das entregas do suporte
+async function appendHelpCta(sessionId, cfg) {
+    if (!cfg.whatsapp_link) return;
+    try {
+        await insertMsg(sessionId, 'bot', 'cta', '💬 Preciso de ajuda (WhatsApp)', null,
+            { link_url: cfg.whatsapp_link, cta_color: '#1fa855' }, null);
+    } catch (_) {}
+}
+
+// BOAS-VINDAS ao instalar o app (welcome_enabled): 1 mensagem no suporte,
+// chega não-lida (badge chama atenção). Dedupe fica no caller (user.js,
+// trava install_sequence_sent — 1x por e-mail).
+async function deliverInstallWelcome(email) {
+    const e = String(email || '').toLowerCase().trim();
+    if (!e || e.endsWith('@preview.local')) return null;
+    const cfg = await getSupportConfig();
+    if (!cfg.welcome_enabled) return null;
+    const { rows: sc } = await db.query(`SELECT * FROM chats WHERE active = true AND is_support = true ORDER BY id LIMIT 1`);
+    if (!sc.length) return null;
+    const chat = sc[0];
+    const session = await findOrCreateSession(chat.id, { email: e, visitor: null }, true);
+    const ctx = { email: e, city: session.city || null, cityFallback: chat.city_fallback };
+    const msg = await insertMsg(session.id, 'bot', 'text', capFirst(await fillVars(cfg.welcome_template, ctx)), null, { typing_ms: 0 }, null);
+    await appendHelpCta(session.id, cfg);
+    await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [session.id]);
+    return { chat, messages: [msg], email: e };
 }
 
 // PIX GERADO (evento 'pending' do gateway) → mensagem de "só falta pagar" no
@@ -1215,16 +1291,18 @@ async function deliverPixPendingToSupport(email, info) {
     const chat = sc[0];
     const session = await findOrCreateSession(chat.id, { email: e, visitor: null }, true);
     const ctx = { email: e, city: session.city || null, cityFallback: chat.city_fallback };
+    const cfg = await getSupportConfig();
     const GREEN = '#1fa855';
     const prod = (info && info.product_name) ? String(info.product_name) : 'seu acesso';
     const valor = (info && info.amount > 0)
-        ? ('R$ ' + Number(info.amount).toFixed(2).replace('.', ','))
-        : null;
+        ? (' de R$ ' + Number(info.amount).toFixed(2).replace('.', ','))
+        : '';
 
-    const t1 = await fillVars(
-        'Oi {nome}! Vi aqui que você gerou o Pix' + (valor ? ' de ' + valor : '') +
-        ' pra liberar ' + prod + ' 👀 Tá QUASE seu — só falta pagar!', ctx
-    );
+    // template editável no painel (Central de Suporte) — {produto}/{valor}
+    // entram aqui; {nome}/{saudacao} no fillVars
+    const t1 = capFirst(await fillVars(
+        String(cfg.pix_template).replace(/\{produto\}/gi, prod).replace(/\{valor\}/gi, valor), ctx
+    ));
     const first = await insertMsg(session.id, 'bot', 'text', t1, null, { typing_ms: 0 }, null);
 
     if (info && info.pix_code) {
@@ -1239,6 +1317,7 @@ async function deliverPixPendingToSupport(email, info) {
 
     await insertMsg(session.id, 'bot', 'text',
         'Assim que o pagamento cair, seu acesso libera AUTOMÁTICO aqui no app — eu te aviso na hora 😉 Qualquer dúvida, fala comigo aqui.', null, { typing_ms: 0 }, null);
+    await appendHelpCta(session.id, cfg);
 
     await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [session.id]);
     return [{ chat, messages: [first], email: e }];
@@ -1468,4 +1547,6 @@ module.exports.resumeDelayed = resumeDelayed;
 module.exports.triggerPostPurchaseChats = triggerPostPurchaseChats;
 module.exports.deliverPurchaseToSupport = deliverPurchaseToSupport;
 module.exports.deliverPixPendingToSupport = deliverPixPendingToSupport;
+module.exports.deliverInstallWelcome = deliverInstallWelcome;
+module.exports.invalidateSupportConfig = invalidateSupportConfig;
 module.exports.postDueStatusSchedules = postDueStatusSchedules;
