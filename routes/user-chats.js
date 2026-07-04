@@ -530,7 +530,16 @@ router.get('/chats', optionalUser, async (req, res) => {
                 unread,
             });
         }
-        return res.json({ success: true, chats: out });
+        // Plano do lead: alimenta o selo FREE/VIP do topo e o card do Perfil.
+        // paywall_unlock = planos do produto único (pro botão "Virar VIP").
+        const globalPlanId = await chatPlanProductId();
+        const vipUser = await ownsProduct(ident.email, globalPlanId);
+        return res.json({
+            success: true,
+            chats: out,
+            vip: vipUser,
+            paywall_unlock: vipUser ? null : await loadUnlock(globalPlanId, null),
+        });
     } catch (err) {
         logger.error('Erro listando chats:', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });

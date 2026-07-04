@@ -6762,6 +6762,37 @@ body.is-slowconn .prod-cta-fixed {
     background: rgba(255,255,255,0.06);
 }
 
+/* Card do PLANO no perfil: Free (com botão dourado de upgrade) / VIP dourado */
+.p3-plan {
+    width: calc(100% - 32px);
+    margin: 24px 16px 0;
+    padding: 14px 16px;
+    background: rgba(255,255,255,.03);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.p3-plan .t1 { font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,.45); font-family: inherit; }
+.p3-plan .t2 { font-size: 17px; font-weight: 800; color: #fff; margin-top: 2px; font-family: inherit; }
+.p3-plan.vip { border-color: rgba(245,197,66,.5); background: rgba(245,197,66,.07); }
+.p3-plan.vip .t2 { color: #f5c542; }
+.p3-plan-btn {
+    margin-left: auto;
+    background: linear-gradient(180deg, #fbbf24, #f59e0b);
+    color: #241a05;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 6px 18px rgba(245,158,11,.3);
+}
+.p3-plan-btn:active { filter: brightness(.92); }
+
 /* Botão FIXO de instalar o PWA no perfil (referência: card vermelho com ícone) */
 .p3-install-btn {
     width: calc(100% - 32px);
@@ -7396,6 +7427,14 @@ body.is-slowconn .prod-cta-fixed {
             </div>
 
             <!-- FOOTER ACTIONS -->
+            <!-- Plano do cliente: Free (upgrade dourado → popup de planos) / VIP -->
+            <div class="p3-plan" id="p3PlanCard" style="display:none;">
+                <div>
+                    <div class="t1">Seu plano</div>
+                    <div class="t2" id="p3PlanName">Free</div>
+                </div>
+                <button class="p3-plan-btn" id="p3PlanBtn" onclick="profileUpgrade()">👑 Virar VIP</button>
+            </div>
             <!-- Instalar o PWA (fixo no perfil; some sozinho quando já instalado) -->
             <button class="p3-install-btn" id="p3InstallBtn" onclick="profileInstallApp()">
                 <span class="ic"><svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg></span>
@@ -8120,8 +8159,13 @@ body.is-slowconn .prod-cta-fixed {
 <style>
 /* Chat integrado — tema claro aprovado, escopado nos ids #chat / #chatconv */
 #chat, #chatconv { background: #ECE5DD; }
-#chat .ca-header { padding: calc(14px + env(safe-area-inset-top)) 16px 10px; background: #f7f5f3; border-bottom: 1px solid #e6e0da; }
+#chat .ca-header { padding: calc(14px + env(safe-area-inset-top)) 16px 10px; background: #f7f5f3; border-bottom: 1px solid #e6e0da; display: flex; align-items: center; justify-content: space-between; }
 #chat .ca-header h1 { font-size: 21px; font-weight: 700; color: #111; margin: 0; }
+/* Selo do plano no topo (NÃO clicável): FREE quase invisível; VIP dourado */
+.ca-plan-badge { font-size: 10px; font-weight: 700; letter-spacing: .8px; color: #9a958d; border: 1px solid #ddd6cd; padding: 3px 10px; border-radius: 999px; background: #fff; }
+.ca-plan-badge.vip { color: #6d5320; background: linear-gradient(180deg, #f7e3a4, #eec95e); border-color: #d9b558; }
+/* Instrução central da conversa vazia (maior, 2 linhas, centro da tela) */
+.ca-first-hint { margin: auto 0; align-self: center; background: #fff; border-radius: 14px; padding: 14px 20px; max-width: 240px; text-align: center; font-size: 15.5px; line-height: 1.5; color: #3d4852; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.07); }
 #chat .screen-scroll { background: #fff; padding-bottom: 100px; }
 .ca-sec-label { font-size: 10.5px; letter-spacing: 1.5px; color: #8a8480; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; }
 .ca-online-row { padding: 12px 16px 4px; background: #fff; }
@@ -8132,13 +8176,14 @@ body.is-slowconn .prod-cta-fixed {
 .ca-online-item .dot { position: absolute; bottom: 0; right: 0; width: 12px; height: 12px; border-radius: 50%; background: #25D366; border: 2px solid #fff; }
 .ca-online-item .nm { font-size: 10px; color: #555; margin-top: 4px; max-width: 58px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Fileira de STATUS (stories) */
-.ca-stories { padding: 12px 16px 6px; background: #fff; border-bottom: 8px solid #ECE5DD; }
-.ca-stories-row { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; }
+/* Status emenda direto nas conversas (sem o degrau bege) + fotos maiores */
+.ca-stories { padding: 12px 16px 8px; background: #fff; }
+.ca-stories-row { display: flex; gap: 13px; overflow-x: auto; padding-bottom: 6px; }
 .ca-story-item { text-align: center; flex-shrink: 0; cursor: pointer; }
-.ca-story-item .ring { width: 60px; height: 60px; border-radius: 50%; padding: 2.5px; background: #d0c8c0; }
+.ca-story-item .ring { width: 66px; height: 66px; border-radius: 50%; padding: 2.5px; background: #d0c8c0; }
 .ca-story-item .ring.unseen { background: linear-gradient(135deg, #25D366, #128C7E); }
 .ca-story-item .ring .av { width: 100%; height: 100%; border-radius: 50%; background: #ddd6d0 center/cover no-repeat; border: 2px solid #fff; box-sizing: border-box; }
-.ca-story-item .nm { font-size: 10px; color: #555; margin-top: 4px; max-width: 62px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ca-story-item .nm { font-size: 11px; color: #555; margin-top: 4px; max-width: 68px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* Viewer de stories (tela cheia, estilo Instagram) */
 #caStory { position: fixed; inset: 0; z-index: 740; background: #000; display: none; flex-direction: column; }
 #caStory.show { display: flex; }
@@ -8186,12 +8231,12 @@ body.is-slowconn .prod-cta-fixed {
 .ca-sec-block .ca-sec-label { padding: 6px 16px 0; }
 .ca-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #f0ebe6; cursor: pointer; }
 .ca-row:active { background: #f7f5f3; }
-.ca-row .av { width: 50px; height: 50px; border-radius: 50%; background: #ddd6d0 center/cover no-repeat; flex-shrink: 0; position: relative; }
-.ca-row .av .dot { position: absolute; bottom: 0; right: 0; width: 13px; height: 13px; border-radius: 50%; background: #25D366; border: 2px solid #fff; }
+.ca-row .av { width: 56px; height: 56px; border-radius: 50%; background: #ddd6d0 center/cover no-repeat; flex-shrink: 0; position: relative; }
+.ca-row .av .dot { position: absolute; bottom: 0; right: 0; width: 14px; height: 14px; border-radius: 50%; background: #25D366; border: 2px solid #fff; }
 .ca-row .av.locked { display: flex; align-items: center; justify-content: center; }
 .ca-row .mid { flex: 1; min-width: 0; }
-.ca-row .nm { font-size: 15px; font-weight: 600; color: #111; }
-.ca-row .pv { font-size: 12.5px; color: #8a8480; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+.ca-row .nm { font-size: 16.5px; font-weight: 600; color: #111; }
+.ca-row .pv { font-size: 13.5px; color: #8a8480; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
 .ca-row .pv.vip { color: #e50914; font-weight: 600; }
 .ca-row .pv.online { color: #1fa855; }
 /* prévia da conversa VIP: dá pra ver que chegou mensagem, mas o conteúdo fica borrado */
@@ -8293,7 +8338,7 @@ body.is-slowconn .prod-cta-fixed {
 
 <div class="screen" id="chat">
     <div class="screen-scroll" style="display:flex; flex-direction:column; padding-bottom:0;">
-        <div class="ca-header"><h1>Conversas</h1></div>
+        <div class="ca-header"><h1>Conversas</h1><span class="ca-plan-badge" id="caPlanBadge" style="display:none;">FREE</span></div>
         <div id="caListScroll" style="background:#fff; min-height:100%; padding-bottom:100px;">
             <div class="ca-empty">Carregando conversas...</div>
         </div>
@@ -9064,6 +9109,7 @@ window.ChatApp = (function() {
                 return tb - ta;
             });
             LIST_CHATS = chats;
+            updatePlanUI(data);
             let html = storiesStripHtml();
             // VIP NÃO tem mais seção separada — entra junto com as conversas normais.
             const sections = {};
@@ -9071,8 +9117,12 @@ window.ChatApp = (function() {
                 const sec = c.section || 'Minhas conversas';
                 (sections[sec] = sections[sec] || []).push(c);
             }
-            for (const sec of Object.keys(sections)) {
-                html += '<div class="ca-sec-block"><div class="ca-sec-label">' + esc(sec) + '</div>';
+            // Seção única padrão: SEM rótulo (o status emenda direto nas conversas).
+            // Rótulo só aparece com seções personalizadas ou mais de uma.
+            const secNames = Object.keys(sections);
+            const hideLabel = secNames.length === 1 && secNames[0] === 'Minhas conversas';
+            for (const sec of secNames) {
+                html += '<div class="ca-sec-block">' + (hideLabel ? '' : '<div class="ca-sec-label">' + esc(sec) + '</div>');
                 for (const c of sections[sec]) {
                     const bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
                     // Avatar SEMPRE normal (foto + online), inclusive nos VIP — o lead
@@ -9129,6 +9179,32 @@ window.ChatApp = (function() {
         }
     }
 
+    // Selo FREE/VIP do topo + card de plano no Perfil + planos do popup em cache.
+    // Alimentado por qualquer resposta do /chats (loadList e refreshUnreadDot).
+    function updatePlanUI(data) {
+        try {
+            if (data && data.paywall_unlock) window.MV_PAY_UNLOCK = data.paywall_unlock;
+            if (!data || data.vip === undefined) return;
+            const vip = data.vip === true;
+            window.MV_VIP = vip;
+            const b = document.getElementById('caPlanBadge');
+            if (b) {
+                b.style.display = 'inline-flex';
+                b.className = 'ca-plan-badge' + (vip ? ' vip' : '');
+                b.textContent = vip ? '👑 VIP' : 'FREE';
+            }
+            const card = document.getElementById('p3PlanCard');
+            if (card) {
+                card.style.display = 'flex';
+                card.className = 'p3-plan' + (vip ? ' vip' : '');
+                const nm = document.getElementById('p3PlanName');
+                if (nm) nm.textContent = vip ? 'VIP 👑' : 'Free';
+                const btn = document.getElementById('p3PlanBtn');
+                if (btn) btn.style.display = vip ? 'none' : '';
+            }
+        } catch (_) {}
+    }
+
     // Atualiza só o badge da aba (sem re-render da lista) — usado no boot/poll.
     // Mostra QUANTAS conversas têm mensagem nova.
     async function refreshUnreadDot() {
@@ -9136,6 +9212,7 @@ window.ChatApp = (function() {
             const r = await fetch('/api/user/chats?visitor_id=' + VID + funnelParam(), { credentials: 'include' });
             const data = await r.json();
             if (!data.success) return;
+            updatePlanUI(data);
             const convsUnread = (data.chats || []).filter(c => (c.unread || 0) > 0).length;
             const dot = document.getElementById('chatNavDot');
             if (dot) {
@@ -9263,9 +9340,8 @@ window.ChatApp = (function() {
         if ((!data.messages || !data.messages.length)) {
             const hint = document.createElement('div');
             hint.id = 'caFirstHint';
-            hint.className = 'ca-day';
-            hint.style.marginTop = '18px';
-            hint.textContent = 'Envie a primeira mensagem pra ela 👇';
+            hint.className = 'ca-first-hint';
+            hint.innerHTML = 'Envie a primeira<br>mensagem pra ela 👇';
             body.appendChild(hint);
         }
     }
@@ -16900,6 +16976,33 @@ window.MVFunnelInteraction = function() {
 // Bot\u00e3o "Instalar o app" fixo no PERFIL: usa o mesmo fluxo de instala\u00e7\u00e3o do
 // funil (prompt nativo \u2192 instru\u00e7\u00e3o manual \u2192 breakout do Instagram). Some
 // sozinho quando o app j\u00e1 est\u00e1 instalado (standalone).
+// Botão "Virar VIP" do card de plano no PERFIL: abre o popup de planos
+// (VIP/PREMIUM do produto único). Usa o unlock em cache do /chats; se ainda
+// não carregou, busca na hora.
+window.profileUpgrade = async function() {
+    try {
+        let u = window.MV_PAY_UNLOCK || null;
+        if (!u) {
+            let vid = ''; try { vid = localStorage.getItem('mv_chat_visitor') || ''; } catch (_) {}
+            const r = await fetch('/api/user/chats?visitor_id=' + encodeURIComponent(vid), { credentials: 'include' });
+            const d = await r.json();
+            if (d && d.vip === true) return; // já é VIP — nada a vender
+            if (d && d.paywall_unlock) u = d.paywall_unlock;
+        }
+        if (u && window.MVPaywall) {
+            MVPaywall.openModal(u, {
+                icon: 'lock',
+                eyebrow: 'ACESSO EXCLUSIVO',
+                title: 'Conversa VIP 🔥',
+                subtitle: 'Libere o acesso e converse sem limite com todas as mulheres online.',
+                ctaText: 'QUERO SER VIP',
+                track: { type: 'chat_paywall_click', meta: { ctx: 'profile' } },
+            });
+            try { window.TRACK && TRACK.event('chat_paywall_open', { ctx: 'profile' }); } catch (_) {}
+        }
+    } catch (_) {}
+};
+
 window.profileInstallApp = function() {
     try {
         if (window.ChatApp && ChatApp.isStandalone && ChatApp.isStandalone()) {
