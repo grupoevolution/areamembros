@@ -8376,13 +8376,26 @@ body.is-slowconn .prod-cta-fixed {
 .ga-media-ov .full iframe { width: 100%; height: 100%; border: none; }
 .ga-media-ov .fnav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.14); color: #fff; font-size: 22px; line-height: 34px; text-align: center; cursor: pointer; user-select: none; }
 .ga-media-ov .fnav.prev { left: 10px; } .ga-media-ov .fnav.next { right: 10px; }
-/* banner dourado do PASSE VIP no topo da lista de grupos */
-.ga-pass { margin: 6px 16px 12px; background: linear-gradient(135deg, #2a1608, #180c05); border: 1px solid rgba(245,197,66,.55); border-radius: 16px; padding: 13px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-.ga-pass .mid2 { flex: 1; min-width: 0; }
-.ga-pass .e { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: #f5c542; }
-.ga-pass .t { font-size: 19px; font-weight: 800; color: #fff; margin: 2px 0 1px; }
-.ga-pass .s { font-size: 12px; color: #cdbd8a; }
-.ga-pass .arr { color: #f5c542; font-size: 20px; font-weight: 700; }
+/* BILHETE DOURADO do PASSE VIP: ouro de verdade + brilho varrendo (shine) */
+.ga-pass { position: relative; overflow: hidden; margin: 6px 16px 12px;
+    background: linear-gradient(120deg, #8a6014 0%, #d9a531 22%, #f7df8b 42%, #e3b53f 58%, #a8791d 82%, #8a6014 100%);
+    border: 1.5px solid #f7df8b; border-radius: 16px; padding: 14px 16px;
+    display: flex; align-items: center; gap: 10px; cursor: pointer;
+    box-shadow: 0 6px 22px rgba(217,165,49,.45), inset 0 1px 0 rgba(255,255,255,.35);
+    animation: gaPassGlow 2.4s ease-in-out infinite; }
+.ga-pass::after { content: ''; position: absolute; top: -60%; bottom: -60%; left: -80px; width: 55px;
+    background: linear-gradient(100deg, rgba(255,255,255,0), rgba(255,255,255,.75), rgba(255,255,255,0));
+    transform: skewX(-20deg); animation: gaPassShine 2.8s ease-in-out infinite; pointer-events: none; }
+@keyframes gaPassShine { 0%, 55% { left: -80px; } 90%, 100% { left: 110%; } }
+@keyframes gaPassGlow {
+    0%, 100% { box-shadow: 0 6px 22px rgba(217,165,49,.45), inset 0 1px 0 rgba(255,255,255,.35); }
+    50% { box-shadow: 0 6px 30px rgba(247,223,139,.75), inset 0 1px 0 rgba(255,255,255,.35); }
+}
+.ga-pass .mid2 { flex: 1; min-width: 0; position: relative; }
+.ga-pass .e { font-size: 10px; font-weight: 800; letter-spacing: 2.5px; color: #4a3204; }
+.ga-pass .t { font-size: 19.5px; font-weight: 800; color: #2c1d02; margin: 2px 0 1px; text-shadow: 0 1px 0 rgba(255,255,255,.35); }
+.ga-pass .s { font-size: 12px; font-weight: 600; color: #5d420c; }
+.ga-pass .arr { color: #2c1d02; font-size: 22px; font-weight: 800; position: relative; }
 </style>
 
 <div class="screen" id="chat">
@@ -10444,8 +10457,8 @@ window.GroupApp = (function () {
             PASS = data.pass || null;
             if (PASS) {
                 html += '<div class="ga-pass" onclick="GroupApp.openPass()">'
-                    + '<div class="mid2"><div class="e">✨ PASSE VIP</div><div class="t">Todos os grupos</div>'
-                    + '<div class="s">Desbloqueie tudo por um preço só</div></div>'
+                    + '<div class="mid2"><div class="e">✦ PASSE VIP · ACESSO VITALÍCIO</div><div class="t">Todos os grupos, pra sempre</div>'
+                    + '<div class="s">Pagamento único · círculo fechado de quem tem TUDO</div></div>'
                     + '<span class="arr">›</span></div>';
             }
             html += '<div class="ca-sec-block">';
@@ -10626,11 +10639,13 @@ window.GroupApp = (function () {
         let ov = document.getElementById('gaPlansOv');
         if (!ov) { ov = document.createElement('div'); ov.id = 'gaPlansOv'; document.body.appendChild(ov); }
         ov.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(6,4,5,.94);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;';
-        const bens = String(p.benefits || 'Todos os grupos, atuais e futuros\nTodas as mídias liberadas\nSem mensalidade — pra sempre').split('\n').filter(Boolean).slice(0, 4);
+        const bens = String(p.benefits
+            || 'TODOS os grupos liberados — atuais e futuros\nAcervo completo: todas as fotos e vídeos de todos os grupos\nParticipe e converse sem nenhum limite\nGrupo novo lançou? Entra de graça pra você\nPagamento ÚNICO — nunca mais paga mensalidade\nSelo VIP: você no círculo fechado'
+        ).split('\n').filter(Boolean).slice(0, 6);
         ov.innerHTML = '<div style="background:linear-gradient(160deg,#241304,#140b03);border:1px solid rgba(245,197,66,.55);border-radius:20px;max-width:330px;width:100%;padding:24px 18px 14px;margin:auto;text-align:center;">'
-            + '<div style="font-size:10px;font-weight:800;letter-spacing:3px;color:#f5c542;">✨ PASSE VIP</div>'
-            + '<div style="font-size:23px;font-weight:800;color:#fff;margin:6px 0 4px;">TODOS OS GRUPOS</div>'
-            + '<div style="font-size:12.5px;color:#cdbd8a;margin-bottom:14px;">Desbloqueie tudo por um preço só</div>'
+            + '<div style="font-size:10px;font-weight:800;letter-spacing:3px;color:#f5c542;">✦ PASSE VIP · ACESSO VITALÍCIO</div>'
+            + '<div style="font-size:23px;font-weight:800;color:#fff;margin:6px 0 4px;">TODOS OS GRUPOS,<br>PRA SEMPRE</div>'
+            + '<div style="font-size:12.5px;color:#cdbd8a;margin-bottom:14px;">Um pagamento. Zero mensalidade. Tudo aberto.</div>'
             + '<div style="font-size:32px;font-weight:800;color:#f5c542;margin-bottom:12px;">' + fmtR$(p.price) + (p.original_price ? ' <span style="font-size:13px;color:#8d7a45;text-decoration:line-through;font-weight:600;">' + fmtR$(p.original_price) + '</span>' : '') + '</div>'
             + '<div style="text-align:left;max-width:250px;margin:0 auto 16px;">' + bens.map(b => '<div style="font-size:12.5px;color:#e8ddc0;margin-bottom:6px;">✓ ' + esc(b) + '</div>').join('') + '</div>'
             + '<button id="gaPassGo" style="width:100%;background:linear-gradient(180deg,#fbbf24,#f59e0b);border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:800;color:#241a05;letter-spacing:.5px;cursor:pointer;box-shadow:0 10px 30px rgba(245,158,11,.35);font-family:inherit;">QUERO TUDO LIBERADO</button>'
