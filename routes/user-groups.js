@@ -300,12 +300,15 @@ function lockedFrom(session) {
     const lf = session.state && session.state.locked_from;
     return lf ? new Date(lf) : null;
 }
-// Mensagem mascarada: o app mostra o bloco borrado (nome visível, conteúdo não)
+// Mensagem mascarada: o conteúdo REAL nunca sai do servidor — vai uma frase
+// FAKE de tamanho parecido, que o app mostra BORRADA (parece conversa real).
+const FAKE_S = ['vem no privado', 'olha isso kkk', 'que delícia', 'to passada', 'manda mais aí', 'sério isso?'];
+const FAKE_M = ['gente olha o que ela mandou agora', 'vem cá que eu te mostro tudo kkk', 'quem viu isso ontem sabe kkkk', 'ela postou e apagou correndo'];
+const FAKE_L = ['não acredito que ela mandou isso aqui no grupo, olha a foto que vazou agora', 'quem tava na resenha ontem à noite sabe muito bem do que eu to falando kkkk'];
 function maskContent(content) {
     const len = (content || '').length;
-    if (len <= 8) return '▓▓▓ ▓▓▓▓';
-    if (len <= 20) return '▓▓▓▓ ▓▓▓ ▓▓▓▓▓';
-    return '▓▓▓▓ ▓▓▓ ▓▓▓▓▓▓ ▓▓ ▓▓▓▓ ▓▓▓';
+    const pool = len <= 14 ? FAKE_S : len <= 40 ? FAKE_M : FAKE_L;
+    return pool[Math.floor(Math.random() * pool.length)];
 }
 function publicMsg(m, personasById, masked) {
     const p = m.persona_id ? personasById[m.persona_id] : null;
@@ -321,6 +324,32 @@ function publicMsg(m, personasById, masked) {
         created_at: m.created_at,
         masked: masked === true,
     };
+}
+
+// Info do PASSE (banner dourado + linha 'OU LEVE TUDO'): tenta o 1º plano do
+// produto do Passe; sem plano com link, cai no preço do produto + checkout da
+// oferta. Retorna null se o produto do Passe não existir/não tiver link.
+async function groupPassInfo() {
+    const passId = await groupPassProductId();
+    if (!passId) return null;
+    try {
+        const { rows: pp } = await db.query(
+            `SELECT name, price, original_price, benefits, checkout_url
+             FROM product_plans WHERE product_id = $1 AND active = true
+             ORDER BY display_order, id LIMIT 1`, [passId]
+        );
+        if (pp.length && pp[0].checkout_url) return pp[0];
+        const { rows: pr } = await db.query(`SELECT name, price FROM products WHERE id = $1`, [passId]);
+        const { rows: off } = await db.query(
+            `SELECT checkout_url FROM product_offers
+             WHERE product_id = $1 AND is_active = true AND checkout_url IS NOT NULL
+             ORDER BY priority DESC, id LIMIT 1`, [passId]
+        );
+        if (pr.length && off.length) {
+            return { name: pr[0].name || 'Passe Vitalício', price: pr[0].price, original_price: null, benefits: null, checkout_url: off[0].checkout_url };
+        }
+    } catch (_) {}
+    return null;
 }
 
 // Popup do grupo: planos do produto (mensal/trimestral) + Passe Vitalício
@@ -339,12 +368,8 @@ async function groupUnlock(group) {
     try {
         const passId = await groupPassProductId();
         if (passId && passId !== group.product_id) {
-            const { rows: passPlans } = await db.query(
-                `SELECT name, price, original_price, badge, benefits, checkout_url, is_recommended
-                 FROM product_plans WHERE product_id = $1 AND active = true ORDER BY display_order, id LIMIT 1`,
-                [passId]
-            );
-            for (const p of passPlans) info.plans.push({ ...p, is_recommended: false, badge: p.badge || 'VITALÍCIO' });
+            const pass = await groupPassInfo();
+            if (pass) info.plans.push({ ...pass, is_recommended: false, badge: 'VITALÍCIO' });
         }
     } catch (_) {}
     return info;
@@ -429,12 +454,7 @@ router.get('/groups', optionalUser, async (req, res) => {
         try {
             const passId = await groupPassProductId();
             if (passId && !(await ownsProduct(ident.email, passId))) {
-                const { rows: pp } = await db.query(
-                    `SELECT name, price, original_price, benefits, checkout_url
-                     FROM product_plans WHERE product_id = $1 AND active = true
-                     ORDER BY display_order, id LIMIT 1`, [passId]
-                );
-                if (pp.length && pp[0].checkout_url) pass = pp[0];
+                pass = await groupPassInfo();
             }
         } catch (_) {}
         return res.json({ success: true, groups: out, pass });
