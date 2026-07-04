@@ -81,7 +81,7 @@ router.get('/:id', requireAdmin, async (req, res) => {
 router.post('/', requireAdmin, async (req, res) => {
     try {
         const { slug, name, description, featured_product_id, video_call_id, active,
-                entry_type, entry_product_id, entry_category_id, entry_chat_id,
+                entry_type, entry_product_id, entry_category_id, entry_chat_id, entry_group_id,
                 pressel_enabled, pressel_config, visible_chat_ids } = req.body || {};
         const cleanSlug = sanitizeSlug(slug || name);
         if (!cleanSlug) return res.status(400).json({ success: false, error: 'Slug inválido' });
@@ -92,10 +92,11 @@ router.post('/', requireAdmin, async (req, res) => {
 
         const fpId = featured_product_id ? parseInt(featured_product_id, 10) : null;
         const vcId = video_call_id ? parseInt(video_call_id, 10) : null;
-        const entryT = ['home', 'product', 'category', 'chat', 'chat_list', 'videos'].includes(entry_type) ? entry_type : 'home';
+        const entryT = ['home', 'product', 'category', 'chat', 'chat_list', 'videos', 'group', 'group_list'].includes(entry_type) ? entry_type : 'home';
         const entryP = entry_product_id ? parseInt(entry_product_id, 10) : null;
         const entryC = entry_category_id ? parseInt(entry_category_id, 10) : null;
         const entryCh = entry_chat_id ? parseInt(entry_chat_id, 10) : null;
+        const entryG = entry_group_id ? parseInt(entry_group_id, 10) : null;
 
         // conversas visíveis ANTES do e-mail (array de ids; vazio = sem restrição)
         const visIds = Array.isArray(visible_chat_ids)
@@ -104,9 +105,9 @@ router.post('/', requireAdmin, async (req, res) => {
 
         const { rows } = await db.query(`
             INSERT INTO funnels (slug, name, description, featured_product_id, video_call_id, active,
-                                 entry_type, entry_product_id, entry_category_id, entry_chat_id,
+                                 entry_type, entry_product_id, entry_category_id, entry_chat_id, entry_group_id,
                                  pressel_enabled, pressel_config, visible_chat_ids)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING *
         `, [
             cleanSlug,
             name.trim().slice(0, 120),
@@ -118,6 +119,7 @@ router.post('/', requireAdmin, async (req, res) => {
             entryP,
             entryC,
             entryCh,
+            entryG,
             pressel_enabled === true,
             pressel_config ? JSON.stringify(pressel_config) : null,
             visIds && visIds.length ? JSON.stringify(visIds) : null,
@@ -137,7 +139,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
     if (!id) return res.status(400).json({ success: false, error: 'ID inválido' });
     try {
         const { slug, name, description, featured_product_id, video_call_id, active,
-                entry_type, entry_product_id, entry_category_id, entry_chat_id,
+                entry_type, entry_product_id, entry_category_id, entry_chat_id, entry_group_id,
                 pressel_enabled, pressel_config, visible_chat_ids } = req.body || {};
         const updates = [];
         const values = [];
@@ -145,7 +147,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
 
         if (entry_type !== undefined) {
             updates.push(`entry_type = $${p++}`);
-            values.push(['home', 'product', 'category', 'chat', 'chat_list', 'videos'].includes(entry_type) ? entry_type : 'home');
+            values.push(['home', 'product', 'category', 'chat', 'chat_list', 'videos', 'group', 'group_list'].includes(entry_type) ? entry_type : 'home');
         }
         if (entry_product_id !== undefined) {
             updates.push(`entry_product_id = $${p++}`);
@@ -158,6 +160,10 @@ router.put('/:id', requireAdmin, async (req, res) => {
         if (entry_chat_id !== undefined) {
             updates.push(`entry_chat_id = $${p++}`);
             values.push(entry_chat_id ? parseInt(entry_chat_id, 10) : null);
+        }
+        if (entry_group_id !== undefined) {
+            updates.push(`entry_group_id = $${p++}`);
+            values.push(entry_group_id ? parseInt(entry_group_id, 10) : null);
         }
 
         if (slug !== undefined) {
