@@ -627,6 +627,16 @@ router.post('/groups/:id/send', optionalUser, async (req, res) => {
         if (access === 'locked') {
             return res.status(403).json({ success: false, error: 'vip_required', unlock: await groupUnlock(group) });
         }
+        // TRIAL: só UMA mensagem — na 2ª tentativa, popup de planos
+        if (access === 'trial') {
+            const { rows: [{ n: sent }] } = await db.query(
+                `SELECT COUNT(*)::int AS n FROM group_messages WHERE session_id = $1 AND sender = 'user'`,
+                [session.id]
+            );
+            if (sent >= 1) {
+                return res.status(403).json({ success: false, error: 'vip_required', unlock: await groupUnlock(group) });
+            }
+        }
         const { rows: [mine] } = await db.query(
             `INSERT INTO group_messages (session_id, sender, type, content) VALUES ($1, 'user', 'text', $2) RETURNING *`,
             [session.id, text]
@@ -658,7 +668,23 @@ router.get('/groups/:id/media', optionalUser, async (req, res) => {
         const group = gr[0];
         await hydrateGroupMedia(group);
         if (!group.is_free && !(await ownsGroup(ident.email, group))) {
-            return res.status(403).json({ success: false, error: 'vip_required', unlock: await groupUnlock(group) });
+            // galeria TRAVADA: mostra só as CONTAGENS (nada de mídia real) +
+            // popup de planos no botão — o acervo vira isca de venda
+            let vidCount = 0;
+            if (group.media_video_library_id && group.media_video_collection_id) {
+                try {
+                    const vids = await listCollectionVideos(group.media_video_library_id, group.media_video_collection_id);
+                    vidCount = (vids || []).length;
+                } catch (_) {}
+            }
+            const imgCount = Array.isArray(group.media_image_urls) ? group.media_image_urls.length : 0;
+            return res.json({
+                success: true,
+                locked: true,
+                photos: imgCount,
+                videos: vidCount,
+                unlock: await groupUnlock(group),
+            });
         }
         const images = Array.isArray(group.media_image_urls) ? group.media_image_urls : [];
         let videos = [];

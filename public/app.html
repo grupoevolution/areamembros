@@ -10805,7 +10805,9 @@ window.GroupApp = (function () {
         const { status, data } = await api('/api/user/groups/' + CUR.id + '/send', { text });
         if (status === 403 || (data && data.error === 'vip_required')) {
             if (data && data.unlock) CUR.unlock = data.unlock;
-            lockUI(true);
+            // trial: já usou a mensagem única (ou travou de vez) → popup de planos.
+            // O visual só trava quando o TEMPO acaba (heartbeat/poll cuidam disso).
+            if (CUR.access === 'locked') lockUI(true); else openPopup();
             return;
         }
         if (data.success) {
@@ -10830,10 +10832,18 @@ window.GroupApp = (function () {
             return;
         }
         if (!data.success) return;
+        if (data.locked) {
+            if (data.unlock) CUR.unlock = data.unlock;
+            renderLockedMedia(data.photos || 0, data.videos || 0);
+            return;
+        }
         MEDIA = [];
         for (const u of (data.images || [])) MEDIA.push({ kind: 'img', url: u });
         for (const v of (data.videos || [])) MEDIA.push({ kind: 'vid', embed: v.embed_url, thumb: v.thumb_url || null });
         const grid = document.getElementById('gaMediaGrid');
+        grid.style.position = '';
+        const mt = document.getElementById('gaMediaOv').querySelector('.top .t');
+        if (mt) mt.innerHTML = 'Mídias do grupo' + (MEDIA.length ? ' <span style="font-weight:400;color:rgba(255,255,255,.5);font-size:12px;">· ' + MEDIA.length + ' itens</span>' : '');
         grid.innerHTML = MEDIA.length
             ? MEDIA.map((m, i) =>
                 '<div class="it" data-i="' + i + '" style="' + (m.kind === 'img'
@@ -10844,6 +10854,33 @@ window.GroupApp = (function () {
         grid.querySelectorAll('.it').forEach(it => it.addEventListener('click', () => openFull(parseInt(it.dataset.i, 10))));
         document.getElementById('gaMediaOv').classList.add('show');
     }
+    // Galeria TRAVADA (não-membro): tiles borrados fake + cadeado + contagens
+    // + botão que abre o popup de planos. Nenhuma mídia real é carregada.
+    function renderLockedMedia(photos, videos) {
+        const total = (photos || 0) + (videos || 0);
+        const ov = document.getElementById('gaMediaOv');
+        const grid = document.getElementById('gaMediaGrid');
+        const title = ov.querySelector('.top .t');
+        if (title) title.innerHTML = 'Mídias do grupo' + (total ? ' <span style="font-weight:400;color:rgba(255,255,255,.5);font-size:12px;">· ' + total + ' itens</span>' : '');
+        const HUES = [350, 25, 140, 200, 270, 45, 90, 320, 180];
+        let tiles = '';
+        for (let i = 0; i < 18; i++) {
+            const h = HUES[i % HUES.length];
+            tiles += '<div class="it" style="background:linear-gradient(135deg, hsl(' + h + ',28%,14%), hsl(' + ((h + 40) % 360) + ',24%,9%)); filter: blur(6px); pointer-events:none;"></div>';
+        }
+        grid.innerHTML = tiles
+            + '<div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:30px; text-align:center; background:rgba(13,10,12,.45);">'
+            + '<div style="font-size:38px;">🔒</div>'
+            + '<div style="font-size:19px; font-weight:800; color:#fff;">' + (photos || 0) + ' fotos · ' + (videos || 0) + ' vídeos</div>'
+            + '<div style="font-size:13px; color:rgba(255,255,255,.6); line-height:1.5; max-width:260px;">Todo o acervo do grupo fica guardado aqui. Desbloqueie pra ver tudo.</div>'
+            + '<button id="gaMediaUnlock" style="margin-top:6px; background:linear-gradient(90deg,#ff1f3d,#e50914); border:none; border-radius:14px; padding:14px 26px; font-size:14.5px; font-weight:800; color:#fff; cursor:pointer; font-family:inherit; box-shadow:0 8px 26px rgba(229,9,20,.4);">Desbloquear grupo</button>'
+            + '</div>';
+        grid.style.position = 'relative';
+        const b = grid.querySelector('#gaMediaUnlock');
+        if (b) b.addEventListener('click', () => { try { window.TRACK && TRACK.event('group_paywall_open', { group_id: CUR && CUR.id, ctx: 'media' }); } catch (_) {} openPopup(); });
+        ov.classList.add('show');
+    }
+
     function renderFull() {
         const m = MEDIA[MIDX];
         const fb = document.getElementById('gaMediaFullBody');
