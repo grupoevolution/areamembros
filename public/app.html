@@ -8158,7 +8158,7 @@ body.is-slowconn .prod-cta-fixed {
 =================================== -->
 <style>
 /* Chat integrado — tema claro aprovado, escopado nos ids #chat / #chatconv */
-#chat, #chatconv { background: #ECE5DD; }
+#chat, #chatconv, #groupconv { background: #ECE5DD; }
 #chat .ca-header { padding: calc(14px + env(safe-area-inset-top)) 16px 10px; background: #f7f5f3; border-bottom: 1px solid #e6e0da; display: flex; align-items: center; justify-content: space-between; }
 #chat .ca-header h1 { font-size: 21px; font-weight: 700; color: #111; margin: 0; }
 /* Selo do plano no topo (NÃO clicável): FREE quase invisível; VIP dourado */
@@ -8244,8 +8244,8 @@ body.is-slowconn .prod-cta-fixed {
 .ca-row .tm { font-size: 10.5px; color: #8a8480; align-self: flex-start; margin-top: 4px; }
 .ca-empty { padding: 60px 24px; text-align: center; color: #8a8480; font-size: 13.5px; line-height: 1.6; background: #fff; }
 /* conversa */
-#chatconv { display: none; }
-#chatconv.active { display: flex; flex-direction: column; }
+#chatconv, #groupconv { display: none; }
+#chatconv.active, #groupconv.active { display: flex; flex-direction: column; }
 .ca-ch-header { display: flex; align-items: center; gap: 10px; padding: calc(10px + env(safe-area-inset-top)) 12px 10px; background: #f7f5f3; border-bottom: 1px solid #e0dad4; }
 .ca-ch-header .back { font-size: 22px; color: #111; cursor: pointer; padding: 4px 6px 4px 0; border: none; background: none; line-height: 1; }
 .ca-ch-header .av { width: 38px; height: 38px; border-radius: 50%; background: #c4a09a center/cover no-repeat; position: relative; flex-shrink: 0; }
@@ -8372,8 +8372,17 @@ body.is-slowconn .prod-cta-fixed {
 .ga-media-ov .full { position: absolute; inset: 0; background: #000; z-index: 2; display: none; flex-direction: column; }
 .ga-media-ov .full.show { display: flex; }
 .ga-media-ov .full .fbody { flex: 1; display: flex; align-items: center; justify-content: center; }
-.ga-media-ov .full img, .ga-media-ov .full iframe { max-width: 100%; max-height: 100%; border: none; }
-.ga-media-ov .full iframe { width: 100%; aspect-ratio: 16/9; }
+.ga-media-ov .full img { max-width: 100%; max-height: 100%; }
+.ga-media-ov .full iframe { width: 100%; height: 100%; border: none; }
+.ga-media-ov .fnav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.14); color: #fff; font-size: 22px; line-height: 34px; text-align: center; cursor: pointer; user-select: none; }
+.ga-media-ov .fnav.prev { left: 10px; } .ga-media-ov .fnav.next { right: 10px; }
+/* banner dourado do PASSE VIP no topo da lista de grupos */
+.ga-pass { margin: 6px 16px 12px; background: linear-gradient(135deg, #2a1608, #180c05); border: 1px solid rgba(245,197,66,.55); border-radius: 16px; padding: 13px 16px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.ga-pass .mid2 { flex: 1; min-width: 0; }
+.ga-pass .e { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: #f5c542; }
+.ga-pass .t { font-size: 19px; font-weight: 800; color: #fff; margin: 2px 0 1px; }
+.ga-pass .s { font-size: 12px; color: #cdbd8a; }
+.ga-pass .arr { color: #f5c542; font-size: 20px; font-weight: 700; }
 </style>
 
 <div class="screen" id="chat">
@@ -8432,7 +8441,7 @@ body.is-slowconn .prod-cta-fixed {
 <div class="ga-media-ov" id="gaMediaOv">
     <div class="top"><span class="t">Mídias do grupo</span><button onclick="GroupApp.closeMedia()" aria-label="Fechar">×</button></div>
     <div class="grid" id="gaMediaGrid"></div>
-    <div class="full" id="gaMediaFull"><div class="top" style="justify-content:flex-end;"><button onclick="GroupApp.closeFull()" aria-label="Voltar">×</button></div><div class="fbody" id="gaMediaFullBody"></div></div>
+    <div class="full" id="gaMediaFull"><div class="top" style="justify-content:flex-end;"><button onclick="GroupApp.closeFull()" aria-label="Voltar">×</button></div><div class="fbody" id="gaMediaFullBody"></div><div class="fnav prev" onclick="GroupApp.fullNav(-1)">‹</div><div class="fnav next" onclick="GroupApp.fullNav(1)">›</div></div>
 </div>
 
 <!-- SCREEN: conversa aberta -->
@@ -10430,7 +10439,16 @@ window.GroupApp = (function () {
             const tabs = document.getElementById('caTabs');
             if (tabs) tabs.style.display = GROUPS_ON ? 'flex' : 'none';
             if (!groups.length) { scroll.innerHTML = '<div class="ca-empty">Nenhum grupo disponível ainda.</div>'; return; }
-            let html = '<div class="ca-sec-block">';
+            let html = '';
+            // banner dourado do PASSE VIP (oferta exclusiva daqui)
+            PASS = data.pass || null;
+            if (PASS) {
+                html += '<div class="ga-pass" onclick="GroupApp.openPass()">'
+                    + '<div class="mid2"><div class="e">✨ PASSE VIP</div><div class="t">Todos os grupos</div>'
+                    + '<div class="s">Desbloqueie tudo por um preço só</div></div>'
+                    + '<span class="arr">›</span></div>';
+            }
+            html += '<div class="ca-sec-block">';
             for (const g of groups) {
                 const bg = g.avatar_url ? ' style="background-image:url(\'' + esc(g.avatar_url) + '\')"' : '';
                 const icon = g.avatar_url ? '' : '<svg width="26" height="26" fill="none" stroke="#8a857d" stroke-width="2" viewBox="0 0 24 24" style="position:absolute;inset:0;margin:auto;"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>';
@@ -10470,6 +10488,7 @@ window.GroupApp = (function () {
     }
 
     // ── GRUPO ABERTO ─────────────────────────────────────────────────────────
+    let PASS = null; // plano do Passe Vitalício (banner dourado da lista)
     let CUR = null; // { id, group, access, unlock, lastId, pollTimer, hbTimer, popupShown }
     function stopTimers() {
         if (CUR && CUR.pollTimer) clearInterval(CUR.pollTimer);
@@ -10531,17 +10550,100 @@ window.GroupApp = (function () {
             return ' · R$ ' + Number(p.price).toFixed(2).replace('.', ',') + '/mês';
         } catch (_) { return ''; }
     }
+    // Popup de planos SELECIONÁVEIS (referência): radios, trimestral
+    // pré-marcado como MAIS ESCOLHIDO, seção "OU LEVE TUDO" com o Passe e
+    // um único botão vermelho DESBLOQUEAR AGORA.
+    const fmtR$ = (v) => 'R$ ' + Number(v).toFixed(2).replace('.', ',');
     function openPopup() {
-        if (!CUR || !CUR.unlock || !window.MVPaywall) return;
+        if (!CUR || !CUR.unlock) return;
+        const all = Array.isArray(CUR.unlock.plans) ? CUR.unlock.plans.filter(p => p.checkout_url) : [];
+        if (!all.length) { try { console.warn('[grupo] sem planos com checkout — configure o produto do grupo'); } catch (_) {} return; }
+        const plans = all.filter(p => String(p.badge || '').toUpperCase() !== 'VITALÍCIO');
+        const pass = all.find(p => String(p.badge || '').toUpperCase() === 'VITALÍCIO') || null;
         try { window.TRACK && TRACK.event('group_paywall_open', { group_id: CUR.id }); } catch (_) {}
-        MVPaywall.openModal(CUR.unlock, {
-            icon: 'lock',
-            eyebrow: 'ACESSO EXCLUSIVO',
-            title: 'Grupo ' + ((CUR.group && CUR.group.name) || ''),
-            subtitle: 'Entre agora e participe sem limite — conversas, mídias e tudo que rola lá dentro.',
-            ctaText: 'Entrar no grupo',
-            track: { type: 'group_paywall_click', meta: { group_id: CUR.id } },
+        let ov = document.getElementById('gaPlansOv');
+        if (!ov) { ov = document.createElement('div'); ov.id = 'gaPlansOv'; document.body.appendChild(ov); }
+        ov.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(6,4,5,.94);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;';
+        const g = CUR.group || {};
+        const sub = CUR.access === 'locked'
+            ? 'Sua prévia acabou 😏 — o grupo continua sem você. Desbloqueie e participe de tudo.'
+            : 'Entre agora e participe sem limite — conversas, mídias e tudo que rola lá dentro.';
+        const subFor = (p, i) => {
+            if (p.benefits) return esc(String(p.benefits).split('\n')[0].slice(0, 44));
+            return p.is_recommended ? 'melhor custo-benefício' : (i === 0 ? 'renova todo mês' : '');
+        };
+        const row = (p, i, sel) =>
+            '<div data-plan="' + i + '" style="position:relative;display:flex;align-items:center;gap:11px;border:1.5px solid ' + (sel ? '#f5c542' : 'rgba(255,255,255,.14)') + ';background:' + (sel ? 'rgba(245,197,66,.07)' : 'rgba(255,255,255,.03)') + ';border-radius:14px;padding:13px 14px;margin-bottom:9px;cursor:pointer;">'
+            + (p.is_recommended ? '<span style="position:absolute;top:-9px;right:12px;background:#f5c542;color:#241a05;font-size:9.5px;font-weight:800;letter-spacing:.5px;padding:3px 9px;border-radius:999px;">MAIS ESCOLHIDO</span>' : '')
+            + '<span style="width:19px;height:19px;border-radius:50%;border:2px solid ' + (sel ? '#f5c542' : '#5b555f') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + (sel ? '<span style="width:9px;height:9px;border-radius:50%;background:#f5c542;"></span>' : '') + '</span>'
+            + '<span style="flex:1;min-width:0;"><span style="display:block;font-size:15px;font-weight:800;color:#fff;">' + esc(p.name || 'Plano') + '</span>'
+            + '<span style="display:block;font-size:11.5px;color:#a89fae;">' + subFor(p, i) + '</span></span>'
+            + '<span style="font-size:18px;font-weight:800;color:#fff;">' + fmtR$(p.price) + '</span></div>';
+        const passRow = (sel) => !pass ? '' :
+            '<div style="text-align:center;font-size:10.5px;letter-spacing:2px;color:#8d8792;margin:12px 0 9px;">— OU LEVE TUDO —</div>'
+            + '<div data-plan="pass" style="display:flex;align-items:center;gap:11px;border:1.5px solid ' + (sel ? '#f5c542' : 'rgba(245,197,66,.45)') + ';background:rgba(245,197,66,.06);border-radius:14px;padding:13px 14px;cursor:pointer;">'
+            + '<span style="width:19px;height:19px;border-radius:50%;border:2px solid ' + (sel ? '#f5c542' : '#8d7a45') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + (sel ? '<span style="width:9px;height:9px;border-radius:50%;background:#f5c542;"></span>' : '') + '</span>'
+            + '<span style="flex:1;min-width:0;"><span style="display:block;font-size:10px;font-weight:800;letter-spacing:1.5px;color:#f5c542;">✨ PASSE VIP</span>'
+            + '<span style="display:block;font-size:14.5px;font-weight:800;color:#fff;">TODOS OS GRUPOS</span>'
+            + '<span style="display:block;font-size:11px;color:#cdbd8a;">' + esc((pass.benefits || 'Atuais e futuros · sem mensalidade').split('\n')[0].slice(0, 46)) + '</span></span>'
+            + '<span style="font-size:18px;font-weight:800;color:#f5c542;">' + fmtR$(pass.price) + '</span></div>';
+        let sel = plans.findIndex(p => p.is_recommended === true);
+        if (sel < 0) sel = plans.length > 1 ? 1 : 0;
+        let selPass = false;
+        function paint() {
+            ov.innerHTML = '<div style="background:#141013;border:1px solid rgba(255,255,255,.09);border-radius:20px;max-width:340px;width:100%;padding:20px 16px 14px;margin:auto;">'
+                + '<div style="width:46px;height:46px;border-radius:14px;background:#25a55f;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;"><svg width="22" height="22" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></div>'
+                + '<div style="text-align:center;font-size:18px;font-weight:800;color:#fff;margin-bottom:5px;">' + esc(g.name || 'Grupo VIP') + '</div>'
+                + '<div style="text-align:center;font-size:12.5px;color:#a89fae;line-height:1.5;max-width:280px;margin:0 auto 15px;">' + sub + '</div>'
+                + plans.map((p, i) => row(p, i, !selPass && sel === i)).join('')
+                + passRow(selPass)
+                + '<button id="gaPlansGo" style="width:100%;background:linear-gradient(90deg,#ff1f3d,#e50914);border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:800;color:#fff;letter-spacing:.5px;margin-top:14px;cursor:pointer;box-shadow:0 8px 26px rgba(229,9,20,.4);font-family:inherit;">DESBLOQUEAR AGORA</button>'
+                + '<div style="text-align:center;font-size:10.5px;color:#8d8792;margin-top:10px;">🔒 Pagamento seguro · Cancele quando quiser</div>'
+                + '<button id="gaPlansNo" style="display:block;margin:8px auto 0;background:none;border:none;color:#8d8792;font-size:13px;text-decoration:underline;cursor:pointer;font-family:inherit;padding:7px;">agora não</button>'
+                + '</div>';
+            ov.querySelectorAll('[data-plan]').forEach(el => el.addEventListener('click', () => {
+                if (el.dataset.plan === 'pass') { selPass = true; } else { selPass = false; sel = parseInt(el.dataset.plan, 10); }
+                paint();
+            }));
+            ov.querySelector('#gaPlansGo').addEventListener('click', () => {
+                const chosen = selPass ? pass : plans[sel];
+                if (!chosen || !chosen.checkout_url) return;
+                try { window.TRACK && TRACK.event('group_paywall_click', { group_id: CUR && CUR.id, plan: chosen.name, pass: selPass }); } catch (_) {}
+                try { window.open(chosen.checkout_url, '_blank', 'noopener'); } catch (_) { window.location.href = chosen.checkout_url; }
+            });
+            ov.querySelector('#gaPlansNo').addEventListener('click', () => { ov.style.display = 'none'; });
+            ov.onclick = (e) => { if (e.target === ov) ov.style.display = 'none'; };
+        }
+        paint();
+        ov.style.display = 'flex';
+    }
+
+    // Popup EXCLUSIVO do Passe (banner dourado da lista)
+    function openPass() {
+        const p = PASS;
+        if (!p || !p.checkout_url) return;
+        try { window.TRACK && TRACK.event('group_paywall_open', { ctx: 'pass_banner' }); } catch (_) {}
+        let ov = document.getElementById('gaPlansOv');
+        if (!ov) { ov = document.createElement('div'); ov.id = 'gaPlansOv'; document.body.appendChild(ov); }
+        ov.style.cssText = 'position:fixed;inset:0;z-index:99998;background:rgba(6,4,5,.94);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;';
+        const bens = String(p.benefits || 'Todos os grupos, atuais e futuros\nTodas as mídias liberadas\nSem mensalidade — pra sempre').split('\n').filter(Boolean).slice(0, 4);
+        ov.innerHTML = '<div style="background:linear-gradient(160deg,#241304,#140b03);border:1px solid rgba(245,197,66,.55);border-radius:20px;max-width:330px;width:100%;padding:24px 18px 14px;margin:auto;text-align:center;">'
+            + '<div style="font-size:10px;font-weight:800;letter-spacing:3px;color:#f5c542;">✨ PASSE VIP</div>'
+            + '<div style="font-size:23px;font-weight:800;color:#fff;margin:6px 0 4px;">TODOS OS GRUPOS</div>'
+            + '<div style="font-size:12.5px;color:#cdbd8a;margin-bottom:14px;">Desbloqueie tudo por um preço só</div>'
+            + '<div style="font-size:32px;font-weight:800;color:#f5c542;margin-bottom:12px;">' + fmtR$(p.price) + (p.original_price ? ' <span style="font-size:13px;color:#8d7a45;text-decoration:line-through;font-weight:600;">' + fmtR$(p.original_price) + '</span>' : '') + '</div>'
+            + '<div style="text-align:left;max-width:250px;margin:0 auto 16px;">' + bens.map(b => '<div style="font-size:12.5px;color:#e8ddc0;margin-bottom:6px;">✓ ' + esc(b) + '</div>').join('') + '</div>'
+            + '<button id="gaPassGo" style="width:100%;background:linear-gradient(180deg,#fbbf24,#f59e0b);border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:800;color:#241a05;letter-spacing:.5px;cursor:pointer;box-shadow:0 10px 30px rgba(245,158,11,.35);font-family:inherit;">QUERO TUDO LIBERADO</button>'
+            + '<div style="font-size:10.5px;color:#8d7a45;margin-top:10px;">🔒 Pagamento único e seguro</div>'
+            + '<button id="gaPassNo" style="display:block;margin:8px auto 0;background:none;border:none;color:#8d8792;font-size:13px;text-decoration:underline;cursor:pointer;font-family:inherit;padding:7px;">agora não</button>'
+            + '</div>';
+        ov.querySelector('#gaPassGo').addEventListener('click', () => {
+            try { window.TRACK && TRACK.event('group_paywall_click', { ctx: 'pass_banner', pass: true }); } catch (_) {}
+            try { window.open(p.checkout_url, '_blank', 'noopener'); } catch (_) { window.location.href = p.checkout_url; }
         });
+        ov.querySelector('#gaPassNo').addEventListener('click', () => { ov.style.display = 'none'; });
+        ov.onclick = (e) => { if (e.target === ov) ov.style.display = 'none'; };
+        ov.style.display = 'flex';
     }
     function ctaClick() {
         if (!CUR) return;
@@ -10715,6 +10817,9 @@ window.GroupApp = (function () {
     }
 
     // ── MÍDIAS DO GRUPO ──────────────────────────────────────────────────────
+    // Galeria de verdade: grade de fotos + vídeos (com capa) e visualizador em
+    // TELA CHEIA — toca direto, arrasta pro lado pra ir pro próximo (misturado).
+    let MEDIA = [], MIDX = 0;
     async function openMedia() {
         if (!CUR) return;
         const r = await fetch('/api/user/groups/' + CUR.id + '/media?visitor_id=' + VID, { credentials: 'include' });
@@ -10725,22 +10830,54 @@ window.GroupApp = (function () {
             return;
         }
         if (!data.success) return;
+        MEDIA = [];
+        for (const u of (data.images || [])) MEDIA.push({ kind: 'img', url: u });
+        for (const v of (data.videos || [])) MEDIA.push({ kind: 'vid', embed: v.embed_url, thumb: v.thumb_url || null });
         const grid = document.getElementById('gaMediaGrid');
-        let html = '';
-        for (const u of (data.images || [])) {
-            html += '<div class="it" style="background-image:url(\'' + esc(u) + '\')" data-img="' + esc(u) + '"></div>';
-        }
-        for (const v of (data.videos || [])) {
-            html += '<div class="it" style="' + (v.thumb_url ? "background-image:url('" + esc(v.thumb_url) + "');" : '') + '" data-embed="' + esc(v.embed_url) + '"><span class="play">▶</span></div>';
-        }
-        grid.innerHTML = html || '<div style="grid-column:1/-1;padding:40px;text-align:center;color:rgba(255,255,255,.5);font-size:13px;">Nenhuma mídia ainda.</div>';
-        grid.querySelectorAll('.it').forEach(it => it.addEventListener('click', () => {
-            const fb = document.getElementById('gaMediaFullBody');
-            if (it.dataset.img) fb.innerHTML = '<img src="' + esc(it.dataset.img) + '" alt="">';
-            else if (it.dataset.embed) fb.innerHTML = '<iframe src="' + esc(it.dataset.embed) + '" allow="autoplay; fullscreen" allowfullscreen></iframe>';
-            document.getElementById('gaMediaFull').classList.add('show');
-        }));
+        grid.innerHTML = MEDIA.length
+            ? MEDIA.map((m, i) =>
+                '<div class="it" data-i="' + i + '" style="' + (m.kind === 'img'
+                    ? "background-image:url('" + esc(m.url) + "');"
+                    : (m.thumb ? "background-image:url('" + esc(m.thumb) + "');" : 'background:#241f26;'))
+                + '">' + (m.kind === 'vid' ? '<span class="play">▶</span>' : '') + '</div>').join('')
+            : '<div style="grid-column:1/-1;padding:40px;text-align:center;color:rgba(255,255,255,.5);font-size:13px;">Nenhuma mídia ainda.</div>';
+        grid.querySelectorAll('.it').forEach(it => it.addEventListener('click', () => openFull(parseInt(it.dataset.i, 10))));
         document.getElementById('gaMediaOv').classList.add('show');
+    }
+    function renderFull() {
+        const m = MEDIA[MIDX];
+        const fb = document.getElementById('gaMediaFullBody');
+        if (!m || !fb) return;
+        if (m.kind === 'img') {
+            fb.innerHTML = '<img src="' + esc(m.url) + '" alt="">';
+        } else {
+            // vídeo já abre TOCANDO em tela cheia
+            const url = m.embed + (m.embed.indexOf('?') >= 0 ? '&' : '?') + 'autoplay=true';
+            fb.innerHTML = '<iframe src="' + esc(url) + '" allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>';
+        }
+    }
+    function openFull(i) {
+        MIDX = Math.max(0, Math.min(MEDIA.length - 1, i | 0));
+        renderFull();
+        const f = document.getElementById('gaMediaFull');
+        f.classList.add('show');
+        // arrastar pro lado = próxima/anterior (fotos e vídeos misturados)
+        if (!f._swipe) {
+            f._swipe = true;
+            f.addEventListener('touchstart', (e) => { const t = e.touches[0]; f._sx = t.clientX; f._sy = t.clientY; }, { passive: true });
+            f.addEventListener('touchend', (e) => {
+                if (f._sx == null) return;
+                const t = e.changedTouches[0];
+                const dx = t.clientX - f._sx, dy = t.clientY - f._sy;
+                f._sx = null;
+                if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.4) fullNav(dx < 0 ? 1 : -1);
+            }, { passive: true });
+        }
+    }
+    function fullNav(dir) {
+        if (!MEDIA.length) return;
+        MIDX = (MIDX + dir + MEDIA.length) % MEDIA.length;
+        renderFull();
     }
     function closeMedia() {
         document.getElementById('gaMediaOv').classList.remove('show');
@@ -10752,7 +10889,7 @@ window.GroupApp = (function () {
         document.getElementById('gaMediaFullBody').innerHTML = '';
     }
 
-    return { tab, loadList, checkTabs, open, back, send, ctaClick, openMedia, closeMedia, closeFull };
+    return { tab, loadList, checkTabs, open, back, send, ctaClick, openMedia, closeMedia, closeFull, fullNav, openPass };
 })();
 
 // Deep-link do push de mensagem: /?chat=<id> abre a conversa direto
@@ -18051,7 +18188,7 @@ document.addEventListener('keydown', function(e) {
         if (t.closest('#videoCallOverlay')) return;
         // Não intercepta o CHAT (lista/conversa) nem os popups do gate/chamada:
         // a conversa rola livre e o e-mail é pedido só ao tocar pra ver a mídia.
-        if (t.closest('#chat') || t.closest('#chatconv') || t.closest('#caGate') || t.closest('#caCallScr') || t.closest('#caCallPop') || t.closest('#caViewer') || t.closest('#caPhotoViewer') || t.closest('#caVipToast')) return;
+        if (t.closest('#chat') || t.closest('#chatconv') || t.closest('#groupconv') || t.closest('#gaMediaOv') || t.closest('#gaPlansOv') || t.closest('#caGate') || t.closest('#caCallScr') || t.closest('#caCallPop') || t.closest('#caViewer') || t.closest('#caPhotoViewer') || t.closest('#caVipToast')) return;
         // Aba de Vídeos (feed): o e-mail é pedido pelo próprio fluxo do feed
         // (toca no áudio → 3-4s → popup; ou ao tentar rolar pro 2º vídeo).
         if (t.closest('#tiktok')) return;

@@ -25,7 +25,7 @@ const router = express.Router();
 const db = require('../db');
 const { logger } = require('../lib/logger');
 const { optionalUser } = require('../lib/user-auth');
-const { listCollectionVideos, bunnyEmbedUrl, bunnyThumbUrl } = require('../lib/bunny');
+const { listCollectionVideos, bunnyEmbedUrl, bunnyThumbUrl, listStorageFolder } = require('../lib/bunny');
 
 // ── Identidade (mesmo padrão do chat) ────────────────────────────────────────
 function getIdentity(req) {
@@ -113,6 +113,27 @@ function periodNow() {
 const rand = (n) => Math.floor(Math.random() * n);
 const pick = (arr) => (arr && arr.length ? arr[rand(arr.length)] : null);
 
+// Junta as fotos configuradas LINK A LINK com as da PASTA da Bunny Storage
+// (galeria + apresentações). Muta o objeto group — chamar após carregar.
+async function hydrateGroupMedia(group) {
+    try {
+        const merge = (manual, extra) => {
+            const a = Array.isArray(manual) ? manual : [];
+            return extra.length ? a.concat(extra.filter(u => a.indexOf(u) < 0)) : a;
+        };
+        if (group.media_image_folder) {
+            group.media_image_urls = merge(group.media_image_urls, await listStorageFolder(group.media_image_folder));
+        }
+        if (group.presentation_male_folder) {
+            group.presentation_male_urls = merge(group.presentation_male_urls, await listStorageFolder(group.presentation_male_folder));
+        }
+        if (group.presentation_female_folder) {
+            group.presentation_female_urls = merge(group.presentation_female_urls, await listStorageFolder(group.presentation_female_folder));
+        }
+    } catch (_) {}
+    return group;
+}
+
 // ── Cenas ────────────────────────────────────────────────────────────────────
 // Sorteio ponderado no pool ambiente (respeita o período; 'reacao' fica fora —
 // só dispara quando o lead manda mensagem).
@@ -128,13 +149,29 @@ async function pickScene(groupId, opts) {
         params
     );
     if (!rows.length) return null;
-    const total = rows.reduce((s, r) => s + Math.max(1, r.weight | 0), 0);
+    // Apresentações: respeita a proporção de gênero do grupo (female_ratio %).
+    // O gênero da cena = g do 1º slot com t 'presentation' (ou do 1º slot).
+    let pool = rows;
+    if (opts.category === 'apresentacao' && opts.femaleRatio != null && rows.length > 1) {
+        const sceneGender = (sc) => {
+            const msgs = Array.isArray(sc.messages) ? sc.messages : [];
+            const pres = msgs.find(m => m.t === 'presentation' && (m.g === 'f' || m.g === 'm'));
+            if (pres) return pres.g;
+            const first = msgs.find(m => m.g === 'f' || m.g === 'm');
+            return first ? first.g : null;
+        };
+        const wantF = Math.random() * 100 < Math.max(0, Math.min(100, opts.femaleRatio));
+        const filtered = rows.filter(r => sceneGender(r) === (wantF ? 'f' : 'm'));
+        if (filtered.length) pool = filtered;
+    }
+    const rowsPool = pool;
+    const total = rowsPool.reduce((s, r) => s + Math.max(1, r.weight | 0), 0);
     let roll = Math.random() * total;
-    for (const r of rows) {
+    for (const r of rowsPool) {
         roll -= Math.max(1, r.weight | 0);
         if (roll <= 0) return r;
     }
-    return rows[rows.length - 1];
+    return rowsPool[rowsPool.length - 1];
 }
 
 // Materializa uma cena: sorteia personas pros slots (respeitando gênero) e
@@ -215,7 +252,9 @@ async function backfill(session, group, personas, targetMsgs) {
     const picked = [];
     while (count < targetMsgs && guard-- > 0) {
         const cat = plan.shift() || null;
-        const scene = await pickScene(group.id, cat ? { category: cat, period: per } : { period: per });
+        const scene = await pickScene(group.id, cat
+            ? { category: cat, period: per, femaleRatio: group.female_ratio }
+            : { period: per });
         if (!scene) { if (cat) continue; break; }
         picked.push(scene);
         count += (Array.isArray(scene.messages) ? scene.messages.length : 0);
@@ -385,7 +424,20 @@ router.get('/groups', optionalUser, async (req, res) => {
             });
         }
         out.sort((a, b) => (b.pinned - a.pinned));
-        return res.json({ success: true, groups: out });
+        // Banner do PASSE VIP (topo da lista): só pra quem ainda não tem
+        let pass = null;
+        try {
+            const passId = await groupPassProductId();
+            if (passId && !(await ownsProduct(ident.email, passId))) {
+                const { rows: pp } = await db.query(
+                    `SELECT name, price, original_price, benefits, checkout_url
+                     FROM product_plans WHERE product_id = $1 AND active = true
+                     ORDER BY display_order, id LIMIT 1`, [passId]
+                );
+                if (pp.length && pp[0].checkout_url) pass = pp[0];
+            }
+        } catch (_) {}
+        return res.json({ success: true, groups: out, pass });
     } catch (err) {
         logger.error('Erro listando grupos:', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
@@ -402,6 +454,7 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
         const { rows: gr } = await db.query(`SELECT * FROM groups WHERE id = $1 AND active = true`, [groupId]);
         if (!gr.length) return res.status(404).json({ success: false, error: 'Grupo não encontrado' });
         const group = gr[0];
+        await hydrateGroupMedia(group);
         const session = await findOrCreateSession(groupId, ident, true);
         await cleanupRetention(session, group);
         const personas = await loadPersonas(groupId);
@@ -474,6 +527,7 @@ router.get('/groups/:id/poll', optionalUser, async (req, res) => {
         const { rows: gr } = await db.query(`SELECT * FROM groups WHERE id = $1 AND active = true`, [groupId]);
         if (!gr.length) return res.json({ success: false });
         const group = gr[0];
+        await hydrateGroupMedia(group);
         const session = await findOrCreateSession(groupId, ident, false);
         if (!session) return res.json({ success: true, messages: [] });
         const personas = await loadPersonas(groupId);
@@ -546,6 +600,7 @@ router.post('/groups/:id/send', optionalUser, async (req, res) => {
         const { rows: gr } = await db.query(`SELECT * FROM groups WHERE id = $1 AND active = true`, [groupId]);
         if (!gr.length) return res.status(404).json({ success: false, error: 'Grupo não encontrado' });
         const group = gr[0];
+        await hydrateGroupMedia(group);
         if (group.is_free) return res.status(403).json({ success: false, error: 'channel_readonly' });
         const session = await findOrCreateSession(groupId, ident, true);
         const access = await accessState(ident, group, session);
@@ -581,6 +636,7 @@ router.get('/groups/:id/media', optionalUser, async (req, res) => {
         const { rows: gr } = await db.query(`SELECT * FROM groups WHERE id = $1 AND active = true`, [groupId]);
         if (!gr.length) return res.status(404).json({ success: false, error: 'Grupo não encontrado' });
         const group = gr[0];
+        await hydrateGroupMedia(group);
         if (!group.is_free && !(await ownsGroup(ident.email, group))) {
             return res.status(403).json({ success: false, error: 'vip_required', unlock: await groupUnlock(group) });
         }
@@ -592,7 +648,8 @@ router.get('/groups/:id/media', optionalUser, async (req, res) => {
                 videos = (vids || []).map(v => ({
                     title: v.title || null,
                     embed_url: bunnyEmbedUrl(group.media_video_library_id, v.guid),
-                    thumb_url: bunnyThumbUrl ? bunnyThumbUrl(group.media_video_library_id, v.guid) : null,
+                    // capa: thumbnailFileName vem da API do Bunny (fallback padrão)
+                    thumb_url: bunnyThumbUrl(v.guid, v.thumbnailFileName || 'thumbnail.jpg'),
                 }));
             } catch (_) {}
         }
