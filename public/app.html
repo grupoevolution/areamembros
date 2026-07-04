@@ -11034,6 +11034,38 @@ window.GroupApp = (function () {
     } catch(_) {}
 })();
 
+// Deep-links de DESTINO (push/sequência/rotina com app fechado):
+//   ?group=ID          → abre o grupo direto
+//   ?go=chats          → aba Conversas
+//   ?go=groups         → aba Grupos
+//   ?go=videos         → aba Vídeos (feed)
+// Espera o app montar (até ~16s), navega e limpa a URL.
+(function handleDestDeepLink() {
+    try {
+        const qs = window.location.search;
+        const mg = qs.match(/[?&]group=(\d+)/);
+        const go = (qs.match(/[?&]go=(chats|groups|videos)/) || [])[1] || null;
+        if (!mg && !go) return;
+        let tries = 0;
+        const t = setInterval(() => {
+            tries++;
+            const ready = typeof switchScreen === 'function' && window.ChatApp && window.GroupApp;
+            // vídeos: espera a config do feed carregar (senão cai no toast "em breve")
+            const videosPending = go === 'videos' && !(window.MV_EXPLORE && window.MV_EXPLORE.enabled === true);
+            if ((!ready || videosPending) && tries <= 40) return;
+            clearInterval(t);
+            if (!ready) return;
+            try {
+                if (mg) GroupApp.open(parseInt(mg[1], 10));
+                else if (go === 'chats') { switchScreen('chat'); ChatApp.loadList(); }
+                else if (go === 'groups') { switchScreen('chat'); GroupApp.tab('groups'); }
+                else if (go === 'videos' && typeof openExploreTab === 'function') openExploreTab();
+            } catch (_) {}
+            try { history.replaceState(null, '', window.location.pathname); } catch (_) {}
+        }, 400);
+    } catch (_) {}
+})();
+
 // Bolinha de não-lidas: checa no boot, ao voltar o foco, e a cada 40s enquanto o
 // app está aberto — pra as mensagens que a modelo manda sozinha (auto-start)
 // "chegarem ao vivo": o badge acende e, se o cliente estiver na aba Conversas,
@@ -11132,9 +11164,13 @@ window.MVNotify = (function() {
 function mvNavigate(url) {
     if (!url) return;
     try {
-        if (/[?&]videos=/.test(String(url))) { if (typeof openExploreTab === 'function') openExploreTab(); return; }
+        if (/[?&](videos=|go=videos)/.test(String(url))) { if (typeof openExploreTab === 'function') openExploreTab(); return; }
         const mc = String(url).match(/[?&]chat=(\d+)/);
         if (mc && window.ChatApp) { ChatApp.open(parseInt(mc[1], 10)); return; }
+        const mg = String(url).match(/[?&]group=(\d+)/);
+        if (mg && window.GroupApp) { GroupApp.open(parseInt(mg[1], 10)); return; }
+        if (/[?&]go=chats/.test(String(url)) && window.ChatApp) { switchScreen('chat'); try { ChatApp.loadList(); } catch (_) {} return; }
+        if (/[?&]go=groups/.test(String(url)) && window.GroupApp) { switchScreen('chat'); try { GroupApp.tab('groups'); } catch (_) {} return; }
         const mp = String(url).match(/[?&]p=(\d+)/);
         if (mp && typeof openProductPage === 'function') { openProductPage(parseInt(mp[1], 10)); return; }
         if (/^https?:\/\//i.test(url)) { window.open(url, '_blank'); return; }

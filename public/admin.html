@@ -4986,8 +4986,12 @@ a { color: inherit; text-decoration: none; }
                             <label class="form-label">Destino rápido</label>
                             <select class="form-input" id="pushDest" onchange="applyPushDest()">
                                 <option value="/">🏠 Tela inicial (catálogo)</option>
-                                <option value="product">📦 Produto específico (ID)…</option>
                                 <option value="chat">💬 Conversa/chat (ID)…</option>
+                                <option value="chats_tab">🗨️ Aba Conversas</option>
+                                <option value="group">👥 Grupo específico (ID)…</option>
+                                <option value="groups_tab">👥 Aba Grupos</option>
+                                <option value="videos">🎬 Aba Vídeos</option>
+                                <option value="product">📦 Produto específico (ID)…</option>
                                 <option value="custom">✏️ URL personalizada</option>
                             </select>
                         </div>
@@ -5044,8 +5048,12 @@ a { color: inherit; text-decoration: none; }
                                 <input type="text" class="form-input" id="routineTitle" placeholder="Ex: Ela te mandou mensagem 😏">
                             </div>
                             <div>
-                                <label class="form-label">URL ao clicar (ex: /, /?chat=2, /?p=5)</label>
-                                <input type="text" class="form-input" id="routineUrl" value="/">
+                                <label class="form-label">Ao clicar, abre…</label>
+                                <div style="display:flex;gap:8px;">
+                                    <select class="form-input" id="routineDest" onchange="applyDestUI('routine')" style="flex:1;"></select>
+                                    <input type="number" class="form-input" id="routineDestId" placeholder="ID" style="width:90px;display:none;">
+                                </div>
+                                <input type="text" class="form-input" id="routineUrl" value="/" placeholder="/caminho ou https://..." style="margin-top:8px;display:none;">
                             </div>
                         </div>
                         <div class="form-row" style="margin-bottom:12px;">
@@ -5078,8 +5086,12 @@ a { color: inherit; text-decoration: none; }
                                 <input type="number" class="form-input" id="istDelay" min="1" value="5" placeholder="ex: 5, 60, 180">
                             </div>
                             <div>
-                                <label class="form-label">URL ao clicar (ex: /, /?chat=2, /?p=5)</label>
-                                <input type="text" class="form-input" id="istUrl" value="/">
+                                <label class="form-label">Ao clicar, abre…</label>
+                                <div style="display:flex;gap:8px;">
+                                    <select class="form-input" id="istDest" onchange="applyDestUI('ist')" style="flex:1;"></select>
+                                    <input type="number" class="form-input" id="istDestId" placeholder="ID" style="width:90px;display:none;">
+                                </div>
+                                <input type="text" class="form-input" id="istUrl" value="/" placeholder="/caminho ou https://..." style="margin-top:8px;display:none;">
                             </div>
                         </div>
                         <div class="form-row" style="margin-bottom:12px;">
@@ -11921,12 +11933,16 @@ function applyPushDest() {
     const idEl = document.getElementById('pushDestId');
     const lbl = document.getElementById('pushDestIdLabel');
     const urlEl = document.getElementById('pushUrl');
-    const needsId = (dest === 'product' || dest === 'chat');
+    const needsId = (dest === 'product' || dest === 'chat' || dest === 'group');
     idEl.disabled = !needsId;
     lbl.style.opacity = needsId ? '1' : '.5';
     if (dest === '/') urlEl.value = '/';
     else if (dest === 'product') urlEl.value = idEl.value ? '/?p=' + parseInt(idEl.value, 10) : '/?p=';
     else if (dest === 'chat') urlEl.value = idEl.value ? '/?chat=' + parseInt(idEl.value, 10) : '/?chat=';
+    else if (dest === 'group') urlEl.value = idEl.value ? '/?group=' + parseInt(idEl.value, 10) : '/?group=';
+    else if (dest === 'chats_tab') urlEl.value = '/?go=chats';
+    else if (dest === 'groups_tab') urlEl.value = '/?go=groups';
+    else if (dest === 'videos') urlEl.value = '/?go=videos';
     // 'custom' deixa o admin digitar livremente em pushUrl
 }
 window.applyPushDest = applyPushDest;
@@ -12003,6 +12019,81 @@ window.sendPushNotification = sendPushNotification;
 window.showPreviewQR = showPreviewQR;
 
 // ============================================================================
+// SELETOR DE DESTINO ("Ao clicar, abre…") — compartilhado por sequência,
+// rotina e push manual. Gera/entende os caminhos internos do app:
+//   /            Início (catálogo)      /?chat=ID    conversa
+//   /?go=chats   aba Conversas          /?group=ID   grupo
+//   /?go=groups  aba Grupos             /?p=ID       produto
+//   /?go=videos  aba Vídeos             (custom)     URL livre
+// ============================================================================
+const DEST_OPTS = [
+    ['/',          '🏠 Início (catálogo)'],
+    ['chat',       '💬 Conversa específica… (ID)'],
+    ['chats_tab',  '🗨️ Aba Conversas'],
+    ['group',      '👥 Grupo específico… (ID)'],
+    ['groups_tab', '👥 Aba Grupos'],
+    ['videos',     '🎬 Aba Vídeos'],
+    ['product',    '📦 Produto específico… (ID)'],
+    ['custom',     '✏️ URL personalizada'],
+];
+const DEST_NEEDS_ID = { chat: 1, group: 1, product: 1 };
+function destFillSelect(prefix) {
+    const sel = document.getElementById(prefix + 'Dest');
+    if (!sel || sel.options.length) return;
+    sel.innerHTML = DEST_OPTS.map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('');
+}
+function applyDestUI(prefix) {
+    destFillSelect(prefix);
+    const dest = document.getElementById(prefix + 'Dest').value;
+    document.getElementById(prefix + 'DestId').style.display = DEST_NEEDS_ID[dest] ? '' : 'none';
+    document.getElementById(prefix + 'Url').style.display = dest === 'custom' ? '' : 'none';
+}
+function getDestUrl(prefix) {
+    const dest = document.getElementById(prefix + 'Dest').value;
+    const id = parseInt(document.getElementById(prefix + 'DestId').value, 10) || 0;
+    const custom = (document.getElementById(prefix + 'Url').value || '').trim();
+    if (dest === 'chat') return id ? '/?chat=' + id : '/';
+    if (dest === 'group') return id ? '/?group=' + id : '/';
+    if (dest === 'product') return id ? '/?p=' + id : '/';
+    if (dest === 'chats_tab') return '/?go=chats';
+    if (dest === 'groups_tab') return '/?go=groups';
+    if (dest === 'videos') return '/?go=videos';
+    if (dest === 'custom') return custom || '/';
+    return '/';
+}
+function setDestUrl(prefix, url) {
+    destFillSelect(prefix);
+    url = String(url || '/');
+    let dest = 'custom', id = '';
+    let m;
+    if (url === '/' || url === '') dest = '/';
+    else if ((m = url.match(/[?&]chat=(\d+)/))) { dest = 'chat'; id = m[1]; }
+    else if ((m = url.match(/[?&]group=(\d+)/))) { dest = 'group'; id = m[1]; }
+    else if ((m = url.match(/[?&]p=(\d+)/))) { dest = 'product'; id = m[1]; }
+    else if (/[?&]go=chats/.test(url)) dest = 'chats_tab';
+    else if (/[?&]go=groups/.test(url)) dest = 'groups_tab';
+    else if (/[?&](go=videos|videos=)/.test(url)) dest = 'videos';
+    document.getElementById(prefix + 'Dest').value = dest;
+    document.getElementById(prefix + 'DestId').value = id;
+    document.getElementById(prefix + 'Url').value = dest === 'custom' ? url : '/';
+    applyDestUI(prefix);
+}
+window.applyDestUI = applyDestUI;
+// rótulo amigável do destino pra listagem ("Aba Vídeos" em vez de /?go=videos)
+function destLabel(url) {
+    url = String(url || '/');
+    let m;
+    if (url === '/' || url === '') return '🏠 Início';
+    if ((m = url.match(/[?&]chat=(\d+)/))) return '💬 Conversa #' + m[1];
+    if ((m = url.match(/[?&]group=(\d+)/))) return '👥 Grupo #' + m[1];
+    if ((m = url.match(/[?&]p=(\d+)/))) return '📦 Produto #' + m[1];
+    if (/[?&]go=chats/.test(url)) return '🗨️ Aba Conversas';
+    if (/[?&]go=groups/.test(url)) return '👥 Aba Grupos';
+    if (/[?&](go=videos|videos=)/.test(url)) return '🎬 Aba Vídeos';
+    return url;
+}
+
+// ============================================================================
 // ROTINA DIÁRIA DE NOTIFICAÇÕES (engagement_push_slots)
 // ============================================================================
 let _routineEditId = null;
@@ -12011,6 +12102,7 @@ const ROUTINE_AUD = { all: '👥 Todos', leads: '🎯 Não compraram', buyers: '
 async function loadPushRoutine() {
     const list = document.getElementById('routineList');
     if (!list) return;
+    applyDestUI('routine');
     try {
         const r = await fetch('/api/admin/push/routine', { credentials: 'include' }).then(r => r.json());
         if (!r.success) { list.textContent = 'Erro ao carregar.'; return; }
@@ -12021,7 +12113,7 @@ async function loadPushRoutine() {
                 <span style="font-weight:800;font-size:14px;min-width:52px;">${time}</span>
                 <span style="flex:1;min-width:0;">
                     <span style="display:block;font-weight:600;color:var(--text);">${escapeHtml(s.title)}</span>
-                    <span style="display:block;font-size:11.5px;color:var(--text-dim);">${escapeHtml(s.body || '')} · ${ROUTINE_AUD[s.audience] || s.audience} · ${escapeHtml(s.url || '/')}${s.last_sent_date ? ' · último: ' + String(s.last_sent_date).slice(0, 10) : ''}</span>
+                    <span style="display:block;font-size:11.5px;color:var(--text-dim);">${escapeHtml(s.body || '')} · ${ROUTINE_AUD[s.audience] || s.audience} · ${escapeHtml(destLabel(s.url))}${s.last_sent_date ? ' · último: ' + String(s.last_sent_date).slice(0, 10) : ''}</span>
                 </span>
                 <button class="btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="toggleRoutineSlot(${s.id})">${s.active ? 'Pausar' : 'Ativar'}</button>
                 <button class="btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="editRoutineSlot(${s.id})">Editar</button>
@@ -12038,7 +12130,7 @@ async function saveRoutineSlot() {
         send_time: get('routineTime'),
         title: get('routineTitle'),
         body: get('routineBody'),
-        url: get('routineUrl') || '/',
+        url: getDestUrl('routine'),
         icon_url: get('routineIcon'),
         audience: get('routineAudience') || 'all',
         active: true,
@@ -12070,7 +12162,7 @@ function editRoutineSlot(id) {
     document.getElementById('routineTime').value = String(s.send_time).slice(0, 5);
     document.getElementById('routineTitle').value = s.title || '';
     document.getElementById('routineBody').value = s.body || '';
-    document.getElementById('routineUrl').value = s.url || '/';
+    setDestUrl('routine', s.url);
     document.getElementById('routineIcon').value = s.icon_url || '';
     document.getElementById('routineAudience').value = s.audience || 'all';
     document.getElementById('routineSaveBtn').textContent = 'Salvar alterações';
@@ -12082,7 +12174,7 @@ function cancelRoutineEdit() {
     document.getElementById('routineTitle').value = '';
     document.getElementById('routineBody').value = '';
     document.getElementById('routineIcon').value = '';
-    document.getElementById('routineUrl').value = '/';
+    setDestUrl('routine', '/');
     document.getElementById('routineSaveBtn').textContent = 'Adicionar horário';
     document.getElementById('routineCancelBtn').style.display = 'none';
 }
@@ -12127,6 +12219,7 @@ function fmtInstallDelay(min) {
 async function loadInstallSteps() {
     const list = document.getElementById('installStepsList');
     if (!list) return;
+    applyDestUI('ist');
     try {
         const r = await fetch('/api/admin/push/install-steps', { credentials: 'include' }).then(r => r.json());
         if (!r.success) { list.textContent = 'Erro ao carregar.'; return; }
@@ -12136,7 +12229,7 @@ async function loadInstallSteps() {
                 <span style="font-weight:800;font-size:13px;min-width:60px;color:#4CD964;">${fmtInstallDelay(s.delay_minutes)}</span>
                 <span style="flex:1;min-width:0;">
                     <span style="display:block;font-weight:600;color:var(--text);">${escHtmlAdmin(s.title)}</span>
-                    <span style="display:block;font-size:11.5px;color:var(--text-dim);">${escHtmlAdmin(s.body || '')} · ${escHtmlAdmin(s.url || '/')}</span>
+                    <span style="display:block;font-size:11.5px;color:var(--text-dim);">${escHtmlAdmin(s.body || '')} · ${escHtmlAdmin(destLabel(s.url))}</span>
                 </span>
                 <button class="btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="toggleInstallStep(${s.id})">${s.active ? 'Pausar' : 'Ativar'}</button>
                 <button class="btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="editInstallStep(${s.id})">Editar</button>
@@ -12152,7 +12245,7 @@ async function saveInstallStep() {
         delay_minutes: parseInt(get('istDelay'), 10) || 0,
         title: get('istTitle'),
         body: get('istBody'),
-        url: get('istUrl') || '/',
+        url: getDestUrl('ist'),
         icon_url: get('istIcon'),
         active: true,
     };
@@ -12180,7 +12273,7 @@ function editInstallStep(id) {
     document.getElementById('istDelay').value = s.delay_minutes;
     document.getElementById('istTitle').value = s.title || '';
     document.getElementById('istBody').value = s.body || '';
-    document.getElementById('istUrl').value = s.url || '/';
+    setDestUrl('ist', s.url);
     document.getElementById('istIcon').value = s.icon_url || '';
     document.getElementById('istSaveBtn').textContent = 'Salvar alterações';
     document.getElementById('istCancelBtn').style.display = '';
@@ -12191,7 +12284,7 @@ function cancelInstallStepEdit() {
     document.getElementById('istBody').value = '';
     document.getElementById('istIcon').value = '';
     document.getElementById('istDelay').value = '5';
-    document.getElementById('istUrl').value = '/';
+    setDestUrl('ist', '/');
     document.getElementById('istSaveBtn').textContent = 'Adicionar passo';
     document.getElementById('istCancelBtn').style.display = 'none';
 }
