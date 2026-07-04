@@ -9653,6 +9653,17 @@ window.ChatApp = (function() {
                 d.querySelector('.ca-vonce').addEventListener('click', () => openVonce(d));
             }
         } else if (m.type === 'cta') {
+            // CTA de INSTALAR o app (Suporte): some se já instalou; clique abre
+            // o fluxo de instalação (prompt nativo → manual → sair do Instagram).
+            if (m.meta && m.meta.action === 'install_pwa') {
+                if (isStandalone()) return; // já instalou: não polui o chat
+                d.style.alignSelf = 'stretch';
+                d.style.width = '100%';
+                d.innerHTML = '<button class="ca-cta-btn" style="background:' + esc((m.meta.cta_color) || '#e50914') + ';">' + esc(m.content || '📲 Instalar o app') + '</button>';
+                d.querySelector('button').addEventListener('click', () => { try { gateInstall(function () {}); } catch (_) {} });
+                body.appendChild(d);
+                return;
+            }
             // botão full-width igual aos botões de ação, com a cor configurada.
             d.style.alignSelf = 'stretch';
             d.style.width = '100%';

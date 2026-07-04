@@ -1133,6 +1133,12 @@ async function deliverPurchaseToSupport(email, productIds) {
     const ctx = { email: e, city: session.city || null, cityFallback: chat.city_fallback };
     const GREEN = '#1fa855', RED = '#e50914';
     let firstMsg = null;
+    // Saudação pelo horário de Brasília (abre a entrega com calor humano)
+    try {
+        const hBr = (new Date(Date.now() - 3 * 3600 * 1000)).getUTCHours();
+        const sauda = hBr >= 5 && hBr < 12 ? 'Bom dia' : hBr >= 12 && hBr < 18 ? 'Boa tarde' : 'Boa noite';
+        firstMsg = await insertMsg(session.id, 'bot', 'text', await fillVars(sauda + ', {nome}! 👋', ctx), null, { typing_ms: 0 }, null);
+    } catch (_) {}
     for (const p of prods) {
         const base = (p.post_purchase_message && p.post_purchase_message.trim())
             || 'Oi {nome}! Parabéns pela compra de {produto} 🎉 Seu acesso já está liberado em Minhas Compras. Qualquer dúvida, é só falar aqui 💬';
@@ -1156,6 +1162,12 @@ async function deliverPurchaseToSupport(email, productIds) {
             }
         }
     }
+    // Incentivo de instalar o PWA: o app SÓ mostra este botão se o cliente
+    // ainda não instalou (meta.action='install_pwa' → fluxo de instalação).
+    try {
+        await insertMsg(session.id, 'bot', 'cta', '📲 Instalar o app no celular', null,
+            { action: 'install_pwa', cta_color: RED }, null);
+    } catch (_) {}
     await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [session.id]);
     return firstMsg ? [{ chat, messages: [firstMsg], email: e }] : [];
 }
