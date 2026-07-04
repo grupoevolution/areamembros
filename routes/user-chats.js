@@ -68,7 +68,7 @@ async function ownsProduct(email, productId) {
     if (!productId) return false;
     try {
         const { rows } = await db.query(
-            `SELECT 1 FROM user_access WHERE LOWER(email) = $1 AND product_id = $2 AND status = 'active' LIMIT 1`,
+            `SELECT 1 FROM user_access WHERE LOWER(email) = $1 AND product_id = $2 AND status = 'active' AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1`,
             [email, productId]
         );
         return rows.length > 0;

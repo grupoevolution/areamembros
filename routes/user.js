@@ -535,6 +535,7 @@ router.get('/catalog', optionalUser, async (req, res) => {
                 SELECT DISTINCT product_id
                 FROM user_access
                 WHERE LOWER(email) = $1 AND status = 'active'
+                  AND (expires_at IS NULL OR expires_at > NOW())
             `, [req.user.email]);
             ownedIds = new Set(owned.map(r => r.product_id));
         }
@@ -864,6 +865,7 @@ router.get('/library', requireUser, async (req, res) => {
             LEFT JOIN categories c ON c.id = p.category_id
             WHERE LOWER(ua.email) = $1
               AND ua.status = 'active'
+              AND (ua.expires_at IS NULL OR ua.expires_at > NOW())
               AND p.is_active = true
               -- Assinatura do Chat / Status VIP (produtos internos do paywall):
               -- não viram card na biblioteca — o "produto" é o chat destravado.
@@ -1461,6 +1463,7 @@ router.post('/products', async (req, res) => {
             LEFT JOIN categories c ON c.id = p.category_id
             WHERE LOWER(ua.email) = $1 
               AND ua.status = 'active'
+              AND (ua.expires_at IS NULL OR ua.expires_at > NOW())
               AND p.is_active = true
             ORDER BY ua.granted_at DESC
         `, [normalizedEmail]);
