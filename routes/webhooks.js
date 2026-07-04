@@ -90,6 +90,22 @@ async function logWebhookProcessed(logId, { processed, error, summary }) {
 }
 
 
+/**
+ * Venda ÓRFÃ: chegou item com offer_id que não está cadastrado em nenhum
+ * produto do painel. Antes isso passava em silêncio (processed=true) e o
+ * cliente ficava SEM o acesso que pagou. Agora o log fica processed=false
+ * com o erro na cara — aparece em vermelho na tela de Webhooks e entra no
+ * "Reprocessar falhas": cadastre o código na aba Ofertas e reprocesse.
+ */
+function orphanSaleError(summary) {
+    if (!summary || !summary.items_without_product) return null;
+    const missing = (summary.errors || []).filter(e => String(e).startsWith('Produto não configurado'));
+    const first = missing[0] || 'venda com oferta não cadastrada no painel';
+    const extra = missing.length > 1 ? ` (+${missing.length - 1} item(ns))` : '';
+    return `⚠️ ${first}${extra} — cadastre o código da oferta no produto e clique em Reprocessar.`;
+}
+
+
 // =============================================================================
 // WEBHOOK KIRVANO
 // =============================================================================
@@ -132,12 +148,15 @@ router.post('/kirvano', webhookLimiter, async (req, res) => {
     // 5. Processa venda
     try {
         const summary = await processSale(normalized.data);
-        
+
+        const orphan = orphanSaleError(summary);
+        if (orphan) logger.warn(`Webhook Kirvano com venda órfã: ${orphan}`);
         await logWebhookProcessed(logId, {
-            processed: true,
+            processed: !orphan,
+            error: orphan,
             summary,
         });
-        
+
         return res.status(200).json({ success: true, summary });
     } catch (err) {
         logger.error('Erro processando webhook Kirvano:', err);
@@ -185,12 +204,15 @@ router.post('/perfectpay', webhookLimiter, async (req, res) => {
     
     try {
         const summary = await processSale(normalized.data);
-        
+
+        const orphan = orphanSaleError(summary);
+        if (orphan) logger.warn(`Webhook PerfectPay com venda órfã: ${orphan}`);
         await logWebhookProcessed(logId, {
-            processed: true,
+            processed: !orphan,
+            error: orphan,
             summary,
         });
-        
+
         return res.status(200).json({ success: true, summary });
     } catch (err) {
         logger.error('Erro processando webhook PerfectPay:', err);

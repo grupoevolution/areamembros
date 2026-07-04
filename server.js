@@ -495,6 +495,14 @@ let server;
         logger.warn('chat-worker não iniciou: ' + err.message);
     }
 
+    // Worker dos grupos: cenas continuam rodando com o app fechado (grupo vivo)
+    try {
+        const { startGroupWorker } = require('./lib/group-worker');
+        startGroupWorker();
+    } catch (err) {
+        logger.warn('group-worker não iniciou: ' + err.message);
+    }
+
     server.on('error', (err) => {
         logger.error('Falha ao abrir a porta HTTP:', err.message);
         process.exit(1);

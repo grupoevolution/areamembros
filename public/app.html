@@ -9349,6 +9349,7 @@ window.ChatApp = (function() {
                 // deixava o chat "congelado" — o paywall ativava no servidor mas o
                 // app só ficava sabendo se chegasse mensagem junto.
                 if (data.paywalled === true) setPaywalled();
+                else if (data.paywalled === false) clearPaywalled();
                 if (Array.isArray(data.messages) && data.messages.length) {
                     handleAdvance({ messages: data.messages, awaiting: data.awaiting, resume_at: data.resume_at, paywalled: data.paywalled }, true);
                 } else if (data.awaiting !== undefined && CUR && CUR.awaiting !== data.awaiting) {
@@ -9683,6 +9684,32 @@ window.ChatApp = (function() {
                 d.style.width = '100%';
                 d.innerHTML = '<button class="ca-cta-btn" style="background:' + esc((m.meta.cta_color) || '#e50914') + ';">' + esc(m.content || '📲 Instalar o app') + '</button>';
                 d.querySelector('button').addEventListener('click', () => { try { gateInstall(function () {}); } catch (_) {} });
+                body.appendChild(d);
+                return;
+            }
+            // CTA de COPIAR CÓDIGO PIX (suporte, evento "Pix gerado"): copia
+            // pro clipboard e confirma no próprio botão — leigo não se perde.
+            if (m.meta && m.meta.action === 'copy_pix' && m.meta.pix_code) {
+                d.style.alignSelf = 'stretch';
+                d.style.width = '100%';
+                d.innerHTML = '<button class="ca-cta-btn" style="background:' + esc((m.meta.cta_color) || '#1fa855') + ';">' + esc(m.content || '📋 Copiar código Pix') + '</button>';
+                const pixBtn = d.querySelector('button');
+                pixBtn.addEventListener('click', async () => {
+                    const code = String(m.meta.pix_code);
+                    let ok = false;
+                    try { await navigator.clipboard.writeText(code); ok = true; } catch (_) {
+                        // fallback pra navegador antigo/webview sem clipboard API
+                        try {
+                            const ta = document.createElement('textarea');
+                            ta.value = code; ta.style.cssText = 'position:fixed;opacity:0;';
+                            document.body.appendChild(ta); ta.select();
+                            ok = document.execCommand('copy'); ta.remove();
+                        } catch (_) {}
+                    }
+                    pixBtn.textContent = ok ? '✅ Código copiado! Agora cola no app do banco' : '📋 Copiar código Pix';
+                    try { window.TRACK && TRACK.event('pix_code_copy', { chat_id: CUR && CUR.id }); } catch (_) {}
+                    if (ok) setTimeout(() => { pixBtn.textContent = m.content || '📋 Copiar código Pix'; }, 6000);
+                });
                 body.appendChild(d);
                 return;
             }
@@ -10361,6 +10388,19 @@ window.ChatApp = (function() {
         try { openChatPaywall(); } catch (_) {}
     }
 
+    // A compra CAIU (webhook liberou o VIP): destrava a conversa AO VIVO —
+    // popup fecha, barra de digitar volta ao normal e o contador de envios
+    // "não entregues" zera. As mensagens antigas com erro FICAM com erro
+    // (decisão do dono); só as novas passam a ser entregues.
+    function clearPaywalled() {
+        if (!CUR || !CUR.paywalled) return;
+        CUR.paywalled = false;
+        CUR.payLock = false;
+        try { localStorage.removeItem('mv_payfail_' + CUR.id); } catch (_) {}
+        try { updateInputBar(); } catch (_) {}
+        try { if (window.MVPaywall) MVPaywall.close(); } catch (_) {}
+    }
+
     // Entrada de "Ligação de vídeo · perdida" no chat (estilo WhatsApp)
     function renderMissedCall() {
         const body = document.getElementById('caBody');
@@ -10699,6 +10739,27 @@ window.GroupApp = (function () {
         if (showPopup && !CUR.popupShown) { CUR.popupShown = true; openPopup(); }
     }
 
+    // Aviso de RENOVAÇÃO no topo: assinatura do grupo/Passe vencendo em até
+    // 2 dias — barra dourada fixa; toque abre o popup de planos pra renovar.
+    // Sem isso o acesso morria em silêncio e o cliente achava que foi banido.
+    function renderExpiryNotice(until) {
+        const old = document.getElementById('gaExpiryBar'); if (old) old.remove();
+        if (!until || !CUR) return;
+        const ms = new Date(until).getTime() - Date.now();
+        if (isNaN(ms) || ms <= 0) return;
+        const days = Math.ceil(ms / 86400000);
+        if (days > 2) return;
+        const txt = days <= 1 ? '⏳ Seu acesso vence HOJE' : '⏳ Seu acesso vence em 2 dias';
+        const bar = document.createElement('div');
+        bar.id = 'gaExpiryBar';
+        bar.style.cssText = 'display:flex;align-items:center;gap:8px;background:linear-gradient(90deg,#3a2a08,#241a05);border-bottom:1px solid rgba(245,197,66,.4);color:#f5c542;font-size:12.5px;font-weight:700;padding:9px 14px;cursor:pointer;flex-shrink:0;';
+        bar.innerHTML = '<span style="flex:1;">' + txt + ' — renove e não perca o grupo</span>'
+            + '<span style="background:#f5c542;color:#241a05;font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px;">RENOVAR</span>';
+        bar.addEventListener('click', () => openPopup());
+        const body = document.getElementById('gaBody');
+        if (body && body.parentNode) body.parentNode.insertBefore(bar, body);
+    }
+
     function applyFooter() {
         const g = CUR.group || {};
         const input = document.getElementById('gaInputBar');
@@ -10744,6 +10805,15 @@ window.GroupApp = (function () {
                 const r = await fetch('/api/user/groups/' + CUR.id + '/poll?after=' + CUR.lastId + '&visitor_id=' + VID, { credentials: 'include' });
                 const data = await r.json();
                 if (!data.success) return;
+                // Pagou com a tela aberta? Acesso virou 'member' → fecha o popup
+                // de planos e recarrega a conversa inteira (as mensagens borradas
+                // viram reais, barra libera, banner de mídias aparece). É isso que
+                // faz o grupo destravar SOZINHO segundos depois do webhook.
+                if (data.access === 'member' && CUR.access !== 'member') {
+                    const ovp = document.getElementById('gaPlansOv'); if (ovp) ovp.style.display = 'none';
+                    open(CUR.id);
+                    return;
+                }
                 if (data.access === 'locked' && CUR.access !== 'locked') lockUI(true);
                 const list = data.messages || [];
                 if (list.length) {
@@ -10784,6 +10854,7 @@ window.GroupApp = (function () {
         body.innerHTML = '<div class="ca-day">HOJE</div><div class="ca-crypt">🔒 Suas mensagens são protegidas</div>';
         for (const m of (data.messages || [])) renderMsg(m);
         applyFooter();
+        renderExpiryNotice(data.member_until);
         scrollBottom();
         startPoll();
         startHeartbeat();
@@ -19272,9 +19343,42 @@ window.Explore = (function () {
         v.dataset.ready = '';
     }
 
+    // ── Destravar SOZINHO depois da compra ──────────────────────────────
+    // Enquanto o paywall está na tela, consulta o servidor de tempos em tempos
+    // (e na volta do checkout, via visibilitychange). Assim que o webhook
+    // liberar o acesso, o paywall fecha e o feed continua — sem F5.
+    let accessTimer = null;
+    async function recheckAccess() {
+        if (!data || data.has_access) return true;
+        try {
+            const r = await fetch('/api/user/explore/access', { credentials: 'include' });
+            const d = await r.json();
+            if (d && d.success && d.has_access) {
+                data.has_access = true;
+                data.unlock = null;
+                stopAccessWatch();
+                closePaywall();
+                playActive();
+                return true;
+            }
+        } catch (_) {}
+        return false;
+    }
+    function startAccessWatch() {
+        if (accessTimer) return;
+        accessTimer = setInterval(recheckAccess, 8000);
+    }
+    function stopAccessWatch() { if (accessTimer) { clearInterval(accessTimer); accessTimer = null; } }
+    document.addEventListener('visibilitychange', () => {
+        // voltou do checkout (outra aba/app) com o paywall aberto → confere na hora
+        const ov = document.getElementById('tkPaywall');
+        if (!document.hidden && ov && ov.classList.contains('open')) recheckAccess();
+    });
+
     function closePaywall() {
         const ov = document.getElementById('tkPaywall');
         if (ov) { ov.classList.remove('open'); ov.innerHTML = ''; }
+        stopAccessWatch();
     }
     function openPaywall() {
         const ov = document.getElementById('tkPaywall');
@@ -19295,6 +19399,9 @@ window.Explore = (function () {
             onClose: () => { closePaywall(); if (typeof switchScreen === 'function') switchScreen('home'); },
         });
         ov.classList.add('open');
+        // fica de olho: pagou → destrava sozinho
+        recheckAccess();
+        startAccessWatch();
     }
 
     function doShare() {

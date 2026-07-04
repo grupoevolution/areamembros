@@ -5016,6 +5016,54 @@ a { color: inherit; text-decoration: none; }
                     <div style="font-size:11.5px; color:rgba(255,255,255,.45); margin-top:8px;">"Broadcast" ignora os e-mails específicos e manda pra <b>todos os celulares com o app instalado</b>. "Disparar push" respeita os e-mails (vazio = todos também).</div>
                 </div>
 
+                <!-- ===== ROTINA DIÁRIA DE NOTIFICAÇÕES ===== -->
+                <div class="form-card" style="padding:20px;margin-bottom:18px;">
+                    <div class="form-card-head" style="margin-bottom:6px;">
+                        <div class="form-card-title">⏰ Rotina diária de notificações</div>
+                        <div class="form-card-sub">Chama o lead de volta pro app TODO DIA, sozinho. Cada linha é um horário (Brasília) com uma mensagem — quem instalou o app recebe, mesmo fechado. Dica: 2 a 3 por dia com copy de curiosidade ("ela te mandou mensagem 😏").</div>
+                    </div>
+                    <div id="routineList" style="margin:14px 0;font-size:13px;color:var(--text-muted);">Carregando…</div>
+                    <div style="border-top:1px solid var(--border);padding-top:14px;">
+                        <div class="form-row-grid-2" style="gap:14px;margin-bottom:12px;">
+                            <div>
+                                <label class="form-label">Horário (Brasília)</label>
+                                <input type="time" class="form-input" id="routineTime" value="09:00">
+                            </div>
+                            <div>
+                                <label class="form-label">Quem recebe</label>
+                                <select class="form-input" id="routineAudience">
+                                    <option value="all">👥 Todos os instalados</option>
+                                    <option value="leads">🎯 Só quem NÃO comprou ainda</option>
+                                    <option value="buyers">💎 Só quem JÁ comprou</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row-grid-2" style="gap:14px;margin-bottom:12px;">
+                            <div>
+                                <label class="form-label">Título</label>
+                                <input type="text" class="form-input" id="routineTitle" placeholder="Ex: Ela te mandou mensagem 😏">
+                            </div>
+                            <div>
+                                <label class="form-label">URL ao clicar (ex: /, /?chat=2, /?p=5)</label>
+                                <input type="text" class="form-input" id="routineUrl" value="/">
+                            </div>
+                        </div>
+                        <div class="form-row" style="margin-bottom:12px;">
+                            <label class="form-label">Mensagem</label>
+                            <input type="text" class="form-input" id="routineBody" placeholder="Ex: Tem coisa nova te esperando no app 🔥">
+                        </div>
+                        <div class="form-row" style="margin-bottom:12px;">
+                            <label class="form-label">Ícone/foto (URL, opcional)</label>
+                            <input type="text" class="form-input" id="routineIcon" placeholder="https://... (foto da modelo fica redonda no push)">
+                        </div>
+                        <div id="routineAlert" style="display:none;padding:10px;border-radius:8px;font-size:13px;margin-bottom:10px;"></div>
+                        <div style="display:flex;gap:10px;">
+                            <button class="btn-primary" id="routineSaveBtn" onclick="saveRoutineSlot()">Adicionar horário</button>
+                            <button class="btn-secondary" id="routineCancelBtn" onclick="cancelRoutineEdit()" style="display:none;">Cancelar edição</button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- ===== QR PREVIEW MODAL ===== -->
                 <div id="previewQrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;padding:20px;">
                     <div style="background:#1a0a0a;border:1px solid var(--border);border-radius:14px;max-width:360px;width:100%;padding:24px;text-align:center;">
@@ -11772,6 +11820,8 @@ async function loadGrowth() {
         document.getElementById('growthPushStatus').textContent = '⚠️ Erro carregando status';
     }
 
+    // Rotina diária de notificações (card abaixo do push manual)
+    try { loadPushRoutine(); } catch (_) {}
 }
 
 // Destino rápido: preenche a URL de clique conforme o preset escolhido
@@ -11860,6 +11910,117 @@ async function showPreviewQR() {
 window.loadGrowth = loadGrowth;
 window.sendPushNotification = sendPushNotification;
 window.showPreviewQR = showPreviewQR;
+
+// ============================================================================
+// ROTINA DIÁRIA DE NOTIFICAÇÕES (engagement_push_slots)
+// ============================================================================
+let _routineEditId = null;
+const ROUTINE_AUD = { all: '👥 Todos', leads: '🎯 Não compraram', buyers: '💎 Compraram' };
+
+async function loadPushRoutine() {
+    const list = document.getElementById('routineList');
+    if (!list) return;
+    try {
+        const r = await fetch('/api/admin/push/routine', { credentials: 'include' }).then(r => r.json());
+        if (!r.success) { list.textContent = 'Erro ao carregar.'; return; }
+        if (!r.slots.length) { list.innerHTML = '<span style="color:var(--text-dim);">Nenhum horário ainda — adiciona o primeiro aí embaixo. 👇</span>'; return; }
+        list.innerHTML = r.slots.map(s => {
+            const time = String(s.send_time).slice(0, 5);
+            return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);${s.active ? '' : 'opacity:.45;'}">
+                <span style="font-weight:800;font-size:14px;min-width:52px;">${time}</span>
+                <span style="flex:1;min-width:0;">
+                    <span style="display:block;font-weight:600;color:var(--text);">${escapeHtml(s.title)}</span>
+                    <span style="display:block;font-size:11.5px;color:var(--text-dim);">${escapeHtml(s.body || '')} · ${ROUTINE_AUD[s.audience] || s.audience} · ${escapeHtml(s.url || '/')}${s.last_sent_date ? ' · último: ' + String(s.last_sent_date).slice(0, 10) : ''}</span>
+                </span>
+                <button class="btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="toggleRoutineSlot(${s.id})">${s.active ? 'Pausar' : 'Ativar'}</button>
+                <button class="btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="editRoutineSlot(${s.id})">Editar</button>
+                <button class="btn-secondary" style="padding:5px 10px;font-size:11px;color:var(--danger);" onclick="deleteRoutineSlot(${s.id})">✕</button>
+            </div>`;
+        }).join('');
+        window.__routineSlots = r.slots;
+    } catch (_) { list.textContent = 'Erro de rede.'; }
+}
+
+async function saveRoutineSlot() {
+    const get = id => document.getElementById(id)?.value?.trim() || '';
+    const payload = {
+        send_time: get('routineTime'),
+        title: get('routineTitle'),
+        body: get('routineBody'),
+        url: get('routineUrl') || '/',
+        icon_url: get('routineIcon'),
+        audience: get('routineAudience') || 'all',
+        active: true,
+    };
+    if (!payload.send_time || !payload.title) return _alertModal('routineAlert', 'Horário e título são obrigatórios', 'error');
+    // edição preserva o ativo/pausado atual
+    if (_routineEditId) {
+        const cur = (window.__routineSlots || []).find(s => s.id === _routineEditId);
+        if (cur) payload.active = cur.active;
+    }
+    const url = _routineEditId ? '/api/admin/push/routine/' + _routineEditId : '/api/admin/push/routine';
+    const method = _routineEditId ? 'PUT' : 'POST';
+    try {
+        const r = await fetch(url, {
+            method, credentials: 'include', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        }).then(r => r.json());
+        if (!r.success) return _alertModal('routineAlert', r.error || 'Erro', 'error');
+        _alertModal('routineAlert', _routineEditId ? '✅ Horário atualizado' : '✅ Horário adicionado — dispara todo dia sozinho', 'success');
+        cancelRoutineEdit();
+        loadPushRoutine();
+    } catch (err) { _alertModal('routineAlert', err.message || 'Erro de rede', 'error'); }
+}
+
+function editRoutineSlot(id) {
+    const s = (window.__routineSlots || []).find(x => x.id === id);
+    if (!s) return;
+    _routineEditId = id;
+    document.getElementById('routineTime').value = String(s.send_time).slice(0, 5);
+    document.getElementById('routineTitle').value = s.title || '';
+    document.getElementById('routineBody').value = s.body || '';
+    document.getElementById('routineUrl').value = s.url || '/';
+    document.getElementById('routineIcon').value = s.icon_url || '';
+    document.getElementById('routineAudience').value = s.audience || 'all';
+    document.getElementById('routineSaveBtn').textContent = 'Salvar alterações';
+    document.getElementById('routineCancelBtn').style.display = '';
+}
+
+function cancelRoutineEdit() {
+    _routineEditId = null;
+    document.getElementById('routineTitle').value = '';
+    document.getElementById('routineBody').value = '';
+    document.getElementById('routineIcon').value = '';
+    document.getElementById('routineUrl').value = '/';
+    document.getElementById('routineSaveBtn').textContent = 'Adicionar horário';
+    document.getElementById('routineCancelBtn').style.display = 'none';
+}
+
+async function toggleRoutineSlot(id) {
+    const s = (window.__routineSlots || []).find(x => x.id === id);
+    if (!s) return;
+    try {
+        await fetch('/api/admin/push/routine/' + id, {
+            method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...s, send_time: String(s.send_time).slice(0, 5), active: !s.active }),
+        });
+        loadPushRoutine();
+    } catch (_) {}
+}
+
+async function deleteRoutineSlot(id) {
+    if (!confirm('Excluir este horário da rotina?')) return;
+    try {
+        await fetch('/api/admin/push/routine/' + id, { method: 'DELETE', credentials: 'include' });
+        loadPushRoutine();
+    } catch (_) {}
+}
+window.loadPushRoutine = loadPushRoutine;
+window.saveRoutineSlot = saveRoutineSlot;
+window.editRoutineSlot = editRoutineSlot;
+window.cancelRoutineEdit = cancelRoutineEdit;
+window.toggleRoutineSlot = toggleRoutineSlot;
+window.deleteRoutineSlot = deleteRoutineSlot;
 
 // ============================================================================
 // LIVE NOTIFICATIONS (ticker fake/real)

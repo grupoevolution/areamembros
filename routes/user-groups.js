@@ -399,6 +399,66 @@ async function accessState(ident, group, session) {
     return t.remaining > 0 ? 'trial' : 'locked';
 }
 
+// Até quando vai o acesso do MEMBRO (assinatura do grupo OU Passe). NULL =
+// vitalício (qualquer acesso sem expires_at ganha). Alimenta o aviso de
+// "seu acesso vence em X dias" no topo do grupo.
+async function memberUntil(email, group) {
+    if (!email) return null;
+    try {
+        const passId = await groupPassProductId();
+        const ids = [group.product_id, passId].filter(Boolean);
+        if (!ids.length) return null;
+        const { rows } = await db.query(
+            `SELECT expires_at FROM user_access
+             WHERE LOWER(email) = $1 AND product_id = ANY($2::int[]) AND status = 'active'
+               AND (expires_at IS NULL OR expires_at > NOW())`,
+            [email, ids]
+        );
+        if (!rows.length) return null;
+        if (rows.some(r => !r.expires_at)) return null; // tem acesso vitalício
+        return rows.map(r => new Date(r.expires_at)).sort((a, b) => b - a)[0];
+    } catch (_) { return null; }
+}
+
+// ── Worker de fundo: o grupo continua VIVO com o app fechado ────────────────
+// Chamado pelo group-worker a cada 60s. Materializa cenas vencidas das
+// sessões de leads ATIVOS (abriram o grupo nos últimos 3 dias) — quando o
+// lead voltar, encontra o histórico acumulado de verdade (parece um grupo
+// real que não parou). Base fria fica de fora de propósito: pra ela o
+// runDueScenes do /open resolve na volta, sem gastar banco com lead morto.
+async function runBackgroundScenes() {
+    const { rows: sessions } = await db.query(`
+        SELECT s.* FROM group_sessions s
+        JOIN groups g ON g.id = s.group_id AND g.active = true
+        WHERE s.next_scene_at IS NOT NULL
+          AND s.next_scene_at <= NOW()
+          AND s.last_seen_at >= NOW() - INTERVAL '3 days'
+        ORDER BY s.next_scene_at
+        LIMIT 40
+    `);
+    if (!sessions.length) return 0;
+    const groupCache = {}, personaCache = {};
+    let ran = 0;
+    for (const s of sessions) {
+        try {
+            if (!groupCache[s.group_id]) {
+                const { rows: gr } = await db.query(`SELECT * FROM groups WHERE id = $1`, [s.group_id]);
+                if (!gr.length) continue;
+                await hydrateGroupMedia(gr[0]);
+                groupCache[s.group_id] = gr[0];
+                personaCache[s.group_id] = await loadPersonas(s.group_id);
+            }
+            const group = groupCache[s.group_id];
+            const personas = personaCache[s.group_id];
+            if (!personas.length) { await scheduleNext(s, group, new Date()); continue; }
+            await runDueScenes(s, group, personas);
+            await cleanupRetention(s, group);
+            ran++;
+        } catch (_) { /* uma sessão com erro não derruba o lote */ }
+    }
+    return ran;
+}
+
 // ── ROTAS ────────────────────────────────────────────────────────────────────
 
 // GET /api/user/groups — lista (fixados primeiro: pinned/comprados)
@@ -512,6 +572,11 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
             invite = { chat_ids: group.invite_chat_ids.slice(0, 3), delay_seconds: group.invite_delay_seconds || 120 };
         }
 
+        // membro com assinatura por tempo: quando vence (NULL = vitalício).
+        // Alimenta o aviso de renovação no topo (<= 2 dias) — e nesse caso o
+        // unlock (planos) vai junto pra oferta de renovação abrir o popup.
+        const until = access === 'member' ? await memberUntil(ident.email, group) : null;
+
         return res.json({
             success: true,
             group: {
@@ -527,7 +592,10 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
             trial_remaining: access === 'trial' ? trial.remaining : 0,
             trial_total: trial.limit,
             messages: list,
-            unlock: (access === 'trial' || access === 'locked') ? await groupUnlock(group) : null,
+            member_until: until,
+            unlock: (access === 'trial' || access === 'locked' || until)
+                ? await groupUnlock(group)
+                : null,
             monthly_price: null,
             invite,
         });
@@ -707,3 +775,5 @@ router.get('/groups/:id/media', optionalUser, async (req, res) => {
 });
 
 module.exports = router;
+// usado pelo group-worker (cenas continuam rodando com o app fechado)
+module.exports.runBackgroundScenes = runBackgroundScenes;

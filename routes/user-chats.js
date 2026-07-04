@@ -586,6 +586,14 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         ident.city = session.city;
         ident.cityFallback = chat.city_fallback;
 
+        // Comprou o VIP depois de bater no paywall? Limpa a marca AQUI (em
+        // qualquer estado da sessão, não só no legado awaiting='paywall') —
+        // sem isso o app continuava tratando o cliente pagante como travado.
+        if (session.paywalled_at && perm.is_vip) {
+            await db.query(`UPDATE chat_sessions SET paywalled_at = NULL WHERE id = $1`, [session.id]);
+            session.paywalled_at = null;
+        }
+
         const { rows: history } = await db.query(
             `SELECT * FROM chat_messages WHERE session_id = $1 ORDER BY id`, [session.id]
         );
@@ -842,13 +850,21 @@ router.get('/chats/:id/poll', optionalUser, async (req, res) => {
         if (!session) return res.json({ success: true, messages: [], awaiting: null });
 
         // Se o delay venceu, retoma o roteiro AGORA (cliente está com a tela aberta)
+        // — com reivindicação ATÔMICA ('delay'→'resuming'), igual ao /open, pra não
+        // rodar junto com o worker e duplicar mensagens.
         if (session.awaiting === 'delay' && session.resume_at && new Date(session.resume_at) <= new Date()) {
-            const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
-            if (cr.length) {
-                ident.city = session.city;
-                ident.cityFallback = cr[0].city_fallback;
-                const steps = await loadSteps(chatId, session.current_flow || 'open');
-                await runScript(session, cr[0], steps, session.current_order, ident);
+            const claim = await db.query(
+                `UPDATE chat_sessions SET awaiting = 'resuming' WHERE id = $1 AND awaiting = 'delay' RETURNING id`,
+                [session.id]
+            );
+            if (claim.rows.length) {
+                const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
+                if (cr.length) {
+                    ident.city = session.city;
+                    ident.cityFallback = cr[0].city_fallback;
+                    const steps = await loadSteps(chatId, session.current_flow || 'open');
+                    await runScript(session, cr[0], steps, session.current_order, ident);
+                }
             }
         }
         // Chamada abandonada (fechou o app/tela no meio): se o roteiro ficou
@@ -878,11 +894,18 @@ router.get('/chats/:id/poll', optionalUser, async (req, res) => {
             await db.query(`UPDATE chat_sessions SET last_seen_at = NOW() WHERE id = $1`, [session.id]);
         }
         // avisa o app que a sessão passou do paywall (o roteiro CONTINUA rodando;
-        // é o lead que fica travado — digitar/ligar/atender exigem VIP)
+        // é o lead que fica travado — digitar/ligar/atender exigem VIP).
+        // Se ele COMPROU nesse meio-tempo, limpa a marca já no poll — é assim
+        // que a conversa destrava sozinha segundos após o webhook, sem F5.
         let paywalled = false;
         if (session.paywalled_at) {
             const { rows: pc } = await db.query(`SELECT id, product_id FROM chats WHERE id = $1`, [chatId]);
-            paywalled = !(await ownsChatVip(ident.email, pc[0] || {}));
+            const vip = await ownsChatVip(ident.email, pc[0] || {});
+            if (vip) {
+                await db.query(`UPDATE chat_sessions SET paywalled_at = NULL WHERE id = $1`, [session.id]);
+                session.paywalled_at = null;
+            }
+            paywalled = !vip;
         }
         return res.json({
             success: true,
@@ -923,7 +946,15 @@ router.post('/chats/messages/:id/viewed', optionalUser, async (req, res) => {
             );
             const session = sr[0];
             if (session && session.awaiting === 'view_once') {
-                const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [session.chat_id]);
+                // Reivindica atomicamente ('view_once'→'resuming') — dois toques
+                // rápidos na mídia (ou toque + poll) não podem retomar em dobro.
+                const claim = await db.query(
+                    `UPDATE chat_sessions SET awaiting = 'resuming' WHERE id = $1 AND awaiting = 'view_once' RETURNING id`,
+                    [session.id]
+                );
+                const { rows: cr } = claim.rows.length
+                    ? await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [session.chat_id])
+                    : { rows: [] };
                 if (cr.length) {
                     const chat = cr[0];
                     const ident2 = {
@@ -1172,6 +1203,47 @@ async function deliverPurchaseToSupport(email, productIds) {
     return firstMsg ? [{ chat, messages: [firstMsg], email: e }] : [];
 }
 
+// PIX GERADO (evento 'pending' do gateway) → mensagem de "só falta pagar" no
+// chat de SUPORTE: copy de urgência + botão COPIAR CÓDIGO (o app copia pro
+// clipboard) + instrução passo-a-passo pra leigo + aviso de liberação
+// automática. Dedupe por venda fica no sales-processor (pix_pending_notices).
+async function deliverPixPendingToSupport(email, info) {
+    const e = String(email || '').toLowerCase().trim();
+    if (!e || e.endsWith('@preview.local')) return [];
+    const { rows: sc } = await db.query(`SELECT * FROM chats WHERE active = true AND is_support = true ORDER BY id LIMIT 1`);
+    if (!sc.length) return [];
+    const chat = sc[0];
+    const session = await findOrCreateSession(chat.id, { email: e, visitor: null }, true);
+    const ctx = { email: e, city: session.city || null, cityFallback: chat.city_fallback };
+    const GREEN = '#1fa855';
+    const prod = (info && info.product_name) ? String(info.product_name) : 'seu acesso';
+    const valor = (info && info.amount > 0)
+        ? ('R$ ' + Number(info.amount).toFixed(2).replace('.', ','))
+        : null;
+
+    const t1 = await fillVars(
+        'Oi {nome}! Vi aqui que você gerou o Pix' + (valor ? ' de ' + valor : '') +
+        ' pra liberar ' + prod + ' 👀 Tá QUASE seu — só falta pagar!', ctx
+    );
+    const first = await insertMsg(session.id, 'bot', 'text', t1, null, { typing_ms: 0 }, null);
+
+    if (info && info.pix_code) {
+        await insertMsg(session.id, 'bot', 'text',
+            'É rapidinho: toca no botão aqui embaixo pra COPIAR o código, abre o app do seu banco, escolhe Pix → "Copia e Cola", cola o código e confirma ✅', null, { typing_ms: 0 }, null);
+        await insertMsg(session.id, 'bot', 'cta', '📋 Copiar código Pix', null,
+            { action: 'copy_pix', pix_code: String(info.pix_code), cta_color: GREEN }, null);
+    } else if (info && info.pix_url) {
+        await insertMsg(session.id, 'bot', 'cta', '💰 Abrir a tela de pagamento', null,
+            { link_url: String(info.pix_url), cta_color: GREEN }, null);
+    }
+
+    await insertMsg(session.id, 'bot', 'text',
+        'Assim que o pagamento cair, seu acesso libera AUTOMÁTICO aqui no app — eu te aviso na hora 😉 Qualquer dúvida, fala comigo aqui.', null, { typing_ms: 0 }, null);
+
+    await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [session.id]);
+    return [{ chat, messages: [first], email: e }];
+}
+
 // ── STATUS (stories) ─────────────────────────────────────────────────────────
 async function markStatusViewed(sid, ident) {
     try {
@@ -1395,4 +1467,5 @@ module.exports = router;
 module.exports.resumeDelayed = resumeDelayed;
 module.exports.triggerPostPurchaseChats = triggerPostPurchaseChats;
 module.exports.deliverPurchaseToSupport = deliverPurchaseToSupport;
+module.exports.deliverPixPendingToSupport = deliverPixPendingToSupport;
 module.exports.postDueStatusSchedules = postDueStatusSchedules;

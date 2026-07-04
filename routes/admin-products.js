@@ -800,85 +800,90 @@ router.post('/import', requireAdmin, async (req, res) => {
         for (const p of products) {
             try {
                 if (!p.name) { stats.skipped++; continue; }
-                // Detecta produto existente por nome
-                const { rows: existing } = await db.query('SELECT id FROM products WHERE name = $1 LIMIT 1', [p.name]);
-                const productId = existing[0]?.id;
+                // Cada produto roda numa TRANSAÇÃO própria: se falhar no meio
+                // (ex.: oferta inválida), NADA daquele produto é aplicado —
+                // antes, o replace podia deletar e não recriar (produto sumia).
+                await db.transaction(async (client) => {
+                    // Detecta produto existente por nome
+                    const { rows: existing } = await client.query('SELECT id FROM products WHERE name = $1 LIMIT 1', [p.name]);
+                    const productId = existing[0]?.id;
 
-                const safeExtra = (p.extra_data && typeof p.extra_data === 'object') ? p.extra_data : {};
-                const fields = [
-                    p.name,
-                    p.description || null,
-                    p.category_id || null,
-                    p.banner_url || null,
-                    p.main_video_url || null,
-                    p.access_url || null,
-                    parseFloat(p.price) || 0,
-                    p.is_active !== false,
-                    p.is_featured === true,
-                    p.badge_text || null,
-                    p.badge_color || null,
-                    safeExtra,
-                    p.is_published === true,
-                    p.audio_url || null,
-                    p.audio_enabled === true,
-                    p.audio_title || null,
-                    p.video_call_id || null,
-                ];
+                    const safeExtra = (p.extra_data && typeof p.extra_data === 'object') ? p.extra_data : {};
+                    const fields = [
+                        p.name,
+                        p.description || null,
+                        p.category_id || null,
+                        p.banner_url || null,
+                        p.main_video_url || null,
+                        p.access_url || null,
+                        parseFloat(p.price) || 0,
+                        p.is_active !== false,
+                        p.is_featured === true,
+                        p.badge_text || null,
+                        p.badge_color || null,
+                        safeExtra,
+                        p.is_published === true,
+                        p.audio_url || null,
+                        p.audio_enabled === true,
+                        p.audio_title || null,
+                        p.video_call_id || null,
+                    ];
 
-                let pid;
-                if (productId && !replaceMode) {
-                    // UPDATE
-                    await db.query(`
-                        UPDATE products SET name=$1, description=$2, category_id=$3, banner_url=$4,
-                            main_video_url=$5, access_url=$6, price=$7, is_active=$8, is_featured=$9,
-                            badge_text=$10, badge_color=$11, extra_data=$12, is_published=$13,
-                            audio_url=$14, audio_enabled=$15, audio_title=$16, video_call_id=$17
-                        WHERE id=$18
-                    `, [...fields, productId]);
-                    pid = productId;
-                    stats.updated++;
-                } else {
-                    if (productId && replaceMode) {
-                        await db.query('DELETE FROM product_offers WHERE product_id = $1', [productId]);
-                        await db.query('DELETE FROM product_media WHERE product_id = $1', [productId]);
-                        await db.query('DELETE FROM products WHERE id = $1', [productId]);
+                    let pid;
+                    if (productId && !replaceMode) {
+                        // UPDATE
+                        await client.query(`
+                            UPDATE products SET name=$1, description=$2, category_id=$3, banner_url=$4,
+                                main_video_url=$5, access_url=$6, price=$7, is_active=$8, is_featured=$9,
+                                badge_text=$10, badge_color=$11, extra_data=$12, is_published=$13,
+                                audio_url=$14, audio_enabled=$15, audio_title=$16, video_call_id=$17
+                            WHERE id=$18
+                        `, [...fields, productId]);
+                        pid = productId;
+                        stats.updated++;
+                    } else {
+                        if (productId && replaceMode) {
+                            await client.query('DELETE FROM product_offers WHERE product_id = $1', [productId]);
+                            await client.query('DELETE FROM product_media WHERE product_id = $1', [productId]);
+                            await client.query('DELETE FROM products WHERE id = $1', [productId]);
+                        }
+                        const { rows: ins } = await client.query(`
+                            INSERT INTO products (name, description, category_id, banner_url, main_video_url,
+                                access_url, price, is_active, is_featured, badge_text, badge_color, extra_data,
+                                is_published, audio_url, audio_enabled, audio_title, video_call_id)
+                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id
+                        `, fields);
+                        pid = ins[0].id;
+                        stats.created++;
                     }
-                    const { rows: ins } = await db.query(`
-                        INSERT INTO products (name, description, category_id, banner_url, main_video_url,
-                            access_url, price, is_active, is_featured, badge_text, badge_color, extra_data,
-                            is_published, audio_url, audio_enabled, audio_title, video_call_id)
-                        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id
-                    `, fields);
-                    pid = ins[0].id;
-                    stats.created++;
-                }
 
-                // Ofertas
-                if (Array.isArray(p.offers)) {
-                    await db.query('DELETE FROM product_offers WHERE product_id = $1', [pid]);
-                    for (const o of p.offers) {
-                        if (!o.gateway || !o.offer_id) continue;
-                        const isAcq = !!o.is_acquisition;
-                        const acqRole = isAcq && ['frontend','bump'].includes(o.acquisition_role) ? o.acquisition_role : null;
-                        await db.query(`
-                            INSERT INTO product_offers (product_id, gateway, offer_id, offer_name, checkout_url, price, is_active, is_acquisition, acquisition_role)
-                            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-                        `, [pid, o.gateway, o.offer_id, o.offer_name || null, o.checkout_url || null, parseFloat(o.price) || null, o.is_active !== false, isAcq, acqRole]);
+                    // Ofertas
+                    if (Array.isArray(p.offers)) {
+                        await client.query('DELETE FROM product_offers WHERE product_id = $1', [pid]);
+                        for (const o of p.offers) {
+                            if (!o.gateway || !o.offer_id) continue;
+                            const isAcq = !!o.is_acquisition;
+                            const acqRole = isAcq && ['frontend','bump'].includes(o.acquisition_role) ? o.acquisition_role : null;
+                            await client.query(`
+                                INSERT INTO product_offers (product_id, gateway, offer_id, offer_name, checkout_url, price, is_active, is_acquisition, acquisition_role)
+                                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+                            `, [pid, o.gateway, o.offer_id, o.offer_name || null, o.checkout_url || null, parseFloat(o.price) || null, o.is_active !== false, isAcq, acqRole]);
+                        }
                     }
-                }
 
-                // Mídia
-                if (Array.isArray(p.media)) {
-                    await db.query('DELETE FROM product_media WHERE product_id = $1', [pid]);
-                    for (let i = 0; i < p.media.length; i++) {
-                        const m = p.media[i];
-                        if (!m.url || !m.media_type) continue;
-                        await db.query(`
-                            INSERT INTO product_media (product_id, media_type, url, thumbnail_url, display_order)
-                            VALUES ($1,$2,$3,$4,$5)
-                        `, [pid, m.media_type, m.url, m.thumbnail_url || null, m.display_order ?? i]);
+                    // Mídia
+                    if (Array.isArray(p.media)) {
+                        await client.query('DELETE FROM product_media WHERE product_id = $1', [pid]);
+                        for (let i = 0; i < p.media.length; i++) {
+                            const m = p.media[i];
+                            if (!m.url || !m.media_type) continue;
+                            await client.query(`
+                                INSERT INTO product_media (product_id, media_type, url, thumbnail_url, display_order)
+                                VALUES ($1,$2,$3,$4,$5)
+                            `, [pid, m.media_type, m.url, m.thumbnail_url || null, m.display_order ?? i]);
+                        }
                     }
-                }
+                });
             } catch (e) {
                 stats.errors.push({ product: p?.name || 'desconhecido', error: e.message });
             }

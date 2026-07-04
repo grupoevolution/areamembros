@@ -1880,6 +1880,23 @@ async function loadExploreUnlock(productId, checkoutUrl) {
     return info;
 }
 
+// Checagem LEVE de acesso ao Explorar (sem montar o feed). O app consulta isso
+// enquanto o paywall está aberto pra destravar SOZINHO assim que o webhook da
+// compra liberar o acesso (sem o cliente precisar fechar/reabrir o app).
+router.get('/explore/access', optionalUser, async (req, res) => {
+    try {
+        const cfgRow = await db.query(`SELECT value FROM gamification_config WHERE key = 'explore_config'`).catch(() => ({ rows: [] }));
+        const cfg = cfgRow.rows[0]?.value || {};
+        const productId = cfg.product_id ? parseInt(cfg.product_id, 10) : null;
+        const email = req.user?.email || null;
+        let hasAccess = await ownsExploreProduct(email, productId);
+        if (!hasAccess) hasAccess = await ownsExploreByOffers(email, cfg.unlock_offer_codes);
+        return res.json({ success: true, has_access: hasAccess });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
 router.get('/explore/feed', optionalUser, async (req, res) => {
     try {
         const cfgRow = await db.query(`SELECT value FROM gamification_config WHERE key = 'explore_config'`).catch(() => ({ rows: [] }));

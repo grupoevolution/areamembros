@@ -116,6 +116,86 @@ router.post('/send', requireAdmin, async (req, res) => {
     return res.json({ success: true, total: subs.length, sent, failed });
 });
 
+// =============================================================================
+// ROTINA DIÁRIA DE NOTIFICAÇÕES (pós-instalação do PWA)
+// =============================================================================
+// Slots de horário (Brasília) com mensagem e público. O push-worker dispara
+// cada slot 1x por dia pra todos os inscritos do público escolhido — é a
+// máquina de trazer o lead de volta pro app sem o admin fazer nada.
+
+function cleanSlot(body) {
+    const b = body || {};
+    const time = String(b.send_time || '').trim();
+    if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(time)) return { error: 'Horário inválido (use HH:MM)' };
+    const title = String(b.title || '').trim().slice(0, 120);
+    if (!title) return { error: 'Título obrigatório' };
+    const audience = ['all', 'leads', 'buyers'].includes(b.audience) ? b.audience : 'all';
+    return {
+        send_time: time,
+        title,
+        body: String(b.body || '').trim().slice(0, 300) || null,
+        url: String(b.url || '/').trim().slice(0, 300) || '/',
+        icon_url: String(b.icon_url || '').trim().slice(0, 500) || null,
+        audience,
+        active: b.active !== false,
+    };
+}
+
+router.get('/routine', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await db.query(`SELECT * FROM engagement_push_slots ORDER BY send_time, id`);
+        return res.json({ success: true, slots: rows });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+router.post('/routine', requireAdmin, async (req, res) => {
+    const s = cleanSlot(req.body);
+    if (s.error) return res.status(400).json({ success: false, error: s.error });
+    try {
+        const { rows } = await db.query(
+            `INSERT INTO engagement_push_slots (send_time, title, body, url, icon_url, audience, active)
+             VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+            [s.send_time, s.title, s.body, s.url, s.icon_url, s.audience, s.active]
+        );
+        return res.json({ success: true, slot: rows[0] });
+    } catch (err) {
+        logger.error('rotina push: criar falhou:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+router.put('/routine/:id', requireAdmin, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ success: false, error: 'ID inválido' });
+    const s = cleanSlot(req.body);
+    if (s.error) return res.status(400).json({ success: false, error: s.error });
+    try {
+        const { rows } = await db.query(
+            `UPDATE engagement_push_slots
+             SET send_time=$1, title=$2, body=$3, url=$4, icon_url=$5, audience=$6, active=$7
+             WHERE id=$8 RETURNING *`,
+            [s.send_time, s.title, s.body, s.url, s.icon_url, s.audience, s.active, id]
+        );
+        if (!rows.length) return res.status(404).json({ success: false, error: 'Slot não encontrado' });
+        return res.json({ success: true, slot: rows[0] });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+router.delete('/routine/:id', requireAdmin, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        await db.query(`DELETE FROM engagement_push_slots WHERE id = $1`, [id]);
+        return res.json({ success: true });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
 router.get('/subscribers', requireAdmin, async (req, res) => {
     try {
         const { rows } = await db.query(`
