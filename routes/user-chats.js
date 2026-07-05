@@ -304,20 +304,24 @@ async function runScript(session, chat, steps, idx, ident) {
             break;
         }
         if (s.type === 'paywall') {
-            // 🔒 Marca o PONTO do paywall e SEGUE o roteiro: a modelo continua
-            // mandando mensagens/ligações normalmente — é o LEAD que não consegue
-            // mais responder, ligar nem atender sem assinar (digitar vira "não
-            // entregue" + popup). VIP passa sem marca.
+            // 🔒 FIM DA PARTE GRÁTIS DO ROTEIRO (decisão do dono, jul/2026):
+            // VIP passa direto pra parte PAGA. Quem não pagou PARA AQUI —
+            // o roteiro fica pausado em awaiting='paywall' (digitar vira "não
+            // entregue" + popup) e a parte paga NUNCA vaza. Quando o webhook
+            // da compra chega, resumePaywalledChats retoma DESTE ponto e a
+            // conversa continua sozinha (+ push "te mandou mensagem").
             const vip = await ownsChatVip(ident.email, chat);
-            if (!vip && !session.paywalled_at) {
-                await db.query(
-                    `UPDATE chat_sessions SET paywalled_at = NOW(), updated_at = NOW() WHERE id = $1`,
-                    [session.id]
-                );
-                session.paywalled_at = new Date();
-            }
-            idx = idx + 1;
-            continue;
+            if (vip) { idx = idx + 1; continue; }
+            awaiting = 'paywall';
+            await db.query(
+                `UPDATE chat_sessions SET current_order = $2, awaiting = 'paywall', current_flow = $3,
+                 paywalled_at = COALESCE(paywalled_at, NOW()), updated_at = NOW() WHERE id = $1`,
+                [session.id, idx, session.current_flow || 'open']
+            );
+            session.current_order = idx;
+            session.awaiting = 'paywall';
+            if (!session.paywalled_at) session.paywalled_at = new Date();
+            return out; // sai sem o UPDATE final (estado já gravado aqui)
         }
         if (s.type === 'delay') {
             // PAUSA o roteiro: marca quando retomar. O worker (app fechado) ou
@@ -1281,6 +1285,55 @@ async function deliverInstallWelcome(email) {
     return { chat, messages: [msg], email: e };
 }
 
+// PAGAMENTO CAIU → retoma as conversas PAUSADAS no bloco 🔒 Paywall deste
+// e-mail: limpa a marca, roda o roteiro do ponto onde parou (a parte PAGA) e
+// devolve a 1ª mensagem pro caller disparar o push "te mandou mensagem".
+// Claim atômico ('paywall'→'resuming') pra não rodar junto com o /open.
+async function resumePaywalledChats(email) {
+    const e = String(email || '').toLowerCase().trim();
+    if (!e || e.endsWith('@preview.local')) return [];
+    const out = [];
+    try {
+        const { rows: sessions } = await db.query(
+            `SELECT s.* FROM chat_sessions s
+             JOIN chats c ON c.id = s.chat_id AND c.active = true
+             WHERE LOWER(s.customer_email) = $1 AND s.awaiting = 'paywall'`,
+            [e]
+        );
+        for (const session of sessions) {
+            try {
+                const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [session.chat_id]);
+                const chat = cr[0];
+                if (!chat) continue;
+                // comprou OUTRO produto (não o do chat)? não destrava esta conversa
+                if (!(await ownsChatVip(e, chat))) continue;
+                const claim = await db.query(
+                    `UPDATE chat_sessions SET awaiting = 'resuming', paywalled_at = NULL, updated_at = NOW()
+                     WHERE id = $1 AND awaiting = 'paywall' RETURNING id`,
+                    [session.id]
+                );
+                if (!claim.rows.length) continue;
+                session.awaiting = null;
+                session.paywalled_at = null;
+                const ident = {
+                    email: e,
+                    visitor: session.visitor_id || null,
+                    city: session.city || null,
+                    cityFallback: chat.city_fallback,
+                };
+                const steps = await loadSteps(session.chat_id, session.current_flow || 'open');
+                const fresh = await runScript(session, chat, steps, session.current_order, ident);
+                if (fresh.length) out.push({ chat, messages: fresh, email: e });
+            } catch (err) {
+                logger.warn('[chat] resumePaywalled falhou sessão ' + session.id + ': ' + err.message);
+            }
+        }
+    } catch (err) {
+        logger.warn('[chat] resumePaywalledChats falhou: ' + err.message);
+    }
+    return out;
+}
+
 // PIX GERADO (evento 'pending' do gateway) → mensagem de "só falta pagar" no
 // chat de SUPORTE: copy de urgência + botão COPIAR CÓDIGO (o app copia pro
 // clipboard) + instrução passo-a-passo pra leigo + aviso de liberação
@@ -1552,6 +1605,7 @@ module.exports.resumeDelayed = resumeDelayed;
 module.exports.triggerPostPurchaseChats = triggerPostPurchaseChats;
 module.exports.deliverPurchaseToSupport = deliverPurchaseToSupport;
 module.exports.deliverPixPendingToSupport = deliverPixPendingToSupport;
+module.exports.resumePaywalledChats = resumePaywalledChats;
 module.exports.deliverInstallWelcome = deliverInstallWelcome;
 module.exports.invalidateSupportConfig = invalidateSupportConfig;
 module.exports.postDueStatusSchedules = postDueStatusSchedules;
