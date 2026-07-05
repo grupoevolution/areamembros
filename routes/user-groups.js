@@ -311,6 +311,12 @@ async function materializeScene(session, group, scene, baseTime, gapScale) {
             const g = person ? person.g : 'f';
             media = pickUnusedMedia(session, 'pres:' + g, g === 'm' ? presM : presF);
             if (!media) { if (!content) continue; type = 'text'; }
+        } else if (m.t === 'vonce') {
+            // ISCA "visualização única": bloco tracejado "só membros podem
+            // abrir" — não carrega mídia nenhuma; o clique cai no popup de
+            // planos (não-membro) ou na galeria (membro)
+            type = 'vonce';
+            meta = { kind: m.kind === 'foto' ? 'foto' : 'video' };
         } else if (m.t === 'cta') {
             type = 'cta';
             content = content || 'Ver agora';
@@ -318,7 +324,7 @@ async function materializeScene(session, group, scene, baseTime, gapScale) {
         } else if (m.t && m.t !== 'text') {
             continue; // tipo desconhecido/futuro (media_video): pula
         }
-        if (!content && !media) continue;
+        if (!content && !media && type !== 'vonce') continue;
         if (isAdmin) meta = Object.assign({}, meta || {}, { admin: true });
         const { rows } = await db.query(
             `INSERT INTO group_messages (session_id, persona_id, sender, type, content, media_url, meta, created_at, sender_name, sender_gender)
@@ -441,6 +447,7 @@ function maskContent(content) {
     return pool[Math.floor(Math.random() * pool.length)];
 }
 function publicMsg(m, personasById, masked) {
+    if (m.type === 'vonce') masked = false; // a ISCA fica visível até pra travado (é a provocação)
     const p = m.persona_id ? personasById[m.persona_id] : null;
     return {
         id: m.id,

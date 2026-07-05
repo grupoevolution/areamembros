@@ -262,7 +262,8 @@ router.post('/:id/scenes/import', requireAdmin, async (req, res) => {
             const msgs = (Array.isArray(s.messages) ? s.messages : []).slice(0, 40).map(m => ({
                 p: intOr(m.p, 1, 1, 12),
                 g: m.g === 'm' || m.g === 'f' ? m.g : undefined,
-                t: ['text', 'image', 'presentation', 'cta'].includes(m.t) ? m.t : 'text',
+                t: ['text', 'image', 'presentation', 'cta', 'vonce'].includes(m.t) ? m.t : 'text',
+                kind: m.kind === 'foto' ? 'foto' : (m.kind === 'video' ? 'video' : undefined),
                 text: (m.text || '').toString().slice(0, 1000) || undefined,
                 gap_s: m.gap_s !== undefined ? intOr(m.gap_s, 8, 2, 600) : undefined,
                 link: (m.link || '').toString().slice(0, 1000) || undefined,
@@ -270,7 +271,7 @@ router.post('/:id/scenes/import', requireAdmin, async (req, res) => {
                 color: (m.color || '').toString().slice(0, 20) || undefined,
                 folder: (m.folder || '').toString().trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40) || undefined,
                 admin: m.admin === true ? true : undefined,
-            })).filter(m => m.text || m.t === 'image' || m.t === 'presentation');
+            })).filter(m => m.text || m.t === 'image' || m.t === 'presentation' || m.t === 'vonce');
             if (!msgs.length) continue;
             clean.push({ category: cat, period: per, weight, messages: msgs });
         }

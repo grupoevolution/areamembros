@@ -47,6 +47,13 @@
 {"p":1,"g":"m","t":"text","text":"convencido, vou assinar kkk","gap_s":12},
 {"p":4,"admin":true,"t":"cta","text":"Assinar com desconto","link":"/","color":"#e50914","gap_s":6}]},
 
+{"category":"midia","period":"any","weight":3,"messages":[
+{"p":1,"g":"f","t":"presentation","text":"sou a {nome} do grupo VIP... deixando um gostinho aqui pro pessoal de fora 😏","gap_s":7},
+{"p":1,"g":"f","t":"vonce","kind":"video","gap_s":6},
+{"p":2,"g":"m","t":"text","text":"nao to acreditando nesse video","gap_s":11},
+{"p":1,"g":"f","t":"text","text":"no grupo VIP eu mando SEM visualização única... fica salvo lá 😏","gap_s":13},
+{"p":3,"admin":true,"t":"cta","text":"Entrar no grupo VIP","link":"/?go=groups","color":"#e50914","gap_s":6}]},
+
 {"category":"reacao","period":"any","weight":2,"messages":[
 {"p":1,"admin":true,"t":"text","text":"Opa! Esse canal é só de avisos — mas os grupos VIP são abertos pra conversar à vontade 😉","gap_s":5},
 {"p":1,"admin":true,"t":"cta","text":"Ir pros grupos VIP","link":"/?go=groups","color":"#25a55f","gap_s":4}]}

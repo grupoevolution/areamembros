@@ -350,6 +350,20 @@
 {"p":1,"g":"f","t":"image","text":"pronta pra dormir... ou não kkk","gap_s":8},
 {"p":2,"g":"m","t":"text","text":"agora ninguem dorme kkkk","gap_s":10},
 {"p":3,"g":"f","t":"text","text":"KKKKK maldade postar isso essa hora","gap_s":12}]},
+{"category":"midia","period":"any","weight":2,"messages":[
+{"p":1,"g":"f","t":"text","text":"vou mandar uma coisa que não pode ficar salva kkkk","gap_s":7},
+{"p":1,"g":"f","t":"vonce","kind":"video","gap_s":6},
+{"p":2,"g":"m","t":"text","text":"não to acreditando nesse video","gap_s":12},
+{"p":3,"g":"f","t":"text","text":"quem viu, viu kkkkk","gap_s":10}]},
+{"category":"midia","period":"any","weight":2,"messages":[
+{"p":1,"g":"f","t":"vonce","kind":"foto","gap_s":7},
+{"p":2,"g":"m","t":"text","text":"abri na hora, valeu MUITO a pena kkkk","gap_s":11},
+{"p":1,"g":"f","t":"text","text":"só os rápidos aproveitam kkk","gap_s":10}]},
+{"category":"midia","period":"noite","weight":2,"messages":[
+{"p":1,"g":"f","t":"text","text":"isso não foi nada... olha isso","gap_s":6},
+{"p":1,"g":"f","t":"vonce","kind":"video","gap_s":6},
+{"p":2,"g":"f","t":"text","text":"AMIGA kkkkkk sem noção","gap_s":12},
+{"p":3,"g":"m","t":"text","text":"melhor grupo que já entrei, sem discussão","gap_s":10}]},
 
 {"category":"bomdia","period":"manha","weight":2,"messages":[
 {"p":1,"g":"f","t":"text","text":"bom dia grupo do meu coração ☀️","gap_s":6},

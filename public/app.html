@@ -8344,6 +8344,51 @@ body.is-slowconn .prod-cta-fixed {
 .ga-media-banner { background: #25a55f; padding: 11px 14px; display: flex; align-items: center; gap: 9px; cursor: pointer; }
 .ga-media-banner .tx { flex: 1; font-size: 13px; font-weight: 600; color: #fff; }
 .ga-media-banner svg { flex-shrink: 0; }
+/* ── UI v2 dos grupos (referência do amigo, adaptada à paleta clara) ── */
+/* mensagem com AVATAR DE INICIAL ao lado */
+.ga-mrow { display: flex; align-items: flex-end; gap: 7px; align-self: flex-start; max-width: 88%; }
+.ga-mrow .ca-bub { max-width: 100%; align-self: auto; }
+.ga-avi { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center;
+    justify-content: center; font-size: 13px; font-weight: 800; color: #fff; margin-bottom: 2px;
+    background-size: cover; background-position: center; text-transform: uppercase; }
+/* reações (chips embaixo da mensagem) */
+.ga-reacts { display: flex; gap: 5px; margin: -1px 0 3px 37px; align-self: flex-start; flex-wrap: wrap; }
+.ga-react { background: #fff; border: 1px solid #e4ddd5; border-radius: 999px; padding: 2px 8px; font-size: 11.5px;
+    color: #555; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 1px rgba(0,0,0,.05); cursor: pointer; user-select: none; }
+.ga-react.on { background: #e7f8ee; border-color: #25a55f; color: #1b7a44; }
+/* isca de visualização única (só membros abrem) */
+.ga-vonce { display: flex; align-items: center; gap: 11px; border: 1.5px dashed #e05a4e; border-radius: 12px;
+    padding: 11px 13px; cursor: pointer; background: rgba(224,90,78,.04); min-width: 210px; }
+.ga-vonce .ic { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg,#ff5f3d,#e01e37);
+    display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.ga-vonce .mid { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ga-vonce .mid b { font-size: 13.5px; color: #1b1b1b; }
+.ga-vonce .mid .sub { font-size: 11.5px; color: #8a857d; }
+/* barra fixa "Só membros falam nos grupos" */
+.ga-lockrow { display: flex; align-items: center; gap: 11px; background: #fff; border: 1.5px solid rgba(229,9,20,.4);
+    border-radius: 16px; padding: 11px 13px; cursor: pointer; box-shadow: 0 6px 24px rgba(229,9,20,.15); }
+.ga-lockrow .lk { width: 38px; height: 38px; border-radius: 12px; background: rgba(229,9,20,.1); display: flex;
+    align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+.ga-lockrow .txts { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ga-lockrow .txts b { font-size: 13.5px; color: #1b1b1b; }
+.ga-lockrow .txts span { font-size: 11.5px; color: #8a949c; }
+.ga-lockrow .go { background: linear-gradient(90deg,#ff1f3d,#e50914); border: none; border-radius: 999px;
+    padding: 10px 16px; font-size: 12.5px; font-weight: 800; color: #fff; cursor: pointer; font-family: inherit;
+    flex-shrink: 0; box-shadow: 0 4px 14px rgba(229,9,20,.35); }
+/* banner COMPACTO do Passe (lista de grupos) */
+.ga-pass2 { display: flex; align-items: center; gap: 11px; margin: 10px 12px; padding: 10px 12px; border-radius: 14px;
+    background: linear-gradient(120deg, #2a1c04, #4a3204); border: 1px solid rgba(245,197,66,.5); cursor: pointer; }
+.ga-pass2 .avs { display: flex; flex-shrink: 0; }
+.ga-pass2 .avs span { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #4a3204;
+    background-size: cover; background-position: center; background-color: #6b5312; margin-left: -9px; }
+.ga-pass2 .avs span:first-child { margin-left: 0; }
+.ga-pass2 .mid3 { flex: 1; min-width: 0; }
+.ga-pass2 .t { font-size: 14px; font-weight: 800; letter-spacing: 1.5px; color: #f5c542; }
+.ga-pass2 .s { font-size: 11.5px; color: #d8c48b; margin-top: 1px; }
+.ga-pass2 .arr2 { width: 32px; height: 32px; border-radius: 50%; background: #f5c542; color: #241a05;
+    display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; flex-shrink: 0; }
+/* prévia borrada DE VERDADE na lista (grupo travado) */
+.pv-blur { filter: blur(3.5px); user-select: none; }
 /* banner do Telegram (grupo gratuito) */
 .ga-tg { background: #2AABEE; padding: 10px 14px; display: flex; align-items: center; gap: 9px; cursor: pointer; }
 .ga-tg .tx { flex: 1; font-size: 12.5px; font-weight: 600; color: #fff; }
@@ -8356,8 +8401,8 @@ body.is-slowconn .prod-cta-fixed {
 .ga-locknote .t1 { font-size: 13px; font-weight: 700; color: #3d4852; line-height: 1.45; }
 /* CTA fixo do rodapé (verde) */
 .ga-ctabar { padding: 10px 12px calc(14px + env(safe-area-inset-bottom)); background: #ECE5DD; }
-.ga-ctabar button { width: 100%; background: #25a55f; border: none; color: #fff; font-size: 15px; font-weight: 700; padding: 15px; border-radius: 14px; cursor: pointer; box-shadow: 0 3px 12px rgba(37,165,95,.35); font-family: inherit; }
-.ga-ctabar button:active { transform: scale(.98); }
+.ga-ctabar > button { width: 100%; background: #25a55f; border: none; color: #fff; font-size: 15px; font-weight: 700; padding: 15px; border-radius: 14px; cursor: pointer; box-shadow: 0 3px 12px rgba(37,165,95,.35); font-family: inherit; }
+.ga-ctabar > button:active { transform: scale(.98); }
 /* aviso do fim do trial */
 .ga-trial-chip { position: absolute; left: 50%; transform: translateX(-50%); bottom: 86px; background: #1b1b1b; color: #fff; font-size: 12px; font-weight: 600; padding: 8px 14px; border-radius: 999px; z-index: 5; box-shadow: 0 6px 20px rgba(0,0,0,.35); display: none; }
 /* galeria de mídias do grupo */
@@ -8401,6 +8446,8 @@ body.is-slowconn .prod-cta-fixed {
 <div class="screen" id="chat">
     <div class="screen-scroll" style="display:flex; flex-direction:column; padding-bottom:0;">
         <div class="ca-header"><h1>Conversas</h1><span class="ca-plan-badge" id="caPlanBadge" style="display:none;">FREE</span></div>
+        <!-- Stories FIXOS: acima das abas, visíveis em Conversas E Grupos -->
+        <div id="caStoriesFixed" style="background:#fff;"></div>
         <!-- Abas: Conversas (1:1) | Grupos. A de Grupos só aparece quando há grupo ativo. -->
         <div class="ca-tabs" id="caTabs" style="display:none;">
             <button id="caTabChats" class="on" onclick="GroupApp.tab('chats')">Conversas</button>
@@ -9175,8 +9222,12 @@ window.ChatApp = (function() {
         if (el) { el.classList.remove('show'); el.innerHTML = ''; }
         STORY = null;
     }
-    // atualiza só a fileira de stories sem recarregar a lista toda
+    // atualiza só a fileira de stories sem recarregar a lista toda.
+    // v2: os stories moram no container FIXO acima das abas (visíveis também
+    // na aba Grupos, igual à referência) — não mais dentro da lista.
     function renderStripInline() {
+        const holder = document.getElementById('caStoriesFixed');
+        if (holder) { holder.innerHTML = storiesStripHtml(); return; }
         const old = document.querySelector('#caListScroll .ca-stories');
         if (old) old.outerHTML = storiesStripHtml();
     }
@@ -9216,8 +9267,10 @@ window.ChatApp = (function() {
             ]);
             const data = await r.json();
             try { const sd = sr && await sr.json(); STORIES = (sd && sd.success && Array.isArray(sd.stories)) ? sd.stories : []; } catch (_) { STORIES = []; }
+            const storiesHolder = document.getElementById('caStoriesFixed');
+            if (storiesHolder) storiesHolder.innerHTML = storiesStripHtml();
             if (!data.success || !Array.isArray(data.chats) || data.chats.length === 0) {
-                scroll.innerHTML = storiesStripHtml() || '<div class="ca-empty">Nenhuma conversa disponível ainda.<br>Volte em breve.</div>';
+                scroll.innerHTML = (storiesHolder ? '' : storiesStripHtml()) || '<div class="ca-empty">Nenhuma conversa disponível ainda.<br>Volte em breve.</div>';
                 return;
             }
             // Ordena por última mensagem (mais recente no topo, estilo WhatsApp).
@@ -9229,7 +9282,7 @@ window.ChatApp = (function() {
             });
             LIST_CHATS = chats;
             updatePlanUI(data);
-            let html = storiesStripHtml();
+            let html = storiesHolder ? '' : storiesStripHtml();
             // VIP NÃO tem mais seção separada — entra junto com as conversas normais.
             const sections = {};
             for (const c of chats) {
@@ -10509,34 +10562,46 @@ window.GroupApp = (function () {
             if (tabs) tabs.style.display = GROUPS_ON ? 'flex' : 'none';
             if (!groups.length) { scroll.innerHTML = '<div class="ca-empty">Nenhum grupo disponível ainda.</div>'; return; }
             let html = '';
-            // banner dourado do PASSE VIP (oferta exclusiva daqui)
+            // banner COMPACTO do PASSE VIP (fotos empilhadas — estilo referência);
+            // o popup do bilhete dourado continua ao tocar
             PASS = data.pass || null;
             if (PASS) {
-                html += '<div class="ga-pass" onclick="GroupApp.openPass()">'
-                    + '<div class="mid2"><div class="e">✦ PASSE VIP · ACESSO VITALÍCIO</div><div class="t">Todos os grupos, pra sempre</div>'
-                    + '<div class="s">Pagamento único · círculo fechado de quem tem TUDO</div></div>'
-                    + '<span class="arr">›</span></div>';
+                const avs = groups.filter(g => g.avatar_url).slice(0, 4)
+                    .map(g => '<span style="background-image:url(\'' + esc(g.avatar_url) + '\')"></span>').join('')
+                    || '<span></span><span></span><span></span>';
+                html += '<div class="ga-pass2" onclick="GroupApp.openPass()">'
+                    + '<div class="avs">' + avs + '</div>'
+                    + '<div class="mid3"><div class="t">PASSE VIP</div><div class="s">Todos os grupos liberados</div></div>'
+                    + '<span class="arr2">›</span></div>';
             }
             html += '<div class="ca-sec-block">';
             for (const g of groups) {
-                const bg = g.avatar_url ? ' style="background-image:url(\'' + esc(g.avatar_url) + '\')"' : '';
                 const icon = g.avatar_url ? '' : '<svg width="26" height="26" fill="none" stroke="#8a857d" stroke-width="2" viewBox="0 0 24 24" style="position:absolute;inset:0;margin:auto;"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>';
                 const pin = g.pinned ? '<svg width="12" height="12" fill="none" stroke="#b3aca4" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;"><path d="M12 17v5M9 10.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V16h14v-.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V6h1a2 2 0 000-4H8a2 2 0 000 4h1z"/></svg>' : '';
+                // travado: prévia BORRADA de verdade (blur) — dá vontade de espiar
                 const pv = g.locked_preview
-                    ? '<div class="pv" style="color:#b3aca4;">' + esc((g.last && g.last.preview) || '▓▓▓▓ ▓▓▓ ▓▓▓▓▓') + ' 🔒</div>'
+                    ? '<div class="pv" style="display:flex;align-items:center;gap:5px;"><span class="pv-blur">' + esc((g.last && g.last.preview) || 'mensagens novas rolando agora') + '</span> 🔒</div>'
                     : (g.last
                         ? '<div class="pv">' + (g.last.name ? '<b style="color:#25a55f;font-weight:600;">' + esc(g.last.name) + ':</b> ' : '') + esc(g.last.preview) + '</div>'
                         : '<div class="pv online">' + g.members_count + ' membros</div>');
                 const unread = (g.unread > 0)
                     ? '<span style="display:inline-flex;min-width:19px;height:19px;border-radius:999px;background:#25D366;color:#fff;font-size:10.5px;font-weight:600;align-items:center;justify-content:center;padding:0 5px;margin-top:3px;">' + (g.unread > 99 ? '99+' : g.unread) + '</span>'
                     : '';
-                const tm = (g.last && g.last.at) ? hhmm(g.last.at) : '';
+                // mensagem fresca (<10 min) → "agora" em destaque, senão hh:mm
+                let tm = '';
+                if (g.last && g.last.at) {
+                    const fresh = (Date.now() - new Date(g.last.at).getTime()) < 10 * 60000;
+                    tm = fresh
+                        ? '<span style="color:#e50914;font-weight:800;font-size:11.5px;">agora</span>'
+                        : '<span style="color:#1fa855;font-weight:600;font-size:11.5px;">' + hhmm(g.last.at) + '</span>';
+                } else if (g.unread > 0) {
+                    tm = '<span style="color:#e50914;font-weight:800;font-size:11.5px;">agora</span>';
+                }
                 html += '<div class="ca-row" onclick="GroupApp.open(' + g.id + ')">'
                     + '<div class="av" style="position:relative;' + (g.avatar_url ? "background-image:url('" + esc(g.avatar_url) + "');" : '') + '">' + icon + '</div>'
                     + '<div class="mid"><div class="nm" style="display:flex;align-items:center;gap:5px;">' + pin + esc(g.name) + '</div>' + pv + '</div>'
                     + '<div class="tm" style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;">'
-                    + (tm ? '<span style="color:#1fa855;font-weight:600;font-size:11.5px;">' + tm + '</span>' : '')
-                    + unread + '</div></div>';
+                    + tm + unread + '</div></div>';
             }
             html += '</div>';
             scroll.innerHTML = html;
@@ -10571,6 +10636,41 @@ window.GroupApp = (function () {
         tab('groups');
     }
 
+    // ── REAÇÕES automáticas: determinístico pelo id da mensagem (nem toda
+    // mensagem tem — parece orgânico; fotos e iscas atraem mais reação).
+    const REACT_EMOJIS = ['🔥', '😍', '👏', '❤️', '😂', '🥵'];
+    function seededReactions(m) {
+        if (!m || !m.id || m.sender === 'user' || m.masked || m.type === 'cta') return [];
+        let h = (m.id * 2654435761) >>> 0;
+        const chance = (m.type === 'image' || m.type === 'vonce') ? 85 : 38;
+        if ((h % 100) >= chance) return [];
+        const n = 1 + (h % 3);
+        const out = [];
+        for (let i = 0; i < n; i++) {
+            h = (Math.imul(h, 48271) + 11) >>> 0;
+            const e = REACT_EMOJIS[h % REACT_EMOJIS.length];
+            if (out.some(x => x.e === e)) continue;
+            out.push({ e, c: (h >> 4) % 9 }); // 0 = só o emoji, sem número
+        }
+        return out;
+    }
+    function myReacts() {
+        try { return JSON.parse(localStorage.getItem('mv_greacts') || '{}'); } catch (_) { return {}; }
+    }
+    function toggleReact(msgId, chip) {
+        const all = myReacts();
+        const on = !all[msgId];
+        if (on) all[msgId] = 1; else delete all[msgId];
+        try { localStorage.setItem('mv_greacts', JSON.stringify(all)); } catch (_) {}
+        chip.classList.toggle('on', on);
+        const c = chip.querySelector('i');
+        if (c) {
+            const base = parseInt(c.dataset.base, 10) || 0;
+            const val = base + (on ? 1 : 0);
+            c.textContent = val > 0 ? val : '';
+        }
+    }
+
     function renderMsg(m) {
         const body = document.getElementById('gaBody');
         if (!body || !m) return;
@@ -10586,21 +10686,28 @@ window.GroupApp = (function () {
         } else if (!mine && m.name) {
             inner += '<div class="ga-nm" style="color:' + nameColor(m.name) + ';">' + esc(m.name) + '</div>';
         }
+        let isCta = false;
         if (m.type === 'image' && m.media_url) {
             inner += '<img class="photo" src="' + esc(m.media_url) + '" alt="" loading="lazy">';
             if (m.content) inner += '<div class="tx">' + esc(m.content) + '</div>';
         } else if (m.type === 'image' && m.masked) {
             inner += '<div class="tx" style="display:flex;align-items:center;gap:8px;color:#8a857d;"><span style="width:96px;height:56px;border-radius:8px;background:#d8cfc4;display:inline-block;"></span>Foto</div>';
+        } else if (m.type === 'vonce' && !m.masked) {
+            // ISCA: visualização única — só membro abre; não-membro cai no popup
+            const kind = ((m.meta && m.meta.kind) === 'foto') ? 'Foto' : 'Vídeo';
+            inner += '<div class="ga-vonce"><span class="ic">🔥</span>'
+                + '<span class="mid"><b>' + kind + ' — visualização única</b>'
+                + '<span class="sub">🔒 só membros podem abrir</span></span></div>';
+            if (m.content) inner += '<div class="tx">' + esc(m.content) + '</div>';
         } else if (m.type === 'cta' && !m.masked) {
-            const meta = m.meta || {};
-            d.style.alignSelf = 'stretch'; d.style.width = '100%';
-            inner += '<button class="ca-cta-btn" style="background:' + esc(meta.cta_color || '#25a55f') + ';">' + esc(m.content || 'Ver agora') + '</button>';
+            isCta = true;
+            inner += '<button class="ca-cta-btn" style="background:' + esc((m.meta || {}).cta_color || '#25a55f') + ';">' + esc(m.content || 'Ver agora') + '</button>';
         } else {
             inner += '<div class="tx">' + esc(m.content || '') + '</div>';
         }
         inner += '<div class="tm2">' + hhmm(m.created_at) + '</div>';
         d.innerHTML = inner;
-        if (m.type === 'cta' && !m.masked) {
+        if (isCta) {
             const meta = m.meta || {};
             const btn = d.querySelector('button');
             if (btn) btn.addEventListener('click', () => {
@@ -10611,7 +10718,58 @@ window.GroupApp = (function () {
                 else window.open(meta.link_url, '_blank', 'noopener');
             });
         }
-        body.appendChild(d);
+        if (m.type === 'vonce' && !m.masked) {
+            const teaser = d.querySelector('.ga-vonce');
+            if (teaser) teaser.addEventListener('click', () => {
+                try { window.TRACK && TRACK.event('group_paywall_open', { group_id: CUR && CUR.id, ctx: 'vonce' }); } catch (_) {}
+                if (CUR && CUR.access === 'member') openMedia();
+                else openPopup();
+            });
+        }
+
+        // Layout final: mensagem de bot ganha AVATAR de inicial ao lado (Admin
+        // usa a foto do grupo); CTA continua full-width sem avatar.
+        let node = d;
+        if (!mine && !isCta) {
+            const wrap = document.createElement('div');
+            wrap.className = 'ga-mrow';
+            const av = document.createElement('div');
+            av.className = 'ga-avi';
+            if (isAdm) {
+                const gav = CUR && CUR.group && CUR.group.avatar_url;
+                if (gav) { av.style.backgroundImage = 'url("' + gav + '")'; av.textContent = ''; }
+                else { av.style.background = '#d4a017'; av.textContent = 'A'; }
+            } else {
+                const nm = m.name || 'M';
+                av.style.background = nameColor(nm);
+                av.textContent = nm.charAt(0);
+            }
+            wrap.appendChild(av);
+            wrap.appendChild(d);
+            node = wrap;
+        } else if (isCta) {
+            d.style.alignSelf = 'stretch'; d.style.width = '100%';
+        }
+        body.appendChild(node);
+
+        // reações (chips) — logo abaixo da mensagem
+        const reacts = seededReactions(m);
+        if (reacts.length) {
+            const mine2 = myReacts();
+            const row = document.createElement('div');
+            row.className = 'ga-reacts';
+            row.innerHTML = reacts.map((r2, i) => {
+                const on = i === 0 && mine2[m.id];
+                const val = (r2.c || 0) + (on ? 1 : 0);
+                return '<span class="ga-react' + (on ? ' on' : '') + '" data-mid="' + m.id + '">' + r2.e
+                    + '<i data-base="' + (r2.c || 0) + '">' + (val > 0 ? val : '') + '</i></span>';
+            }).join('');
+            row.querySelectorAll('.ga-react').forEach((chip, i) => {
+                if (i === 0) chip.addEventListener('click', () => toggleReact(m.id, chip));
+                else chip.addEventListener('click', () => chip.classList.toggle('on'));
+            });
+            body.appendChild(row);
+        }
         if (m.id && CUR && m.id > CUR.lastId) CUR.lastId = m.id;
     }
     function scrollBottom() {
@@ -10738,15 +10896,18 @@ window.GroupApp = (function () {
         openPopup();
     }
 
-    // trava a interface (trial esgotou / assinatura venceu)
+    // trava a interface (trial esgotou / assinatura venceu) — barra rica fixa
+    // no estilo da referência: cadeado + copy + botão ENTRAR
     function lockUI(showPopup) {
         if (!CUR) return;
         CUR.access = 'locked';
         document.getElementById('gaInputBar').style.display = 'none';
         document.getElementById('gaTrialChip').style.display = 'none';
         const bar = document.getElementById('gaCtaBar');
-        const btn = document.getElementById('gaCtaBtn');
-        btn.textContent = 'Entrar no grupo' + monthlyLabel(CUR.unlock);
+        bar.innerHTML = '<div class="ga-lockrow" onclick="GroupApp.ctaClick()">'
+            + '<span class="lk">🔒</span>'
+            + '<span class="txts"><b>Só membros falam nos grupos</b><span>entre e participe de tudo, sem censura</span></span>'
+            + '<button class="go">ENTRAR →</button></div>';
         bar.style.display = 'block';
         // aviso central no fim do corpo (1x)
         const body = document.getElementById('gaBody');
@@ -10787,14 +10948,17 @@ window.GroupApp = (function () {
         const g = CUR.group || {};
         const input = document.getElementById('gaInputBar');
         const bar = document.getElementById('gaCtaBar');
-        const btn = document.getElementById('gaCtaBtn');
         document.getElementById('gaTrialChip').style.display = 'none';
         if (CUR.access === 'member' || CUR.access === 'trial') {
             input.style.display = 'flex'; bar.style.display = 'none';
         } else if (CUR.access === 'channel') {
             input.style.display = 'none';
-            if (g.cta_label) { btn.textContent = g.cta_label; bar.style.display = 'block'; }
-            else bar.style.display = 'none';
+            // canal free: botão simples configurável (lockUI reescreve o bar,
+            // então o botão é recriado aqui)
+            if (g.cta_label) {
+                bar.innerHTML = '<button id="gaCtaBtn" onclick="GroupApp.ctaClick()">' + esc(g.cta_label) + '</button>';
+                bar.style.display = 'block';
+            } else bar.style.display = 'none';
         } else {
             lockUI(false);
         }
