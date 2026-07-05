@@ -9635,9 +9635,12 @@ window.ChatApp = (function() {
             return;
         }
         const mode = (CUR.chat && CUR.chat.input_mode) || 'always';
-        // Pós-paywall: a barra fica SEMPRE ativa de propósito (mesmo no modo
-        // gated) — o lead digita, a mensagem "não entrega" e o popup reaparece.
-        const canType = (mode !== 'gated') || aw === 'input' || aw === 'paywall' || CUR.paywalled === true || (aw === 'buttons' && CUR.lastButtonsAllowInput);
+        const isVip = !!(CUR.perm && CUR.perm.is_vip);
+        // VIP: barra de digitar FIXA em TODAS as conversas, independente da
+        // config (modo gated/roteiro). Depois de pagar, ele fala quando quiser.
+        // Pós-paywall (ainda não-VIP): barra ativa de propósito (digita, "não
+        // entrega" e o popup reaparece).
+        const canType = isVip || (mode !== 'gated') || aw === 'input' || aw === 'paywall' || CUR.paywalled === true || (aw === 'buttons' && CUR.lastButtonsAllowInput);
         if (canType) {
             // libera o input; esconde a barra de status
             bar.style.display = 'flex';

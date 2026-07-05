@@ -14,7 +14,9 @@
  *   - chat.access='vip'   → bloqueado sem o produto vinculado (lista mostra 🔒)
  *   - reply_mode='vip'    → digitar livre só com o produto; 'all' = todos;
  *     'none' = ninguém (só botões do roteiro)
- *   - allow_photo + VIP   → cliente pode mandar foto
+ *   - VIP                 → input SEMPRE liberado + pode mandar foto em TODAS
+ *                           as conversas (100% liberado após pagar; allow_photo
+ *                           e reply_mode/input_mode não valem mais pra ele)
  *   - visualização única  → mídia entregue UMA vez; depois viewed_at trava
  * =============================================================================
  */
@@ -146,8 +148,11 @@ function permissions(chat, owns, ident) {
     return {
         locked,
         is_vip: isVip,
-        can_reply: !locked && canReply,
-        can_photo: !locked && isVip && chat.allow_photo === true,
+        // VIP responde SEMPRE (independente do reply_mode) — ele pagou
+        can_reply: isVip || (!locked && canReply),
+        // VIP pode mandar foto em qualquer conversa (a config allow_photo vira
+        // irrelevante depois de pagar — "100% liberado após pagar")
+        can_photo: !locked && isVip,
         unlock: locked ? { checkout_url: chat.checkout_url || null, product_id: chat.product_id || null } : null,
     };
 }

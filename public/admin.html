@@ -5915,10 +5915,9 @@ a { color: inherit; text-decoration: none; }
                             <label class="g-lbl">Depois de quantos segundos</label>
                             <input class="form-control" type="number" id="gInviteDelay" min="5" max="86400" value="120" style="width:140px;"/>
                         </div>
-                        <div style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:12px;">
-                            <label class="g-lbl" style="font-weight:700;">🎭 Elenco — agora é AUTOMÁTICO 🎉</label>
-                            <div style="font-size:11.5px; color:rgba(255,255,255,.5); margin-top:4px;">O sistema tem ~180 nomes brasileiros e monta um elenco próprio pra CADA lead: nas apresentações entra sempre gente nova, nos papos as mesmas pessoas voltam. Nos arquivos de cena, use <b style="color:#4CD964;">{nome}</b> no texto — vira o nome de quem está falando. O campo abaixo é LEGADO (pode deixar vazio).</div>
-                            <textarea class="form-control" id="gPersonas" style="width:100%; min-height:44px; margin-top:8px;" placeholder="(legado — não precisa mais)"></textarea>
+                        <div style="background:rgba(76,217,100,.06); border:1px solid rgba(76,217,100,.25); border-radius:10px; padding:12px;">
+                            <label class="g-lbl" style="font-weight:700;">🎭 Elenco automático</label>
+                            <div style="font-size:11.5px; color:rgba(255,255,255,.5); margin-top:4px;">Não precisa cadastrar ninguém. O sistema tem ~180 nomes brasileiros e monta um elenco próprio pra CADA lead: nas apresentações entra sempre gente nova, nos papos as mesmas pessoas voltam. Nos arquivos de cena, use <b style="color:#4CD964;">{nome}</b> no texto — vira o nome de quem está falando.</div>
                         </div>
                         <div style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:12px;">
                             <label class="g-lbl" style="font-weight:700;">🎬 Cenas (JSON) — gere fora e cole aqui</label>
@@ -15784,7 +15783,7 @@ async function loadGroupDropdowns(productId, inviteIds) {
 
 function openGroupModal() {
     document.getElementById('groupModalTitle').textContent = 'Novo Grupo';
-    ['gId','gName','gAvatar','gDesc','gCtaLabel','gCtaLink','gTelegram','gBunnyLib','gBunnyCol','gMediaImgs','gPresM','gPresF','gMediaFolder','gPresMFolder','gPresFFolder','gMediaFolders','gPersonas','gScenesJson'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    ['gId','gName','gAvatar','gDesc','gCtaLabel','gCtaLink','gTelegram','gBunnyLib','gBunnyCol','gMediaImgs','gPresM','gPresF','gMediaFolder','gPresMFolder','gPresFFolder','gMediaFolders','gScenesJson'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     document.getElementById('gOrder').value = 0;
     document.getElementById('gMsgsHour').value = 60;
     document.getElementById('gTrial').value = 60;
@@ -15837,11 +15836,6 @@ async function editGroup(g) {
     document.getElementById('gScenesReplace').checked = false;
     loadGroupDropdowns(g.product_id || '', g.invite_chat_ids || []);
     loadGroupScenesSummary(g.id);
-    try {
-        const r = await fetch('/api/admin/groups/' + g.id + '/personas', { credentials: 'include' });
-        const d = await r.json();
-        document.getElementById('gPersonas').value = (d.personas || []).map(p => p.name + '|' + p.gender).join('\n');
-    } catch (_) {}
     document.getElementById('groupModalBackdrop').style.display = 'flex';
 }
 
@@ -15907,11 +15901,6 @@ async function saveGroup() {
         if (!d.success) { alert('Erro: ' + (d.error || '')); return; }
         const gid = d.group.id;
         document.getElementById('gId').value = gid;
-        // elenco (substitui)
-        await fetch('/api/admin/groups/' + gid + '/personas', {
-            method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-            body: JSON.stringify({ lines: document.getElementById('gPersonas').value }),
-        });
         closeGroupModal();
         loadAdminGroups();
     } catch (e) { alert('Erro: ' + e.message); }
