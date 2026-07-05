@@ -871,21 +871,33 @@ router.get('/groups/:id/media', optionalUser, async (req, res) => {
         const group = gr[0];
         await hydrateGroupMedia(group);
         if (!group.is_free && !(await ownsGroup(ident.email, group))) {
-            // galeria TRAVADA: mostra só as CONTAGENS (nada de mídia real) +
-            // popup de planos no botão — o acervo vira isca de venda
-            let vidCount = 0;
+            // galeria TRAVADA: mostra a PRÉVIA real (thumbs) BORRADA no cliente
+            // — o acervo vira isca de venda (dá vontade de espiar). O borrão é
+            // CSS no cliente (mesma escolha do dono no resto do app).
+            let vidCount = 0, vidThumbs = [];
             if (group.media_video_library_id && group.media_video_collection_id) {
                 try {
                     const vids = await listCollectionVideos(group.media_video_library_id, group.media_video_collection_id);
                     vidCount = (vids || []).length;
+                    vidThumbs = (vids || []).slice(0, 24).map(v => bunnyThumbUrl(v.guid, v.thumbnailFileName || 'thumbnail.jpg'));
                 } catch (_) {}
             }
-            const imgCount = Array.isArray(group.media_image_urls) ? group.media_image_urls.length : 0;
+            const imgs = Array.isArray(group.media_image_urls) ? group.media_image_urls : [];
+            // intercala fotos e capas de vídeo pra a grade de prévia parecer cheia
+            const preview = [];
+            const maxP = 24;
+            for (let i = 0; i < maxP; i++) {
+                if (i < imgs.length) preview.push(imgs[i]);
+                if (preview.length >= maxP) break;
+                if (i < vidThumbs.length) preview.push(vidThumbs[i]);
+                if (preview.length >= maxP) break;
+            }
             return res.json({
                 success: true,
                 locked: true,
-                photos: imgCount,
+                photos: imgs.length,
                 videos: vidCount,
+                preview,
                 unlock: await groupUnlock(group),
             });
         }

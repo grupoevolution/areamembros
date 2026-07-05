@@ -8337,9 +8337,11 @@ body.is-slowconn .prod-cta-fixed {
 
 /* ═══ GRUPOS ═══ */
 /* Abas Conversas | Grupos (pílulas, verde WhatsApp) */
-.ca-tabs { display: flex; gap: 6px; padding: 10px 16px 12px; background: #fff; }
-.ca-tabs button { flex: 1; border: none; border-radius: 999px; padding: 9px 0; font-size: 13px; font-weight: 600; font-family: inherit; cursor: pointer; background: #f1ede8; color: #8a857d; }
-.ca-tabs button.on { background: #25a55f; color: #fff; }
+/* abas clean com underline (sem cara de botão) */
+.ca-tabs { display: flex; gap: 30px; padding: 2px 20px 0; background: #fff; border-bottom: 1px solid #efeae4; }
+.ca-tabs button { border: none; background: none; padding: 11px 2px 13px; font-size: 15.5px; font-weight: 700; font-family: inherit; cursor: pointer; color: #9a948d; position: relative; letter-spacing: .2px; }
+.ca-tabs button.on { color: #1b1b1b; }
+.ca-tabs button.on::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: #25a55f; }
 /* faixa verde "Mídias do grupo" */
 .ga-media-banner { background: #25a55f; padding: 11px 14px; display: flex; align-items: center; gap: 9px; cursor: pointer; }
 .ga-media-banner .tx { flex: 1; font-size: 13px; font-weight: 600; color: #fff; }
@@ -8351,11 +8353,15 @@ body.is-slowconn .prod-cta-fixed {
 .ga-avi { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center;
     justify-content: center; font-size: 13px; font-weight: 800; color: #fff; margin-bottom: 2px;
     background-size: cover; background-position: center; text-transform: uppercase; }
-/* reações (chips embaixo da mensagem) */
-.ga-reacts { display: flex; gap: 5px; margin: -1px 0 3px 37px; align-self: flex-start; flex-wrap: wrap; }
-.ga-react { background: #fff; border: 1px solid #e4ddd5; border-radius: 999px; padding: 2px 8px; font-size: 11.5px;
-    color: #555; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 1px 1px rgba(0,0,0,.05); cursor: pointer; user-select: none; }
-.ga-react.on { background: #e7f8ee; border-color: #25a55f; color: #1b7a44; }
+/* reações estilo rede social: pílula branca flutuante que "cola" na base da
+   mensagem (overlap negativo), sombra suave, sem borda dura */
+.ga-reacts { display: flex; gap: 4px; margin: -11px 0 5px 40px; align-self: flex-start; flex-wrap: wrap; position: relative; z-index: 3; }
+.ga-react { background: #fff; border-radius: 999px; padding: 3px 8px 3px 6px; font-size: 14px; line-height: 1;
+    color: #6b6b6b; display: inline-flex; align-items: center; gap: 3px; box-shadow: 0 2px 6px rgba(0,0,0,.14); cursor: pointer; user-select: none; }
+.ga-react i { font-style: normal; font-size: 11.5px; font-weight: 700; color: #8a8a8a; }
+.ga-react.on { background: #e7f8ee; }
+.ga-react.on i { color: #1b7a44; }
+.ga-react:active { transform: scale(.92); }
 /* isca de visualização única (só membros abrem) */
 .ga-vonce { display: flex; align-items: center; gap: 11px; border: 1.5px dashed #e05a4e; border-radius: 12px;
     padding: 11px 13px; cursor: pointer; background: rgba(224,90,78,.04); min-width: 210px; }
@@ -8375,18 +8381,25 @@ body.is-slowconn .prod-cta-fixed {
 .ga-lockrow .go { background: linear-gradient(90deg,#ff1f3d,#e50914); border: none; border-radius: 999px;
     padding: 10px 16px; font-size: 12.5px; font-weight: 800; color: #fff; cursor: pointer; font-family: inherit;
     flex-shrink: 0; box-shadow: 0 4px 14px rgba(229,9,20,.35); }
-/* banner COMPACTO do Passe (lista de grupos) */
-.ga-pass2 { display: flex; align-items: center; gap: 11px; margin: 10px 12px; padding: 10px 12px; border-radius: 14px;
-    background: linear-gradient(120deg, #2a1c04, #4a3204); border: 1px solid rgba(245,197,66,.5); cursor: pointer; }
+/* banner COMPACTO do Passe (lista de grupos) — ouro rico + brilho varrendo */
+.ga-pass2 { position: relative; overflow: hidden; display: flex; align-items: center; gap: 11px; margin: 11px 12px; padding: 12px 14px;
+    border-radius: 16px; cursor: pointer;
+    background: linear-gradient(115deg, #5a4310 0%, #8a6a1c 38%, #c9a13e 50%, #8a6a1c 62%, #5a4310 100%);
+    border: 1px solid rgba(245,210,120,.6); box-shadow: 0 8px 22px rgba(120,86,20,.35); }
+.ga-pass2::after { content: ''; position: absolute; top: -60%; bottom: -60%; left: -70%; width: 46px;
+    background: linear-gradient(90deg, transparent, rgba(255,245,205,.75), transparent); transform: skewX(-20deg);
+    animation: passShine 3.6s ease-in-out infinite; }
+@keyframes passShine { 0% { left: -70%; } 55%, 100% { left: 135%; } }
+.ga-pass2 > * { position: relative; z-index: 1; }
 .ga-pass2 .avs { display: flex; flex-shrink: 0; }
-.ga-pass2 .avs span { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #4a3204;
-    background-size: cover; background-position: center; background-color: #6b5312; margin-left: -9px; }
+.ga-pass2 .avs span { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #7a5c15;
+    background-size: cover; background-position: center; background-color: #6b5312; margin-left: -10px; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
 .ga-pass2 .avs span:first-child { margin-left: 0; }
 .ga-pass2 .mid3 { flex: 1; min-width: 0; }
-.ga-pass2 .t { font-size: 14px; font-weight: 800; letter-spacing: 1.5px; color: #f5c542; }
-.ga-pass2 .s { font-size: 11.5px; color: #d8c48b; margin-top: 1px; }
-.ga-pass2 .arr2 { width: 32px; height: 32px; border-radius: 50%; background: #f5c542; color: #241a05;
-    display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; flex-shrink: 0; }
+.ga-pass2 .t { font-size: 15px; font-weight: 800; letter-spacing: 1.5px; color: #fff6d8; text-shadow: 0 1px 2px rgba(90,60,10,.5); }
+.ga-pass2 .s { font-size: 11.5px; color: #f2e2b0; margin-top: 1px; }
+.ga-pass2 .arr2 { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(180deg,#ffe9a8,#f5c542); color: #4a3204;
+    display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
 /* prévia borrada DE VERDADE na lista (grupo travado) */
 .pv-blur { filter: blur(3.5px); user-select: none; }
 /* banner do Telegram (grupo gratuito) */
@@ -10592,10 +10605,10 @@ window.GroupApp = (function () {
                 if (g.last && g.last.at) {
                     const fresh = (Date.now() - new Date(g.last.at).getTime()) < 10 * 60000;
                     tm = fresh
-                        ? '<span style="color:#e50914;font-weight:800;font-size:11.5px;">agora</span>'
+                        ? '<span style="color:#1fa855;font-weight:700;font-size:11.5px;">agora</span>'
                         : '<span style="color:#1fa855;font-weight:600;font-size:11.5px;">' + hhmm(g.last.at) + '</span>';
                 } else if (g.unread > 0) {
-                    tm = '<span style="color:#e50914;font-weight:800;font-size:11.5px;">agora</span>';
+                    tm = '<span style="color:#1fa855;font-weight:700;font-size:11.5px;">agora</span>';
                 }
                 html += '<div class="ca-row" onclick="GroupApp.open(' + g.id + ')">'
                     + '<div class="av" style="position:relative;' + (g.avatar_url ? "background-image:url('" + esc(g.avatar_url) + "');" : '') + '">' + icon + '</div>'
@@ -11107,7 +11120,7 @@ window.GroupApp = (function () {
         if (!data.success) return;
         if (data.locked) {
             if (data.unlock) CUR.unlock = data.unlock;
-            renderLockedMedia(data.photos || 0, data.videos || 0);
+            renderLockedMedia(data.photos || 0, data.videos || 0, data.preview || []);
             return;
         }
         MEDIA = [];
@@ -11129,23 +11142,27 @@ window.GroupApp = (function () {
     }
     // Galeria TRAVADA (não-membro): tiles borrados fake + cadeado + contagens
     // + botão que abre o popup de planos. Nenhuma mídia real é carregada.
-    function renderLockedMedia(photos, videos) {
+    function renderLockedMedia(photos, videos, preview) {
         const total = (photos || 0) + (videos || 0);
         const ov = document.getElementById('gaMediaOv');
         const grid = document.getElementById('gaMediaGrid');
         const title = ov.querySelector('.top .t');
         if (title) title.innerHTML = 'Mídias do grupo' + (total ? ' <span style="font-weight:400;color:rgba(255,255,255,.5);font-size:12px;">· ' + total + ' itens</span>' : '');
-        const HUES = [350, 25, 140, 200, 270, 45, 90, 320, 180];
+        // grade com as PRÉVIAS reais BORRADAS (isca); sem prévia, cai num
+        // gradiente escuro discreto
+        const thumbs = Array.isArray(preview) ? preview : [];
         let tiles = '';
-        for (let i = 0; i < 18; i++) {
-            const h = HUES[i % HUES.length];
-            tiles += '<div class="it" style="background:linear-gradient(135deg, hsl(' + h + ',28%,14%), hsl(' + ((h + 40) % 360) + ',24%,9%)); filter: blur(6px); pointer-events:none;"></div>';
+        for (let i = 0; i < 24; i++) {
+            const u = thumbs[i % (thumbs.length || 1)];
+            tiles += thumbs.length
+                ? '<div class="it" style="background-image:url(\'' + esc(u) + '\');background-size:cover;background-position:center;filter:blur(9px) brightness(.75);pointer-events:none;"></div>'
+                : '<div class="it" style="background:linear-gradient(135deg,#241016,#140a10);filter:blur(6px);pointer-events:none;"></div>';
         }
         grid.innerHTML = tiles
-            + '<div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:30px; text-align:center; background:rgba(13,10,12,.45);">'
+            + '<div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:30px; text-align:center; background:rgba(13,10,12,.35);">'
             + '<div style="font-size:38px;">🔒</div>'
             + '<div style="font-size:19px; font-weight:800; color:#fff;">' + (photos || 0) + ' fotos · ' + (videos || 0) + ' vídeos</div>'
-            + '<div style="font-size:13px; color:rgba(255,255,255,.6); line-height:1.5; max-width:260px;">Todo o acervo do grupo fica guardado aqui. Desbloqueie pra ver tudo.</div>'
+            + '<div style="font-size:13px; color:rgba(255,255,255,.7); line-height:1.5; max-width:260px;">Todo o acervo do grupo fica guardado aqui. Desbloqueie pra ver tudo.</div>'
             + '<button id="gaMediaUnlock" style="margin-top:6px; background:linear-gradient(90deg,#ff1f3d,#e50914); border:none; border-radius:14px; padding:14px 26px; font-size:14.5px; font-weight:800; color:#fff; cursor:pointer; font-family:inherit; box-shadow:0 8px 26px rgba(229,9,20,.4);">Desbloquear grupo</button>'
             + '</div>';
         grid.style.position = 'relative';
