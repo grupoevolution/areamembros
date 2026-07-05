@@ -36,13 +36,13 @@ const DEFAULT_EXPLORE = {
     // Pasta (coleção) do Bunny — preenchida, alimenta o feed inteiro de uma vez
     // (igual aos conteúdos do produto). Tem prioridade sobre a lista manual.
     collection_library_id: null, collection_id: null, creator_name: null,
-    paywall_title: 'Você já viu o grátis 🔥',
-    paywall_text: 'Libera o feed completo agora — sem limite. As que mais bombam tão te esperando do outro lado.',
+    paywall_title: 'Isso foi só a amostra 🔥',
+    paywall_text: 'Acesso TOTAL a todos os vídeos, sem limite nenhum — com conteúdo novo entrando todo dia. Os mais quentes ficam do outro lado.',
     paywall_cta: 'QUERO ACESSO VIP',
     // Oferta exibida no paywall (de X por Y)
     offer_original_price: 49.90,
     offer_price: 19.90,
-    offer_note: 'acesso vitalício · 1 pagamento',
+    offer_note: 'liberação imediata após o pagamento',
 };
 const DEFAULT_PWA_GATE = {
     gate_stories: true, gate_view_once: true, gate_explore: true,

@@ -19174,6 +19174,26 @@ window.MVPaywall = (function () {
             renderPix(container, d.pending, unlock, opts);
         } catch (_) {}
     }
+    // VIGIA: o fluxo real é o popup JÁ ABERTO → cliente vai pro checkout em
+    // outra aba → gera o Pix lá → volta. A checagem única do render não pega
+    // isso; então, enquanto o popup existir na tela, re-checa a cada 8s (só
+    // com a aba visível). Para sozinho quando o popup fecha, quando o painel
+    // do Pix já está na tela ou quando o cliente pediu "pagamento novo".
+    function watchPix(container, unlock, opts) {
+        if (!container || !unlock || !unlock.product_id) return;
+        if (container._pixWatch) clearInterval(container._pixWatch);
+        container._pixOptOut = false;
+        let ticks = 0;
+        container._pixWatch = setInterval(() => {
+            ticks++;
+            if (!document.body.contains(container) || ticks > 240) {
+                clearInterval(container._pixWatch); container._pixWatch = null; return;
+            }
+            if (document.hidden || container._pixOptOut) return;
+            if (container.querySelector('[data-pix-copy]')) return; // painel já na tela
+            maybePix(container, unlock, opts);
+        }, 8000);
+    }
     function renderPix(container, pending, unlock, opts) {
         if (pixTimer) { clearInterval(pixTimer); pixTimer = null; }
         const price = fmtMoney(pending.amount);
@@ -19224,7 +19244,10 @@ window.MVPaywall = (function () {
             }
             try { window.TRACK && TRACK.event('pix_code_copy', { ctx: 'paywall', product_id: unlock.product_id }); } catch (_) {}
         });
-        container.querySelector('[data-pix-new]').addEventListener('click', rerenderNormal);
+        container.querySelector('[data-pix-new]').addEventListener('click', () => {
+            container._pixOptOut = true; // escolheu pagar de novo: vigia não re-mostra o antigo
+            rerenderNormal();
+        });
         const c = container.querySelector('[data-mv-close]');
         if (c) c.addEventListener('click', () => { if (opts && typeof opts.onClose === 'function') opts.onClose(); else close(); });
     }
@@ -19240,6 +19263,7 @@ window.MVPaywall = (function () {
         el.innerHTML = bannerHTML(unlock, opts);
         wire(el, unlock, opts);
         maybePix(el, unlock, opts);
+        watchPix(el, unlock, opts);
     }
 
     // Modal de tela cheia (tiktok / uso genérico)
@@ -19256,7 +19280,9 @@ window.MVPaywall = (function () {
         const innerOpts = Object.assign({}, opts, { onClose: doClose });
         m.innerHTML = '<div class="mvpw-card">' + bannerHTML(unlock, innerOpts) + '</div>';
         wire(m, unlock, innerOpts);
-        maybePix(m.querySelector('.mvpw-card'), unlock, innerOpts);
+        const cardEl = m.querySelector('.mvpw-card');
+        maybePix(cardEl, unlock, innerOpts);
+        watchPix(cardEl, unlock, innerOpts);
         // toca no fundo (fora do card) → fecha
         m.onclick = (e) => { if (e.target === m) doClose(); };
         m.classList.add('open');
@@ -19514,8 +19540,8 @@ window.Explore = (function () {
         ov.innerHTML = '<div id="tkPaywallCard"></div>';
         MVPaywall.renderInline(document.getElementById('tkPaywallCard'), data.unlock || {}, {
             icon: 'lock',
-            title: pw.title || 'Você já viu o grátis 🔥',
-            subtitle: pw.text || 'Libera o feed completo agora — sem limite.',
+            title: pw.title || 'Isso foi só a amostra 🔥',
+            subtitle: pw.text || 'Acesso TOTAL a todos os vídeos, sem limite nenhum — com conteúdo novo entrando todo dia.',
             ctaText: pw.cta || 'QUERO ACESSO VIP',
             offer: { price: pw.offer_price, original_price: pw.offer_original_price, note: pw.offer_note },
             social: '+2.400 já viraram VIP esta semana',

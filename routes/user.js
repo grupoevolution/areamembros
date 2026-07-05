@@ -1930,13 +1930,46 @@ router.get('/explore/access', optionalUser, async (req, res) => {
     }
 });
 
+// Copy nova do paywall dos vídeos (jul/2026): sem "vitalício" (o acesso não
+// é) e vendendo o que importa — tudo liberado + conteúdo novo todo dia.
+// Config antiga salva no painel com os textos LEGADOS é migrada na leitura.
+const EXPLORE_PW_TITLE = 'Isso foi só a amostra 🔥';
+const EXPLORE_PW_TEXT = 'Acesso TOTAL a todos os vídeos, sem limite nenhum — com conteúdo novo entrando todo dia. Os mais quentes ficam do outro lado.';
+const EXPLORE_PW_NOTE = 'liberação imediata após o pagamento';
+const EXPLORE_LEGACY = {
+    'Você já viu o grátis 🔥': EXPLORE_PW_TITLE,
+    'Libera o feed completo agora — sem limite.': EXPLORE_PW_TEXT,
+    'Libera o feed completo agora — sem limite. As que mais bombam tão te esperando do outro lado.': EXPLORE_PW_TEXT,
+    'acesso vitalício · 1 pagamento': EXPLORE_PW_NOTE,
+};
+function explorePwCopy(saved, fallback) {
+    const v = (saved == null ? '' : String(saved)).trim();
+    if (!v) return fallback;
+    return EXPLORE_LEGACY[v] || v;
+}
+
 router.get('/explore/feed', optionalUser, async (req, res) => {
     try {
         const cfgRow = await db.query(`SELECT value FROM gamification_config WHERE key = 'explore_config'`).catch(() => ({ rows: [] }));
         const cfg = cfgRow.rows[0]?.value || {};
         const freeLimit = Number.isFinite(+cfg.free_limit) ? Math.max(0, parseInt(cfg.free_limit, 10)) : 15;
         const pwaGateAfter = Number.isFinite(+cfg.pwa_gate_after) ? Math.max(0, parseInt(cfg.pwa_gate_after, 10)) : 2;
-        const productId = cfg.product_id ? parseInt(cfg.product_id, 10) : null;
+        let productId = cfg.product_id ? parseInt(cfg.product_id, 10) : null;
+        // Sem produto configurado mas COM códigos de oferta: resolve o produto
+        // pelo primeiro código — garante unlock.product_id pro popup do Pix
+        // pendente funcionar mesmo nessa configuração.
+        if (!productId) {
+            const codes = parseOfferCodes(cfg.unlock_offer_codes);
+            if (codes.length) {
+                try {
+                    const { rows: [po] } = await db.query(
+                        `SELECT product_id FROM product_offers WHERE offer_id = ANY($1::text[]) AND product_id IS NOT NULL LIMIT 1`,
+                        [codes]
+                    );
+                    if (po) productId = po.product_id;
+                } catch (_) {}
+            }
+        }
         const email = req.user?.email || null;
         let hasAccess = await ownsExploreProduct(email, productId);
         if (!hasAccess) hasAccess = await ownsExploreByOffers(email, cfg.unlock_offer_codes);
@@ -1960,12 +1993,12 @@ router.get('/explore/feed', optionalUser, async (req, res) => {
             free_limit: freeLimit,
             pwa_gate_after: pwaGateAfter,
             paywall: {
-                title: cfg.paywall_title || 'Você já viu o grátis 🔥',
-                text: cfg.paywall_text || 'Libera o feed completo agora — sem limite.',
+                title: explorePwCopy(cfg.paywall_title, EXPLORE_PW_TITLE),
+                text: explorePwCopy(cfg.paywall_text, EXPLORE_PW_TEXT),
                 cta: cfg.paywall_cta || 'QUERO ACESSO VIP',
                 offer_price: cfg.offer_price != null ? cfg.offer_price : 19.90,
                 offer_original_price: cfg.offer_original_price != null ? cfg.offer_original_price : 49.90,
-                offer_note: cfg.offer_note != null ? cfg.offer_note : 'acesso vitalício · 1 pagamento',
+                offer_note: explorePwCopy(cfg.offer_note, EXPLORE_PW_NOTE),
             },
             unlock: hasAccess ? null : await loadExploreUnlock(productId, cfg.checkout_url || null),
             videos,
