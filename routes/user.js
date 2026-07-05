@@ -1888,15 +1888,21 @@ router.get('/pix/pending', optionalUser, async (req, res) => {
     try {
         const email = req.user?.email || null;
         const productId = parseInt(req.query.product_id, 10) || null;
-        if (!email || !productId) return res.json({ success: true, pending: null });
+        if (!email) return res.json({ success: true, pending: null });
+        // Preferência: Pix do MESMO produto do popup. FALLBACK: o último Pix
+        // pendente do cliente, seja de qual produto for — na prática o lead
+        // só tem um por vez, e o produto do código da oferta pode não ser o
+        // mesmo configurado na aba (ex.: Vídeos apontando pra outro produto).
         const { rows } = await db.query(
-            `SELECT pix_code, amount,
-                    GREATEST(0, ${PIX_PENDING_MINUTES * 60} - EXTRACT(EPOCH FROM (NOW() - created_at)))::int AS expires_in_s
-             FROM pix_pending_notices
-             WHERE LOWER(customer_email) = $1 AND product_id = $2
-               AND pix_code IS NOT NULL
-               AND created_at > NOW() - INTERVAL '${PIX_PENDING_MINUTES} minutes'
-             ORDER BY id DESC LIMIT 1`,
+            `SELECT n.pix_code, n.amount, n.product_id, p.name AS product_name,
+                    GREATEST(0, ${PIX_PENDING_MINUTES * 60} - EXTRACT(EPOCH FROM (NOW() - n.created_at)))::int AS expires_in_s
+             FROM pix_pending_notices n
+             LEFT JOIN products p ON p.id = n.product_id
+             WHERE LOWER(n.customer_email) = $1
+               AND n.pix_code IS NOT NULL
+               AND n.created_at > NOW() - INTERVAL '${PIX_PENDING_MINUTES} minutes'
+             ORDER BY (n.product_id = $2) DESC NULLS LAST, n.id DESC
+             LIMIT 1`,
             [email.toLowerCase().trim(), productId]
         );
         if (!rows.length) return res.json({ success: true, pending: null });
@@ -1905,6 +1911,7 @@ router.get('/pix/pending', optionalUser, async (req, res) => {
             pending: {
                 pix_code: rows[0].pix_code,
                 amount: rows[0].amount != null ? parseFloat(rows[0].amount) : null,
+                product_name: rows[0].product_name || null,
                 expires_in_s: rows[0].expires_in_s,
             },
         });

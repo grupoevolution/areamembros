@@ -19167,8 +19167,11 @@ window.MVPaywall = (function () {
     let pixTimer = null;
     async function maybePix(container, unlock, opts) {
         try {
-            if (!container || !unlock || !unlock.product_id) return;
-            const r = await fetch('/api/user/pix/pending?product_id=' + unlock.product_id, { credentials: 'include' });
+            if (!container || !unlock) return;
+            // o servidor tenta o produto exato e cai pro último Pix pendente
+            // do cliente (independe do produto) — funciona até com o popup
+            // configurado só com link de checkout, sem produto.
+            const r = await fetch('/api/user/pix/pending?product_id=' + (unlock.product_id || 0), { credentials: 'include' });
             const d = await r.json();
             if (!d || !d.success || !d.pending || !d.pending.pix_code) return;
             renderPix(container, d.pending, unlock, opts);
@@ -19180,7 +19183,7 @@ window.MVPaywall = (function () {
     // com a aba visível). Para sozinho quando o popup fecha, quando o painel
     // do Pix já está na tela ou quando o cliente pediu "pagamento novo".
     function watchPix(container, unlock, opts) {
-        if (!container || !unlock || !unlock.product_id) return;
+        if (!container || !unlock) return;
         if (container._pixWatch) clearInterval(container._pixWatch);
         container._pixOptOut = false;
         let ticks = 0;
@@ -19200,7 +19203,8 @@ window.MVPaywall = (function () {
         container.innerHTML = '<div class="mvpw-icon" style="background:#1fa855;">' + CLOCK + '</div>'
             + '<div class="mvpw-eyebrow">SEU PIX JÁ FOI GERADO</div>'
             + '<div class="mvpw-title">Falta só pagar</div>'
-            + '<div class="mvpw-sub">Você gerou um Pix' + (price ? ' de <b>' + esc(price) + '</b>' : '') + ' pra liberar este acesso.<br>O código vence em <b data-pix-left>--:--</b>.</div>'
+            + '<div class="mvpw-sub">Você gerou um Pix' + (price ? ' de <b>' + esc(price) + '</b>' : '')
+            + ' pra liberar <b>' + esc(pending.product_name || 'seu acesso') + '</b>.<br>O código vence em <b data-pix-left>--:--</b>.</div>'
             + '<button class="mvpw-buy rec mvpw-bigcta" data-pix-copy style="background:#1fa855;box-shadow:0 8px 26px rgba(31,168,85,.4);">Copiar código Pix</button>'
             + '<div class="mvpw-sub" style="margin-top:12px;text-align:left;line-height:1.8;">'
             + '1. Toca no botão — o código copia sozinho<br>'
