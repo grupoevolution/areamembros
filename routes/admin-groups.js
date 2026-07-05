@@ -2,12 +2,18 @@
  * =============================================================================
  * routes/admin-groups.js — gestão dos GRUPOS (grupos-bot estilo WhatsApp)
  * =============================================================================
- * CRUD dos grupos, elenco (personas) e import de cenas por JSON.
+ * CRUD dos grupos e import de cenas por JSON (v3 — elenco automático).
  * Formato das cenas (gerado fora e colado no painel):
- *   [{ "category": "papo|pesado|apresentacao|midia|cta|reacao|bomdia|boanoite",
+ *   [{ "category": "papo|pesado|apresentacao|midia|cta|reacao|bomdia|boanoite|entrada",
  *      "period": "any|manha|tarde|noite|madrugada", "weight": 1,
  *      "messages": [{ "p": 1, "g": "f", "t": "text|image|presentation|cta",
- *                     "text": "...", "gap_s": 8, "link": "...", "pid": 12 }] }]
+ *                     "text": "...", "gap_s": 8, "link": "...", "pid": 12,
+ *                     "folder": "academia", "admin": true }] }]
+ * v3: o texto usa {nome} (o sistema escolhe o nome do elenco e o remetente É
+ * esse nome) e {nome2} (nome da pessoa do slot 2 — referência cruzada);
+ * "folder" pega foto da pasta nomeada do grupo (media_folders);
+ * "admin": true = mensagem do administrador (canal free); "entrada" = roteiro
+ * que roda NA ORDEM no primeiro acesso do lead.
  * =============================================================================
  */
 
@@ -17,7 +23,7 @@ const db = require('../db');
 const { requireAdmin } = require('../lib/auth');
 const { logger } = require('../lib/logger');
 
-const CATEGORIES = ['papo', 'pesado', 'apresentacao', 'midia', 'cta', 'reacao', 'bomdia', 'boanoite'];
+const CATEGORIES = ['papo', 'pesado', 'apresentacao', 'midia', 'cta', 'reacao', 'bomdia', 'boanoite', 'entrada'];
 const PERIODS = ['any', 'manha', 'tarde', 'noite', 'madrugada'];
 
 const urlList = (v) => {
@@ -30,6 +36,28 @@ const intOr = (v, d, min, max) => {
     if (isNaN(n)) return d;
     return Math.max(min, Math.min(max, n));
 };
+
+// Pastas por CATEGORIA (v3): aceita objeto { chave: pasta } ou texto com uma
+// por linha no formato "chave = pasta/na/bunny".
+function parseMediaFolders(v) {
+    let obj = null;
+    if (v && typeof v === 'object' && !Array.isArray(v)) obj = v;
+    else if (typeof v === 'string') {
+        obj = {};
+        v.split('\n').forEach(line => {
+            const i = line.indexOf('=');
+            if (i > 0) obj[line.slice(0, i)] = line.slice(i + 1);
+        });
+    }
+    if (!obj) return {};
+    const out = {};
+    for (const k of Object.keys(obj).slice(0, 30)) {
+        const key = String(k).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40);
+        const path = String(obj[k] || '').trim().replace(/^\/+|\/+$/g, '').slice(0, 200);
+        if (key && path) out[key] = path;
+    }
+    return out;
+}
 
 function groupPayload(b) {
     return {
@@ -50,6 +78,7 @@ function groupPayload(b) {
         media_image_folder: (b.media_image_folder || '').trim().replace(/^\/+|\/+$/g, '').slice(0, 200) || null,
         presentation_male_folder: (b.presentation_male_folder || '').trim().replace(/^\/+|\/+$/g, '').slice(0, 200) || null,
         presentation_female_folder: (b.presentation_female_folder || '').trim().replace(/^\/+|\/+$/g, '').slice(0, 200) || null,
+        media_folders: parseMediaFolders(b.media_folders),
         female_ratio: intOr(b.female_ratio, 80, 0, 100),
         msgs_per_hour: intOr(b.msgs_per_hour, 60, 10, 600),
         retention_hours: intOr(b.retention_hours, 24, 1, 720),
@@ -239,6 +268,8 @@ router.post('/:id/scenes/import', requireAdmin, async (req, res) => {
                 link: (m.link || '').toString().slice(0, 1000) || undefined,
                 pid: m.pid ? parseInt(m.pid, 10) : undefined,
                 color: (m.color || '').toString().slice(0, 20) || undefined,
+                folder: (m.folder || '').toString().trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40) || undefined,
+                admin: m.admin === true ? true : undefined,
             })).filter(m => m.text || m.t === 'image' || m.t === 'presentation');
             if (!msgs.length) continue;
             clean.push({ category: cat, period: per, weight, messages: msgs });

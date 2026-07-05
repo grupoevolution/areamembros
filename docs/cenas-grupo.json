@@ -1,85 +1,103 @@
 [
+{"category":"entrada","period":"any","weight":1,"messages":[
+{"p":1,"g":"f","t":"text","text":"opa, entrou gente nova no grupo 👀","gap_s":4},
+{"p":2,"g":"f","t":"text","text":"chegou carne nova kkkkk","gap_s":7},
+{"p":3,"g":"f","t":"text","text":"seja bem vindo!! aqui é o melhor grupo que você já entrou, confia kk","gap_s":9}]},
+{"category":"entrada","period":"any","weight":1,"messages":[
+{"p":1,"g":"f","t":"text","text":"se apresenta aí pra gente te conhecer 😏","gap_s":8},
+{"p":2,"g":"f","t":"text","text":"isso, fala teu nome e de onde vc é","gap_s":10},
+{"p":3,"g":"m","t":"text","text":"deixa o cara respirar primeiro kkkk","gap_s":8},
+{"p":1,"g":"f","t":"text","text":"respirou? agora fala kkkk","gap_s":9}]},
+{"category":"entrada","period":"any","weight":1,"messages":[
+{"p":1,"g":"f","t":"presentation","text":"aproveitando: sou a {nome}, 26 anos, solteira 🙈 pros novatos que não me conhecem","gap_s":10},
+{"p":2,"g":"f","t":"text","text":"a {nome1} recepcionando como sempre kkkk","gap_s":9},
+{"p":1,"g":"f","t":"text","text":"ué, tem que receber bem né kkk","gap_s":8}]},
+{"category":"entrada","period":"any","weight":1,"messages":[
+{"p":1,"g":"f","t":"text","text":"fica à vontade viu, aqui rola de tudo... conversa, foto, resenha kkk","gap_s":10},
+{"p":2,"g":"f","t":"text","text":"principalmente foto kkkkk","gap_s":8},
+{"p":3,"g":"f","t":"text","text":"KKKKK verdade, vc chegou no dia certo","gap_s":9}]},
+
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Lorena, 26 anos e solteira 😊","gap_s":6},
+{"p":1,"g":"f","t":"presentation","text":"{nome}, 26 anos e solteira 😊","gap_s":6},
 {"p":2,"g":"f","t":"text","text":"seja bem vinda gataaa","gap_s":9},
 {"p":3,"g":"m","t":"text","text":"chegou mais uma kkkk","gap_s":13},
 {"p":1,"g":"f","t":"text","text":"obrigada gente, já to gostando daqui kkk","gap_s":18}]},
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Camila, 31 anos, casada 🙊","gap_s":5},
+{"p":1,"g":"f","t":"presentation","text":"{nome}, 31 anos, casada 🙊","gap_s":5},
 {"p":2,"g":"f","t":"text","text":"eita casada kkkkk chegou no lugar certo","gap_s":11},
 {"p":1,"g":"f","t":"text","text":"o que ele não sabe não machuca né kkkk","gap_s":16},
 {"p":3,"g":"f","t":"text","text":"KKKKKKK falou tudo","gap_s":8}]},
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Sou a Bia, 22 aninhos, solteira e sem juizo","gap_s":6},
-{"p":2,"g":"m","t":"text","text":"bem vinda bia 🔥","gap_s":10},
+{"p":1,"g":"f","t":"presentation","text":"Sou a {nome}, 22 aninhos, solteira e sem juizo","gap_s":6},
+{"p":2,"g":"m","t":"text","text":"bem vinda {nome1} 🔥","gap_s":10},
 {"p":3,"g":"f","t":"text","text":"sem juizo é o lema daqui amiga","gap_s":14}]},
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Renata, 38, viúva... voltando pro jogo kkk","gap_s":7},
-{"p":2,"g":"f","t":"text","text":"arrasa renata, o jogo agradece","gap_s":12},
+{"p":1,"g":"f","t":"presentation","text":"{nome}, 38, viúva... voltando pro jogo kkk","gap_s":7},
+{"p":2,"g":"f","t":"text","text":"arrasa, o jogo agradece","gap_s":12},
 {"p":3,"g":"m","t":"text","text":"bem vinda 👏","gap_s":9},
 {"p":1,"g":"f","t":"text","text":"obrigadaa, prometo não decepcionar kk","gap_s":20}]},
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Jéssica, 24, namorando (mas ele não manda em mim)","gap_s":6},
+{"p":1,"g":"f","t":"presentation","text":"{nome}, 24, namorando (mas ele não manda em mim)","gap_s":6},
 {"p":2,"g":"f","t":"text","text":"KKKKKK amei a sinceridade","gap_s":10},
-{"p":3,"g":"f","t":"text","text":"bem vinda jé, aqui ninguem julga","gap_s":15}]},
+{"p":3,"g":"f","t":"text","text":"bem vinda, aqui ninguem julga","gap_s":15}]},
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Aline, 29 anos, solteira depois de 7 anos presa num relacionamento kk","gap_s":7},
+{"p":1,"g":"f","t":"presentation","text":"{nome}, 29 anos, solteira depois de 7 anos presa num relacionamento kk","gap_s":7},
 {"p":2,"g":"f","t":"text","text":"liberdade é tudo amiga, bem vinda","gap_s":12},
 {"p":3,"g":"m","t":"text","text":"7 anos?? tem muito atraso pra colocar em dia kkkk","gap_s":16},
 {"p":1,"g":"f","t":"text","text":"nem me fala kkkkkk","gap_s":9}]},
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Patrícia, 35, casada e entediada 🥱","gap_s":6},
+{"p":1,"g":"f","t":"presentation","text":"{nome}, 35, casada e entediada 🥱","gap_s":6},
 {"p":2,"g":"f","t":"text","text":"tédio a gente resolve rapidinho por aqui kk","gap_s":11},
 {"p":1,"g":"f","t":"text","text":"é o que eu espero kkkk","gap_s":14}]},
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Duda, 20 anos, solteiríssima","gap_s":5},
-{"p":2,"g":"m","t":"text","text":"bem vinda duda 😏","gap_s":9},
+{"p":1,"g":"f","t":"presentation","text":"{nome}, 20 anos, solteiríssima","gap_s":5},
+{"p":2,"g":"m","t":"text","text":"bem vinda 😏","gap_s":9},
 {"p":3,"g":"f","t":"text","text":"chegou a novinha do grupo kkk seja bem vinda","gap_s":13}]},
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Vanessa, 33, enrolada com um boy que não decide nada kk","gap_s":7},
+{"p":1,"g":"f","t":"presentation","text":"{nome}, 33, enrolada com um boy que não decide nada kk","gap_s":7},
 {"p":2,"g":"f","t":"text","text":"amiga larga esse indeciso e vem ser feliz","gap_s":12},
 {"p":1,"g":"f","t":"text","text":"to tentando kkkkk por isso to aqui","gap_s":15}]},
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Sou a Carol, 27, solteira e curiosa 👀","gap_s":6},
+{"p":1,"g":"f","t":"presentation","text":"Sou a {nome}, 27, solteira e curiosa 👀","gap_s":6},
 {"p":2,"g":"f","t":"text","text":"curiosidade aqui é recompensada kkk","gap_s":10},
-{"p":3,"g":"m","t":"text","text":"bem vinda carol","gap_s":8}]},
+{"p":3,"g":"m","t":"text","text":"bem vinda","gap_s":8}]},
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Fernanda, 41 anos, divorciada e MUITO bem obrigada kkk","gap_s":7},
+{"p":1,"g":"f","t":"presentation","text":"{nome}, 41 anos, divorciada e MUITO bem obrigada kkk","gap_s":7},
 {"p":2,"g":"f","t":"text","text":"a melhor fase é essa, aproveita","gap_s":12},
-{"p":3,"g":"f","t":"text","text":"bem vinda fê 💅","gap_s":9}]},
+{"p":3,"g":"f","t":"text","text":"bem vinda 💅","gap_s":9}]},
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Mirella, 23, solteira... me indicaram esse grupo kkk","gap_s":6},
+{"p":1,"g":"f","t":"presentation","text":"{nome}, 23, solteira... me indicaram esse grupo kkk","gap_s":6},
 {"p":2,"g":"m","t":"text","text":"te indicaram certo kkkk bem vinda","gap_s":11},
 {"p":1,"g":"f","t":"text","text":"já vi que vou gostar daqui 😏","gap_s":17}]},
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Tati, 30 anos, casada (ele viaja muito a trabalho 🙃)","gap_s":7},
+{"p":1,"g":"f","t":"presentation","text":"{nome}, 30 anos, casada (ele viaja muito a trabalho 🙃)","gap_s":7},
 {"p":2,"g":"f","t":"text","text":"KKKKKK entendi tudo com esse emoji","gap_s":10},
-{"p":3,"g":"f","t":"text","text":"bem vinda tati, aproveita as viagens dele kk","gap_s":14}]},
+{"p":3,"g":"f","t":"text","text":"bem vinda, aproveita as viagens dele kk","gap_s":14}]},
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Larissa, 25, solteira e recém chegada na cidade","gap_s":6},
-{"p":2,"g":"m","t":"text","text":"bem vinda lari, cidade nova vida nova kkk","gap_s":11},
+{"p":1,"g":"f","t":"presentation","text":"{nome}, 25, solteira e recém chegada na cidade","gap_s":6},
+{"p":2,"g":"m","t":"text","text":"bem vinda, cidade nova vida nova kkk","gap_s":11},
 {"p":1,"g":"f","t":"text","text":"exatamente kkk vim conhecer gente nova","gap_s":15}]},
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Sou a Nathy, 28, noiva... mas o grupo é meu segredo kkk","gap_s":7},
+{"p":1,"g":"f","t":"presentation","text":"Sou a {nome}, 28, noiva... mas o grupo é meu segredo kkk","gap_s":7},
 {"p":2,"g":"f","t":"text","text":"segredo guardado a sete chaves amiga 🤫","gap_s":11},
 {"p":3,"g":"f","t":"text","text":"o que rola no grupo fica no grupo kkkk","gap_s":13}]},
 {"category":"apresentacao","period":"any","weight":3,"messages":[
-{"p":1,"g":"f","t":"presentation","text":"Isabela, 21 anos, solteira 💕","gap_s":5},
-{"p":2,"g":"f","t":"text","text":"bem vinda isa!!","gap_s":8},
+{"p":1,"g":"f","t":"presentation","text":"{nome}, 21 anos, solteira 💕","gap_s":5},
+{"p":2,"g":"f","t":"text","text":"bem vinda!!","gap_s":8},
 {"p":3,"g":"m","t":"text","text":"o grupo só melhora kkk","gap_s":12}]},
 {"category":"apresentacao","period":"any","weight":1,"messages":[
-{"p":1,"g":"m","t":"presentation","text":"Marcos, 34, casado kkk vim de convite","gap_s":6},
-{"p":2,"g":"f","t":"text","text":"bem vindo marcos, comporta-se kkkk","gap_s":11},
+{"p":1,"g":"m","t":"presentation","text":"{nome}, 34, casado kkk vim de convite","gap_s":6},
+{"p":2,"g":"f","t":"text","text":"bem vindo, comporta-se kkkk","gap_s":11},
 {"p":1,"g":"m","t":"text","text":"prometo nada kkk","gap_s":14}]},
 {"category":"apresentacao","period":"any","weight":1,"messages":[
-{"p":1,"g":"m","t":"presentation","text":"Diego, 27, solteiro","gap_s":5},
-{"p":2,"g":"f","t":"text","text":"bem vindo diego 👋","gap_s":9},
+{"p":1,"g":"m","t":"presentation","text":"{nome}, 27, solteiro","gap_s":5},
+{"p":2,"g":"f","t":"text","text":"bem vindo 👋","gap_s":9},
 {"p":3,"g":"f","t":"text","text":"mais um pra conta kkkk","gap_s":12}]},
 {"category":"apresentacao","period":"any","weight":1,"messages":[
-{"p":1,"g":"m","t":"presentation","text":"Rafael, 39 anos, divorciado","gap_s":6},
-{"p":2,"g":"f","t":"text","text":"bem vindo rafa, aqui a fila anda kkk","gap_s":10}]},
+{"p":1,"g":"m","t":"presentation","text":"{nome}, 39 anos, divorciado","gap_s":6},
+{"p":2,"g":"f","t":"text","text":"bem vindo, aqui a fila anda kkk","gap_s":10}]},
 {"category":"apresentacao","period":"any","weight":1,"messages":[
-{"p":1,"g":"m","t":"presentation","text":"Thiago, 25, solteiro... me falaram que aqui é o melhor grupo kk","gap_s":6},
+{"p":1,"g":"m","t":"presentation","text":"{nome}, 25, solteiro... me falaram que aqui é o melhor grupo kk","gap_s":6},
 {"p":2,"g":"f","t":"text","text":"falaram certo kkkk bem vindo","gap_s":10},
 {"p":3,"g":"f","t":"text","text":"chegou mais um curioso 👀","gap_s":13}]},
 
@@ -317,17 +335,21 @@
 {"p":2,"g":"f","t":"text","text":"AMIGA que foto é essa 🔥","gap_s":11},
 {"p":3,"g":"m","t":"text","text":"aprovadíssimo kkkk","gap_s":9}]},
 {"category":"midia","period":"any","weight":1,"messages":[
-{"p":1,"g":"f","t":"image","text":"look de hoje kkk","gap_s":8},
+{"p":1,"g":"f","t":"image","folder":"academia","text":"treino pago 😮‍💨 quem mais foi hoje?","gap_s":8},
+{"p":2,"g":"f","t":"text","text":"foco total amiga 🔥","gap_s":10},
+{"p":3,"g":"m","t":"text","text":"a academia agradece kkkk","gap_s":11}]},
+{"category":"midia","period":"any","weight":1,"messages":[
+{"p":1,"g":"f","t":"image","folder":"banho","text":"recém saída do banho kkk","gap_s":8},
+{"p":2,"g":"m","t":"text","text":"que banho abençoado kkkk","gap_s":10},
+{"p":3,"g":"f","t":"text","text":"cheirosa e poderosa 💅","gap_s":11}]},
+{"category":"midia","period":"any","weight":1,"messages":[
+{"p":1,"g":"f","t":"image","folder":"espelho","text":"look de hoje, aprovam?","gap_s":8},
 {"p":2,"g":"f","t":"text","text":"perfeita como sempre","gap_s":10},
 {"p":3,"g":"f","t":"text","text":"esse look tá um perigo kkk","gap_s":12}]},
 {"category":"midia","period":"noite","weight":1,"messages":[
 {"p":1,"g":"f","t":"image","text":"pronta pra dormir... ou não kkk","gap_s":8},
 {"p":2,"g":"m","t":"text","text":"agora ninguem dorme kkkk","gap_s":10},
 {"p":3,"g":"f","t":"text","text":"KKKKK maldade postar isso essa hora","gap_s":12}]},
-{"category":"midia","period":"any","weight":1,"messages":[
-{"p":1,"g":"f","t":"image","text":"dia de sol pede foto ☀️","gap_s":8},
-{"p":2,"g":"f","t":"text","text":"o sol combina com vc kkk","gap_s":10},
-{"p":3,"g":"m","t":"text","text":"foto boa demais pra um grupo só kkkk","gap_s":11}]},
 
 {"category":"bomdia","period":"manha","weight":2,"messages":[
 {"p":1,"g":"f","t":"text","text":"bom dia grupo do meu coração ☀️","gap_s":6},

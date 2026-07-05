@@ -5905,6 +5905,8 @@ a { color: inherit; text-decoration: none; }
                                 <input class="form-control" type="number" id="gFemaleRatio" min="0" max="100" value="80" style="width:90px;"/>
                                 <span style="font-size:11px; color:rgba(255,255,255,.45);">80 = a cada 10 apresentações, ~8 são de mulher</span>
                             </div>
+                            <label class="g-lbl" style="margin-top:10px;">📂 PASTAS POR CATEGORIA — uma por linha: <span style="color:#f5c542;">chave = pasta/na/bunny</span> (as cenas usam a chave: {"t":"image","folder":"academia"})</label>
+                            <textarea class="form-control" id="gMediaFolders" style="width:100%; min-height:64px;" placeholder="academia = modelos/ana/academia&#10;banho = modelos/ana/banho&#10;espelho = modelos/ana/espelho"></textarea>
                             <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:6px;">Pastas exigem BUNNY_STORAGE_ZONE / BUNNY_STORAGE_KEY / BUNNY_STORAGE_CDN no ambiente do servidor.</div>
                         </div>
                         <div style="background:rgba(229,9,20,.05); border:1px solid rgba(229,9,20,.3); border-radius:10px; padding:12px;">
@@ -5914,8 +5916,9 @@ a { color: inherit; text-decoration: none; }
                             <input class="form-control" type="number" id="gInviteDelay" min="5" max="86400" value="120" style="width:140px;"/>
                         </div>
                         <div style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:12px;">
-                            <label class="g-lbl" style="font-weight:700;">🎭 Elenco (personas) — 1 por linha: <span style="color:#4CD964;">Nome|f</span> ou <span style="color:#3b82f6;">Nome|m</span></label>
-                            <textarea class="form-control" id="gPersonas" style="width:100%; min-height:80px;" placeholder="Amanda|f&#10;Paty|f&#10;Marcos|m"></textarea>
+                            <label class="g-lbl" style="font-weight:700;">🎭 Elenco — agora é AUTOMÁTICO 🎉</label>
+                            <div style="font-size:11.5px; color:rgba(255,255,255,.5); margin-top:4px;">O sistema tem ~180 nomes brasileiros e monta um elenco próprio pra CADA lead: nas apresentações entra sempre gente nova, nos papos as mesmas pessoas voltam. Nos arquivos de cena, use <b style="color:#4CD964;">{nome}</b> no texto — vira o nome de quem está falando. O campo abaixo é LEGADO (pode deixar vazio).</div>
+                            <textarea class="form-control" id="gPersonas" style="width:100%; min-height:44px; margin-top:8px;" placeholder="(legado — não precisa mais)"></textarea>
                         </div>
                         <div style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:12px;">
                             <label class="g-lbl" style="font-weight:700;">🎬 Cenas (JSON) — gere fora e cole aqui</label>
@@ -15781,7 +15784,7 @@ async function loadGroupDropdowns(productId, inviteIds) {
 
 function openGroupModal() {
     document.getElementById('groupModalTitle').textContent = 'Novo Grupo';
-    ['gId','gName','gAvatar','gDesc','gCtaLabel','gCtaLink','gTelegram','gBunnyLib','gBunnyCol','gMediaImgs','gPresM','gPresF','gMediaFolder','gPresMFolder','gPresFFolder','gPersonas','gScenesJson'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    ['gId','gName','gAvatar','gDesc','gCtaLabel','gCtaLink','gTelegram','gBunnyLib','gBunnyCol','gMediaImgs','gPresM','gPresF','gMediaFolder','gPresMFolder','gPresFFolder','gMediaFolders','gPersonas','gScenesJson'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     document.getElementById('gOrder').value = 0;
     document.getElementById('gMsgsHour').value = 60;
     document.getElementById('gTrial').value = 60;
@@ -15820,6 +15823,8 @@ async function editGroup(g) {
     document.getElementById('gPresMFolder').value = g.presentation_male_folder || '';
     document.getElementById('gPresFFolder').value = g.presentation_female_folder || '';
     document.getElementById('gFemaleRatio').value = (g.female_ratio == null ? 80 : g.female_ratio);
+    document.getElementById('gMediaFolders').value = (g.media_folders && typeof g.media_folders === 'object')
+        ? Object.keys(g.media_folders).map(k => k + ' = ' + g.media_folders[k]).join('\n') : '';
     document.getElementById('gPresM').value = (Array.isArray(g.presentation_male_urls) ? g.presentation_male_urls : []).join('\n');
     document.getElementById('gPresF').value = (Array.isArray(g.presentation_female_urls) ? g.presentation_female_urls : []).join('\n');
     document.getElementById('gMsgsHour').value = g.msgs_per_hour || 60;
@@ -15872,6 +15877,7 @@ function groupFormPayload() {
         media_image_folder: val('gMediaFolder').trim() || null,
         presentation_male_folder: val('gPresMFolder').trim() || null,
         presentation_female_folder: val('gPresFFolder').trim() || null,
+        media_folders: val('gMediaFolders'),
         female_ratio: parseInt(val('gFemaleRatio'), 10) || 80,
         presentation_male_urls: val('gPresM'),
         presentation_female_urls: val('gPresF'),

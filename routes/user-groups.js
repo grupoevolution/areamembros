@@ -130,8 +130,91 @@ async function hydrateGroupMedia(group) {
         if (group.presentation_female_folder) {
             group.presentation_female_urls = merge(group.presentation_female_urls, await listStorageFolder(group.presentation_female_folder));
         }
+        // PASTAS POR CATEGORIA (v3): groups.media_folders = { "academia": "pasta/na/bunny", ... }
+        // As cenas referenciam pela chave: {"t":"image","folder":"academia",...}
+        group.media_folder_urls = {};
+        const folders = (group.media_folders && typeof group.media_folders === 'object') ? group.media_folders : {};
+        for (const key of Object.keys(folders).slice(0, 30)) {
+            try { group.media_folder_urls[key] = await listStorageFolder(folders[key]); } catch (_) { group.media_folder_urls[key] = []; }
+        }
     } catch (_) {}
     return group;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ELENCO AUTOMÁTICO (v3) — os nomes saem DAQUI, não de personas manuais.
+// Cada LEAD tem o próprio elenco (session.state.cast): nos papos as mesmas
+// pessoas reaparecem (grupo real tem gente recorrente); nas APRESENTAÇÕES
+// entra sempre alguém novo. O texto usa {nome} → vira o nome do remetente,
+// então nunca mais "Júlia apresentando a Larissa".
+// ═════════════════════════════════════════════════════════════════════════════
+const CAST_F = [
+    'Larissa','Camila','Juliana','Amanda','Bruna','Fernanda','Aline','Patrícia','Vanessa','Carla',
+    'Tatiane','Renata','Débora','Priscila','Michele','Simone','Adriana','Cristiane','Daniela','Elaine',
+    'Fabiana','Gabriela','Helena','Ingrid','Jéssica','Karina','Letícia','Mariana','Natália','Paula',
+    'Raquel','Sabrina','Talita','Viviane','Bianca','Caroline','Duda','Eduarda','Flávia','Giovanna',
+    'Isabela','Kelly','Luana','Marcela','Nicole','Pâmela','Rafaela','Sandra','Thaís','Valéria',
+    'Alessandra','Beatriz','Cíntia','Denise','Érica','Franciele','Grazi','Iara','Josiane','Lívia',
+    'Mônica','Nayara','Poliana','Rosana','Suelen','Tainá','Vitória','Yasmin','Andressa','Bárbara',
+    'Clara','Daiane','Emanuelle','Geovana','Isadora','Jaqueline','Lorena','Milena','Núbia','Regina',
+    'Sarah','Tamires','Valentina','Wesla','Ana Paula','Maria Clara','Ana Júlia','Rebeca','Stefany','Mirella',
+    'Lays','Kamila','Joyce','Iasmin','Heloísa','Gislaine','Fabíola','Evelyn','Dandara','Cássia',
+    'Brenda','Antônia','Alícia','Samara','Rayane','Quézia','Pietra','Olívia','Nathália','Marta',
+    'Luciana','Késia','Janaína','Ivone','Hadassa','Gilmara','Filipa','Estela','Dara','Catarina'
+];
+const CAST_M = [
+    'Marcos','Diego','Rafael','Thiago','Bruno','Carlos','Daniel','Eduardo','Felipe','Gustavo',
+    'Henrique','Igor','João','Kaique','Leandro','Mateus','Nathan','Otávio','Paulo','Renan',
+    'Samuel','Tiago','Vinícius','Wesley','Alex','Breno','Caio','Douglas','Emerson','Fábio',
+    'Gabriel','Hugo','Ítalo','Jorge','Luan','Murilo','Nícolas','Pedro','Ricardo','Sérgio',
+    'Talles','Victor','Wallace','Yuri','Anderson','Bernardo','Cristiano','Davi','Erick','Fernando',
+    'Guilherme','Heitor','Jean','Lucas','Maurício','Robson','Rodrigo','Vitor Hugo','Washington','Adriano'
+];
+
+function sessionState(session) {
+    if (!session.state || typeof session.state !== 'object' || Array.isArray(session.state)) session.state = {};
+    return session.state;
+}
+async function saveSessionState(session) {
+    try {
+        await db.query(`UPDATE group_sessions SET state = $2, updated_at = NOW() WHERE id = $1`,
+            [session.id, JSON.stringify(session.state || {})]);
+    } catch (_) {}
+}
+
+// Escolhe uma pessoa do elenco do LEAD. fresh=true → SEMPRE alguém novo
+// (apresentação). Senão: 75% reaproveita quem já apareceu (recorrência).
+// exclude = nomes já usados NA MESMA CENA (duas pessoas da cena nunca são a
+// mesma — senão vira alguém conversando sozinho).
+function castPick(session, gender, fresh, exclude) {
+    const st = sessionState(session);
+    st.cast = Array.isArray(st.cast) ? st.cast : [];
+    const pool = gender === 'm' ? CAST_M : CAST_F;
+    const existing = st.cast.filter(c => c && c.g === gender && !(exclude && exclude.has(c.n)));
+    if (!fresh && existing.length >= 4 && Math.random() < 0.75) return pick(existing);
+    const usedNames = new Set(st.cast.map(c => c && c.n));
+    const avail = pool.filter(n => !usedNames.has(n) && !(exclude && exclude.has(n)));
+    if (!avail.length) return existing.length ? pick(existing) : { n: pick(pool), g: gender };
+    const person = { n: pick(avail), g: gender };
+    st.cast.push(person);
+    if (st.cast.length > 120) st.cast = st.cast.slice(-120);
+    return person;
+}
+
+// Foto sem repetição POR LEAD (apresentação e pastas): risca as já usadas na
+// sessão; esgotou a pasta, volta a valer tudo.
+function pickUnusedMedia(session, listKey, urls) {
+    if (!Array.isArray(urls) || !urls.length) return null;
+    const st = sessionState(session);
+    st.used_media = (st.used_media && typeof st.used_media === 'object') ? st.used_media : {};
+    const used = new Set(Array.isArray(st.used_media[listKey]) ? st.used_media[listKey] : []);
+    let candidates = urls.filter(u => !used.has(u));
+    if (!candidates.length) { st.used_media[listKey] = []; candidates = urls; }
+    const chosen = pick(candidates);
+    const arr = Array.isArray(st.used_media[listKey]) ? st.used_media[listKey] : [];
+    arr.push(chosen);
+    st.used_media[listKey] = arr.slice(-400);
+    return chosen;
 }
 
 // ── Cenas ────────────────────────────────────────────────────────────────────
@@ -141,7 +224,8 @@ async function pickScene(groupId, opts) {
     opts = opts || {};
     const period = opts.period || periodNow();
     const params = [groupId, period];
-    let catSql = `AND category <> 'reacao'`;
+    // 'reacao' só quando o lead fala; 'entrada' só no primeiro acesso (em ordem)
+    let catSql = `AND category NOT IN ('reacao', 'entrada')`;
     if (opts.category) { params.push(opts.category); catSql = `AND category = $3`; }
     const { rows } = await db.query(
         `SELECT * FROM group_scenes
@@ -174,42 +258,58 @@ async function pickScene(groupId, opts) {
     return rowsPool[rowsPool.length - 1];
 }
 
-// Materializa uma cena: sorteia personas pros slots (respeitando gênero) e
-// insere as mensagens com timestamps espaçados a partir de baseTime.
+// Materializa uma cena (v3 — ELENCO AUTOMÁTICO): sorteia gente do elenco do
+// LEAD pros slots, troca {nome} pelo nome do remetente, escolhe fotos das
+// pastas (sem repetir por lead) e insere com timestamps a partir de baseTime.
+// m.admin === true → mensagem do ADMINISTRADOR (canal free de ofertas).
 // Retorna { messages, endTime }.
-async function materializeScene(session, group, scene, personas, baseTime, gapScale) {
+async function materializeScene(session, group, scene, baseTime, gapScale) {
     const msgs = Array.isArray(scene.messages) ? scene.messages : [];
-    if (!msgs.length || !personas.length) return { messages: [], endTime: baseTime };
+    if (!msgs.length) return { messages: [], endTime: baseTime };
     gapScale = gapScale || 1;
-    // slots → personas (sem repetir enquanto der; respeita g quando informado)
+    const st = sessionState(session);
+    const femaleRatio = Number.isFinite(+group.female_ratio) ? +group.female_ratio : 80;
+    // slots → pessoas do elenco. O slot com t:'presentation' é SEMPRE alguém
+    // novo pra este lead (apresentação não repete gente).
+    const presSlot = (msgs.find(m => m.t === 'presentation') || {}).p || null;
     const slotMap = {};
-    const used = new Set();
+    const usedInScene = new Set(); // pessoas desta cena — cada slot é ALGUÉM diferente
     const bySlot = (slot, g) => {
         if (slotMap[slot]) return slotMap[slot];
-        let pool = personas.filter(p => !used.has(p.id) && (!g || p.gender === g));
-        if (!pool.length) pool = personas.filter(p => (!g || p.gender === g));
-        if (!pool.length) pool = personas;
-        const p = pick(pool);
-        slotMap[slot] = p;
-        used.add(p.id);
-        return p;
+        const gender = (g === 'm' || g === 'f') ? g : (Math.random() * 100 < femaleRatio ? 'f' : 'm');
+        const person = castPick(session, gender, slot === presSlot, usedInScene);
+        slotMap[slot] = person;
+        usedInScene.add(person.n);
+        return person;
     };
     const imgs = Array.isArray(group.media_image_urls) ? group.media_image_urls : [];
     const presM = Array.isArray(group.presentation_male_urls) ? group.presentation_male_urls : [];
     const presF = Array.isArray(group.presentation_female_urls) ? group.presentation_female_urls : [];
+    const folderUrls = (group.media_folder_urls && typeof group.media_folder_urls === 'object') ? group.media_folder_urls : {};
     const out = [];
     let t = baseTime;
     for (const m of msgs) {
         const gap = Math.max(2, Math.min(600, parseInt(m.gap_s, 10) || (4 + rand(9))));
         t = new Date(t.getTime() + gap * gapScale * 1000);
-        const persona = bySlot(m.p || 1, m.g === 'm' || m.g === 'f' ? m.g : null);
+        const isAdmin = m.admin === true;
+        const person = isAdmin ? null : bySlot(m.p || 1, m.g === 'm' || m.g === 'f' ? m.g : null);
         let type = 'text', content = (m.text || '').slice(0, 1000) || null, media = null, meta = null;
+        // {nome} → quem está FALANDO; {nome2} → a pessoa do slot 2 (referência
+        // cruzada: "bem vinda {nome1}" dito pelo slot 2 sobre o slot 1)
+        if (content) {
+            content = content.replace(/\{nome(\d+)\}/gi, (_, d) => bySlot(parseInt(d, 10), null).n);
+            content = content.replace(/\{nome\}/gi, person ? person.n : (group.name || 'Admin'));
+        }
         if (m.t === 'image') {
-            type = 'image'; media = pick(imgs);
+            type = 'image';
+            const key = (m.folder || '').toString().trim();
+            const pool = key ? (folderUrls[key] || []) : imgs;
+            media = pickUnusedMedia(session, key ? 'folder:' + key : 'imgs', pool);
             if (!media) { if (!content) continue; type = 'text'; }
         } else if (m.t === 'presentation') {
             type = 'image';
-            media = persona.gender === 'm' ? pick(presM) : pick(presF);
+            const g = person ? person.g : 'f';
+            media = pickUnusedMedia(session, 'pres:' + g, g === 'm' ? presM : presF);
             if (!media) { if (!content) continue; type = 'text'; }
         } else if (m.t === 'cta') {
             type = 'cta';
@@ -219,13 +319,21 @@ async function materializeScene(session, group, scene, personas, baseTime, gapSc
             continue; // tipo desconhecido/futuro (media_video): pula
         }
         if (!content && !media) continue;
+        if (isAdmin) meta = Object.assign({}, meta || {}, { admin: true });
         const { rows } = await db.query(
-            `INSERT INTO group_messages (session_id, persona_id, sender, type, content, media_url, meta, created_at)
-             VALUES ($1, $2, 'bot', $3, $4, $5, $6, $7) RETURNING *`,
-            [session.id, persona.id, type, content, media, meta ? JSON.stringify(meta) : null, t]
+            `INSERT INTO group_messages (session_id, persona_id, sender, type, content, media_url, meta, created_at, sender_name, sender_gender)
+             VALUES ($1, NULL, 'bot', $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+            [
+                session.id, type, content, media,
+                meta ? JSON.stringify(meta) : null, t,
+                isAdmin ? 'Admin' : person.n,
+                isAdmin ? null : person.g,
+            ]
         );
         out.push(rows[0]);
     }
+    // elenco + fotos usadas persistem no estado da sessão (1 UPDATE por cena)
+    await saveSessionState(session);
     return { messages: out, endTime: t };
 }
 
@@ -240,7 +348,7 @@ async function scheduleNext(session, group, fromTime) {
 
 // Preenche o grupo pra parecer VIVO: gera cenas com timestamps NO PASSADO
 // (entrada nova ou lead que ficou fora um tempo).
-async function backfill(session, group, personas, targetMsgs) {
+async function backfill(session, group, targetMsgs) {
     targetMsgs = targetMsgs || 22;
     const per = periodNow();
     // mix: saudação do período (se houver) + apresentação + ambiente
@@ -268,22 +376,44 @@ async function backfill(session, group, personas, targetMsgs) {
     let t = new Date(Date.now() - windowS * 1000 - 20000);
     const all = [];
     for (const s of picked) {
-        const r = await materializeScene(session, group, s, personas, t, scale);
+        const r = await materializeScene(session, group, s, t, scale);
         all.push(...r.messages);
         t = new Date(r.endTime.getTime() + Math.round(45 * scale) * 1000);
     }
     return all;
 }
 
+// ROTEIRO DE ENTRADA (v3): cenas da categoria 'entrada' rodam NA ORDEM no
+// primeiro acesso, com timestamps pra FRENTE — pingam AO VIVO via poll
+// enquanto o trial corre ("chegou carne nova, se apresenta" etc). 1x por lead.
+async function runEntryScript(session, group) {
+    const st = sessionState(session);
+    if (st.entry_done) return [];
+    st.entry_done = true;
+    const { rows: scenes } = await db.query(
+        `SELECT * FROM group_scenes WHERE group_id = $1 AND active = true AND category = 'entrada' ORDER BY id`,
+        [group.id]
+    );
+    if (!scenes.length) { await saveSessionState(session); return []; }
+    const out = [];
+    let t = new Date(Date.now() + 6000); // 1ª fala ~6s depois de entrar
+    for (const s of scenes.slice(0, 10)) {
+        const r = await materializeScene(session, group, s, t, 1);
+        out.push(...r.messages);
+        t = new Date(r.endTime.getTime() + (8 + rand(10)) * 1000);
+    }
+    return out;
+}
+
 // Cenas VENCIDAS (next_scene_at passou): materializa até 2 pra "aparecer agora"
-async function runDueScenes(session, group, personas) {
+async function runDueScenes(session, group) {
     const out = [];
     let guard = 2;
     while (guard-- > 0 && session.next_scene_at && new Date(session.next_scene_at) <= new Date()) {
         const scene = await pickScene(group.id, { period: periodNow() });
         if (!scene) break;
         const base = new Date(Math.max(new Date(session.next_scene_at).getTime(), Date.now() - 90000));
-        const r = await materializeScene(session, group, scene, personas, base, 1);
+        const r = await materializeScene(session, group, scene, base, 1);
         out.push(...r.messages);
         await scheduleNext(session, group, r.endTime);
     }
@@ -315,8 +445,9 @@ function publicMsg(m, personasById, masked) {
     return {
         id: m.id,
         sender: m.sender,
-        name: m.sender === 'user' ? null : (p ? p.name : 'Membro'),
-        gender: p ? p.gender : null,
+        // v3: nome vem gravado na mensagem (elenco automático); persona_id é legado
+        name: m.sender === 'user' ? null : (m.sender_name || (p ? p.name : 'Membro')),
+        gender: m.sender_gender || (p ? p.gender : null),
         type: masked ? (m.type === 'text' ? 'text' : 'image') : m.type,
         content: masked ? (m.type === 'text' || m.type === 'cta' ? maskContent(m.content) : null) : m.content,
         media_url: masked ? null : m.media_url,
@@ -437,7 +568,7 @@ async function runBackgroundScenes() {
         LIMIT 40
     `);
     if (!sessions.length) return 0;
-    const groupCache = {}, personaCache = {};
+    const groupCache = {};
     let ran = 0;
     for (const s of sessions) {
         try {
@@ -446,12 +577,9 @@ async function runBackgroundScenes() {
                 if (!gr.length) continue;
                 await hydrateGroupMedia(gr[0]);
                 groupCache[s.group_id] = gr[0];
-                personaCache[s.group_id] = await loadPersonas(s.group_id);
             }
             const group = groupCache[s.group_id];
-            const personas = personaCache[s.group_id];
-            if (!personas.length) { await scheduleNext(s, group, new Date()); continue; }
-            await runDueScenes(s, group, personas);
+            await runDueScenes(s, group);
             await cleanupRetention(s, group);
             ran++;
         } catch (_) { /* uma sessão com erro não derruba o lote */ }
@@ -482,7 +610,7 @@ router.get('/groups', optionalUser, async (req, res) => {
                 if (lm[0]) {
                     masked = !g.is_free && !owned && trialState(session, g).remaining <= 0;
                     last = {
-                        name: lm[0].sender === 'user' ? 'Você' : (lm[0].persona_name || 'Membro'),
+                        name: lm[0].sender === 'user' ? 'Você' : (lm[0].sender_name || lm[0].persona_name || 'Membro'),
                         preview: masked ? maskContent(lm[0].content) :
                             (lm[0].type === 'image' ? 'Foto' : (lm[0].content || 'Mensagem')),
                         at: lm[0].created_at,
@@ -545,12 +673,15 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
         const { rows: [{ n: msgCount }] } = await db.query(
             `SELECT COUNT(*)::int AS n FROM group_messages WHERE session_id = $1`, [session.id]
         );
-        if (msgCount < 10 && personas.length) {
-            await backfill(session, group, personas);
+        if (msgCount < 10) {
+            // primeira vez: passado vivo (backfill) + ROTEIRO DE ENTRADA pingando
+            // ao vivo ("chegou carne nova, se apresenta") enquanto o trial corre
+            await backfill(session, group);
+            await runEntryScript(session, group);
             await scheduleNext(session, group, new Date());
-        } else if (personas.length) {
+        } else {
             if (!session.next_scene_at) await scheduleNext(session, group, new Date());
-            else await runDueScenes(session, group, personas);
+            else await runDueScenes(session, group);
         }
 
         const { rows: msgs } = await db.query(
@@ -619,7 +750,7 @@ router.get('/groups/:id/poll', optionalUser, async (req, res) => {
         const session = await findOrCreateSession(groupId, ident, false);
         if (!session) return res.json({ success: true, messages: [] });
         const personas = await loadPersonas(groupId);
-        if (personas.length) await runDueScenes(session, group, personas);
+        await runDueScenes(session, group);
         const access = await accessState(ident, group, session);
         const { rows: msgs } = await db.query(
             `SELECT * FROM group_messages WHERE session_id = $1 AND id > $2 AND created_at <= NOW() ORDER BY id`,
@@ -711,11 +842,8 @@ router.post('/groups/:id/send', optionalUser, async (req, res) => {
         );
         // bots REAGEM (cena 'reacao') chegando nos próximos segundos via poll
         try {
-            const personas = await loadPersonas(groupId);
             const scene = await pickScene(groupId, { category: 'reacao', period: periodNow() });
-            if (scene && personas.length) {
-                await materializeScene(session, group, scene, personas, new Date(Date.now() + 2000), 1);
-            }
+            if (scene) await materializeScene(session, group, scene, new Date(Date.now() + 2000), 1);
         } catch (_) {}
         await db.query(`UPDATE group_sessions SET last_seen_at = NOW(), updated_at = NOW() WHERE id = $1`, [session.id]);
         return res.json({ success: true, message: publicMsg(mine, {}, false) });

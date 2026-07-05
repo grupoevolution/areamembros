@@ -1,0 +1,53 @@
+[
+{"category":"entrada","period":"any","weight":1,"messages":[
+{"p":1,"admin":true,"t":"text","text":"Bem-vindo ao canal oficial 🎉 Aqui você fica sabendo PRIMEIRO de tudo: conteúdo novo, promoções e as meninas que estão online nos grupos VIP.","gap_s":5},
+{"p":2,"g":"f","t":"text","text":"chegou gente nova, bem vindo!! 👋","gap_s":9},
+{"p":3,"g":"m","t":"text","text":"pode confiar, as ofertas daqui valem MUITO a pena kkk","gap_s":11},
+{"p":1,"admin":true,"t":"text","text":"Fica de olho que hoje ainda tem novidade 👀","gap_s":10}]},
+
+{"category":"papo","period":"any","weight":3,"messages":[
+{"p":1,"admin":true,"t":"text","text":"🔥 CONTEÚDO NOVO NO AR — acabou de entrar vídeo novo na área VIP. Quem já é assinante, corre lá:","gap_s":6},
+{"p":1,"admin":true,"t":"cta","text":"Ver os vídeos novos","link":"/?go=videos","color":"#e50914","gap_s":4},
+{"p":2,"g":"m","t":"text","text":"acabei de ver, tá absurdo kkkk","gap_s":12},
+{"p":3,"g":"f","t":"text","text":"os de hoje tão melhores que os de ontem, e olha que ontem já tava bom","gap_s":10}]},
+{"category":"papo","period":"any","weight":3,"messages":[
+{"p":1,"admin":true,"t":"text","text":"⚡ SÓ HOJE: acesso VIP com DESCONTO. Poucas vagas nesse valor — quando acabar, volta ao preço normal.","gap_s":6},
+{"p":1,"admin":true,"t":"cta","text":"Quero meu desconto","link":"/","color":"#e50914","gap_s":4},
+{"p":2,"g":"m","t":"text","text":"comprei semana passada nesse desconto, melhor decisão kkk","gap_s":12},
+{"p":3,"g":"m","t":"text","text":"vale cada centavo, confia","gap_s":9}]},
+{"category":"papo","period":"any","weight":3,"messages":[
+{"p":1,"admin":true,"t":"text","text":"👀 Tem gente online AGORA nos grupos VIP… as conversas de lá não param. Quem tá de fora nem imagina o que rola.","gap_s":6},
+{"p":1,"admin":true,"t":"cta","text":"Conhecer os grupos VIP","link":"/?go=groups","color":"#25a55f","gap_s":4},
+{"p":2,"g":"m","t":"text","text":"o grupo vip é outro nível, aqui é só a vitrine kkkk","gap_s":11}]},
+{"category":"papo","period":"any","weight":2,"messages":[
+{"p":1,"admin":true,"t":"text","text":"Dica: instala o app na tela inicial pra receber os avisos na hora — promoção aqui voa 🚀","gap_s":6},
+{"p":2,"g":"f","t":"text","text":"instalei ontem, chega notificação de tudo primeiro","gap_s":10}]},
+{"category":"papo","period":"noite","weight":3,"messages":[
+{"p":1,"admin":true,"t":"text","text":"🌙 A noite é o melhor horário: as meninas ficam online nos grupos VIP e o movimento lá dentro TRIPLICA.","gap_s":6},
+{"p":1,"admin":true,"t":"cta","text":"Entrar agora","link":"/?go=groups","color":"#25a55f","gap_s":4},
+{"p":2,"g":"m","t":"text","text":"confirmo, de noite lá dentro é uma loucura kkkk","gap_s":11}]},
+{"category":"papo","period":"any","weight":2,"messages":[
+{"p":1,"g":"f","t":"presentation","text":"oi gente!! sou a {nome} 🙈 to online agora lá no grupo VIP, vem falar comigo lá","gap_s":7},
+{"p":2,"g":"m","t":"text","text":"indo agora kkkk","gap_s":9},
+{"p":1,"admin":true,"t":"cta","text":"Falar com ela no VIP","link":"/?go=groups","color":"#e50914","gap_s":5}]},
+{"category":"papo","period":"any","weight":2,"messages":[
+{"p":1,"g":"f","t":"presentation","text":"passando pra avisar que postei coisa NOVA hoje 🔥 sou a {nome}, me acha lá dentro","gap_s":7},
+{"p":2,"g":"m","t":"text","text":"essa aí não decepciona nunca kkkk","gap_s":10},
+{"p":1,"admin":true,"t":"cta","text":"Ver o conteúdo dela","link":"/?go=videos","color":"#e50914","gap_s":5}]},
+{"category":"papo","period":"any","weight":2,"messages":[
+{"p":1,"admin":true,"t":"text","text":"❓ Muita gente pergunta: \"o acesso libera na hora?\" SIM — pagou, liberou AUTOMÁTICO no app. Sem esperar ninguém responder.","gap_s":6},
+{"p":2,"g":"m","t":"text","text":"paguei no pix e liberou em segundos, real","gap_s":11}]},
+{"category":"papo","period":"manha","weight":2,"messages":[
+{"p":1,"admin":true,"t":"text","text":"☀️ Bom dia! Resumo de ontem: conteúdo novo na área de vídeos + grupos VIP fervendo até tarde. Hoje tem mais.","gap_s":6},
+{"p":2,"g":"m","t":"text","text":"bom dia! ontem tava bom demais kkkk","gap_s":10}]},
+{"category":"papo","period":"any","weight":2,"messages":[
+{"p":1,"g":"m","t":"text","text":"galera vale a pena assinar? to na dúvida","gap_s":6},
+{"p":2,"g":"m","t":"text","text":"assinei tem 2 meses, uso todo dia kkk vale demais","gap_s":11},
+{"p":3,"g":"f","t":"text","text":"o pessoal de dentro não volta mais pra cá kkkk","gap_s":10},
+{"p":1,"g":"m","t":"text","text":"convencido, vou assinar kkk","gap_s":12},
+{"p":4,"admin":true,"t":"cta","text":"Assinar com desconto","link":"/","color":"#e50914","gap_s":6}]},
+
+{"category":"reacao","period":"any","weight":2,"messages":[
+{"p":1,"admin":true,"t":"text","text":"Opa! Esse canal é só de avisos — mas os grupos VIP são abertos pra conversar à vontade 😉","gap_s":5},
+{"p":1,"admin":true,"t":"cta","text":"Ir pros grupos VIP","link":"/?go=groups","color":"#25a55f","gap_s":4}]}
+]

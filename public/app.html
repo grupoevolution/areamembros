@@ -10528,7 +10528,7 @@ window.GroupApp = (function () {
                         ? '<div class="pv">' + (g.last.name ? '<b style="color:#25a55f;font-weight:600;">' + esc(g.last.name) + ':</b> ' : '') + esc(g.last.preview) + '</div>'
                         : '<div class="pv online">' + g.members_count + ' membros</div>');
                 const unread = (g.unread > 0)
-                    ? '<span style="display:inline-flex;min-width:19px;height:19px;border-radius:999px;background:#25D366;color:#fff;font-size:10.5px;font-weight:600;align-items:center;justify-content:center;padding:0 5px;margin-top:3px;">' + (g.unread > 999 ? '999+' : g.unread) + '</span>'
+                    ? '<span style="display:inline-flex;min-width:19px;height:19px;border-radius:999px;background:#25D366;color:#fff;font-size:10.5px;font-weight:600;align-items:center;justify-content:center;padding:0 5px;margin-top:3px;">' + (g.unread > 99 ? '99+' : g.unread) + '</span>'
                     : '';
                 const tm = (g.last && g.last.at) ? hhmm(g.last.at) : '';
                 html += '<div class="ca-row" onclick="GroupApp.open(' + g.id + ')">'
@@ -10578,7 +10578,14 @@ window.GroupApp = (function () {
         const d = document.createElement('div');
         d.className = 'ca-bub' + (mine ? ' mine' : '') + (m.masked ? ' ga-masked' : '');
         let inner = '';
-        if (!mine && m.name) inner += '<div class="ga-nm" style="color:' + nameColor(m.name) + ';">' + esc(m.name) + '</div>';
+        const isAdm = !mine && m.meta && m.meta.admin === true;
+        if (isAdm) {
+            // mensagem do ADMINISTRADOR (canal free de ofertas): dourado + selo
+            inner += '<div class="ga-nm" style="color:#d4a017;display:flex;align-items:center;gap:6px;">Admin'
+                + '<span style="background:rgba(212,160,23,.15);color:#d4a017;font-size:9px;font-weight:800;padding:1px 6px;border-radius:999px;letter-spacing:.5px;">ADM</span></div>';
+        } else if (!mine && m.name) {
+            inner += '<div class="ga-nm" style="color:' + nameColor(m.name) + ';">' + esc(m.name) + '</div>';
+        }
         if (m.type === 'image' && m.media_url) {
             inner += '<img class="photo" src="' + esc(m.media_url) + '" alt="" loading="lazy">';
             if (m.content) inner += '<div class="tx">' + esc(m.content) + '</div>';
