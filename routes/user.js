@@ -2113,9 +2113,9 @@ async function scheduleInstallSequence(email) {
         );
         for (const s of steps) {
             await db.query(
-                `INSERT INTO funnel_scheduled_pushes (customer_email, title, message, url, icon_url, send_at)
-                 VALUES ($1, $2, $3, $4, $5, NOW() + make_interval(mins => $6))`,
-                [e, s.title, s.body || '', s.url || '/', s.icon_url || null, Math.max(1, s.delay_minutes | 0)]
+                `INSERT INTO funnel_scheduled_pushes (customer_email, title, message, url, icon_url, send_at, install_step_id)
+                 VALUES ($1, $2, $3, $4, $5, NOW() + make_interval(mins => $6), $7)`,
+                [e, s.title, s.body || '', s.url || '/', s.icon_url || null, Math.max(1, s.delay_minutes | 0), s.id]
             );
         }
     } catch (err) { logger.warn('sequência pós-instalação falhou: ' + err.message); }
@@ -2125,6 +2125,22 @@ async function scheduleInstallSequence(email) {
         if (typeof chatsApi.deliverInstallWelcome === 'function') await chatsApi.deliverInstallWelcome(e);
     } catch (err) { logger.warn('boas-vindas do suporte falhou: ' + err.message); }
 }
+
+// Beacon do RELATÓRIO de notificações (vem do service worker, sem auth):
+// kind='delivered' quando a notificação foi EXIBIDA no aparelho;
+// kind='opened' quando o cliente CLICOU nela. Incrementa a push_log.
+router.post('/push/ack', async (req, res) => {
+    try {
+        const pid = parseInt(req.body?.pid, 10);
+        const kind = req.body?.kind === 'opened' ? 'opened' : (req.body?.kind === 'delivered' ? 'delivered' : null);
+        if (!pid || !kind) return res.json({ success: true });
+        const col = kind === 'opened' ? 'opened' : 'delivered';
+        await db.query(`UPDATE push_log SET ${col} = ${col} + 1 WHERE id = $1`, [pid]);
+        return res.json({ success: true });
+    } catch (_) {
+        return res.json({ success: true });
+    }
+});
 
 router.post('/push/unsubscribe', async (req, res) => {
     try {

@@ -59,11 +59,15 @@ router.get('/status', requireAdmin, async (req, res) => {
         }
         const vapid = await ensureVapid();
         const { rows: subsCount } = await db.query(`SELECT COUNT(*)::int AS total FROM push_subscriptions`);
+        const { rows: emCount } = await db.query(
+            `SELECT COUNT(DISTINCT LOWER(customer_email))::int AS n FROM push_subscriptions WHERE customer_email IS NOT NULL`
+        );
         return res.json({
             success: true,
             ready: !!vapid,
             public_key: vapid?.pub,
             subscribers: subsCount[0]?.total || 0,
+            emails: emCount[0]?.n || 0,
         });
     } catch (err) {
         logger.error('push status falhou:', err);
@@ -83,37 +87,51 @@ router.post('/send', requireAdmin, async (req, res) => {
 
     let query = 'SELECT id, endpoint, p256dh, auth FROM push_subscriptions';
     const params = [];
-    if (Array.isArray(target_emails) && target_emails.length > 0) {
+    const targeted = Array.isArray(target_emails) && target_emails.length > 0;
+    if (targeted) {
         query += ` WHERE LOWER(customer_email) = ANY($1::text[])`;
         params.push(target_emails.map(e => String(e).toLowerCase()));
     }
     const { rows: subs } = await db.query(query, params);
+
+    // relatório: 1 linha por disparo manual/broadcast
+    const { openPushLog, bumpPushLog } = require('../lib/push-log');
+    const pid = await openPushLog({ source: targeted ? 'manual' : 'broadcast', title });
 
     const payload = JSON.stringify({
         title: String(title).slice(0, 100),
         body: String(body).slice(0, 200),
         url: url || '/',
         icon: icon ? String(icon).slice(0, 500) : undefined,
+        pid: pid || undefined,
     });
 
+    // Envio em LOTES PARALELOS (40 por vez): 455 aparelhos em sequência
+    // estourava o timeout do proxy → a resposta voltava como página HTML
+    // ("Unexpected token <"), mesmo com os pushes saindo. Assim responde
+    // em segundos.
     let sent = 0, failed = 0;
-    for (const sub of subs) {
-        try {
-            await webpush.sendNotification(
+    const BATCH = 40;
+    for (let i = 0; i < subs.length; i += BATCH) {
+        const chunk = subs.slice(i, i + BATCH);
+        const results = await Promise.allSettled(chunk.map(sub =>
+            webpush.sendNotification(
                 { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
                 payload
-            );
-            sent++;
-        } catch (err) {
+            )
+        ));
+        for (let j = 0; j < results.length; j++) {
+            if (results[j].status === 'fulfilled') { sent++; continue; }
             failed++;
-            // Endpoint expirou: remove
+            const err = results[j].reason || {};
             if (err.statusCode === 404 || err.statusCode === 410) {
-                await db.query(`DELETE FROM push_subscriptions WHERE id = $1`, [sub.id]);
+                await db.query(`DELETE FROM push_subscriptions WHERE id = $1`, [chunk[j].id]).catch(() => {});
             }
         }
     }
+    await bumpPushLog(pid, { targets: subs.length, accepted: sent });
 
-    return res.json({ success: true, total: subs.length, sent, failed });
+    return res.json({ success: true, total: subs.length, sent, failed, pid });
 });
 
 // =============================================================================
@@ -267,6 +285,21 @@ router.delete('/install-steps/:id', requireAdmin, async (req, res) => {
     try {
         await db.query(`DELETE FROM install_push_steps WHERE id = $1`, [id]);
         return res.json({ success: true });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// =============================================================================
+// RELATÓRIO DE NOTIFICAÇÕES — funil alvos → aceitos → exibidos → abertos
+// =============================================================================
+router.get('/report', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await db.query(
+            `SELECT id, source, ref_id, day, title, targets, accepted, delivered, opened, created_at
+             FROM push_log ORDER BY day DESC, id DESC LIMIT 120`
+        );
+        return res.json({ success: true, rows });
     } catch (err) {
         return res.status(500).json({ success: false, error: 'Erro interno' });
     }

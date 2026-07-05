@@ -5110,6 +5110,15 @@ a { color: inherit; text-decoration: none; }
                     </div>
                 </div>
 
+                <!-- ===== RELATÓRIO DE NOTIFICAÇÕES ===== -->
+                <div class="form-card" style="padding:20px;margin-bottom:18px;">
+                    <div class="form-card-head" style="margin-bottom:6px;">
+                        <div class="form-card-title">📊 Relatório de notificações</div>
+                        <div class="form-card-sub">O funil de cada disparo: <b>Alvos</b> = aparelhos que tentamos alcançar · <b>Aceitos</b> = o Google/Apple recebeu pra entregar · <b>Exibidos</b> = apareceu de verdade na tela do aparelho · <b>Abertos</b> = o cliente tocou. Fontes automáticas (rotina, boas-vindas, funil, chats) agregam por dia.</div>
+                    </div>
+                    <div id="pushReport" style="margin-top:12px;font-size:12.5px;color:var(--text-muted);overflow-x:auto;">Carregando…</div>
+                </div>
+
                 <!-- ===== QR PREVIEW MODAL ===== -->
                 <div id="previewQrModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;align-items:center;justify-content:center;padding:20px;">
                     <div style="background:#1a0a0a;border:1px solid var(--border);border-radius:14px;max-width:360px;width:100%;padding:24px;text-align:center;">
@@ -11910,7 +11919,9 @@ async function loadGrowth() {
         const el = document.getElementById('growthPushStatus');
         if (r.success && r.ready) {
             window.__pushSubscribers = r.subscribers || 0;
-            el.innerHTML = `✅ Pronto · 📱 <strong>${r.subscribers}</strong> celular(es) com o app instalado`;
+            el.innerHTML = `✅ Pronto · 📱 <strong>${r.subscribers}</strong> aparelho(s) inscrito(s) pra notificação`
+                + (r.emails ? ` · 👤 <strong>${r.emails}</strong> e-mail(s)` : '')
+                + ` <span style="color:var(--text-dim);font-size:11px;">(aparelhos que instalaram E permitiram notificação; desinstalados saem sozinhos no próximo envio)</span>`;
             el.style.color = 'var(--success)';
         } else {
             el.innerHTML = '⚠️ ' + escapeHtml(r.reason || 'Push não configurado. Salve uma vez pra gerar VAPID keys.');
@@ -11923,7 +11934,44 @@ async function loadGrowth() {
     // Rotina diária + sequência pós-instalação (cards abaixo do push manual)
     try { loadPushRoutine(); } catch (_) {}
     try { loadInstallSteps(); } catch (_) {}
+    try { loadPushReport(); } catch (_) {}
 }
+
+// ── RELATÓRIO DE NOTIFICAÇÕES (push_log) ────────────────────────────────────
+const PUSH_SOURCES = {
+    manual: '📤 Push manual', broadcast: '📢 Broadcast', rotina: '⏰ Rotina diária',
+    boasvindas: '🚀 Boas-vindas', funil: '🧲 Funil', chat: '💬 Chats',
+};
+async function loadPushReport() {
+    const box = document.getElementById('pushReport');
+    if (!box) return;
+    try {
+        const r = await fetch('/api/admin/push/report', { credentials: 'include' }).then(r => r.json());
+        if (!r.success) { box.textContent = 'Erro ao carregar.'; return; }
+        if (!r.rows.length) { box.innerHTML = '<span style="color:var(--text-dim);">Nenhum disparo registrado ainda — os próximos pushes aparecem aqui.</span>'; return; }
+        const pct = (a, b) => b > 0 ? Math.round(a / b * 100) + '%' : '—';
+        const day = (d) => { const s = String(d).slice(0, 10).split('-'); return s[2] + '/' + s[1]; };
+        box.innerHTML = '<table style="width:100%;border-collapse:collapse;min-width:640px;">'
+            + '<tr style="text-align:left;color:var(--text-dim);font-size:11px;text-transform:uppercase;letter-spacing:.06em;">'
+            + '<th style="padding:6px 8px;">Data</th><th style="padding:6px 8px;">Origem</th><th style="padding:6px 8px;">Título</th>'
+            + '<th style="padding:6px 8px;text-align:right;">Alvos</th><th style="padding:6px 8px;text-align:right;">Aceitos</th>'
+            + '<th style="padding:6px 8px;text-align:right;">Exibidos</th><th style="padding:6px 8px;text-align:right;">Abertos</th>'
+            + '<th style="padding:6px 8px;text-align:right;">Abertura</th></tr>'
+            + r.rows.map(x => '<tr style="border-top:1px solid var(--border);">'
+                + '<td style="padding:7px 8px;white-space:nowrap;">' + day(x.day) + '</td>'
+                + '<td style="padding:7px 8px;white-space:nowrap;">' + (PUSH_SOURCES[x.source] || x.source) + '</td>'
+                + '<td style="padding:7px 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);">' + escHtmlAdmin(x.title || '—') + '</td>'
+                + '<td style="padding:7px 8px;text-align:right;">' + x.targets + '</td>'
+                + '<td style="padding:7px 8px;text-align:right;">' + x.accepted + '</td>'
+                + '<td style="padding:7px 8px;text-align:right;color:#4CD964;font-weight:700;">' + x.delivered + '</td>'
+                + '<td style="padding:7px 8px;text-align:right;color:#f5c542;font-weight:700;">' + x.opened + '</td>'
+                + '<td style="padding:7px 8px;text-align:right;font-weight:700;">' + pct(x.opened, x.delivered || x.accepted) + '</td>'
+                + '</tr>').join('')
+            + '</table>'
+            + '<div style="font-size:11px;color:var(--text-dim);margin-top:8px;">"Exibidos"/"Abertos" dependem do app atualizado no aparelho do cliente (o service worker novo reporta sozinho) — os números crescem conforme a base atualiza.</div>';
+    } catch (_) { box.textContent = 'Erro de rede.'; }
+}
+window.loadPushReport = loadPushReport;
 
 // Destino rápido: preenche a URL de clique conforme o preset escolhido
 async function applyPushDest() {
@@ -11972,17 +12020,19 @@ async function sendPushNotification() {
 
     const btn = document.getElementById('pushSendBtn');
     btn.disabled = true; btn.textContent = 'Disparando...';
+    const safeJson = async (resp) => { try { return await resp.json(); } catch (_) { return { success: false, error: 'O servidor demorou pra responder — o envio provavelmente CONTINUOU. Confira no Relatório de notificações aqui embaixo.' }; } };
     try {
         const r = await fetch('/api/admin/push/send', {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, body, url, icon, target_emails: target_emails.length ? target_emails : undefined }),
-        }).then(r => r.json());
+        }).then(safeJson);
         if (!r.success) {
             _alertModal('pushAlert', r.error || 'Erro', 'error');
         } else {
             _alertModal('pushAlert', `✓ Enviado: ${r.sent} sucesso, ${r.failed} falha (de ${r.total})`, 'success');
+            try { loadPushReport(); } catch (_) {}
         }
     } catch (err) {
         _alertModal('pushAlert', err.message || 'Erro de rede', 'error');
@@ -12003,7 +12053,7 @@ async function sendPushBroadcast() {
         const r = await fetch('/api/admin/push/send', {
             method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, body, url, icon }), // sem target_emails = todos
-        }).then(r => r.json());
+        }).then(async resp => { try { return await resp.json(); } catch (_) { return { success: false, error: 'O servidor demorou pra responder — o envio provavelmente CONTINUOU. Confira no Relatório de notificações.' }; } });
         if (!r.success) _alertModal('pushAlert', r.error || 'Erro', 'error');
         else _alertModal('pushAlert', `📢 Broadcast: ${r.sent} entregue(s), ${r.failed} falha (de ${r.total})`, 'success');
     } catch (err) { _alertModal('pushAlert', err.message || 'Erro de rede', 'error'); }

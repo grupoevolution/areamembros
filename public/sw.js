@@ -164,8 +164,17 @@ self.addEventListener('push', (event) => {
         tag: payload.tag || 'mvip-default',
         renotify: !!payload.tag, // re-alerta mesmo reusando a mesma tag (msg nova)
         vibrate: [200, 80, 200],
-        data: { url: payload.url || '/', type: payload.type },
+        data: { url: payload.url || '/', type: payload.type, pid: payload.pid || null },
         actions: payload.actions || [],
+    };
+    // Beacon do RELATÓRIO: avisa o servidor que a notificação foi EXIBIDA
+    // neste aparelho (push_log.delivered). O pid viaja dentro do payload.
+    const ack = (kind) => {
+        if (!payload.pid) return Promise.resolve();
+        return fetch('/api/user/push/ack', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pid: payload.pid, kind: kind }), keepalive: true,
+        }).catch(() => {});
     };
     // Estilo WhatsApp: se o app está ABERTO e em foco, NÃO dispara a notificação
     // nativa — manda pro app mostrar o banner in-app (evita notificação dobrada).
@@ -174,24 +183,36 @@ self.addEventListener('push', (event) => {
         const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
         const focused = wins.find(w => w.focused) || wins.find(w => w.visibilityState === 'visible');
         if (focused) {
-            try { focused.postMessage({ type: 'mv-push-foreground', payload }); return; } catch (_) {}
+            try { focused.postMessage({ type: 'mv-push-foreground', payload }); } catch (_) {}
+            await ack('delivered');
+            return;
         }
-        return self.registration.showNotification(payload.title || 'Membros VIP', options);
+        await self.registration.showNotification(payload.title || 'Membros VIP', options);
+        await ack('delivered');
     })());
 });
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     const url = event.notification.data?.url || '/';
-    event.waitUntil(
-        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
-            for (const w of wins) {
-                if (w.url.includes(self.location.origin) && 'focus' in w) {
-                    w.navigate(url);
-                    return w.focus();
-                }
+    const pid = event.notification.data?.pid || null;
+    event.waitUntil((async () => {
+        // beacon do RELATÓRIO: notificação ABERTA (push_log.opened)
+        if (pid) {
+            try {
+                await fetch('/api/user/push/ack', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pid: pid, kind: 'opened' }), keepalive: true,
+                });
+            } catch (_) {}
+        }
+        const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        for (const w of wins) {
+            if (w.url.includes(self.location.origin) && 'focus' in w) {
+                w.navigate(url);
+                return w.focus();
             }
-            if (self.clients.openWindow) return self.clients.openWindow(url);
-        })
-    );
+        }
+        if (self.clients.openWindow) return self.clients.openWindow(url);
+    })());
 });
