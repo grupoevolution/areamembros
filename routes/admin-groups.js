@@ -23,8 +23,10 @@ const db = require('../db');
 const { requireAdmin } = require('../lib/auth');
 const { logger } = require('../lib/logger');
 
-const CATEGORIES = ['papo', 'pesado', 'apresentacao', 'midia', 'cta', 'reacao', 'bomdia', 'boanoite', 'entrada'];
+const CATEGORIES = ['papo', 'pesado', 'apresentacao', 'midia', 'cta', 'reacao', 'novato', 'bomdia', 'boanoite', 'entrada'];
 const PERIODS = ['any', 'manha', 'tarde', 'noite', 'madrugada'];
+// tipos aceitos nos blocos de mensagem (cenas pessoais E itens da agenda)
+const MSG_TYPES = ['text', 'image', 'video', 'audio', 'presentation', 'cta', 'vonce'];
 
 const urlList = (v) => {
     if (Array.isArray(v)) return v.map(s => String(s).trim()).filter(Boolean).slice(0, 500);
@@ -36,9 +38,10 @@ const intOr = (v, d, min, max) => {
     if (isNaN(n)) return d;
     return Math.max(min, Math.min(max, n));
 };
+const rand = (n) => Math.floor(Math.random() * n);
 
-// Pastas por CATEGORIA (v3): aceita objeto { chave: pasta } ou texto com uma
-// por linha no formato "chave = pasta/na/bunny".
+// Pastas de mídia v2: { chave: { path, label, hidden } }. Aceita também o
+// legado (valor string / texto "chave = pasta" por linha).
 function parseMediaFolders(v) {
     let obj = null;
     if (v && typeof v === 'object' && !Array.isArray(v)) obj = v;
@@ -53,10 +56,41 @@ function parseMediaFolders(v) {
     const out = {};
     for (const k of Object.keys(obj).slice(0, 30)) {
         const key = String(k).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40);
-        const path = String(obj[k] || '').trim().replace(/^\/+|\/+$/g, '').slice(0, 200);
-        if (key && path) out[key] = path;
+        if (!key) continue;
+        const raw = obj[k];
+        let path = '', label = key, hidden = false;
+        if (raw && typeof raw === 'object') {
+            path = String(raw.path || '');
+            label = String(raw.label || key).slice(0, 60);
+            hidden = raw.hidden === true;
+        } else {
+            path = String(raw || '');
+        }
+        path = path.trim().replace(/^\/+|\/+$/g, '').slice(0, 200);
+        if (path) out[key] = { path, label, hidden };
     }
     return out;
+}
+
+// Normaliza um bloco de mensagens (formato compartilhado entre cenas e agenda)
+function cleanMessages(list) {
+    return (Array.isArray(list) ? list : []).slice(0, 40).map(m => ({
+        p: intOr(m.p, 1, 1, 12),
+        g: m.g === 'm' || m.g === 'f' ? m.g : undefined,
+        t: MSG_TYPES.includes(m.t) ? m.t : 'text',
+        kind: m.kind === 'foto' ? 'foto' : (m.kind === 'video' ? 'video' : undefined),
+        text: (m.text || '').toString().slice(0, 1000) || undefined,
+        gap_s: m.gap_s !== undefined ? intOr(m.gap_s, 8, 2, 600) : undefined,
+        link: (m.link || '').toString().slice(0, 1000) || undefined,
+        pid: m.pid ? parseInt(m.pid, 10) : undefined,
+        color: (m.color || '').toString().slice(0, 20) || undefined,
+        folder: (m.folder || '').toString().trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40) || undefined,
+        admin: m.admin === true ? true : undefined,
+    })).filter(m => m.text || ['image', 'video', 'audio', 'presentation', 'vonce'].includes(m.t));
+}
+
+function invalidateAgendaCache(groupId) {
+    try { require('./user-groups').invalidateAgenda(groupId); } catch (_) {}
 }
 
 function groupPayload(b) {
@@ -82,6 +116,9 @@ function groupPayload(b) {
         female_ratio: intOr(b.female_ratio, 80, 0, 100),
         msgs_per_hour: intOr(b.msgs_per_hour, 60, 10, 600),
         retention_hours: intOr(b.retention_hours, 24, 1, 720),
+        cycle_days: intOr(b.cycle_days, 7, 1, 60),
+        window_hours: intOr(b.window_hours, 72, 6, 720),
+        trial_end_chat_id: b.trial_end_chat_id ? parseInt(b.trial_end_chat_id, 10) : null,
         trial_seconds: intOr(b.trial_seconds, 60, 15, 3600),
         members_count: intOr(b.members_count, 248, 2, 99999),
         online_count: intOr(b.online_count, 25, 1, 9999),
@@ -94,6 +131,155 @@ function groupPayload(b) {
     };
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// MÉTRICAS — dashboard dos grupos (funil entrou → prévia → PV → comprou)
+// Fontes: group_sessions (leads), tracking_events com metadata.group_id
+// (opens/paywall), user_access do produto do grupo (compras/receita).
+// ═════════════════════════════════════════════════════════════════════════════
+router.get('/metrics', requireAdmin, async (req, res) => {
+    try {
+        const to = req.query.to ? new Date(req.query.to + 'T23:59:59-03:00') : new Date();
+        const from = req.query.from ? new Date(req.query.from + 'T00:00:00-03:00')
+            : new Date(Date.now() - 30 * 86400000);
+        const { rows: groups } = await db.query(
+            `SELECT g.id, g.name, g.avatar_url, g.is_free, g.product_id, p.name AS product_name
+             FROM groups g LEFT JOIN products p ON p.id = g.product_id
+             WHERE g.active = true ORDER BY g.display_order, g.id`
+        );
+        // eventos de grupo no período, agregados por group_id + tipo
+        const { rows: events } = await db.query(
+            `SELECT metadata->>'group_id' AS gid, event_type, COUNT(*)::int AS n
+             FROM tracking_events
+             WHERE event_type IN ('group_open','group_paywall_open','group_paywall_click')
+               AND created_at BETWEEN $1 AND $2
+             GROUP BY 1, 2`, [from, to]
+        );
+        const ev = {};
+        for (const e of events) {
+            if (!e.gid) continue;
+            ev[e.gid] = ev[e.gid] || {};
+            ev[e.gid][e.event_type] = e.n;
+        }
+        const out = [];
+        for (const g of groups) {
+            const { rows: [{ n: leadsNew }] } = await db.query(
+                `SELECT COUNT(*)::int AS n FROM group_sessions WHERE group_id = $1 AND created_at BETWEEN $2 AND $3`,
+                [g.id, from, to]
+            );
+            const { rows: [{ n: leadsTotal }] } = await db.query(
+                `SELECT COUNT(*)::int AS n FROM group_sessions WHERE group_id = $1`, [g.id]
+            );
+            let purchases = 0, revenue = 0, activeMembers = 0;
+            if (g.product_id) {
+                const { rows: [sales] } = await db.query(
+                    `SELECT COUNT(*)::int AS n, COALESCE(SUM(COALESCE(net_amount, sale_amount)), 0) AS total
+                     FROM user_access WHERE product_id = $1 AND granted_at BETWEEN $2 AND $3`,
+                    [g.product_id, from, to]
+                );
+                purchases = sales.n; revenue = parseFloat(sales.total) || 0;
+                const { rows: [{ n: act }] } = await db.query(
+                    `SELECT COUNT(DISTINCT LOWER(email))::int AS n FROM user_access
+                     WHERE product_id = $1 AND status = 'active' AND (expires_at IS NULL OR expires_at > NOW())`,
+                    [g.product_id]
+                );
+                activeMembers = act;
+            }
+            const e = ev[String(g.id)] || {};
+            out.push({
+                id: g.id, name: g.name, avatar_url: g.avatar_url, is_free: g.is_free,
+                product_id: g.product_id, product_name: g.product_name,
+                leads_new: leadsNew, leads_total: leadsTotal,
+                opens: e.group_open || 0,
+                paywall_opens: e.group_paywall_open || 0,
+                paywall_clicks: e.group_paywall_click || 0,
+                purchases, revenue, active_members: activeMembers,
+                conversion: leadsNew > 0 ? Math.round((purchases / leadsNew) * 1000) / 10 : 0,
+            });
+        }
+        // Passe Vitalício entra como linha própria (receita não é de 1 grupo)
+        let pass = null;
+        try {
+            const { rows: pp } = await db.query(
+                `SELECT id, name FROM products WHERE is_group_pass = true AND is_active = true ORDER BY id LIMIT 1`
+            );
+            if (pp.length) {
+                const { rows: [sales] } = await db.query(
+                    `SELECT COUNT(*)::int AS n, COALESCE(SUM(COALESCE(net_amount, sale_amount)), 0) AS total
+                     FROM user_access WHERE product_id = $1 AND granted_at BETWEEN $2 AND $3`,
+                    [pp[0].id, from, to]
+                );
+                const { rows: [{ n: act }] } = await db.query(
+                    `SELECT COUNT(DISTINCT LOWER(email))::int AS n FROM user_access
+                     WHERE product_id = $1 AND status = 'active' AND (expires_at IS NULL OR expires_at > NOW())`,
+                    [pp[0].id]
+                );
+                pass = { product_id: pp[0].id, name: pp[0].name, purchases: sales.n, revenue: parseFloat(sales.total) || 0, active_members: act };
+            }
+        } catch (_) {}
+        return res.json({ success: true, groups: out, pass, from, to });
+    } catch (err) {
+        logger.error('Erro nas métricas de grupos:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// BROADCAST — mensagem NA HORA na timeline de todos (1 linha, sem fan-out)
+// ═════════════════════════════════════════════════════════════════════════════
+const BCAST_TYPES = ['text', 'image', 'video', 'audio', 'vonce'];
+router.post('/broadcast', requireAdmin, async (req, res) => {
+    try {
+        const b = req.body || {};
+        const type = BCAST_TYPES.includes(b.type) ? b.type : 'text';
+        const content = (b.content || '').toString().slice(0, 1000) || null;
+        const media = (b.media_url || '').toString().trim().slice(0, 1000) || null;
+        if (type === 'text' && !content) return res.status(400).json({ success: false, error: 'Texto obrigatório' });
+        if (type !== 'text' && !media) return res.status(400).json({ success: false, error: 'URL da mídia obrigatória' });
+        let groupIds = null; // NULL = todos os grupos
+        if (Array.isArray(b.group_ids) && b.group_ids.length) {
+            groupIds = b.group_ids.map(x => parseInt(x, 10)).filter(Boolean).slice(0, 100);
+            if (!groupIds.length) groupIds = null;
+        }
+        const meta = {};
+        if (type === 'vonce') meta.kind = b.kind === 'video' ? 'video' : 'foto';
+        const sender = (b.sender_name || '').toString().trim().slice(0, 80) || null;
+        const { rows } = await db.query(
+            `INSERT INTO group_broadcasts (group_ids, sender_name, type, content, media_url, meta)
+             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+            [groupIds ? JSON.stringify(groupIds) : null, sender, type, content, media,
+             Object.keys(meta).length ? JSON.stringify(meta) : null]
+        );
+        return res.json({ success: true, broadcast: rows[0] });
+    } catch (err) {
+        logger.error('Erro no broadcast de grupos:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// GET /broadcasts — últimos 50 (pro histórico no painel)
+router.get('/broadcasts', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await db.query(
+            `SELECT * FROM group_broadcasts ORDER BY id DESC LIMIT 50`
+        );
+        return res.json({ success: true, broadcasts: rows });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// DELETE /broadcasts/:bid — apagar tira da timeline de todo mundo na hora
+router.delete('/broadcasts/:bid', requireAdmin, async (req, res) => {
+    const bid = parseInt(req.params.bid, 10);
+    if (!bid) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const { rowCount } = await db.query(`DELETE FROM group_broadcasts WHERE id = $1`, [bid]);
+        return res.json({ success: true, deleted: rowCount });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
 // GET / — lista com contagens
 router.get('/', requireAdmin, async (req, res) => {
     try {
@@ -101,6 +287,7 @@ router.get('/', requireAdmin, async (req, res) => {
             SELECT g.*, p.name AS product_name,
                    (SELECT COUNT(*)::int FROM group_personas gp WHERE gp.group_id = g.id AND gp.active = true) AS personas_count,
                    (SELECT COUNT(*)::int FROM group_scenes gs WHERE gs.group_id = g.id AND gs.active = true) AS scenes_count,
+                   (SELECT COUNT(*)::int FROM group_schedule_items si WHERE si.group_id = g.id AND si.active = true) AS schedule_count,
                    (SELECT COUNT(*)::int FROM group_sessions s WHERE s.group_id = g.id) AS sessions_count
             FROM groups g
             LEFT JOIN products p ON p.id = g.product_id
@@ -113,7 +300,8 @@ router.get('/', requireAdmin, async (req, res) => {
     }
 });
 
-// POST / — cria
+// POST / — cria (âncora do ciclo = meia-noite de HOJE em Brasília: o "dia 1"
+// da agenda começa no dia em que o grupo nasce)
 router.post('/', requireAdmin, async (req, res) => {
     try {
         const p = groupPayload(req.body || {});
@@ -127,7 +315,13 @@ router.post('/', requireAdmin, async (req, res) => {
         const { rows } = await db.query(
             `INSERT INTO groups (${cols.join(', ')}) VALUES (${ph}) RETURNING *`, vals
         );
-        return res.json({ success: true, group: rows[0] });
+        // âncora do ciclo: meia-noite (Brasília) do dia da criação
+        const { rows: anchored } = await db.query(
+            `UPDATE groups SET cycle_anchor =
+                date_trunc('day', created_at AT TIME ZONE 'America/Sao_Paulo') AT TIME ZONE 'America/Sao_Paulo'
+             WHERE id = $1 RETURNING *`, [rows[0].id]
+        );
+        return res.json({ success: true, group: anchored[0] || rows[0] });
     } catch (err) {
         logger.error('Erro criando grupo:', err);
         return res.status(500).json({ success: false, error: err.message || 'Erro interno' });
@@ -259,19 +453,7 @@ router.post('/:id/scenes/import', requireAdmin, async (req, res) => {
             const cat = CATEGORIES.includes(s.category) ? s.category : 'papo';
             const per = PERIODS.includes(s.period) ? s.period : 'any';
             const weight = intOr(s.weight, 1, 1, 100);
-            const msgs = (Array.isArray(s.messages) ? s.messages : []).slice(0, 40).map(m => ({
-                p: intOr(m.p, 1, 1, 12),
-                g: m.g === 'm' || m.g === 'f' ? m.g : undefined,
-                t: ['text', 'image', 'presentation', 'cta', 'vonce'].includes(m.t) ? m.t : 'text',
-                kind: m.kind === 'foto' ? 'foto' : (m.kind === 'video' ? 'video' : undefined),
-                text: (m.text || '').toString().slice(0, 1000) || undefined,
-                gap_s: m.gap_s !== undefined ? intOr(m.gap_s, 8, 2, 600) : undefined,
-                link: (m.link || '').toString().slice(0, 1000) || undefined,
-                pid: m.pid ? parseInt(m.pid, 10) : undefined,
-                color: (m.color || '').toString().slice(0, 20) || undefined,
-                folder: (m.folder || '').toString().trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40) || undefined,
-                admin: m.admin === true ? true : undefined,
-            })).filter(m => m.text || m.t === 'image' || m.t === 'presentation' || m.t === 'vonce');
+            const msgs = cleanMessages(s.messages);
             if (!msgs.length) continue;
             clean.push({ category: cat, period: per, weight, messages: msgs });
         }
@@ -301,6 +483,219 @@ router.delete('/:id/scenes', requireAdmin, async (req, res) => {
         const { rowCount } = await db.query(`DELETE FROM group_scenes WHERE group_id = $1`, [id]);
         return res.json({ success: true, deleted: rowCount });
     } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// AGENDA (linha do tempo compartilhada) — itens por dia do ciclo × horário
+// ═════════════════════════════════════════════════════════════════════════════
+
+// "HH:MM" → minutos do dia (aceita também número direto)
+function toTimeMinutes(v) {
+    if (typeof v === 'number' || /^\d+$/.test(String(v))) {
+        return Math.max(0, Math.min(1439, parseInt(v, 10)));
+    }
+    const m = String(v || '').match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return 540; // 09:00
+    return Math.max(0, Math.min(1439, parseInt(m[1], 10) * 60 + parseInt(m[2], 10)));
+}
+
+// GET /:id/schedule — agenda completa (ordenada por dia × horário)
+router.get('/:id/schedule', requireAdmin, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const { rows } = await db.query(
+            `SELECT * FROM group_schedule_items WHERE group_id = $1 ORDER BY day, time_minutes, id`, [id]
+        );
+        return res.json({ success: true, items: rows });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// POST /:id/schedule — cria item { day, time ('HH:MM'|min), messages[] }
+router.post('/:id/schedule', requireAdmin, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const b = req.body || {};
+        const day = intOr(b.day, 0, 0, 59);
+        const time = toTimeMinutes(b.time !== undefined ? b.time : b.time_minutes);
+        const msgs = cleanMessages(b.messages);
+        if (!msgs.length) return res.status(400).json({ success: false, error: 'Item sem mensagens válidas' });
+        const { rows } = await db.query(
+            `INSERT INTO group_schedule_items (group_id, day, time_minutes, messages)
+             VALUES ($1, $2, $3, $4::jsonb) RETURNING *`,
+            [id, day, time, JSON.stringify(msgs)]
+        );
+        invalidateAgendaCache(id);
+        return res.json({ success: true, item: rows[0] });
+    } catch (err) {
+        logger.error('Erro criando item de agenda:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// PUT /:id/schedule/:itemId — edita item
+router.put('/:id/schedule/:itemId', requireAdmin, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const itemId = parseInt(req.params.itemId, 10);
+    if (!id || !itemId) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const b = req.body || {};
+        const updates = []; const values = []; let p = 1;
+        if (b.day !== undefined) { updates.push(`day = $${p++}`); values.push(intOr(b.day, 0, 0, 59)); }
+        if (b.time !== undefined || b.time_minutes !== undefined) {
+            updates.push(`time_minutes = $${p++}`);
+            values.push(toTimeMinutes(b.time !== undefined ? b.time : b.time_minutes));
+        }
+        if (b.messages !== undefined) {
+            const msgs = cleanMessages(b.messages);
+            if (!msgs.length) return res.status(400).json({ success: false, error: 'Item sem mensagens válidas' });
+            updates.push(`messages = $${p++}::jsonb`); values.push(JSON.stringify(msgs));
+        }
+        if (b.active !== undefined) { updates.push(`active = $${p++}`); values.push(b.active !== false); }
+        if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
+        values.push(itemId, id);
+        const { rows } = await db.query(
+            `UPDATE group_schedule_items SET ${updates.join(', ')} WHERE id = $${p++} AND group_id = $${p} RETURNING *`,
+            values
+        );
+        if (!rows.length) return res.status(404).json({ success: false, error: 'Não encontrado' });
+        invalidateAgendaCache(id);
+        return res.json({ success: true, item: rows[0] });
+    } catch (err) {
+        logger.error('Erro editando item de agenda:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// DELETE /:id/schedule/:itemId
+router.delete('/:id/schedule/:itemId', requireAdmin, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const itemId = parseInt(req.params.itemId, 10);
+    if (!id || !itemId) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const { rowCount } = await db.query(
+            `DELETE FROM group_schedule_items WHERE id = $1 AND group_id = $2`, [itemId, id]
+        );
+        invalidateAgendaCache(id);
+        if (!rowCount) return res.status(404).json({ success: false, error: 'Não encontrado' });
+        return res.json({ success: true });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// POST /:id/schedule/import — body.items = [{day, time, messages}] (aceita
+// string JSON). replace=true limpa a agenda antes. Formato pra gerar fora.
+router.post('/:id/schedule/import', requireAdmin, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        let items = req.body?.items;
+        if (typeof items === 'string') {
+            try { items = JSON.parse(items); } catch (e) {
+                return res.status(400).json({ success: false, error: 'JSON inválido: ' + e.message });
+            }
+        }
+        if (!Array.isArray(items) || !items.length) {
+            return res.status(400).json({ success: false, error: 'Envie um array de itens' });
+        }
+        if (items.length > 1000) return res.status(400).json({ success: false, error: 'Máximo de 1000 itens por import' });
+        const clean = [];
+        for (const it of items) {
+            const msgs = cleanMessages(it?.messages);
+            if (!msgs.length) continue;
+            clean.push({
+                day: intOr(it.day, 0, 0, 59),
+                time: toTimeMinutes(it.time !== undefined ? it.time : it.time_minutes),
+                messages: msgs,
+            });
+        }
+        if (!clean.length) return res.status(400).json({ success: false, error: 'Nenhum item válido no JSON' });
+        if (req.body?.replace === true) {
+            await db.query(`DELETE FROM group_schedule_items WHERE group_id = $1`, [id]);
+        }
+        for (const it of clean) {
+            await db.query(
+                `INSERT INTO group_schedule_items (group_id, day, time_minutes, messages)
+                 VALUES ($1, $2, $3, $4::jsonb)`,
+                [id, it.day, it.time, JSON.stringify(it.messages)]
+            );
+        }
+        invalidateAgendaCache(id);
+        return res.json({ success: true, imported: clean.length });
+    } catch (err) {
+        logger.error('Erro importando agenda:', err);
+        return res.status(500).json({ success: false, error: err.message || 'Erro interno' });
+    }
+});
+
+// POST /:id/schedule/distribute — converte as CENAS ambiente existentes
+// (papo/pesado/apresentacao/midia/cta/bomdia/boanoite) em itens de agenda,
+// espalhados pelos dias do ciclo respeitando o período de cada cena.
+// As cenas originais ficam intactas (entrada/reacao/novato continuam pessoais).
+const PERIOD_WINDOWS = {
+    manha: [7 * 60, 11 * 60 + 30],
+    tarde: [12 * 60 + 30, 17 * 60 + 30],
+    noite: [18 * 60 + 30, 23 * 60 + 30],
+    madrugada: [0, 5 * 60],
+};
+router.post('/:id/schedule/distribute', requireAdmin, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ success: false, error: 'ID inválido' });
+    try {
+        const { rows: gr } = await db.query(`SELECT cycle_days FROM groups WHERE id = $1`, [id]);
+        if (!gr.length) return res.status(404).json({ success: false, error: 'Grupo não encontrado' });
+        const cycleDays = Math.max(1, Math.min(60, gr[0].cycle_days || 7));
+        const { rows: scenes } = await db.query(
+            `SELECT * FROM group_scenes WHERE group_id = $1 AND active = true
+               AND category NOT IN ('entrada', 'reacao', 'novato')
+             ORDER BY id`, [id]
+        );
+        if (!scenes.length) return res.status(400).json({ success: false, error: 'Nenhuma cena ambiente pra distribuir' });
+        if (req.body?.replace === true) {
+            await db.query(`DELETE FROM group_schedule_items WHERE group_id = $1`, [id]);
+        }
+        // horários "orgânicos": espalha as cenas de cada período ao longo da
+        // janela do período, rodando os dias do ciclo em sequência
+        const byPeriod = {};
+        for (const s of scenes) {
+            // categoria manda no período quando a cena não restringe
+            let per = s.period;
+            if (per === 'any') {
+                if (s.category === 'bomdia') per = 'manha';
+                else if (s.category === 'boanoite') per = 'noite';
+                else per = ['manha', 'tarde', 'noite'][rand(3)];
+            }
+            byPeriod[per] = byPeriod[per] || [];
+            byPeriod[per].push(s);
+        }
+        let created = 0;
+        for (const per of Object.keys(byPeriod)) {
+            const win = PERIOD_WINDOWS[per] || PERIOD_WINDOWS.tarde;
+            const list = byPeriod[per];
+            for (let i = 0; i < list.length; i++) {
+                const day = i % cycleDays;
+                const slot = Math.floor(i / cycleDays); // quantos já caíram neste dia/período
+                const span = win[1] - win[0];
+                const base = win[0] + Math.round((span * (slot % 6)) / 6);
+                const time = Math.max(0, Math.min(1439, base + rand(40)));
+                await db.query(
+                    `INSERT INTO group_schedule_items (group_id, day, time_minutes, messages)
+                     VALUES ($1, $2, $3, $4::jsonb)`,
+                    [id, day, time, JSON.stringify(list[i].messages)]
+                );
+                created++;
+            }
+        }
+        invalidateAgendaCache(id);
+        return res.json({ success: true, created });
+    } catch (err) {
+        logger.error('Erro distribuindo cenas na agenda:', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
     }
 });
