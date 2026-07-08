@@ -5922,12 +5922,11 @@ a { color: inherit; text-decoration: none; }
                             <select class="form-control" id="gProduct" style="width:100%;"><option value="">— nenhum (só faz sentido no gratuito) —</option></select>
                             <div style="font-size:11px; color:rgba(255,255,255,.45); margin-top:5px;">Crie o produto no catálogo (categoria Grupos) com os planos e códigos de oferta — validade: mensal 33 dias, trimestral 95. O Passe Vitalício é OUTRO produto com a flag "Passe de grupos" no editor.</div>
                         </div>
-                        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px;">
-                            <div><label class="g-lbl">Ciclo da agenda (dias)</label><input class="form-control" type="number" id="gCycleDays" min="1" max="60" value="7" style="width:100%;" onchange="gaRenderDays()"/></div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                             <div><label class="g-lbl">Janela visível (horas)</label><input class="form-control" type="number" id="gWindowHours" min="6" max="720" value="72" style="width:100%;"/></div>
                             <div><label class="g-lbl">Trial (segundos)</label><input class="form-control" type="number" id="gTrial" min="15" max="3600" value="60" style="width:100%;"/></div>
                         </div>
-                        <div style="font-size:11px; color:rgba(255,255,255,.45); margin-top:-8px;">A agenda se repete a cada N dias (comece com 7, cresça até 30-45 — quanto maior, menos repete). O grupo mostra as últimas X horas — igual pra TODO MUNDO, como um canal real.</div>
+                        <div style="font-size:11px; color:rgba(255,255,255,.45); margin-top:-8px;">O grupo mostra as últimas X horas de conversa — igual pra TODO MUNDO, como um canal real. Os dias de conteúdo se configuram na AGENDA, mais abaixo.</div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                             <div><label class="g-lbl">Nº de membros (exibido)</label><input class="form-control" type="number" id="gMembers" min="2" value="248" style="width:100%;"/></div>
                             <div><label class="g-lbl">Nº online (exibido)</label><input class="form-control" type="number" id="gOnline" min="1" value="25" style="width:100%;"/></div>
@@ -5984,28 +5983,38 @@ a { color: inherit; text-decoration: none; }
                             <label class="g-lbl" style="font-weight:700;">🎭 Elenco automático</label>
                             <div style="font-size:11.5px; color:rgba(255,255,255,.5); margin-top:4px;">Não precisa cadastrar ninguém. O sistema tem ~180 nomes brasileiros e monta um elenco próprio pra CADA lead: nas apresentações entra sempre gente nova, nos papos as mesmas pessoas voltam. Nos arquivos de cena, use <b style="color:#4CD964;">{nome}</b> no texto — vira o nome de quem está falando.</div>
                         </div>
-                        <div style="background:rgba(76,217,100,.05); border:1px solid rgba(76,217,100,.35); border-radius:10px; padding:14px;">
-                            <label class="g-lbl" style="color:#4CD964; font-weight:700; font-size:13px;">🗓 AGENDA — a linha do tempo compartilhada</label>
-                            <div id="gaSummary" style="font-size:11.5px; color:rgba(255,255,255,.5); margin:4px 0 10px;">É isto que roda no grupo — igual pra todo mundo, repetindo a cada ciclo.</div>
+                        <div style="background:linear-gradient(180deg, rgba(37,165,95,.09), rgba(37,165,95,.03)); border:1px solid rgba(76,217,100,.35); border-radius:12px; padding:16px;">
+                            <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
+                                <span style="font-size:14px; font-weight:800; color:#4CD964;">🗓 Agenda do grupo</span>
+                                <span id="gaSummary" style="font-size:11.5px; color:rgba(255,255,255,.55);">a linha do tempo compartilhada — igual pra todo mundo</span>
+                            </div>
+                            <!-- quantos dias de conteúdo (o ciclo) — configura AQUI mesmo -->
+                            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:12px 0;">
+                                <label style="font-size:12.5px; color:#fff; font-weight:600;">Dias de conteúdo:</label>
+                                <input class="form-control" type="number" id="gCycleDays" min="1" max="60" value="7" style="width:76px; text-align:center; font-weight:700;" onchange="gaCycleChanged()"/>
+                                <span style="font-size:11px; color:rgba(255,255,255,.45);">o conteúdo repete quando o ciclo vira — com 45 dias quase nada repete (máx 60)</span>
+                            </div>
                             <!-- fluxo principal: gerar fora (IA) e IMPORTAR o arquivo -->
-                            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; background:rgba(0,0,0,.25); border-radius:8px; padding:10px;">
+                            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.06); border-radius:10px; padding:10px 12px;">
                                 <input type="file" id="gAgendaFile" accept=".json,application/json" style="display:none;" onchange="gaImportFile(this)"/>
                                 <button type="button" class="btn-primary" style="font-size:12.5px;" onclick="document.getElementById('gAgendaFile').click()">📥 Importar arquivo (JSON)</button>
-                                <button type="button" class="btn-secondary" style="font-size:12px;" onclick="gaExport()">⬇ Exportar agenda</button>
+                                <button type="button" class="btn-secondary" style="font-size:12px;" onclick="gaExport()">⬇ Exportar</button>
                                 <button type="button" class="btn-secondary" style="font-size:12px;" onclick="gaDistribute()">🪄 Migrar cenas antigas</button>
                                 <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:#fff; cursor:pointer; margin-left:auto;"><input type="checkbox" id="gAgendaReplace" checked style="width:14px;height:14px;"> substituir a atual</label>
                             </div>
-                            <div style="font-size:11px; color:rgba(255,255,255,.4); margin:6px 0 12px;">Formato em <b style="color:#4CD964;">docs/PROMPT-AGENDA-GRUPO.md</b> (prompt pronto pra gerar o arquivo com IA). Exporte, edite fora e re-importe quando quiser.</div>
-                            <!-- navegação por dia (funciona com ciclo de QUALQUER tamanho) -->
-                            <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-                                <button type="button" class="btn-secondary" style="font-size:13px; padding:5px 12px;" onclick="gaNavDay(-1)">◀</button>
-                                <select class="form-control" id="gaDaySelect" style="flex:1; font-size:12.5px;" onchange="gaState.day=parseInt(this.value,10)||0; gaRenderItems();"></select>
-                                <button type="button" class="btn-secondary" style="font-size:13px; padding:5px 12px;" onclick="gaNavDay(1)">▶</button>
-                                <button type="button" class="btn-primary" style="font-size:12px; white-space:nowrap;" onclick="gaOpenItem(null)">+ Mensagem</button>
+                            <div style="font-size:11px; color:rgba(255,255,255,.4); margin:6px 0 12px;">Formato + prompt pronto pra gerar com IA: <b style="color:#4CD964;">docs/PROMPT-AGENDA-GRUPO.md</b>. Exporte, edite fora e re-importe quando quiser.</div>
+                            <!-- CALENDÁRIO do ciclo: cada quadrado é um dia (verde = tem conteúdo) -->
+                            <div id="gaCal" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(52px, 1fr)); gap:5px; margin-bottom:12px;"></div>
+                            <!-- o dia selecionado -->
+                            <div style="background:rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.06); border-radius:10px; padding:12px;">
+                                <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">
+                                    <span id="gaDayHead" style="font-size:13.5px; font-weight:800; color:#fff;">Dia 1</span>
+                                    <span id="gaDayCount" style="font-size:11px; color:rgba(255,255,255,.4);"></span>
+                                    <button type="button" class="btn-primary" style="font-size:12px; margin-left:auto;" onclick="gaOpenItem(null)">+ Mensagem neste dia</button>
+                                </div>
+                                <div id="gaItems" style="display:flex; flex-direction:column; gap:6px;"></div>
                             </div>
                             <div id="gaDays" style="display:none;"></div>
-                            <div id="gaItems" style="display:flex; flex-direction:column; gap:6px;"></div>
-                            <div style="font-size:11px; color:rgba(255,255,255,.35); margin-top:8px;">Quer mais dias? Aumente o "Ciclo da agenda (dias)" lá em cima (até 60) — os dias aparecem aqui na hora.</div>
                             <textarea class="form-control" id="gAgendaJson" style="display:none;"></textarea>
                         </div>
                         <div style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); border-radius:10px; padding:12px;">
@@ -16192,32 +16201,52 @@ async function gaLoadSchedule(groupId) {
     } catch (_) { gaState.items = []; }
     gaRenderDays(); gaRenderItems();
 }
-// dias como SELECT + setas: escala pra ciclo de qualquer tamanho (até 60 dias)
+// CALENDÁRIO do ciclo: um quadrado por dia (verde = tem conteúdo), clique
+// seleciona. Escala de 1 a 60 dias sem mudar de cara.
 function gaRenderDays() {
-    const sel = document.getElementById('gaDaySelect');
-    if (!sel) return;
+    const cal = document.getElementById('gaCal');
+    if (!cal) return;
     const cd = parseInt((document.getElementById('gCycleDays') || {}).value, 10) || gaState.cycleDays || 7;
     gaState.cycleDays = cd;
     if (gaState.day >= cd) gaState.day = 0;
     let html = '';
     for (let i = 0; i < cd; i++) {
-        const n = gaState.items.filter(it => (it.day | 0) === i).length;
-        html += '<option value="' + i + '">Dia ' + (i + 1) + ' de ' + cd + (n ? ' — ' + n + ' mensagem(ns)' : ' — vazio') + '</option>';
+        const n = gaState.items.filter(it => (it.day | 0) === i && it.active !== false).length;
+        const on = gaState.day === i;
+        const bg = on ? 'background:#25a55f; border-color:#25a55f;'
+            : n ? 'background:rgba(37,165,95,.14); border-color:rgba(76,217,100,.4);'
+                : 'background:rgba(0,0,0,.3); border-color:rgba(255,255,255,.08);';
+        html += '<div onclick="gaState.day=' + i + '; gaRenderDays(); gaRenderItems();"'
+            + ' style="border:1px solid; border-radius:9px; padding:7px 4px 6px; text-align:center; cursor:pointer; user-select:none; ' + bg + '">'
+            + '<div style="font-size:13px; font-weight:800; color:' + (on ? '#fff' : n ? '#4CD964' : 'rgba(255,255,255,.55)') + ';">' + (i + 1) + '</div>'
+            + '<div style="font-size:9.5px; margin-top:1px; color:' + (on ? 'rgba(255,255,255,.85)' : 'rgba(255,255,255,.4)') + ';">' + (n ? n + ' msg' : '—') + '</div>'
+            + '</div>';
     }
-    sel.innerHTML = html;
-    sel.value = gaState.day;
+    cal.innerHTML = html;
     const sum = document.getElementById('gaSummary');
     if (sum) {
         const total = gaState.items.filter(it => it.active !== false).length;
         sum.textContent = total
-            ? total + ' bloco(s) no ciclo de ' + cd + ' dia(s) — igual pra todo mundo, repete a cada ciclo.'
-            : 'É isto que roda no grupo — igual pra todo mundo, repetindo a cada ciclo. Importe um arquivo ou adicione mensagens.';
+            ? total + ' bloco(s) em ' + cd + ' dia(s) de conteúdo — igual pra todo mundo, repete quando o ciclo vira'
+            : 'a linha do tempo compartilhada — importe um arquivo ou adicione mensagens nos dias';
     }
 }
-function gaNavDay(dir) {
-    const cd = gaState.cycleDays || 7;
-    gaState.day = ((gaState.day + dir) % cd + cd) % cd;
+// mudou os dias de conteúdo → reflete na hora e já SALVA no grupo (sem
+// precisar do botão Salvar — evita "aumentei mas não valeu")
+async function gaCycleChanged() {
+    const el = document.getElementById('gCycleDays');
+    let v = parseInt(el.value, 10) || 7;
+    v = Math.max(1, Math.min(60, v));
+    el.value = v;
     gaRenderDays(); gaRenderItems();
+    if (gaState.groupId) {
+        try {
+            await fetch('/api/admin/groups/' + gaState.groupId, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                body: JSON.stringify({ cycle_days: v }),
+            });
+        } catch (_) {}
+    }
 }
 // importa um ARQUIVO .json (fluxo principal: gera fora com IA e sobe aqui)
 function gaImportFile(input) {
@@ -16266,24 +16295,31 @@ function gaExport() {
 function gaRenderItems() {
     const box = document.getElementById('gaItems');
     if (!box) return;
+    const head = document.getElementById('gaDayHead');
+    const cnt = document.getElementById('gaDayCount');
+    if (head) head.textContent = 'Dia ' + (gaState.day + 1);
     if (!gaState.groupId) {
-        box.innerHTML = '<div style="font-size:12px; color:rgba(255,255,255,.4); padding:8px;">Salve o grupo primeiro — depois a agenda libera.</div>';
+        if (cnt) cnt.textContent = '';
+        box.innerHTML = '<div style="font-size:12px; color:rgba(255,255,255,.4); padding:6px 2px;">Salve o grupo primeiro — depois a agenda libera.</div>';
         return;
     }
     const items = gaState.items.filter(it => (it.day | 0) === gaState.day).sort((a, b) => a.time_minutes - b.time_minutes);
+    if (cnt) cnt.textContent = items.length ? items.length + ' bloco(s)' : 'vazio';
     if (!items.length) {
-        box.innerHTML = '<div style="font-size:12px; color:rgba(255,255,255,.4); padding:8px;">Nada agendado neste dia ainda.</div>';
+        box.innerHTML = '<div style="font-size:12px; color:rgba(255,255,255,.4); padding:6px 2px;">Nada neste dia ainda — importe um arquivo ou clique em "+ Mensagem neste dia".</div>';
         return;
     }
     box.innerHTML = items.map(it => {
         const msgs = Array.isArray(it.messages) ? it.messages : [];
         const icons = msgs.slice(0, 8).map(m => GA_TYPE_LABEL[m.t || 'text'] || '💬').join(' ');
         const first = msgs.find(m => m.text);
-        return '<div onclick=\'gaOpenItem(' + JSON.stringify(it).replace(/'/g, '&#39;') + ')\' style="display:flex; align-items:center; gap:10px; background:rgba(0,0,0,.28); border:1px solid rgba(255,255,255,' + (it.active === false ? '.04' : '.1') + '); border-radius:8px; padding:8px 12px; cursor:pointer;' + (it.active === false ? 'opacity:.45;' : '') + '">'
-            + '<span style="font-size:13px; font-weight:800; color:#4CD964; width:46px;">' + gaHHMM(it.time_minutes | 0) + '</span>'
-            + '<span style="font-size:13px;">' + icons + '</span>'
-            + '<span style="flex:1; font-size:12px; color:rgba(255,255,255,.6); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + escHtmlAdmin(first ? first.text : (msgs.length + ' mensagem(ns)')) + '</span>'
-            + '<span style="font-size:11px; color:rgba(255,255,255,.35);">' + msgs.length + ' msg</span>'
+        return '<div onclick=\'gaOpenItem(' + JSON.stringify(it).replace(/'/g, '&#39;') + ')\' '
+            + 'onmouseover="this.style.borderColor=\'rgba(76,217,100,.5)\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,.08)\'" '
+            + 'style="display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:9px; padding:9px 12px; cursor:pointer; transition:border-color .15s;' + (it.active === false ? 'opacity:.45;' : '') + '">'
+            + '<span style="font-size:12px; font-weight:800; color:#0f2b1a; background:#4CD964; border-radius:7px; padding:3px 8px; letter-spacing:.3px;">' + gaHHMM(it.time_minutes | 0) + '</span>'
+            + '<span style="font-size:13px; flex-shrink:0;">' + icons + '</span>'
+            + '<span style="flex:1; font-size:12px; color:rgba(255,255,255,.65); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">' + escHtmlAdmin(first ? first.text : (msgs.length + ' mensagem(ns)')) + '</span>'
+            + '<span style="font-size:11px; color:rgba(255,255,255,.35); flex-shrink:0;">' + msgs.length + ' msg ›</span>'
             + '</div>';
     }).join('');
 }
@@ -16492,19 +16528,28 @@ async function loadGroupsMetrics() {
 }
 
 // ── BROADCAST dos grupos (sequência: textos, mídias e botões com delay) ──────
+let _gbLists = { products: [], chats: [], groups: [] }; // pros selects de destino do botão
 async function openGroupBcast() {
     document.getElementById('groupBcastBackdrop').style.display = 'flex';
     document.getElementById('gbAll').checked = true;
     document.getElementById('gbGroups').style.opacity = '.35';
-    const seq = document.getElementById('gbSeq');
-    if (!seq.children.length) gbAddMsg();
     try {
-        const r = await fetch('/api/admin/groups', { credentials: 'include' });
-        const d = await r.json();
-        document.getElementById('gbGroups').innerHTML = (d.groups || []).filter(g => g.active).map(g =>
+        const [gr, pr, ch] = await Promise.all([
+            fetch('/api/admin/groups', { credentials: 'include' }).then(r => r.json()),
+            fetch('/api/admin/products', { credentials: 'include' }).then(r => r.json()),
+            fetch('/api/admin/chats', { credentials: 'include' }).then(r => r.json()),
+        ]);
+        _gbLists = {
+            products: (pr.products || []).filter(p => p.is_active !== false),
+            chats: (ch.chats || []).filter(c => c.active !== false),
+            groups: (gr.groups || []).filter(g => g.active),
+        };
+        document.getElementById('gbGroups').innerHTML = _gbLists.groups.map(g =>
             '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:#fff;cursor:pointer;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.1);border-radius:999px;padding:5px 11px;">'
             + '<input type="checkbox" data-gbg="' + g.id + '" style="width:13px;height:13px;"> ' + escHtmlAdmin(g.name) + '</label>').join('');
     } catch (_) {}
+    const seq = document.getElementById('gbSeq');
+    if (!seq.children.length) gbAddMsg();
     loadGbHistory();
 }
 function closeGroupBcast() { document.getElementById('groupBcastBackdrop').style.display = 'none'; }
@@ -16540,7 +16585,8 @@ function gbAddMsg() {
         +   '<select class="form-control" data-gm="dest" style="width:210px; font-size:12px;" onchange="gbDestChanged(this)">'
         +     GB_DESTS.map(d2 => '<option value="' + d2[0] + '">' + d2[1] + '</option>').join('')
         +   '</select>'
-        +   '<input class="form-control" data-gm="dest_val" placeholder="ID" style="flex:1; min-width:110px; font-size:12px;"/>'
+        +   '<select class="form-control" data-gm="dest_sel" style="flex:1; min-width:150px; font-size:12px; display:none;"></select>'
+        +   '<input class="form-control" data-gm="dest_val" placeholder="https://..." style="flex:1; min-width:110px; font-size:12px;"/>'
         +   '<select class="form-control" data-gm="cta_color" style="width:110px; font-size:12px;">'
         +     '<option value="#25a55f">🟢 Verde</option><option value="#e50914">🔴 Vermelho</option><option value="#7b2ff7">🟣 Roxo</option>'
         +     '<option value="#2aabee">🔵 Azul</option><option value="#ff2d78">🌸 Rosa</option><option value="#ff7a00">🟠 Laranja</option>'
@@ -16562,9 +16608,20 @@ function gbMsgTypeChanged(sel) {
 function gbDestChanged(sel) {
     const row = sel.closest('.gb-msg-row');
     const v = sel.value;
-    const val = row.querySelector('[data-gm="dest_val"]');
-    if (v === 'home' || v.indexOf('go_') === 0) { val.style.display = 'none'; }
-    else { val.style.display = ''; val.placeholder = v === 'url' ? 'https://...' : 'ID ' + (v === 'product' ? 'do produto' : v === 'chat' ? 'da conversa' : 'do grupo'); }
+    const val = row.querySelector('[data-gm="dest_val"]');   // URL livre
+    const pick = row.querySelector('[data-gm="dest_sel"]');  // lista real
+    if (v === 'home' || v.indexOf('go_') === 0) {
+        val.style.display = 'none'; pick.style.display = 'none';
+    } else if (v === 'url') {
+        val.style.display = ''; pick.style.display = 'none';
+    } else {
+        // produto/conversa/grupo: escolhe da LISTA (nada de decorar ID)
+        const list = v === 'product' ? _gbLists.products : v === 'chat' ? _gbLists.chats : _gbLists.groups;
+        pick.innerHTML = list.length
+            ? list.map(x => '<option value="' + x.id + '">' + escHtmlAdmin(x.name) + '</option>').join('')
+            : '<option value="">— nenhum cadastrado —</option>';
+        pick.style.display = ''; val.style.display = 'none';
+    }
 }
 function gbCollectSeq() {
     const out = [];
@@ -16580,11 +16637,12 @@ function gbCollectSeq() {
         if (type === 'vonce') m.kind = get('kind') || 'foto';
         if (type === 'cta') {
             const dest = get('dest');
-            const dv = String(get('dest_val') || '').trim();
+            const picked = parseInt(get('dest_sel'), 10) || null; // escolhido da lista
+            const dv = String(get('dest_val') || '').trim();      // URL livre
             m.cta_color = get('cta_color') || '#25a55f';
-            if (dest === 'product') { if (!dv) return; m.product_id = parseInt(dv, 10) || null; if (!m.product_id) return; }
-            else if (dest === 'chat') { if (!dv) return; m.link_url = '/?chat=' + parseInt(dv, 10); }
-            else if (dest === 'group') { if (!dv) return; m.link_url = '/?group=' + parseInt(dv, 10); }
+            if (dest === 'product') { if (!picked) return; m.product_id = picked; }
+            else if (dest === 'chat') { if (!picked) return; m.link_url = '/?chat=' + picked; }
+            else if (dest === 'group') { if (!picked) return; m.link_url = '/?group=' + picked; }
             else if (dest === 'go_chats') m.link_url = '/?go=chats';
             else if (dest === 'go_groups') m.link_url = '/?go=groups';
             else if (dest === 'go_videos') m.link_url = '/?go=videos';
