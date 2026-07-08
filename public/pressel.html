@@ -62,24 +62,35 @@ body {
 </head>
 <body>
 <div class="hdr"><h1 id="headline">Conversas</h1></div>
-<div class="sec">Status</div>
+<div class="sec" id="secTop">Status</div>
 <div class="statuses" id="statuses"></div>
 <div class="gap"></div>
-<div class="sec">Minhas conversas</div>
+<div class="sec" id="secList">Minhas conversas</div>
 <div class="list" id="list"></div>
-<div class="foot">🔒 Suas conversas são protegidas</div>
+<div class="foot" id="foot">🔒 Suas conversas são protegidas</div>
 <div class="newmsgs" id="newMsgs" style="display:none;">🔥 <span id="newMsgsN">1</span> nova mensagem</div>
 <script>
 var DATA = __PRESSEL_DATA__;
 (function () {
     var cfg = DATA.config || {};
-    var chats = DATA.chats || [];
+    // modo 'groups': prévia da LISTA DE GRUPOS (mesma página, textos trocados)
+    var isGroups = DATA.mode === 'groups';
+    var chats = isGroups ? (DATA.groups || []) : (DATA.chats || []);
+    if (isGroups) {
+        document.title = 'Grupos';
+        document.getElementById('headline').textContent = 'Grupos';
+        document.getElementById('secTop').textContent = 'Em alta';
+        document.getElementById('secList').textContent = 'Grupos com movimento agora';
+        document.getElementById('foot').textContent = '🔒 Só membros veem tudo que rola nos grupos';
+    }
     if (cfg.headline) document.getElementById('headline').textContent = cfg.headline;
     var previews = Array.isArray(cfg.previews) ? cfg.previews.filter(Boolean) : [];
     // Sem prévias configuradas no funil? Usa um conjunto padrão — a página
     // NUNCA fica parada: as mensagens começam a chegar assim que abre.
     if (!previews.length) {
-        previews = ['oi amor, tá aí? 🥺', 'te mandei uma coisa... 👀', 'vamo conversar? 🔥'];
+        previews = isGroups
+            ? ['gente olha o que ela mandou 🙈', 'vazou agora no grupo kkkk 🔥', 'quem viu, viu… corre aqui 👀']
+            : ['oi amor, tá aí? 🥺', 'te mandei uma coisa... 👀', 'vamo conversar? 🔥'];
     }
     previews = previews.slice(0, chats.length);
 
@@ -96,11 +107,15 @@ var DATA = __PRESSEL_DATA__;
     }).join('');
 
     // Conversas: todas começam "online"; as mensagens CHEGAM ao vivo (sequência
-    // abaixo) e ficam FIXAS — nada de aparecer e sumir.
+    // abaixo) e ficam FIXAS — nada de aparecer e sumir. No modo grupos a linha
+    // de baixo mostra o movimento ("N membros · M online").
     document.getElementById('list').innerHTML = chats.map(function (c, i) {
         var bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
-        return '<div class="row" data-row="' + i + '"><div class="av"' + bg + '>' + (c.show_online !== false ? '<span class="dot"></span>' : '') + '</div>'
-            + '<div class="mid"><div class="nm">' + esc(c.name) + '</div><div class="pv online" data-pv="' + i + '">' + esc(c.status_label || 'online') + '</div></div></div>';
+        var sub = isGroups
+            ? esc((c.members_count || 200) + ' membros · ' + (c.online_count || 20) + ' online')
+            : esc(c.status_label || 'online');
+        return '<div class="row" data-row="' + i + '"><div class="av"' + bg + '>' + (!isGroups && c.show_online !== false ? '<span class="dot"></span>' : '') + '</div>'
+            + '<div class="mid"><div class="nm">' + esc(c.name) + '</div><div class="pv online" data-pv="' + i + '">' + sub + '</div></div></div>';
     }).join('');
 
     // Sequência VIVA por conversa (só visual — nada navega sozinho):
@@ -113,7 +128,9 @@ var DATA = __PRESSEL_DATA__;
         if (!end) {
             end = document.createElement('div');
             end.className = 'end';
-            end.innerHTML = '<span class="tm" data-ts="' + Date.now() + '">agora</span><span class="badge">1</span>';
+            // grupo tem volume: badge já nasce "cheio" (curiosidade)
+            var first = isGroups ? (40 + ((i * 37) % 160)) : 1;
+            end.innerHTML = '<span class="tm" data-ts="' + Date.now() + '">agora</span><span class="badge">' + first + '</span>';
             row.appendChild(end);
         } else {
             var b = end.querySelector('.badge');
