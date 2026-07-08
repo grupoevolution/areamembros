@@ -10657,7 +10657,16 @@ window.GroupApp = (function () {
     const REACT_EMOJIS = ['🔥', '😍', '👏', '❤️', '😂', '🥵'];
     function seededReactions(m) {
         if (!m || !m.id || m.sender === 'user' || m.masked || m.type === 'cta') return [];
-        let h = (m.id * 2654435761) >>> 0;
+        // id pode ser numérico (mensagem pessoal) ou string (timeline
+        // compartilhada, ex. "s12_3_0") — hash cobre os dois
+        let h;
+        if (typeof m.id === 'number') h = (m.id * 2654435761) >>> 0;
+        else {
+            h = 2166136261;
+            const s = String(m.id);
+            for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+            h = h >>> 0;
+        }
         const chance = (m.type === 'image' || m.type === 'vonce') ? 85 : 38;
         if ((h % 100) >= chance) return [];
         const n = 1 + (h % 3);
@@ -10687,9 +10696,72 @@ window.GroupApp = (function () {
         }
     }
 
+    // ── visualização única REAL (membro): consumo por aparelho ──────────────
+    function vonceSeen() {
+        try { return JSON.parse(localStorage.getItem('mv_gvonce') || '{}'); } catch (_) { return {}; }
+    }
+    function markVonce(id) {
+        const a = vonceSeen(); a[id] = 1;
+        try { localStorage.setItem('mv_gvonce', JSON.stringify(a)); } catch (_) {}
+    }
+    function openVonce(m, teaser) {
+        const kindFoto = ((m.meta && m.meta.kind) === 'foto');
+        const ov = document.createElement('div');
+        ov.style.cssText = 'position:fixed;inset:0;background:#000;z-index:99997;display:flex;align-items:center;justify-content:center;';
+        ov.innerHTML = '<div style="position:absolute;top:10px;left:12px;right:12px;height:3px;border-radius:99px;background:rgba(255,255,255,.25);overflow:hidden;"><i class="gaVBar" style="display:block;height:100%;width:0;background:#fff;"></i></div>'
+            + '<button class="gaVX" style="position:absolute;top:16px;right:14px;background:none;border:none;color:#fff;font-size:26px;line-height:1;cursor:pointer;z-index:2;font-family:inherit;">×</button>'
+            + (kindFoto
+                ? '<img src="' + esc(m.media_url) + '" alt="" style="max-width:100%;max-height:100%;">'
+                : '<video src="' + esc(m.media_url) + '" autoplay playsinline style="max-width:100%;max-height:100%;"></video>');
+        document.body.appendChild(ov);
+        let closed = false;
+        const close = () => {
+            if (closed) return; closed = true;
+            try { ov.remove(); } catch (_) {}
+            markVonce(m.id);
+            if (teaser) {
+                teaser.outerHTML = '<div class="tx" style="display:flex;align-items:center;gap:8px;color:#8a857d;">'
+                    + '<span style="width:26px;height:26px;border-radius:50%;border:2px dashed #b8b2a8;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">1</span>Mensagem aberta</div>';
+            }
+        };
+        ov.querySelector('.gaVX').addEventListener('click', close);
+        const bar = ov.querySelector('.gaVBar');
+        if (kindFoto) {
+            bar.style.transition = 'width 8s linear';
+            requestAnimationFrame(() => { bar.style.width = '100%'; });
+            setTimeout(close, 8200);
+        } else {
+            const v = ov.querySelector('video');
+            if (v) {
+                v.addEventListener('ended', close);
+                v.addEventListener('timeupdate', () => { if (v.duration) bar.style.width = (v.currentTime / v.duration * 100) + '%'; });
+            }
+        }
+    }
+
+    // ── separador de dia (a janela compartilhada cobre até 72h) ─────────────
+    function dayKeyOf(iso) { const d = new Date(iso); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
+    function dayLabelOf(iso) {
+        const now = new Date();
+        if (dayKeyOf(iso) === dayKeyOf(now)) return 'HOJE';
+        if (dayKeyOf(iso) === dayKeyOf(new Date(Date.now() - 86400000))) return 'ONTEM';
+        return ['DOMINGO', 'SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA', 'SÁBADO'][new Date(iso).getDay()];
+    }
+
     function renderMsg(m) {
         const body = document.getElementById('gaBody');
         if (!body || !m) return;
+        // troca de dia → separador (HOJE / ONTEM / dia da semana)
+        if (m.created_at && CUR) {
+            const k = dayKeyOf(m.created_at);
+            if (CUR._dayKey !== k) {
+                CUR._dayKey = k;
+                const ds = document.createElement('div');
+                ds.className = 'ca-day';
+                ds.textContent = dayLabelOf(m.created_at);
+                body.appendChild(ds);
+            }
+        }
         const mine = m.sender === 'user';
         const d = document.createElement('div');
         d.className = 'ca-bub' + (mine ? ' mine' : '') + (m.masked ? ' ga-masked' : '');
@@ -10706,14 +10778,28 @@ window.GroupApp = (function () {
         if (m.type === 'image' && m.media_url) {
             inner += '<img class="photo" src="' + esc(m.media_url) + '" alt="" loading="lazy">';
             if (m.content) inner += '<div class="tx">' + esc(m.content) + '</div>';
+        } else if (m.type === 'video' && m.media_url) {
+            inner += '<video class="photo" src="' + esc(m.media_url) + '" controls playsinline preload="metadata" style="max-width:230px;width:100%;border-radius:10px;display:block;background:#000;"></video>';
+            if (m.content) inner += '<div class="tx">' + esc(m.content) + '</div>';
+        } else if (m.type === 'audio' && m.media_url) {
+            inner += '<audio src="' + esc(m.media_url) + '" controls preload="none" style="width:230px;max-width:100%;display:block;"></audio>';
+            if (m.content) inner += '<div class="tx">' + esc(m.content) + '</div>';
         } else if (m.type === 'image' && m.masked) {
             inner += '<div class="tx" style="display:flex;align-items:center;gap:8px;color:#8a857d;"><span style="width:96px;height:56px;border-radius:8px;background:#d8cfc4;display:inline-block;"></span>Foto</div>';
         } else if (m.type === 'vonce' && !m.masked) {
-            // ISCA: visualização única — só membro abre; não-membro cai no popup
+            // visualização única: MEMBRO com mídia real abre de verdade (some
+            // depois de ver — consumo por aparelho); pros demais é a isca que
+            // cai no popup de planos
             const kind = ((m.meta && m.meta.kind) === 'foto') ? 'Foto' : 'Vídeo';
-            inner += '<div class="ga-vonce"><span class="ic">🔥</span>'
-                + '<span class="mid"><b>' + kind + ' — visualização única</b>'
-                + '<span class="sub">🔒 só membros podem abrir</span></span></div>';
+            const canOpen = !!m.media_url;
+            if (canOpen && vonceSeen()[m.id]) {
+                inner += '<div class="tx" style="display:flex;align-items:center;gap:8px;color:#8a857d;">'
+                    + '<span style="width:26px;height:26px;border-radius:50%;border:2px dashed #b8b2a8;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;">1</span>Mensagem aberta</div>';
+            } else {
+                inner += '<div class="ga-vonce"><span class="ic">🔥</span>'
+                    + '<span class="mid"><b>' + kind + ' — visualização única</b>'
+                    + '<span class="sub">' + (canOpen ? '👆 toque para ver · some depois' : '🔒 só membros podem abrir') + '</span></span></div>';
+            }
             if (m.content) inner += '<div class="tx">' + esc(m.content) + '</div>';
         } else if (m.type === 'cta' && !m.masked) {
             isCta = true;
@@ -10737,6 +10823,11 @@ window.GroupApp = (function () {
         if (m.type === 'vonce' && !m.masked) {
             const teaser = d.querySelector('.ga-vonce');
             if (teaser) teaser.addEventListener('click', () => {
+                if (m.media_url) {
+                    // mídia real liberada: abre a visualização única de verdade
+                    if (!vonceSeen()[m.id]) openVonce(m, teaser);
+                    return;
+                }
                 try { window.TRACK && TRACK.event('group_paywall_open', { group_id: CUR && CUR.id, ctx: 'vonce' }); } catch (_) {}
                 if (CUR && CUR.access === 'member') openMedia();
                 else openPopup();
@@ -10786,7 +10877,10 @@ window.GroupApp = (function () {
             });
             body.appendChild(row);
         }
-        if (m.id && CUR && m.id > CUR.lastId) CUR.lastId = m.id;
+        // cursor por TIMESTAMP (a timeline compartilhada não tem id numérico)
+        if (m.created_at && CUR && (!CUR.lastTs || new Date(m.created_at) > new Date(CUR.lastTs))) {
+            CUR.lastTs = m.created_at;
+        }
     }
     function scrollBottom() {
         const body = document.getElementById('gaBody');
@@ -11005,7 +11099,7 @@ window.GroupApp = (function () {
         CUR.pollTimer = setInterval(async () => {
             if (!CUR) return;
             try {
-                const r = await fetch('/api/user/groups/' + CUR.id + '/poll?after=' + CUR.lastId + '&visitor_id=' + VID, { credentials: 'include' });
+                const r = await fetch('/api/user/groups/' + CUR.id + '/poll?after=' + encodeURIComponent(CUR.lastTs || '') + '&visitor_id=' + VID, { credentials: 'include' });
                 const data = await r.json();
                 if (!data.success) return;
                 // Pagou com a tela aberta? Acesso virou 'member' → fecha o popup
@@ -11042,7 +11136,7 @@ window.GroupApp = (function () {
         document.getElementById('gaTgBanner').style.display = 'none';
         const { data } = await api('/api/user/groups/' + id + '/open');
         if (!data.success) { body.innerHTML = '<div class="ca-day">' + esc(data.error || 'erro ao abrir') + '</div>'; return; }
-        CUR = { id, group: data.group, access: data.access, unlock: data.unlock || null, lastId: 0, popupShown: false };
+        CUR = { id, group: data.group, access: data.access, unlock: data.unlock || null, lastTs: null, _dayKey: null, popupShown: false };
         const g = data.group;
         document.getElementById('gaName').textContent = g.name;
         document.getElementById('gaStatus').textContent = g.members_count + ' membros · ' + g.online_count + ' online';
@@ -11054,8 +11148,11 @@ window.GroupApp = (function () {
             tg.style.display = 'flex';
             tg.onclick = () => { try { window.open(g.telegram_url, '_blank', 'noopener'); } catch (_) {} };
         }
-        body.innerHTML = '<div class="ca-day">HOJE</div><div class="ca-crypt">🔒 Suas mensagens são protegidas</div>';
+        body.innerHTML = '<div class="ca-crypt">🔒 Suas mensagens são protegidas</div>';
         for (const m of (data.messages || [])) renderMsg(m);
+        // cursor = relógio do SERVIDOR (o poll pega tudo que nascer daqui pra
+        // frente, inclusive o roteiro de entrada com timestamps futuros)
+        if (data.server_now) CUR.lastTs = data.server_now;
         applyFooter();
         renderExpiryNotice(data.member_until);
         scrollBottom();
@@ -11128,7 +11225,7 @@ window.GroupApp = (function () {
         }
         MEDIA = [];
         for (const u of (data.images || [])) MEDIA.push({ kind: 'img', url: u });
-        for (const v of (data.videos || [])) MEDIA.push({ kind: 'vid', embed: v.embed_url, thumb: v.thumb_url || null });
+        for (const v of (data.videos || [])) MEDIA.push({ kind: 'vid', embed: v.embed_url || null, file: v.file_url || null, thumb: v.thumb_url || null });
         const grid = document.getElementById('gaMediaGrid');
         grid.style.position = '';
         const mt = document.getElementById('gaMediaOv').querySelector('.top .t');
@@ -11180,6 +11277,9 @@ window.GroupApp = (function () {
         if (!m || !fb) return;
         if (m.kind === 'img') {
             fb.innerHTML = '<img src="' + esc(m.url) + '" alt="">';
+        } else if (m.file) {
+            // vídeo de ARQUIVO (pasta da Bunny Storage): <video> nativo
+            fb.innerHTML = '<video src="' + esc(m.file) + '" controls autoplay playsinline style="max-width:100%;max-height:100%;background:#000;"></video>';
         } else {
             // vídeo já abre TOCANDO em tela cheia
             const url = m.embed + (m.embed.indexOf('?') >= 0 ? '&' : '?') + 'autoplay=true';
