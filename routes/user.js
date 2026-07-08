@@ -859,7 +859,13 @@ router.get('/library', requireUser, async (req, res) => {
                       AND po.is_active = true
                     ORDER BY po.priority DESC, po.id ASC
                     LIMIT 1
-                ) as checkout_url
+                ) as checkout_url,
+                (
+                    -- produto de GRUPO: botão de acesso cai DENTRO do grupo
+                    SELECT g.id FROM groups g
+                    WHERE g.product_id = p.id AND g.active = true
+                    ORDER BY g.id LIMIT 1
+                ) as group_id
             FROM user_access ua
             INNER JOIN products p ON p.id = ua.product_id
             LEFT JOIN categories c ON c.id = p.category_id
@@ -872,6 +878,12 @@ router.get('/library', requireUser, async (req, res) => {
               AND COALESCE(p.is_chat_plan, false) = false
               AND COALESCE(p.is_story_plan, false) = false
         `, [email, activeGateway]);
+
+        // Produto vinculado a grupo sem access_url próprio: o "Acessar" leva
+        // direto pra dentro do grupo (deep link já tratado no app)
+        for (const r of library) {
+            if (!r.access_url && r.group_id) r.access_url = '/?group=' + r.group_id;
+        }
 
         // ──────────────────────────────────────────────────────────
         // GIFTS (Fase J2): brindes ativos não-expirados pro mesmo email.

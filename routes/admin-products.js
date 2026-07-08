@@ -372,6 +372,11 @@ router.post('/', requireAdmin, async (req, res) => {
         if (req.body.is_group_pass !== undefined) {
             try { await db.query(`UPDATE products SET is_group_pass = $1 WHERE id = $2`, [req.body.is_group_pass === true, product.id]); } catch (_) {}
         }
+        // Link de checkout com DESCONTO (usado no cross-sell do Suporte)
+        if (req.body.discount_checkout_url !== undefined) {
+            const disc = (req.body.discount_checkout_url || '').toString().trim().slice(0, 1000) || null;
+            try { await db.query(`UPDATE products SET discount_checkout_url = $1 WHERE id = $2`, [disc, product.id]); } catch (_) {}
+        }
         logger.info(`Produto criado: ${product.name} (ID ${product.id})`);
         return res.status(201).json({ success: true, product });
     } catch (err) {
@@ -635,6 +640,11 @@ router.put('/:id', requireAdmin, async (req, res) => {
         // Passe Vitalício dos GRUPOS: flag simples fora do transaction principal
         if (req.body.is_group_pass !== undefined) {
             try { await db.query(`UPDATE products SET is_group_pass = $1 WHERE id = $2`, [req.body.is_group_pass === true, productId]); } catch (_) {}
+        }
+        // Link de checkout com DESCONTO (usado no cross-sell do Suporte)
+        if (req.body.discount_checkout_url !== undefined) {
+            const disc = (req.body.discount_checkout_url || '').toString().trim().slice(0, 1000) || null;
+            try { await db.query(`UPDATE products SET discount_checkout_url = $1 WHERE id = $2`, [disc, productId]); } catch (_) {}
         }
         logger.info(`Produto editado: ${product.name} (ID ${productId})`);
         return res.json({ success: true, product });

@@ -744,6 +744,32 @@ router.post('/chats/:id/start', optionalUser, async (req, res) => {
     }
 });
 
+// Dispara uma conversa em BACKGROUND pra um lead sem passar pelo HTTP — mesmo
+// efeito do POST /chats/:id/start. Usado pelo gatilho de FIM DE TRIAL dos
+// grupos (heartbeat cruza o limite → a "modelo" chama no privado com a oferta).
+// Só roda se a conversa ainda não tem histórico (não re-dispara).
+async function startChatForIdentity(ident, chatId, req) {
+    const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
+    if (!cr.length) return false;
+    const chat = cr[0];
+    const owns = await ownsChatVip(ident.email, chat);
+    const perm = permissions(chat, owns, ident);
+    if (perm.locked) return false;
+    if (!ident.email && !ident.visitor) return false;
+    const session = await findOrCreateSession(chatId, ident, true);
+    if (req) { try { await ensureSessionGeo(session, req); ident.city = session.city; } catch (_) {} }
+    ident.cityFallback = chat.city_fallback;
+    const { rows: history } = await db.query(
+        `SELECT id FROM chat_messages WHERE session_id = $1 ORDER BY id LIMIT 1`, [session.id]
+    );
+    if (history.length) return false;
+    session.current_flow = 'open';
+    const steps = await loadSteps(chatId, 'open');
+    if (!steps.length) return false;
+    await runScript(session, chat, steps, 0, ident);
+    return true;
+}
+
 // POST /chats/:id/advance — botão escolhido, input do roteiro ou mensagem livre
 router.post('/chats/:id/advance', optionalUser, async (req, res) => {
     const chatId = parseInt(req.params.id, 10);
@@ -1190,6 +1216,12 @@ async function deliverPurchaseToSupport(email, productIds) {
         `SELECT id, name, post_purchase_message, post_purchase_link, post_purchase_recommended_ids
          FROM products WHERE id = ANY($1)`, [ids]
     );
+    // produto vinculado a um GRUPO: o botão de acesso cai DENTRO do grupo
+    const { rows: linkedGroups } = await db.query(
+        `SELECT id, product_id FROM groups WHERE active = true AND product_id = ANY($1)`, [ids]
+    );
+    const groupByProduct = {};
+    for (const g of linkedGroups) if (!groupByProduct[g.product_id]) groupByProduct[g.product_id] = g.id;
     if (!prods.length) return [];
     const session = await findOrCreateSession(chat.id, { email: e, visitor: null }, true);
     const ctx = { email: e, city: session.city || null, cityFallback: chat.city_fallback };
@@ -1213,6 +1245,9 @@ async function deliverPurchaseToSupport(email, productIds) {
         if (!firstMsg) firstMsg = m1;
         if (p.post_purchase_link && p.post_purchase_link.trim()) {
             await insertMsg(session.id, 'bot', 'cta', 'Acessar agora', null, { link_url: p.post_purchase_link.trim(), cta_color: GREEN }, null);
+        } else if (groupByProduct[p.id]) {
+            // sem link configurado + produto de grupo → direto pro grupo
+            await insertMsg(session.id, 'bot', 'cta', 'Entrar no grupo agora', null, { link_url: '/?group=' + groupByProduct[p.id], cta_color: GREEN }, null);
         }
         let rec = [];
         try { rec = Array.isArray(p.post_purchase_recommended_ids) ? p.post_purchase_recommended_ids : JSON.parse(p.post_purchase_recommended_ids || '[]'); } catch (_) {}
@@ -1225,11 +1260,20 @@ async function deliverPurchaseToSupport(email, productIds) {
                 .filter(x => x && !ids.includes(x)).slice(0, 3);
         }
         if (rec.length) {
-            const { rows: recProds } = await db.query(`SELECT id, name FROM products WHERE id = ANY($1) AND is_active = true`, [rec]);
+            const { rows: recProds } = await db.query(
+                `SELECT id, name, discount_checkout_url FROM products WHERE id = ANY($1) AND is_active = true`, [rec]
+            );
             if (recProds.length) {
                 await insertMsg(session.id, 'bot', 'text', 'Separei isso aqui que tem tudo a ver com você 👇', null, { typing_ms: 0 }, null);
                 for (const rp of recProds) {
-                    await insertMsg(session.id, 'bot', 'cta', rp.name, null, { product_id: rp.id, cta_color: RED }, null);
+                    // produto com link de DESCONTO → checkout promocional direto;
+                    // sem desconto → página do produto in-app (funil normal)
+                    if (rp.discount_checkout_url && rp.discount_checkout_url.trim()) {
+                        await insertMsg(session.id, 'bot', 'cta', rp.name + ' — com DESCONTO 🔥', null,
+                            { link_url: rp.discount_checkout_url.trim(), cta_color: RED }, null);
+                    } else {
+                        await insertMsg(session.id, 'bot', 'cta', rp.name, null, { product_id: rp.id, cta_color: RED }, null);
+                    }
                 }
             }
         }
@@ -1576,3 +1620,4 @@ module.exports.deliverPixPendingToSupport = deliverPixPendingToSupport;
 module.exports.deliverInstallWelcome = deliverInstallWelcome;
 module.exports.invalidateSupportConfig = invalidateSupportConfig;
 module.exports.postDueStatusSchedules = postDueStatusSchedules;
+module.exports.startChatForIdentity = startChatForIdentity;
