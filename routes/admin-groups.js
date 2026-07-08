@@ -224,34 +224,81 @@ router.get('/metrics', requireAdmin, async (req, res) => {
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
-// BROADCAST — mensagem NA HORA na timeline de todos (1 linha, sem fan-out)
+// BROADCAST — SEQUÊNCIA de mensagens na timeline de todos. Cada mensagem vira
+// uma linha; o DELAY entre elas vira created_at no futuro (a janela computada
+// só mostra o que já "aconteceu" → a sequência pinga sozinha, sem worker).
+// Botão (cta) leva pra qualquer lugar do sistema (conversa/grupo/produto/aba)
+// ou link externo. meta._batch agrupa a sequência no histórico.
 // ═════════════════════════════════════════════════════════════════════════════
-const BCAST_TYPES = ['text', 'image', 'video', 'audio', 'vonce'];
+const BCAST_TYPES = ['text', 'image', 'video', 'audio', 'vonce', 'cta'];
 router.post('/broadcast', requireAdmin, async (req, res) => {
     try {
         const b = req.body || {};
-        const type = BCAST_TYPES.includes(b.type) ? b.type : 'text';
-        const content = (b.content || '').toString().slice(0, 1000) || null;
-        const media = (b.media_url || '').toString().trim().slice(0, 1000) || null;
-        if (type === 'text' && !content) return res.status(400).json({ success: false, error: 'Texto obrigatório' });
-        if (type !== 'text' && !media) return res.status(400).json({ success: false, error: 'URL da mídia obrigatória' });
+        // aceita sequência (messages[]) ou o formato antigo de 1 mensagem
+        const rawMsgs = (Array.isArray(b.messages) && b.messages.length)
+            ? b.messages
+            : [{ type: b.type, content: b.content, media_url: b.media_url, kind: b.kind, delay_s: 0 }];
+        const clean = [];
+        for (const m of rawMsgs.slice(0, 12)) {
+            const type = BCAST_TYPES.includes(m.type) ? m.type : 'text';
+            let content = (m.content || '').toString().slice(0, 1000) || null;
+            const media = (m.media_url || '').toString().trim().slice(0, 1000) || null;
+            const meta = {};
+            if (type === 'vonce') meta.kind = m.kind === 'video' ? 'video' : 'foto';
+            if (type === 'cta') {
+                const link = (m.link_url || '').toString().trim().slice(0, 1000) || null;
+                const pid = m.product_id ? parseInt(m.product_id, 10) : null;
+                if (!link && !pid) continue; // botão sem destino não vale
+                meta.link_url = link;
+                meta.product_id = pid;
+                meta.cta_color = (m.cta_color || '').toString().slice(0, 20) || '#25a55f';
+                content = content || 'Ver agora';
+            }
+            if (type === 'text' && !content) continue;
+            if (['image', 'video', 'audio', 'vonce'].includes(type) && !media) continue;
+            clean.push({
+                type, content, media, meta,
+                delay_s: Math.max(0, Math.min(3600, parseInt(m.delay_s, 10) || 0)),
+            });
+        }
+        if (!clean.length) return res.status(400).json({ success: false, error: 'Nenhuma mensagem válida na sequência' });
         let groupIds = null; // NULL = todos os grupos
         if (Array.isArray(b.group_ids) && b.group_ids.length) {
             groupIds = b.group_ids.map(x => parseInt(x, 10)).filter(Boolean).slice(0, 100);
             if (!groupIds.length) groupIds = null;
         }
-        const meta = {};
-        if (type === 'vonce') meta.kind = b.kind === 'video' ? 'video' : 'foto';
         const sender = (b.sender_name || '').toString().trim().slice(0, 80) || null;
-        const { rows } = await db.query(
-            `INSERT INTO group_broadcasts (group_ids, sender_name, type, content, media_url, meta)
-             VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [groupIds ? JSON.stringify(groupIds) : null, sender, type, content, media,
-             Object.keys(meta).length ? JSON.stringify(meta) : null]
-        );
-        return res.json({ success: true, broadcast: rows[0] });
+        const batch = Date.now().toString(36);
+        let offset = 0;
+        const out = [];
+        for (const m of clean) {
+            offset += m.delay_s; // espera ANTES desta mensagem
+            m.meta._batch = batch;
+            const { rows } = await db.query(
+                `INSERT INTO group_broadcasts (group_ids, sender_name, type, content, media_url, meta, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, NOW() + make_interval(secs => $7)) RETURNING *`,
+                [groupIds ? JSON.stringify(groupIds) : null, sender, m.type, m.content, m.media,
+                 JSON.stringify(m.meta), offset]
+            );
+            out.push(rows[0]);
+        }
+        return res.json({ success: true, broadcasts: out, batch });
     } catch (err) {
         logger.error('Erro no broadcast de grupos:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// DELETE /broadcasts/batch/:key — apaga a SEQUÊNCIA inteira (antes do /:bid)
+router.delete('/broadcasts/batch/:key', requireAdmin, async (req, res) => {
+    const key = String(req.params.key || '').replace(/[^a-z0-9]/g, '').slice(0, 20);
+    if (!key) return res.status(400).json({ success: false, error: 'Batch inválido' });
+    try {
+        const { rowCount } = await db.query(
+            `DELETE FROM group_broadcasts WHERE meta->>'_batch' = $1`, [key]
+        );
+        return res.json({ success: true, deleted: rowCount });
+    } catch (err) {
         return res.status(500).json({ success: false, error: 'Erro interno' });
     }
 });
