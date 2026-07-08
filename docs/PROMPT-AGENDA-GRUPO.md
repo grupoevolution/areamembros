@@ -56,6 +56,7 @@ Um array de ITENS. Cada item = um bloco de mensagens num dia × horário:
 | `gap_s` | 2–600 | segundos depois da mensagem anterior |
 | `folder` | chave de pasta | de QUAL pasta do grupo sai a mídia (`image`/`video`/`audio`/`vonce`) |
 | `kind` | `foto` ou `video` | só no `vonce` (visualização única) |
+| `label` | string (até 60) | só no `cta`: o texto DO botão (o `text` vira o texto em cima, opcional) |
 | `link` / `pid` / `color` | url / id de produto / cor | só no `cta` (botão) |
 | `admin` | `true` | mensagem do ADMINISTRADOR (selo dourado — canal free) |
 

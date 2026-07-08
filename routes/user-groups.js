@@ -345,8 +345,12 @@ function renderOccurrence(group, item, k, occMs) {
             if (key) media = rotatePick(folderFiles(key, kind === 'foto' ? 'image' : 'video'), mseed, k, usedFor(key + ':vonce'));
         } else if (m.t === 'cta') {
             type = 'cta';
-            content = content || 'Ver agora';
+            // label = texto DO botão; content vira o texto em cima (opcional).
+            // Sem label (formato antigo), o content é o rótulo do botão.
             meta = { link_url: m.link || null, product_id: m.pid || null, cta_color: m.color || '#25a55f' };
+            const label = (m.label || '').toString().slice(0, 60);
+            if (label) meta.label = label;
+            if (!label && !content) content = 'Ver agora';
         } else if (m.t && m.t !== 'text') {
             continue; // tipo desconhecido/futuro
         }
@@ -357,7 +361,8 @@ function renderOccurrence(group, item, k, occMs) {
             const idade = idadeMsg != null ? idadeMsg : (idadeOcc != null ? idadeOcc : 19 + ((mseed + k) % 15));
             content = content.replace(/\{idade\}/gi, String(idade));
         }
-        if (!content && !media && type !== 'vonce') continue;
+        // botão "puro" (só label, sem texto em cima) é válido
+        if (!content && !media && type !== 'vonce' && !(type === 'cta' && meta && meta.label)) continue;
         if (isAdmin) meta = Object.assign({}, meta || {}, { admin: true });
         out.push({
             sid: `s${item.id}_${k}_${i}`,
@@ -584,12 +589,14 @@ async function materializeScene(session, group, scene, baseTime, gapScale) {
             meta = { kind: m.kind === 'foto' ? 'foto' : 'video' };
         } else if (m.t === 'cta') {
             type = 'cta';
-            content = content || 'Ver agora';
             meta = { link_url: m.link || null, product_id: m.pid || null, cta_color: m.color || '#25a55f' };
+            const label = (m.label || '').toString().slice(0, 60);
+            if (label) meta.label = label;
+            if (!label && !content) content = 'Ver agora';
         } else if (m.t && m.t !== 'text') {
             continue;
         }
-        if (!content && !media && type !== 'vonce') continue;
+        if (!content && !media && type !== 'vonce' && !(type === 'cta' && meta && meta.label)) continue;
         if (isAdmin) meta = Object.assign({}, meta || {}, { admin: true });
         const { rows } = await db.query(
             `INSERT INTO group_messages (session_id, persona_id, sender, type, content, media_url, meta, created_at, sender_name, sender_gender)

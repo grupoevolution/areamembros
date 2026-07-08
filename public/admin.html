@@ -16372,6 +16372,7 @@ function gaAddBlock(m) {
         + '<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">'
         +   '<select class="form-control" data-gb="folder" style="width:150px; font-size:12px; display:none;">' + gaFolderOptions(m.folder) + '</select>'
         +   '<select class="form-control" data-gb="kind" style="width:110px; font-size:12px; display:none;"><option value="foto"' + (m.kind === 'foto' ? ' selected' : '') + '>Foto</option><option value="video"' + (m.kind === 'video' ? ' selected' : '') + '>Vídeo</option></select>'
+        +   '<input class="form-control" data-gb="label" maxlength="60" placeholder="Texto DO botão (ex: QUERO VER 🔥)" value="' + escapeAttr(m.label || '') + '" style="flex:1; min-width:170px; font-size:12px; display:none;"/>'
         +   '<input class="form-control" data-gb="link" maxlength="1000" placeholder="Link (/?p=12 · https://...)" value="' + escapeAttr(m.link || '') + '" style="flex:1; min-width:150px; font-size:12px; display:none;"/>'
         +   '<input class="form-control" data-gb="pid" type="number" placeholder="ID produto" value="' + (m.pid || '') + '" style="width:100px; font-size:12px; display:none;"/>'
         +   '<input class="form-control" data-gb="color" maxlength="20" placeholder="#25a55f" value="' + escapeAttr(m.color || '') + '" style="width:90px; font-size:12px; display:none;"/>'
@@ -16387,9 +16388,12 @@ function gaBlockTypeChanged(sel) {
     const show = (n, on) => { const el = row.querySelector('[data-gb="' + n + '"]'); if (el) el.style.display = on ? '' : 'none'; };
     show('folder', ['image', 'video', 'audio', 'vonce'].indexOf(t) >= 0);
     show('kind', t === 'vonce');
+    show('label', t === 'cta');
     show('link', t === 'cta');
     show('pid', t === 'cta');
     show('color', t === 'cta');
+    const tx = row.querySelector('[data-gb="text"]');
+    if (tx) tx.placeholder = t === 'cta' ? 'Texto EM CIMA do botão (opcional)' : 'Texto / legenda (opcional nas mídias)';
 }
 function gaCollectBlocks() {
     const out = [];
@@ -16404,11 +16408,12 @@ function gaCollectBlocks() {
         if (['image', 'video', 'audio', 'vonce'].indexOf(t) >= 0) { const f = get('folder'); if (f) b.folder = f; }
         if (t === 'vonce') b.kind = get('kind') || 'foto';
         if (t === 'cta') {
+            const label = String(get('label') || '').trim(); if (label) b.label = label;
             const link = String(get('link') || '').trim(); if (link) b.link = link;
             const pid = parseInt(get('pid'), 10); if (pid) b.pid = pid;
             const color = String(get('color') || '').trim(); if (color) b.color = color;
         }
-        if (b.text || ['image', 'video', 'audio', 'presentation', 'vonce'].indexOf(t) >= 0) out.push(b);
+        if (b.text || b.label || ['image', 'video', 'audio', 'presentation', 'vonce'].indexOf(t) >= 0) out.push(b);
     });
     return out;
 }
@@ -16591,6 +16596,7 @@ function gbAddMsg() {
         +     '<option value="#25a55f">🟢 Verde</option><option value="#e50914">🔴 Vermelho</option><option value="#7b2ff7">🟣 Roxo</option>'
         +     '<option value="#2aabee">🔵 Azul</option><option value="#ff2d78">🌸 Rosa</option><option value="#ff7a00">🟠 Laranja</option>'
         +   '</select>'
+        +   '<input class="form-control" data-gm="label" maxlength="60" placeholder="Texto DO botão (ex: QUERO VER 🔥)" style="width:100%; font-size:12px;"/>'
         + '</div>'
         + '<select class="form-control" data-gm="kind" style="width:130px; font-size:12px; margin-bottom:6px; display:none;"><option value="foto">1x: Foto</option><option value="video">1x: Vídeo</option></select>'
         + '<textarea class="form-control" data-gm="content" maxlength="1000" placeholder="Texto / legenda" style="width:100%; min-height:40px; font-size:12.5px;"></textarea>';
@@ -16602,7 +16608,7 @@ function gbMsgTypeChanged(sel) {
     row.querySelector('[data-gm="media_url"]').style.display = ['image', 'video', 'audio', 'vonce'].includes(t) ? '' : 'none';
     row.querySelector('[data-gm="kind"]').style.display = t === 'vonce' ? '' : 'none';
     row.querySelector('[data-gm="ctaWrap"]').style.display = t === 'cta' ? 'flex' : 'none';
-    row.querySelector('[data-gm="content"]').placeholder = t === 'cta' ? 'Texto do botão (ex: QUERO VER 🔥)' : 'Texto / legenda';
+    row.querySelector('[data-gm="content"]').placeholder = t === 'cta' ? 'Texto EM CIMA do botão (opcional)' : 'Texto / legenda';
     if (t === 'cta') gbDestChanged(row.querySelector('[data-gm="dest"]'));
 }
 function gbDestChanged(sel) {
@@ -16640,6 +16646,7 @@ function gbCollectSeq() {
             const picked = parseInt(get('dest_sel'), 10) || null; // escolhido da lista
             const dv = String(get('dest_val') || '').trim();      // URL livre
             m.cta_color = get('cta_color') || '#25a55f';
+            m.label = String(get('label') || '').trim() || null;  // texto DO botão
             if (dest === 'product') { if (!picked) return; m.product_id = picked; }
             else if (dest === 'chat') { if (!picked) return; m.link_url = '/?chat=' + picked; }
             else if (dest === 'group') { if (!picked) return; m.link_url = '/?group=' + picked; }

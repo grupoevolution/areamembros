@@ -8434,6 +8434,11 @@ body.is-slowconn .prod-cta-fixed {
 .ga-media-ov .full iframe { width: 100%; height: 100%; border: none; }
 .ga-media-ov .fnav { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.14); color: #fff; font-size: 22px; line-height: 34px; text-align: center; cursor: pointer; user-select: none; }
 .ga-media-ov .fnav.prev { left: 10px; } .ga-media-ov .fnav.next { right: 10px; }
+/* botão dentro da bolha do grupo: tamanho de mensagem, não banner */
+.ga-cta-mini { display: inline-block; border: none; color: #fff; font-size: 14px; font-weight: 700;
+    padding: 10px 22px; border-radius: 10px; cursor: pointer; margin-top: 2px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.18); font-family: inherit; }
+.ga-cta-mini:active { transform: scale(.97); filter: brightness(.95); }
 /* BILHETE DOURADO do PASSE VIP: ouro de verdade + brilho varrendo (shine) */
 .ga-pass { position: relative; overflow: hidden; margin: 6px 16px 12px;
     background: linear-gradient(120deg, #8a6014 0%, #d9a531 22%, #f7df8b 42%, #e3b53f 58%, #a8791d 82%, #8a6014 100%);
@@ -10776,10 +10781,14 @@ window.GroupApp = (function () {
         }
         let isCta = false;
         if (m.type === 'image' && m.media_url) {
-            inner += '<img class="photo" src="' + esc(m.media_url) + '" alt="" loading="lazy">';
+            inner += '<img class="photo" src="' + esc(m.media_url) + '" alt="" loading="lazy" style="cursor:pointer;">';
             if (m.content) inner += '<div class="tx">' + esc(m.content) + '</div>';
         } else if (m.type === 'video' && m.media_url) {
-            inner += '<video class="photo" src="' + esc(m.media_url) + '" controls playsinline preload="metadata" style="max-width:230px;width:100%;border-radius:10px;display:block;background:#000;"></video>';
+            // vídeo do feed: toque abre em TELA CHEIA (deslizar navega a galeria)
+            inner += '<div class="ga-vidwrap" style="position:relative;cursor:pointer;">'
+                + '<video class="photo" src="' + esc(m.media_url) + '" playsinline muted preload="metadata" style="max-width:230px;width:100%;border-radius:10px;display:block;background:#000;"></video>'
+                + '<span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:34px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.6);pointer-events:none;">▶</span>'
+                + '</div>';
             if (m.content) inner += '<div class="tx">' + esc(m.content) + '</div>';
         } else if (m.type === 'audio' && m.media_url) {
             inner += '<audio src="' + esc(m.media_url) + '" controls preload="none" style="width:230px;max-width:100%;display:block;"></audio>';
@@ -10803,7 +10812,13 @@ window.GroupApp = (function () {
             if (m.content) inner += '<div class="tx">' + esc(m.content) + '</div>';
         } else if (m.type === 'cta' && !m.masked) {
             isCta = true;
-            inner += '<button class="ca-cta-btn" style="background:' + esc((m.meta || {}).cta_color || '#25a55f') + ';">' + esc(m.content || 'Ver agora') + '</button>';
+            // botão como MENSAGEM normal: texto em cima (opcional) + botão
+            // compacto embaixo, com a bolinha/nome de quem mandou
+            const meta0 = m.meta || {};
+            const label = meta0.label || m.content || 'Ver agora';
+            const caption = meta0.label ? m.content : null;
+            if (caption) inner += '<div class="tx">' + esc(caption) + '</div>';
+            inner += '<button class="ga-cta-mini" style="background:' + esc(meta0.cta_color || '#25a55f') + ';">' + esc(label) + '</button>';
         } else {
             inner += '<div class="tx">' + esc(m.content || '') + '</div>';
         }
@@ -10833,11 +10848,21 @@ window.GroupApp = (function () {
                 else openPopup();
             });
         }
+        // foto/vídeo do feed: toque abre TELA CHEIA; deslizar navega a galeria
+        if (m.type === 'image' && m.media_url && !m.masked) {
+            const ph = d.querySelector('img.photo');
+            if (ph) ph.addEventListener('click', () => openFeedMedia(m.media_url, 'img'));
+        }
+        if (m.type === 'video' && m.media_url && !m.masked) {
+            const vw = d.querySelector('.ga-vidwrap');
+            if (vw) vw.addEventListener('click', () => openFeedMedia(m.media_url, 'vid'));
+        }
 
         // Layout final: mensagem de bot ganha AVATAR de inicial ao lado (Admin
-        // usa a foto do grupo); CTA continua full-width sem avatar.
+        // usa a foto do grupo) — inclusive o BOTÃO (cta), que agora é uma
+        // mensagem como as outras.
         let node = d;
-        if (!mine && !isCta) {
+        if (!mine) {
             const wrap = document.createElement('div');
             wrap.className = 'ga-mrow';
             const av = document.createElement('div');
@@ -10854,8 +10879,6 @@ window.GroupApp = (function () {
             wrap.appendChild(av);
             wrap.appendChild(d);
             node = wrap;
-        } else if (isCta) {
-            d.style.alignSelf = 'stretch'; d.style.width = '100%';
         }
         body.appendChild(node);
 
@@ -11208,6 +11231,41 @@ window.GroupApp = (function () {
     // Galeria de verdade: grade de fotos + vídeos (com capa) e visualizador em
     // TELA CHEIA — toca direto, arrasta pro lado pra ir pro próximo (misturado).
     let MEDIA = [], MIDX = 0;
+
+    // Foto/vídeo do FEED: abre direto em tela cheia e o deslizar navega a
+    // GALERIA inteira (membro/canal). Galeria travada/vazia? Navega pelo que
+    // está visível no próprio feed — nunca abre "sozinho" sem swipe.
+    async function openFeedMedia(url, kind) {
+        if (!CUR) return;
+        let set = null;
+        try {
+            const r = await fetch('/api/user/groups/' + CUR.id + '/media?visitor_id=' + VID, { credentials: 'include' });
+            const data = await r.json().catch(() => ({}));
+            if (data && data.success && !data.locked) {
+                set = [];
+                for (const u of (data.images || [])) set.push({ kind: 'img', url: u });
+                for (const v of (data.videos || [])) set.push({ kind: 'vid', embed: v.embed_url || null, file: v.file_url || null, thumb: v.thumb_url || null });
+            }
+        } catch (_) {}
+        if (!set || !set.length) {
+            set = [];
+            document.querySelectorAll('#gaBody img.photo').forEach(im => {
+                const u = im.getAttribute('src');
+                if (u && !set.some(x => x.url === u)) set.push({ kind: 'img', url: u });
+            });
+            document.querySelectorAll('#gaBody video.photo').forEach(v => {
+                const u = v.getAttribute('src');
+                if (u && !set.some(x => x.file === u)) set.push({ kind: 'vid', file: u });
+            });
+        }
+        let idx = set.findIndex(x => x.url === url || x.file === url);
+        if (idx < 0) { set.unshift(kind === 'vid' ? { kind: 'vid', file: url } : { kind: 'img', url }); idx = 0; }
+        MEDIA = set;
+        document.getElementById('gaMediaOv').classList.add('show');
+        const f = document.getElementById('gaMediaFull');
+        f._fromFeed = true; // fechar volta pro CHAT, não pra grade
+        openFull(idx);
+    }
     async function openMedia() {
         if (!CUR) return;
         const r = await fetch('/api/user/groups/' + CUR.id + '/media?visitor_id=' + VID, { credentials: 'include' });
@@ -11317,6 +11375,11 @@ window.GroupApp = (function () {
         const f = document.getElementById('gaMediaFull');
         f.classList.remove('show');
         document.getElementById('gaMediaFullBody').innerHTML = '';
+        if (f._fromFeed) {
+            // veio de um toque no feed: fechar volta direto pro chat
+            f._fromFeed = false;
+            document.getElementById('gaMediaOv').classList.remove('show');
+        }
     }
 
     return { tab, loadList, checkTabs, open, back, send, ctaClick, openMedia, closeMedia, closeFull, fullNav, openPass };

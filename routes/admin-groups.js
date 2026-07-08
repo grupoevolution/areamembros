@@ -80,13 +80,14 @@ function cleanMessages(list) {
         t: MSG_TYPES.includes(m.t) ? m.t : 'text',
         kind: m.kind === 'foto' ? 'foto' : (m.kind === 'video' ? 'video' : undefined),
         text: (m.text || '').toString().slice(0, 1000) || undefined,
+        label: (m.label || '').toString().slice(0, 60) || undefined,
         gap_s: m.gap_s !== undefined ? intOr(m.gap_s, 8, 2, 600) : undefined,
         link: (m.link || '').toString().slice(0, 1000) || undefined,
         pid: m.pid ? parseInt(m.pid, 10) : undefined,
         color: (m.color || '').toString().slice(0, 20) || undefined,
         folder: (m.folder || '').toString().trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40) || undefined,
         admin: m.admin === true ? true : undefined,
-    })).filter(m => m.text || ['image', 'video', 'audio', 'presentation', 'vonce'].includes(m.t));
+    })).filter(m => m.text || m.label || ['image', 'video', 'audio', 'presentation', 'vonce'].includes(m.t));
 }
 
 function invalidateAgendaCache(groupId) {
@@ -252,7 +253,10 @@ router.post('/broadcast', requireAdmin, async (req, res) => {
                 meta.link_url = link;
                 meta.product_id = pid;
                 meta.cta_color = (m.cta_color || '').toString().slice(0, 20) || '#25a55f';
-                content = content || 'Ver agora';
+                // label = texto DO botão; content vira o texto em cima (opcional)
+                const label = (m.label || '').toString().trim().slice(0, 60);
+                meta.label = label || content || 'Ver agora';
+                if (!label) content = null;
             }
             if (type === 'text' && !content) continue;
             if (['image', 'video', 'audio', 'vonce'].includes(type) && !media) continue;
