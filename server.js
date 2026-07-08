@@ -372,18 +372,32 @@ app.get('/p/:slug', async (req, res) => {
         );
         // pressel desligada/funil inexistente → cai no funil direto (não perde o lead)
         if (!f.length) return res.redirect(302, '/f/' + slug + qs);
-        const { rows: chats } = await db.query(
-            `SELECT id, name, avatar_url, status_label, show_online
-             FROM chats WHERE active = true ORDER BY display_order, id LIMIT 14`
-        );
+        const cfg = f[0].pressel_config || {};
+        // modo 'groups': prévia da LISTA DE GRUPOS (funil entry_type group_list
+        // leva pra aba de grupos); padrão continua a prévia de conversas
+        const mode = cfg.mode === 'groups' ? 'groups' : 'chats';
+        let chats = [], groups = [];
+        if (mode === 'groups') {
+            const { rows } = await db.query(
+                `SELECT id, name, avatar_url, is_free, members_count, online_count
+                 FROM groups WHERE active = true ORDER BY display_order, id LIMIT 14`
+            );
+            groups = rows;
+        } else {
+            const { rows } = await db.query(
+                `SELECT id, name, avatar_url, status_label, show_online
+                 FROM chats WHERE active = true ORDER BY display_order, id LIMIT 14`
+            );
+            chats = rows;
+        }
         // métrica: visita da pressel (não bloqueia a resposta)
         db.query(
             `INSERT INTO tracking_events (event_type, metadata) VALUES ('pressel_view', $1::jsonb)`,
-            [JSON.stringify({ funnel_slug: slug, ua: String(req.headers['user-agent'] || '').slice(0, 300) })]
+            [JSON.stringify({ funnel_slug: slug, mode, ua: String(req.headers['user-agent'] || '').slice(0, 300) })]
         ).catch(() => {});
         const fs = require('fs');
         let html = fs.readFileSync(path.join(__dirname, 'public/pressel.html'), 'utf8');
-        const data = { slug, chats, config: f[0].pressel_config || {} };
+        const data = { slug, mode, chats, groups, config: cfg };
         html = html.replace('__PRESSEL_DATA__', JSON.stringify(data).replace(/</g, '\\u003c'));
         return res.send(html);
     } catch (e) {
@@ -495,13 +509,8 @@ let server;
         logger.warn('chat-worker não iniciou: ' + err.message);
     }
 
-    // Worker dos grupos: cenas continuam rodando com o app fechado (grupo vivo)
-    try {
-        const { startGroupWorker } = require('./lib/group-worker');
-        startGroupWorker();
-    } catch (err) {
-        logger.warn('group-worker não iniciou: ' + err.message);
-    }
+    // GRUPOS v4: o group-worker foi aposentado — a timeline compartilhada é
+    // COMPUTADA na leitura (agenda × relógio), não materializada por lead.
 
     server.on('error', (err) => {
         logger.error('Falha ao abrir a porta HTTP:', err.message);

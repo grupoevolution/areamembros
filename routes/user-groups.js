@@ -1,22 +1,29 @@
 /**
  * =============================================================================
- * routes/user-groups.js — GRUPOS-bot estilo WhatsApp (lado do cliente)
+ * routes/user-groups.js — GRUPOS estilo WhatsApp com TIMELINE COMPARTILHADA
  * =============================================================================
  *
- * Cada grupo é uma timeline POR LEAD (como o chat 1:1): o motor sorteia CENAS
- * (mini-conversas importadas por JSON no painel) e materializa mensagens das
- * personas com espaçamento natural. Nada é compartilhado entre leads.
+ * v4 (jul/2026): o grupo tem UMA linha do tempo, igual pra todos — como um
+ * canal real. Ela NÃO é materializada: é COMPUTADA na leitura a partir da
+ * AGENDA recorrente (group_schedule_items: dia do ciclo × horário Brasília).
+ * O sorteio de nomes/fotos/idades é DETERMINÍSTICO por (grupo, item, ciclo):
+ * todo mundo vê o mesmo, e a cada volta do ciclo a mídia rotaciona sem
+ * repetir até esgotar a pasta. Janela rolante de window_hours (padrão 72h).
  *
- * Estados de acesso:
+ * Materializado compartilhado só o BROADCAST (group_broadcasts — envio
+ * manual do painel; group_ids NULL = todos os grupos, 1 linha, sem fan-out).
+ *
+ * Camada POR LEAD (group_sessions/group_messages) ficou só com:
+ *   - mensagens que o PRÓPRIO lead manda (e as reações 'reacao'/'novato');
+ *   - roteiro de 'entrada' (pinga ao vivo no 1º acesso).
+ *
+ * Estados de acesso (inalterados):
  *   channel — grupo GRATUITO: tudo visível, nunca digita, CTA fixo.
- *   member  — comprou o produto do grupo OU tem o Passe (is_group_pass):
- *             vê tudo, digita e manda foto à vontade.
- *   trial   — pago, 1ª experiência: trial_seconds ACUMULADOS com o grupo
- *             aberto (heartbeat). Digita normal; bots reagem.
+ *   member  — comprou o produto do grupo OU tem o Passe (is_group_pass).
+ *   trial   — trial_seconds ACUMULADOS com o grupo aberto (heartbeat).
  *   locked  — trial esgotado / assinatura vencida: mensagens novas chegam
- *             MASCARADAS (blur no app) + popup dos planos.
- *
- * Retenção: mensagens com mais de retention_hours somem (limpa ao abrir).
+ *             MASCARADAS (blur no app) + popup dos planos. Fim de trial
+ *             dispara o chat de convite (groups.trial_end_chat_id).
  * =============================================================================
  */
 
@@ -25,7 +32,8 @@ const router = express.Router();
 const db = require('../db');
 const { logger } = require('../lib/logger');
 const { optionalUser } = require('../lib/user-auth');
-const { listCollectionVideos, bunnyEmbedUrl, bunnyThumbUrl, listStorageFolder } = require('../lib/bunny');
+const { listCollectionVideos, bunnyEmbedUrl, bunnyThumbUrl, listStorageMedia, listStorageSubfolders } = require('../lib/bunny');
+const { resolveCity } = require('../lib/geo');
 
 // ── Identidade (mesmo padrão do chat) ────────────────────────────────────────
 function getIdentity(req) {
@@ -102,51 +110,39 @@ async function findOrCreateSession(groupId, ident, createIfMissing) {
     return created[0];
 }
 
-// ── Período do dia (Brasília, UTC-3) ─────────────────────────────────────────
-function periodNow() {
-    const h = (new Date(Date.now() - 3 * 3600 * 1000)).getUTCHours();
-    if (h >= 6 && h < 12) return 'manha';
-    if (h >= 12 && h < 18) return 'tarde';
-    if (h >= 18) return 'noite';
-    return 'madrugada';
+// {cidade} das apresentações: geo por IP 1x por sessão (padrão do chat)
+async function ensureSessionGeo(session, req) {
+    if (session.city || session.ip) return;
+    try {
+        const raw = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString();
+        const ip = raw.split(',')[0].trim().slice(0, 64) || null;
+        const city = resolveCity(raw);
+        session.ip = ip; session.city = city;
+        await db.query(`UPDATE group_sessions SET ip = $2, city = $3 WHERE id = $1`, [session.id, ip, city]);
+    } catch (_) {}
+}
+
+// ── Aleatório DETERMINÍSTICO (a base do "igual pra todos") ───────────────────
+function hashStr(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+}
+function mulberry32(a) {
+    return function () {
+        a |= 0; a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
 }
 const rand = (n) => Math.floor(Math.random() * n);
 const pick = (arr) => (arr && arr.length ? arr[rand(arr.length)] : null);
 
-// Junta as fotos configuradas LINK A LINK com as da PASTA da Bunny Storage
-// (galeria + apresentações). Muta o objeto group — chamar após carregar.
-async function hydrateGroupMedia(group) {
-    try {
-        const merge = (manual, extra) => {
-            const a = Array.isArray(manual) ? manual : [];
-            return extra.length ? a.concat(extra.filter(u => a.indexOf(u) < 0)) : a;
-        };
-        if (group.media_image_folder) {
-            group.media_image_urls = merge(group.media_image_urls, await listStorageFolder(group.media_image_folder));
-        }
-        if (group.presentation_male_folder) {
-            group.presentation_male_urls = merge(group.presentation_male_urls, await listStorageFolder(group.presentation_male_folder));
-        }
-        if (group.presentation_female_folder) {
-            group.presentation_female_urls = merge(group.presentation_female_urls, await listStorageFolder(group.presentation_female_folder));
-        }
-        // PASTAS POR CATEGORIA (v3): groups.media_folders = { "academia": "pasta/na/bunny", ... }
-        // As cenas referenciam pela chave: {"t":"image","folder":"academia",...}
-        group.media_folder_urls = {};
-        const folders = (group.media_folders && typeof group.media_folders === 'object') ? group.media_folders : {};
-        for (const key of Object.keys(folders).slice(0, 30)) {
-            try { group.media_folder_urls[key] = await listStorageFolder(folders[key]); } catch (_) { group.media_folder_urls[key] = []; }
-        }
-    } catch (_) {}
-    return group;
-}
-
 // ═════════════════════════════════════════════════════════════════════════════
-// ELENCO AUTOMÁTICO (v3) — os nomes saem DAQUI, não de personas manuais.
-// Cada LEAD tem o próprio elenco (session.state.cast): nos papos as mesmas
-// pessoas reaparecem (grupo real tem gente recorrente); nas APRESENTAÇÕES
-// entra sempre alguém novo. O texto usa {nome} → vira o nome do remetente,
-// então nunca mais "Júlia apresentando a Larissa".
+// ELENCO — os nomes saem daqui. Na timeline COMPARTILHADA o sorteio é seedado
+// (todo mundo vê o mesmo nome); na camada pessoal (entrada/reação) continua o
+// elenco por lead (session.state.cast), com recorrência de 75%.
 // ═════════════════════════════════════════════════════════════════════════════
 const CAST_F = [
     'Larissa','Camila','Juliana','Amanda','Bruna','Fernanda','Aline','Patrícia','Vanessa','Carla',
@@ -170,7 +166,315 @@ const CAST_M = [
     'Talles','Victor','Wallace','Yuri','Anderson','Bernardo','Cristiano','Davi','Erick','Fernando',
     'Guilherme','Heitor','Jean','Lucas','Maurício','Robson','Rodrigo','Vitor Hugo','Washington','Adriano'
 ];
+// {cidade} sem geo: cai numa capital grande (seedado — igual pra todos)
+const FALLBACK_CITIES = ['São Paulo','Rio de Janeiro','Belo Horizonte','Curitiba','Salvador','Fortaleza','Recife','Porto Alegre','Goiânia','Campinas'];
 
+// ── Pastas de mídia v2 ───────────────────────────────────────────────────────
+// media_folders aceita o formato antigo { chave: "pasta" } e o novo
+// { chave: { path, label, hidden } }. hidden = fora da galeria (pastas de
+// rosto/apresentação servem só pro roteiro).
+function normalizeFolders(mediaFolders) {
+    const out = {};
+    const src = (mediaFolders && typeof mediaFolders === 'object' && !Array.isArray(mediaFolders)) ? mediaFolders : {};
+    for (const key of Object.keys(src).slice(0, 30)) {
+        const v = src[key];
+        if (typeof v === 'string') out[key] = { path: v, label: key, hidden: false };
+        else if (v && typeof v === 'object' && v.path) {
+            out[key] = { path: String(v.path), label: String(v.label || key).slice(0, 60), hidden: v.hidden === true };
+        }
+    }
+    return out;
+}
+
+// Pasta de APRESENTAÇÃO: sub-pastas "18-24" viram faixas etárias — a foto sai
+// da faixa e a {idade} do texto é gerada DENTRO dela (foto casa com a idade).
+const BAND_RE = /^(\d{1,2})\s*[-_]\s*(\d{1,2})$/;
+async function loadPresFolder(folder, manualUrls) {
+    const out = { bands: [], flat: [] };
+    if (Array.isArray(manualUrls)) out.flat.push(...manualUrls.filter(u => typeof u === 'string' && u.trim()));
+    if (!folder) return out;
+    try {
+        const media = await listStorageMedia(folder);
+        out.flat.push(...media.filter(f => f.kind === 'image').map(f => f.url));
+        const dirs = await listStorageSubfolders(folder);
+        for (const d of dirs.slice(0, 12)) {
+            const m = String(d).match(BAND_RE);
+            if (!m) continue;
+            const min = parseInt(m[1], 10), max = parseInt(m[2], 10);
+            if (!(min >= 18 && max >= min && max <= 99)) continue;
+            const files = (await listStorageMedia(folder + '/' + d)).filter(f => f.kind === 'image').map(f => f.url);
+            if (files.length) out.bands.push({ label: d, min, max, files });
+        }
+    } catch (_) {}
+    return out;
+}
+
+// Resolve TODAS as pastas do grupo (cache real fica no lib/bunny, 10 min).
+// Muta o objeto group — chamar após carregar do banco.
+async function hydrateGroupMedia(group) {
+    try {
+        group.folders = normalizeFolders(group.media_folders);
+        group.folder_media = {};
+        for (const key of Object.keys(group.folders)) {
+            try { group.folder_media[key] = await listStorageMedia(group.folders[key].path); }
+            catch (_) { group.folder_media[key] = []; }
+        }
+        // compat com a camada pessoal (cenas usam listas de URL de imagem)
+        group.media_folder_urls = {};
+        for (const key of Object.keys(group.folder_media)) {
+            group.media_folder_urls[key] = group.folder_media[key].filter(f => f.kind === 'image').map(f => f.url);
+        }
+        const manual = Array.isArray(group.media_image_urls) ? group.media_image_urls : [];
+        let legacyFolder = [];
+        if (group.media_image_folder) {
+            try { legacyFolder = (await listStorageMedia(group.media_image_folder)).filter(f => f.kind === 'image').map(f => f.url); } catch (_) {}
+        }
+        group.media_image_urls = manual.concat(legacyFolder.filter(u => manual.indexOf(u) < 0));
+        group.pres = {
+            m: await loadPresFolder(group.presentation_male_folder, group.presentation_male_urls),
+            f: await loadPresFolder(group.presentation_female_folder, group.presentation_female_urls),
+        };
+    } catch (_) {}
+    return group;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// TIMELINE COMPARTILHADA (computada — nada disso toca o banco)
+// ═════════════════════════════════════════════════════════════════════════════
+
+// Agenda em cache curto (evita 1 query por poll de cada lead)
+const _agendaCache = new Map(); // groupId -> { at, items }
+async function loadAgenda(groupId) {
+    const c = _agendaCache.get(groupId);
+    if (c && Date.now() - c.at < 15000) return c.items;
+    const { rows } = await db.query(
+        `SELECT id, day, time_minutes, messages FROM group_schedule_items
+         WHERE group_id = $1 AND active = true ORDER BY day, time_minutes, id`,
+        [groupId]
+    );
+    _agendaCache.set(groupId, { at: Date.now(), items: rows });
+    return rows;
+}
+function invalidateAgenda(groupId) { _agendaCache.delete(groupId); }
+
+function anchorMs(group) {
+    const a = group.cycle_anchor || group.created_at;
+    return a ? new Date(a).getTime() : Date.now();
+}
+
+// Rotação sem repetição: cada mensagem tem um offset próprio e anda +1 a cada
+// volta do ciclo — só repete quando a pasta inteira já rodou.
+function rotatePick(list, baseSeed, k, usedIdx) {
+    if (!Array.isArray(list) || !list.length) return null;
+    let idx = (baseSeed + k) % list.length;
+    let guard = list.length;
+    while (usedIdx && usedIdx.has(idx) && guard-- > 0) idx = (idx + 1) % list.length;
+    if (usedIdx) usedIdx.add(idx);
+    return list[idx];
+}
+
+// Materializa (em memória) UMA ocorrência de um item da agenda no ciclo k.
+// Retorna mensagens {sid, t, name, gender, admin, type, content, media_url, meta}.
+// O conteúdo pode conter {cidade} — substituída por lead na hora de responder.
+function renderOccurrence(group, item, k, occMs) {
+    const msgs = Array.isArray(item.messages) ? item.messages : [];
+    if (!msgs.length) return [];
+    const seed = hashStr(group.id + ':' + item.id + ':' + k);
+    const rng = mulberry32(seed);
+    const femaleRatio = Number.isFinite(+group.female_ratio) ? +group.female_ratio : 80;
+    const slotMap = {};
+    const usedNames = new Set();
+    const bySlot = (slot, g) => {
+        if (slotMap[slot]) return slotMap[slot];
+        const gender = (g === 'm' || g === 'f') ? g : (rng() * 100 < femaleRatio ? 'f' : 'm');
+        const pool = gender === 'm' ? CAST_M : CAST_F;
+        let n = pool[Math.floor(rng() * pool.length)];
+        let guard = 8;
+        while (usedNames.has(n) && guard-- > 0) n = pool[Math.floor(rng() * pool.length)];
+        usedNames.add(n);
+        slotMap[slot] = { n, g: gender };
+        return slotMap[slot];
+    };
+    const usedPerList = new Map(); // evita 2 msgs da mesma ocorrência com a mesma mídia
+    const usedFor = (key) => { if (!usedPerList.has(key)) usedPerList.set(key, new Set()); return usedPerList.get(key); };
+    const folderFiles = (key, kind) =>
+        ((group.folder_media && group.folder_media[key]) || []).filter(f => f.kind === kind).map(f => f.url);
+
+    const out = [];
+    let t = occMs;
+    let idadeOcc = null;
+    for (let i = 0; i < msgs.length; i++) {
+        const m = msgs[i];
+        const gap = Math.max(2, Math.min(600, parseInt(m.gap_s, 10) || (4 + Math.floor(rng() * 9))));
+        t += gap * 1000;
+        const isAdmin = m.admin === true;
+        const person = isAdmin ? null : bySlot(m.p || 1, m.g === 'm' || m.g === 'f' ? m.g : null);
+        const mseed = hashStr('m' + item.id + ':' + i);
+        let type = 'text', content = (m.text || '').slice(0, 1000) || null, media = null, meta = null;
+        let idadeMsg = null;
+
+        if (m.t === 'image' || m.t === 'video' || m.t === 'audio') {
+            type = m.t;
+            const kind = m.t === 'image' ? 'image' : m.t;
+            const key = (m.folder || '').toString().trim();
+            const pool = key ? folderFiles(key, kind)
+                : (kind === 'image' ? (group.media_image_urls || []) : []);
+            media = rotatePick(pool, mseed, k, usedFor(key + ':' + kind));
+            if (!media) { if (!content) continue; type = 'text'; }
+        } else if (m.t === 'presentation') {
+            type = 'image';
+            const g = person ? person.g : 'f';
+            const pres = (group.pres && group.pres[g]) || { bands: [], flat: [] };
+            if (pres.bands.length) {
+                const band = pres.bands[Math.floor(rng() * pres.bands.length)];
+                media = rotatePick(band.files, mseed, k, usedFor('pres:' + g));
+                idadeMsg = band.min + ((mseed + k * 3) % (band.max - band.min + 1));
+            } else {
+                media = rotatePick(pres.flat, mseed, k, usedFor('pres:' + g));
+                idadeMsg = 19 + ((mseed + k * 3) % 15);
+            }
+            if (idadeOcc == null) idadeOcc = idadeMsg;
+            if (!media) { if (!content) continue; type = 'text'; }
+        } else if (m.t === 'vonce') {
+            // visualização única: PRA MEMBRO abre de verdade (mídia real da
+            // pasta, consumo por aparelho no app); pra não-membro é a isca
+            type = 'vonce';
+            const kind = m.kind === 'foto' ? 'foto' : 'video';
+            meta = { kind };
+            const key = (m.folder || '').toString().trim();
+            if (key) media = rotatePick(folderFiles(key, kind === 'foto' ? 'image' : 'video'), mseed, k, usedFor(key + ':vonce'));
+        } else if (m.t === 'cta') {
+            type = 'cta';
+            content = content || 'Ver agora';
+            meta = { link_url: m.link || null, product_id: m.pid || null, cta_color: m.color || '#25a55f' };
+        } else if (m.t && m.t !== 'text') {
+            continue; // tipo desconhecido/futuro
+        }
+
+        if (content) {
+            content = content.replace(/\{nome(\d+)\}/gi, (_, d) => bySlot(parseInt(d, 10), null).n);
+            content = content.replace(/\{nome\}/gi, person ? person.n : (group.name || 'Admin'));
+            const idade = idadeMsg != null ? idadeMsg : (idadeOcc != null ? idadeOcc : 19 + ((mseed + k) % 15));
+            content = content.replace(/\{idade\}/gi, String(idade));
+        }
+        if (!content && !media && type !== 'vonce') continue;
+        if (isAdmin) meta = Object.assign({}, meta || {}, { admin: true });
+        out.push({
+            sid: `s${item.id}_${k}_${i}`,
+            t,
+            name: isAdmin ? 'Admin' : person.n,
+            gender: isAdmin ? null : person.g,
+            type, content, media_url: media, meta,
+        });
+    }
+    return out;
+}
+
+// Todas as mensagens compartilhadas da AGENDA com fromMs < t <= toMs
+function computeAgendaWindow(group, items, fromMs, toMs) {
+    if (!items.length) return [];
+    const anchor = anchorMs(group);
+    const cycleDays = Math.max(1, Math.min(60, group.cycle_days | 0 || 7));
+    const cycleMs = cycleDays * 86400000;
+    const out = [];
+    const kMin = Math.max(0, Math.floor((fromMs - anchor) / cycleMs) - 1);
+    const kMax = Math.floor((toMs - anchor) / cycleMs);
+    for (const item of items) {
+        const day = Math.min(Math.max(0, item.day | 0), cycleDays - 1);
+        const offset = (day * 1440 + Math.min(Math.max(0, item.time_minutes | 0), 1439)) * 60000;
+        for (let k = kMin; k <= kMax; k++) {
+            const occ = anchor + k * cycleMs + offset
+                + (hashStr('j' + item.id + ':' + k) % 46) * 1000; // jitter natural por ciclo
+            if (occ > toMs) continue;
+            if (occ < fromMs - 8 * 3600000) continue; // ocorrência velha demais pra ter msg na janela
+            for (const msg of renderOccurrence(group, item, k, occ)) {
+                if (msg.t > fromMs && msg.t <= toMs) out.push(msg);
+            }
+        }
+    }
+    return out;
+}
+
+// Broadcasts do painel que caem na janela (group_ids NULL = todos os grupos)
+async function broadcastsWindow(groupId, fromMs, toMs) {
+    try {
+        // date_trunc: o cursor do cliente tem precisão de MILISSEGUNDO; sem
+        // truncar, os microssegundos do Postgres re-entregam a mesma linha
+        const { rows } = await db.query(
+            `SELECT * FROM group_broadcasts
+             WHERE date_trunc('milliseconds', created_at) > to_timestamp($1 / 1000.0)
+               AND created_at <= to_timestamp($2 / 1000.0)
+               AND (group_ids IS NULL OR group_ids @> $3::jsonb)
+             ORDER BY created_at`,
+            [fromMs, toMs, JSON.stringify([groupId])]
+        );
+        return rows.map(b => ({
+            sid: 'b' + b.id,
+            t: new Date(b.created_at).getTime(),
+            name: b.sender_name || 'Admin',
+            gender: null,
+            type: b.type || 'text',
+            content: b.content || null,
+            media_url: b.media_url || null,
+            meta: Object.assign({}, b.meta || {}, b.sender_name ? {} : { admin: true }),
+        }));
+    } catch (_) { return []; }
+}
+
+// Janela compartilhada completa (agenda + broadcast), ordenada
+async function sharedWindow(group, fromMs, toMs) {
+    const items = await loadAgenda(group.id);
+    const agenda = computeAgendaWindow(group, items, fromMs, toMs);
+    const casts = await broadcastsWindow(group.id, fromMs, toMs);
+    const all = agenda.concat(casts);
+    all.sort((a, b) => (a.t - b.t) || (a.sid < b.sid ? -1 : 1));
+    return all;
+}
+
+// ── Máscara (locked) ─────────────────────────────────────────────────────────
+// Conteúdo real nunca sai do servidor — vai uma frase FAKE de tamanho parecido
+// (SEEDADA pelo id: estável entre polls), que o app mostra borrada.
+const FAKE_S = ['vem no privado', 'olha isso kkk', 'que delícia', 'to passada', 'manda mais aí', 'sério isso?'];
+const FAKE_M = ['gente olha o que ela mandou agora', 'vem cá que eu te mostro tudo kkk', 'quem viu isso ontem sabe kkkk', 'ela postou e apagou correndo'];
+const FAKE_L = ['não acredito que ela mandou isso aqui no grupo, olha a foto que vazou agora', 'quem tava na resenha ontem à noite sabe muito bem do que eu to falando kkkk'];
+function maskContent(content, seedKey) {
+    const len = (content || '').length;
+    const pool = len <= 14 ? FAKE_S : len <= 40 ? FAKE_M : FAKE_L;
+    const idx = seedKey != null ? hashStr(String(seedKey)) % pool.length : Math.floor(Math.random() * pool.length);
+    return pool[idx];
+}
+
+// Mensagem compartilhada → formato da API (aplica cidade por lead + máscara)
+function publicShared(m, opts) {
+    const masked = opts.masked === true && m.type !== 'vonce';
+    let content = m.content;
+    if (content && content.indexOf('{cidade}') >= 0) {
+        const city = opts.city || FALLBACK_CITIES[hashStr('c' + m.sid) % FALLBACK_CITIES.length];
+        content = content.replace(/\{cidade\}/gi, city);
+    }
+    // vonce: mídia real SÓ pra quem pode abrir (membro/canal) — isca pros demais
+    let media = m.media_url;
+    let meta = m.meta || null;
+    if (m.type === 'vonce' && !opts.canOpenVonce) media = null;
+    return {
+        id: m.sid,
+        sender: 'bot',
+        name: m.name,
+        gender: m.gender,
+        type: masked ? (m.type === 'text' || m.type === 'cta' ? 'text' : 'image') : m.type,
+        content: masked ? (m.type === 'text' || m.type === 'cta' ? maskContent(content, m.sid) : null) : content,
+        media_url: masked ? null : media,
+        meta: masked ? null : meta,
+        created_at: new Date(m.t).toISOString(),
+        masked,
+    };
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// CAMADA PESSOAL — cenas 'entrada' (1º acesso), 'reacao'/'novato' (quando o
+// lead fala) e as mensagens do próprio lead. Igual ao motor antigo, só que
+// restrita a essas categorias.
+// ═════════════════════════════════════════════════════════════════════════════
 function sessionState(session) {
     if (!session.state || typeof session.state !== 'object' || Array.isArray(session.state)) session.state = {};
     return session.state;
@@ -182,10 +486,6 @@ async function saveSessionState(session) {
     } catch (_) {}
 }
 
-// Escolhe uma pessoa do elenco do LEAD. fresh=true → SEMPRE alguém novo
-// (apresentação). Senão: 75% reaproveita quem já apareceu (recorrência).
-// exclude = nomes já usados NA MESMA CENA (duas pessoas da cena nunca são a
-// mesma — senão vira alguém conversando sozinho).
 function castPick(session, gender, fresh, exclude) {
     const st = sessionState(session);
     st.cast = Array.isArray(st.cast) ? st.cast : [];
@@ -201,8 +501,6 @@ function castPick(session, gender, fresh, exclude) {
     return person;
 }
 
-// Foto sem repetição POR LEAD (apresentação e pastas): risca as já usadas na
-// sessão; esgotou a pasta, volta a valer tudo.
 function pickUnusedMedia(session, listKey, urls) {
     if (!Array.isArray(urls) || !urls.length) return null;
     const st = sessionState(session);
@@ -217,63 +515,31 @@ function pickUnusedMedia(session, listKey, urls) {
     return chosen;
 }
 
-// ── Cenas ────────────────────────────────────────────────────────────────────
-// Sorteio ponderado no pool ambiente (respeita o período; 'reacao' fica fora —
-// só dispara quando o lead manda mensagem).
-async function pickScene(groupId, opts) {
-    opts = opts || {};
-    const period = opts.period || periodNow();
-    const params = [groupId, period];
-    // 'reacao' só quando o lead fala; 'entrada' só no primeiro acesso (em ordem)
-    let catSql = `AND category NOT IN ('reacao', 'entrada')`;
-    if (opts.category) { params.push(opts.category); catSql = `AND category = $3`; }
+// Cena da camada pessoal (só 'entrada', 'reacao' e 'novato' existem agora)
+async function pickScene(groupId, category) {
     const { rows } = await db.query(
-        `SELECT * FROM group_scenes
-         WHERE group_id = $1 AND active = true AND (period = 'any' OR period = $2) ${catSql}`,
-        params
+        `SELECT * FROM group_scenes WHERE group_id = $1 AND active = true AND category = $2`,
+        [groupId, category]
     );
     if (!rows.length) return null;
-    // Apresentações: respeita a proporção de gênero do grupo (female_ratio %).
-    // O gênero da cena = g do 1º slot com t 'presentation' (ou do 1º slot).
-    let pool = rows;
-    if (opts.category === 'apresentacao' && opts.femaleRatio != null && rows.length > 1) {
-        const sceneGender = (sc) => {
-            const msgs = Array.isArray(sc.messages) ? sc.messages : [];
-            const pres = msgs.find(m => m.t === 'presentation' && (m.g === 'f' || m.g === 'm'));
-            if (pres) return pres.g;
-            const first = msgs.find(m => m.g === 'f' || m.g === 'm');
-            return first ? first.g : null;
-        };
-        const wantF = Math.random() * 100 < Math.max(0, Math.min(100, opts.femaleRatio));
-        const filtered = rows.filter(r => sceneGender(r) === (wantF ? 'f' : 'm'));
-        if (filtered.length) pool = filtered;
-    }
-    const rowsPool = pool;
-    const total = rowsPool.reduce((s, r) => s + Math.max(1, r.weight | 0), 0);
+    const total = rows.reduce((s, r) => s + Math.max(1, r.weight | 0), 0);
     let roll = Math.random() * total;
-    for (const r of rowsPool) {
+    for (const r of rows) {
         roll -= Math.max(1, r.weight | 0);
         if (roll <= 0) return r;
     }
-    return rowsPool[rowsPool.length - 1];
+    return rows[rows.length - 1];
 }
 
-// Materializa uma cena (v3 — ELENCO AUTOMÁTICO): sorteia gente do elenco do
-// LEAD pros slots, troca {nome} pelo nome do remetente, escolhe fotos das
-// pastas (sem repetir por lead) e insere com timestamps a partir de baseTime.
-// m.admin === true → mensagem do ADMINISTRADOR (canal free de ofertas).
-// Retorna { messages, endTime }.
+// Materializa uma cena PESSOAL (grava em group_messages desta sessão)
 async function materializeScene(session, group, scene, baseTime, gapScale) {
     const msgs = Array.isArray(scene.messages) ? scene.messages : [];
     if (!msgs.length) return { messages: [], endTime: baseTime };
     gapScale = gapScale || 1;
-    const st = sessionState(session);
     const femaleRatio = Number.isFinite(+group.female_ratio) ? +group.female_ratio : 80;
-    // slots → pessoas do elenco. O slot com t:'presentation' é SEMPRE alguém
-    // novo pra este lead (apresentação não repete gente).
     const presSlot = (msgs.find(m => m.t === 'presentation') || {}).p || null;
     const slotMap = {};
-    const usedInScene = new Set(); // pessoas desta cena — cada slot é ALGUÉM diferente
+    const usedInScene = new Set();
     const bySlot = (slot, g) => {
         if (slotMap[slot]) return slotMap[slot];
         const gender = (g === 'm' || g === 'f') ? g : (Math.random() * 100 < femaleRatio ? 'f' : 'm');
@@ -283,9 +549,11 @@ async function materializeScene(session, group, scene, baseTime, gapScale) {
         return person;
     };
     const imgs = Array.isArray(group.media_image_urls) ? group.media_image_urls : [];
-    const presM = Array.isArray(group.presentation_male_urls) ? group.presentation_male_urls : [];
-    const presF = Array.isArray(group.presentation_female_urls) ? group.presentation_female_urls : [];
     const folderUrls = (group.media_folder_urls && typeof group.media_folder_urls === 'object') ? group.media_folder_urls : {};
+    const presFlat = (g) => {
+        const p = (group.pres && group.pres[g]) || { bands: [], flat: [] };
+        return p.flat.concat(p.bands.flatMap(b => b.files));
+    };
     const out = [];
     let t = baseTime;
     for (const m of msgs) {
@@ -294,11 +562,11 @@ async function materializeScene(session, group, scene, baseTime, gapScale) {
         const isAdmin = m.admin === true;
         const person = isAdmin ? null : bySlot(m.p || 1, m.g === 'm' || m.g === 'f' ? m.g : null);
         let type = 'text', content = (m.text || '').slice(0, 1000) || null, media = null, meta = null;
-        // {nome} → quem está FALANDO; {nome2} → a pessoa do slot 2 (referência
-        // cruzada: "bem vinda {nome1}" dito pelo slot 2 sobre o slot 1)
         if (content) {
             content = content.replace(/\{nome(\d+)\}/gi, (_, d) => bySlot(parseInt(d, 10), null).n);
             content = content.replace(/\{nome\}/gi, person ? person.n : (group.name || 'Admin'));
+            content = content.replace(/\{idade\}/gi, String(19 + rand(15)));
+            content = content.replace(/\{cidade\}/gi, session.city || pick(FALLBACK_CITIES));
         }
         if (m.t === 'image') {
             type = 'image';
@@ -309,12 +577,9 @@ async function materializeScene(session, group, scene, baseTime, gapScale) {
         } else if (m.t === 'presentation') {
             type = 'image';
             const g = person ? person.g : 'f';
-            media = pickUnusedMedia(session, 'pres:' + g, g === 'm' ? presM : presF);
+            media = pickUnusedMedia(session, 'pres:' + g, presFlat(g));
             if (!media) { if (!content) continue; type = 'text'; }
         } else if (m.t === 'vonce') {
-            // ISCA "visualização única": bloco tracejado "só membros podem
-            // abrir" — não carrega mídia nenhuma; o clique cai no popup de
-            // planos (não-membro) ou na galeria (membro)
             type = 'vonce';
             meta = { kind: m.kind === 'foto' ? 'foto' : 'video' };
         } else if (m.t === 'cta') {
@@ -322,7 +587,7 @@ async function materializeScene(session, group, scene, baseTime, gapScale) {
             content = content || 'Ver agora';
             meta = { link_url: m.link || null, product_id: m.pid || null, cta_color: m.color || '#25a55f' };
         } else if (m.t && m.t !== 'text') {
-            continue; // tipo desconhecido/futuro (media_video): pula
+            continue;
         }
         if (!content && !media && type !== 'vonce') continue;
         if (isAdmin) meta = Object.assign({}, meta || {}, { admin: true });
@@ -338,60 +603,12 @@ async function materializeScene(session, group, scene, baseTime, gapScale) {
         );
         out.push(rows[0]);
     }
-    // elenco + fotos usadas persistem no estado da sessão (1 UPDATE por cena)
     await saveSessionState(session);
     return { messages: out, endTime: t };
 }
 
-// Agenda a PRÓXIMA cena conforme o ritmo (msgs/hora) com variação natural
-async function scheduleNext(session, group, fromTime) {
-    const perMsg = 3600 / Math.max(10, group.msgs_per_hour || 60);
-    const gapSecs = Math.round(perMsg * (2 + rand(6))); // ~2-8 mensagens de "respiro"
-    const at = new Date((fromTime || new Date()).getTime() + gapSecs * 1000);
-    await db.query(`UPDATE group_sessions SET next_scene_at = $2, updated_at = NOW() WHERE id = $1`, [session.id, at]);
-    session.next_scene_at = at;
-}
-
-// Preenche o grupo pra parecer VIVO: gera cenas com timestamps NO PASSADO
-// (entrada nova ou lead que ficou fora um tempo).
-async function backfill(session, group, targetMsgs) {
-    targetMsgs = targetMsgs || 22;
-    const per = periodNow();
-    // mix: saudação do período (se houver) + apresentação + ambiente
-    const plan = [];
-    if (per === 'manha' && Math.random() < 0.6) plan.push('bomdia');
-    if (per === 'noite' && Math.random() < 0.4) plan.push('boanoite');
-    if (Math.random() < 0.7) plan.push('apresentacao');
-    let count = 0, guard = 10;
-    const picked = [];
-    while (count < targetMsgs && guard-- > 0) {
-        const cat = plan.shift() || null;
-        const scene = await pickScene(group.id, cat
-            ? { category: cat, period: per, femaleRatio: group.female_ratio }
-            : { period: per });
-        if (!scene) { if (cat) continue; break; }
-        picked.push(scene);
-        count += (Array.isArray(scene.messages) ? scene.messages.length : 0);
-    }
-    if (!picked.length) return [];
-    // duração total comprimida: tudo aconteceu nos últimos ~40 min
-    let dur = 0;
-    for (const s of picked) for (const m of (s.messages || [])) dur += Math.max(2, Math.min(600, parseInt(m.gap_s, 10) || 8));
-    const windowS = Math.min(40 * 60, Math.max(300, dur));
-    const scale = windowS / Math.max(1, dur);
-    let t = new Date(Date.now() - windowS * 1000 - 20000);
-    const all = [];
-    for (const s of picked) {
-        const r = await materializeScene(session, group, s, t, scale);
-        all.push(...r.messages);
-        t = new Date(r.endTime.getTime() + Math.round(45 * scale) * 1000);
-    }
-    return all;
-}
-
-// ROTEIRO DE ENTRADA (v3): cenas da categoria 'entrada' rodam NA ORDEM no
-// primeiro acesso, com timestamps pra FRENTE — pingam AO VIVO via poll
-// enquanto o trial corre ("chegou carne nova, se apresenta" etc). 1x por lead.
+// ROTEIRO DE ENTRADA: cenas 'entrada' rodam NA ORDEM no primeiro acesso, com
+// timestamps pra FRENTE — pingam AO VIVO via poll. 1x por lead.
 async function runEntryScript(session, group) {
     const st = sessionState(session);
     if (st.entry_done) return [];
@@ -402,7 +619,7 @@ async function runEntryScript(session, group) {
     );
     if (!scenes.length) { await saveSessionState(session); return []; }
     const out = [];
-    let t = new Date(Date.now() + 6000); // 1ª fala ~6s depois de entrar
+    let t = new Date(Date.now() + 6000);
     for (const s of scenes.slice(0, 10)) {
         const r = await materializeScene(session, group, s, t, 1);
         out.push(...r.messages);
@@ -411,22 +628,24 @@ async function runEntryScript(session, group) {
     return out;
 }
 
-// Cenas VENCIDAS (next_scene_at passou): materializa até 2 pra "aparecer agora"
-async function runDueScenes(session, group) {
-    const out = [];
-    let guard = 2;
-    while (guard-- > 0 && session.next_scene_at && new Date(session.next_scene_at) <= new Date()) {
-        const scene = await pickScene(group.id, { period: periodNow() });
-        if (!scene) break;
-        const base = new Date(Math.max(new Date(session.next_scene_at).getTime(), Date.now() - 90000));
-        const r = await materializeScene(session, group, scene, base, 1);
-        out.push(...r.messages);
-        await scheduleNext(session, group, r.endTime);
-    }
-    return out;
+// Mensagem pessoal (linha do group_messages) → formato da API
+function publicPersonal(m, masked) {
+    if (m.type === 'vonce') masked = false;
+    return {
+        id: m.id,
+        sender: m.sender,
+        name: m.sender === 'user' ? null : (m.sender_name || 'Membro'),
+        gender: m.sender_gender || null,
+        type: masked ? (m.type === 'text' ? 'text' : 'image') : m.type,
+        content: masked ? (m.type === 'text' || m.type === 'cta' ? maskContent(m.content, m.id) : null) : m.content,
+        media_url: masked ? null : m.media_url,
+        meta: masked ? null : (m.meta || null),
+        created_at: m.created_at,
+        masked: masked === true,
+    };
 }
 
-// ── Acesso / máscara ─────────────────────────────────────────────────────────
+// ── Acesso / trial ───────────────────────────────────────────────────────────
 function trialState(session, group) {
     const limit = Math.max(15, group.trial_seconds || 60);
     const used = session.trial_used_seconds || 0;
@@ -436,37 +655,32 @@ function lockedFrom(session) {
     const lf = session.state && session.state.locked_from;
     return lf ? new Date(lf) : null;
 }
-// Mensagem mascarada: o conteúdo REAL nunca sai do servidor — vai uma frase
-// FAKE de tamanho parecido, que o app mostra BORRADA (parece conversa real).
-const FAKE_S = ['vem no privado', 'olha isso kkk', 'que delícia', 'to passada', 'manda mais aí', 'sério isso?'];
-const FAKE_M = ['gente olha o que ela mandou agora', 'vem cá que eu te mostro tudo kkk', 'quem viu isso ontem sabe kkkk', 'ela postou e apagou correndo'];
-const FAKE_L = ['não acredito que ela mandou isso aqui no grupo, olha a foto que vazou agora', 'quem tava na resenha ontem à noite sabe muito bem do que eu to falando kkkk'];
-function maskContent(content) {
-    const len = (content || '').length;
-    const pool = len <= 14 ? FAKE_S : len <= 40 ? FAKE_M : FAKE_L;
-    return pool[Math.floor(Math.random() * pool.length)];
-}
-function publicMsg(m, personasById, masked) {
-    if (m.type === 'vonce') masked = false; // a ISCA fica visível até pra travado (é a provocação)
-    const p = m.persona_id ? personasById[m.persona_id] : null;
-    return {
-        id: m.id,
-        sender: m.sender,
-        // v3: nome vem gravado na mensagem (elenco automático); persona_id é legado
-        name: m.sender === 'user' ? null : (m.sender_name || (p ? p.name : 'Membro')),
-        gender: m.sender_gender || (p ? p.gender : null),
-        type: masked ? (m.type === 'text' ? 'text' : 'image') : m.type,
-        content: masked ? (m.type === 'text' || m.type === 'cta' ? maskContent(m.content) : null) : m.content,
-        media_url: masked ? null : m.media_url,
-        meta: masked ? null : (m.meta || null),
-        created_at: m.created_at,
-        masked: masked === true,
-    };
+
+async function accessState(ident, group, session) {
+    if (group.is_free) return 'channel';
+    if (await ownsGroup(ident.email, group)) return 'member';
+    const t = trialState(session, group);
+    return t.remaining > 0 ? 'trial' : 'locked';
 }
 
-// Info do PASSE (banner dourado + linha 'OU LEVE TUDO'): tenta o 1º plano do
-// produto do Passe; sem plano com link, cai no preço do produto + checkout da
-// oferta. Retorna null se o produto do Passe não existir/não tiver link.
+async function memberUntil(email, group) {
+    if (!email) return null;
+    try {
+        const passId = await groupPassProductId();
+        const ids = [group.product_id, passId].filter(Boolean);
+        if (!ids.length) return null;
+        const { rows } = await db.query(
+            `SELECT expires_at FROM user_access
+             WHERE LOWER(email) = $1 AND product_id = ANY($2::int[]) AND status = 'active'
+               AND (expires_at IS NULL OR expires_at > NOW())`,
+            [email, ids]
+        );
+        if (!rows.length) return null;
+        if (rows.some(r => !r.expires_at)) return null;
+        return rows.map(r => new Date(r.expires_at)).sort((a, b) => b - a)[0];
+    } catch (_) { return null; }
+}
+
 async function groupPassInfo() {
     const passId = await groupPassProductId();
     if (!passId) return null;
@@ -490,7 +704,6 @@ async function groupPassInfo() {
     return null;
 }
 
-// Popup do grupo: planos do produto (mensal/trimestral) + Passe Vitalício
 async function groupUnlock(group) {
     const info = { product_id: group.product_id || null, checkout_url: null, plans: [] };
     if (group.product_id) {
@@ -513,85 +726,24 @@ async function groupUnlock(group) {
     return info;
 }
 
-async function loadPersonas(groupId) {
-    const { rows } = await db.query(
-        `SELECT id, name, gender FROM group_personas WHERE group_id = $1 AND active = true`, [groupId]
-    );
-    return rows;
+function windowHours(group) {
+    return Math.max(6, Math.min(720, group.window_hours | 0 || 72));
 }
-const personasMap = (arr) => { const m = {}; for (const p of arr) m[p.id] = p; return m; };
 
-async function cleanupRetention(session, group) {
+async function cleanupPersonal(session, group) {
     try {
         await db.query(
             `DELETE FROM group_messages WHERE session_id = $1 AND created_at < NOW() - make_interval(hours => $2)`,
-            [session.id, Math.max(1, group.retention_hours || 24)]
+            [session.id, windowHours(group)]
         );
     } catch (_) {}
 }
 
-async function accessState(ident, group, session) {
-    if (group.is_free) return 'channel';
-    if (await ownsGroup(ident.email, group)) return 'member';
-    const t = trialState(session, group);
-    return t.remaining > 0 ? 'trial' : 'locked';
-}
-
-// Até quando vai o acesso do MEMBRO (assinatura do grupo OU Passe). NULL =
-// vitalício (qualquer acesso sem expires_at ganha). Alimenta o aviso de
-// "seu acesso vence em X dias" no topo do grupo.
-async function memberUntil(email, group) {
-    if (!email) return null;
-    try {
-        const passId = await groupPassProductId();
-        const ids = [group.product_id, passId].filter(Boolean);
-        if (!ids.length) return null;
-        const { rows } = await db.query(
-            `SELECT expires_at FROM user_access
-             WHERE LOWER(email) = $1 AND product_id = ANY($2::int[]) AND status = 'active'
-               AND (expires_at IS NULL OR expires_at > NOW())`,
-            [email, ids]
-        );
-        if (!rows.length) return null;
-        if (rows.some(r => !r.expires_at)) return null; // tem acesso vitalício
-        return rows.map(r => new Date(r.expires_at)).sort((a, b) => b - a)[0];
-    } catch (_) { return null; }
-}
-
-// ── Worker de fundo: o grupo continua VIVO com o app fechado ────────────────
-// Chamado pelo group-worker a cada 60s. Materializa cenas vencidas das
-// sessões de leads ATIVOS (abriram o grupo nos últimos 3 dias) — quando o
-// lead voltar, encontra o histórico acumulado de verdade (parece um grupo
-// real que não parou). Base fria fica de fora de propósito: pra ela o
-// runDueScenes do /open resolve na volta, sem gastar banco com lead morto.
-async function runBackgroundScenes() {
-    const { rows: sessions } = await db.query(`
-        SELECT s.* FROM group_sessions s
-        JOIN groups g ON g.id = s.group_id AND g.active = true
-        WHERE s.next_scene_at IS NOT NULL
-          AND s.next_scene_at <= NOW()
-          AND s.last_seen_at >= NOW() - INTERVAL '3 days'
-        ORDER BY s.next_scene_at
-        LIMIT 40
-    `);
-    if (!sessions.length) return 0;
-    const groupCache = {};
-    let ran = 0;
-    for (const s of sessions) {
-        try {
-            if (!groupCache[s.group_id]) {
-                const { rows: gr } = await db.query(`SELECT * FROM groups WHERE id = $1`, [s.group_id]);
-                if (!gr.length) continue;
-                await hydrateGroupMedia(gr[0]);
-                groupCache[s.group_id] = gr[0];
-            }
-            const group = groupCache[s.group_id];
-            await runDueScenes(s, group);
-            await cleanupRetention(s, group);
-            ran++;
-        } catch (_) { /* uma sessão com erro não derruba o lote */ }
-    }
-    return ran;
+// Mescla compartilhada + pessoal em ordem cronológica
+function mergeTimeline(shared, personal) {
+    const all = shared.concat(personal);
+    all.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    return all;
 }
 
 // ── ROTAS ────────────────────────────────────────────────────────────────────
@@ -604,36 +756,39 @@ router.get('/groups', optionalUser, async (req, res) => {
             `SELECT * FROM groups WHERE active = true ORDER BY display_order, id`
         );
         const out = [];
+        const now = Date.now();
         for (const g of groups) {
             const owned = await ownsGroup(ident.email, g);
             const session = await findOrCreateSession(g.id, ident, false);
+            // última mensagem/contagem: computadas da agenda (sem mídia — só
+            // preview de texto/tipo), iguais pra todo mundo
+            const winFrom = now - windowHours(g) * 3600000;
+            let shared = [];
+            try { shared = await sharedWindow(g, winFrom, now); } catch (_) {}
             let last = null, unread = 0, masked = false;
+            const lastShared = shared.length ? shared[shared.length - 1] : null;
             if (session) {
-                const { rows: lm } = await db.query(
-                    `SELECT m.*, p.name AS persona_name FROM group_messages m
-                     LEFT JOIN group_personas p ON p.id = m.persona_id
-                     WHERE m.session_id = $1 ORDER BY m.id DESC LIMIT 1`, [session.id]
-                );
-                if (lm[0]) {
-                    masked = !g.is_free && !owned && trialState(session, g).remaining <= 0;
+                masked = !g.is_free && !owned && trialState(session, g).remaining <= 0;
+                const seen = session.last_seen_at ? new Date(session.last_seen_at).getTime() : 0;
+                unread = shared.reduce((n, m) => n + (m.t > seen ? 1 : 0), 0);
+                if (lastShared) {
                     last = {
-                        name: lm[0].sender === 'user' ? 'Você' : (lm[0].sender_name || lm[0].persona_name || 'Membro'),
-                        preview: masked ? maskContent(lm[0].content) :
-                            (lm[0].type === 'image' ? 'Foto' : (lm[0].content || 'Mensagem')),
-                        at: lm[0].created_at,
+                        name: lastShared.name || 'Membro',
+                        preview: masked ? maskContent(lastShared.content, lastShared.sid)
+                            : (lastShared.type === 'image' || lastShared.type === 'vonce' ? 'Foto'
+                                : lastShared.type === 'video' ? 'Vídeo'
+                                : lastShared.type === 'audio' ? 'Áudio'
+                                : (lastShared.content || 'Mensagem')),
+                        at: new Date(lastShared.t).toISOString(),
                     };
                 }
-                const { rows: ur } = await db.query(
-                    `SELECT COUNT(*)::int AS n FROM group_messages
-                     WHERE session_id = $1 AND sender = 'bot' AND ($2::timestamptz IS NULL OR created_at > $2)`,
-                    [session.id, session.last_seen_at]
-                );
-                unread = ur[0]?.n || 0;
             } else {
                 // nunca entrou: número "cheio" pra dar curiosidade (estável por grupo)
-                unread = 40 + ((g.id * 37) % 160);
+                unread = Math.min(999, Math.max(shared.length, 40 + ((g.id * 37) % 160)));
                 masked = !g.is_free;
-                last = masked ? { name: null, preview: maskContent('primeira vez'), at: null } : null;
+                last = lastShared
+                    ? { name: masked ? null : lastShared.name, preview: masked ? maskContent(lastShared.content, lastShared.sid) : (lastShared.content || 'Mensagem'), at: new Date(lastShared.t).toISOString() }
+                    : (masked ? { name: null, preview: maskContent('primeira vez', 'g' + g.id), at: null } : null);
             }
             out.push({
                 id: g.id, name: g.name, avatar_url: g.avatar_url,
@@ -644,7 +799,6 @@ router.get('/groups', optionalUser, async (req, res) => {
             });
         }
         out.sort((a, b) => (b.pinned - a.pinned));
-        // Banner do PASSE VIP (topo da lista): só pra quem ainda não tem
         let pass = null;
         try {
             const passId = await groupPassProductId();
@@ -671,35 +825,35 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
         const group = gr[0];
         await hydrateGroupMedia(group);
         const session = await findOrCreateSession(groupId, ident, true);
-        await cleanupRetention(session, group);
-        const personas = await loadPersonas(groupId);
+        await ensureSessionGeo(session, req);
+        await cleanupPersonal(session, group);
         const access = await accessState(ident, group, session);
         const trial = trialState(session, group);
 
-        // preenche/atualiza a timeline (grupo sempre parece vivo)
-        const { rows: [{ n: msgCount }] } = await db.query(
-            `SELECT COUNT(*)::int AS n FROM group_messages WHERE session_id = $1`, [session.id]
-        );
-        if (msgCount < 10) {
-            // primeira vez: passado vivo (backfill) + ROTEIRO DE ENTRADA pingando
-            // ao vivo ("chegou carne nova, se apresenta") enquanto o trial corre
-            await backfill(session, group);
-            await runEntryScript(session, group);
-            await scheduleNext(session, group, new Date());
-        } else {
-            if (!session.next_scene_at) await scheduleNext(session, group, new Date());
-            else await runDueScenes(session, group);
-        }
+        // roteiro de entrada (1x por lead) pinga ao vivo enquanto ele olha
+        await runEntryScript(session, group);
 
-        const { rows: msgs } = await db.query(
-            `SELECT * FROM group_messages WHERE session_id = $1 AND created_at <= NOW() ORDER BY id DESC LIMIT 60`,
-            [session.id]
+        const now = Date.now();
+        const winFrom = now - windowHours(group) * 3600000;
+        const shared = await sharedWindow(group, winFrom, now);
+        const { rows: personal } = await db.query(
+            `SELECT * FROM group_messages
+             WHERE session_id = $1 AND created_at > to_timestamp($2 / 1000.0) AND created_at <= NOW()
+             ORDER BY created_at, id LIMIT 300`,
+            [session.id, winFrom]
         );
-        msgs.reverse();
-        const pMap = personasMap(personas);
+
         const lf = lockedFrom(session);
-        const list = msgs.map(m => publicMsg(m, pMap,
+        const lfMs = lf ? lf.getTime() : null;
+        const canOpenVonce = access === 'member' || access === 'channel';
+        const city = session.city || null;
+        const sharedPub = shared.map(m => publicShared(m, {
+            masked: access === 'locked' && (!lfMs || m.t >= lfMs),
+            city, canOpenVonce,
+        }));
+        const personalPub = personal.map(m => publicPersonal(m,
             access === 'locked' && m.sender !== 'user' && (!lf || new Date(m.created_at) >= lf)));
+        const list = mergeTimeline(sharedPub, personalPub).slice(-60);
 
         await db.query(`UPDATE group_sessions SET last_seen_at = NOW(), updated_at = NOW() WHERE id = $1`, [session.id]);
 
@@ -710,18 +864,18 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
             invite = { chat_ids: group.invite_chat_ids.slice(0, 3), delay_seconds: group.invite_delay_seconds || 120 };
         }
 
-        // membro com assinatura por tempo: quando vence (NULL = vitalício).
-        // Alimenta o aviso de renovação no topo (<= 2 dias) — e nesse caso o
-        // unlock (planos) vai junto pra oferta de renovação abrir o popup.
         const until = access === 'member' ? await memberUntil(ident.email, group) : null;
 
+        // galeria existe se qualquer pasta visível/coleção tiver conteúdo
+        const hasFolderMedia = Object.keys(group.folders || {}).some(k =>
+            !group.folders[k].hidden && (group.folder_media[k] || []).length);
         return res.json({
             success: true,
             group: {
                 id: group.id, name: group.name, avatar_url: group.avatar_url,
                 is_free: group.is_free,
                 members_count: group.members_count, online_count: group.online_count,
-                has_media: !!(group.media_video_collection_id || (Array.isArray(group.media_image_urls) && group.media_image_urls.length)),
+                has_media: !!(group.media_video_collection_id || (group.media_image_urls || []).length || hasFolderMedia),
                 telegram_url: group.telegram_url || null,
                 cta_label: group.cta_label || null,
                 cta_link: group.cta_link || null,
@@ -730,6 +884,7 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
             trial_remaining: access === 'trial' ? trial.remaining : 0,
             trial_total: trial.limit,
             messages: list,
+            server_now: new Date().toISOString(),
             member_until: until,
             unlock: (access === 'trial' || access === 'locked' || until)
                 ? await groupUnlock(group)
@@ -743,10 +898,10 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
     }
 });
 
-// GET /api/user/groups/:id/poll?after=ID
+// GET /api/user/groups/:id/poll?after=ISO — cursor por TIMESTAMP (a timeline
+// compartilhada é computada; ids numéricos não existem mais nela)
 router.get('/groups/:id/poll', optionalUser, async (req, res) => {
     const groupId = parseInt(req.params.id, 10);
-    const after = parseInt(req.query.after, 10) || 0;
     if (!groupId) return res.json({ success: false });
     try {
         const ident = getIdentity(req);
@@ -756,26 +911,50 @@ router.get('/groups/:id/poll', optionalUser, async (req, res) => {
         await hydrateGroupMedia(group);
         const session = await findOrCreateSession(groupId, ident, false);
         if (!session) return res.json({ success: true, messages: [] });
-        const personas = await loadPersonas(groupId);
-        await runDueScenes(session, group);
         const access = await accessState(ident, group, session);
-        const { rows: msgs } = await db.query(
-            `SELECT * FROM group_messages WHERE session_id = $1 AND id > $2 AND created_at <= NOW() ORDER BY id`,
-            [session.id, after]
+
+        const now = Date.now();
+        const winFrom = now - windowHours(group) * 3600000;
+        let afterMs = Date.parse(req.query.after || '');
+        if (!Number.isFinite(afterMs)) afterMs = now; // sem cursor: só o que vier daqui pra frente
+        afterMs = Math.max(afterMs, winFrom);
+
+        const shared = await sharedWindow(group, afterMs, now);
+        // date_trunc: cursor em ms vs microssegundos do Postgres (sem isso a
+        // mesma mensagem volta em todo poll até o cursor passar dela)
+        const { rows: personal } = await db.query(
+            `SELECT * FROM group_messages
+             WHERE session_id = $1
+               AND date_trunc('milliseconds', created_at) > to_timestamp($2 / 1000.0)
+               AND created_at <= NOW()
+             ORDER BY created_at, id LIMIT 100`,
+            [session.id, afterMs]
         );
-        const pMap = personasMap(personas);
         const lf = lockedFrom(session);
-        const list = msgs.map(m => publicMsg(m, pMap,
+        const lfMs = lf ? lf.getTime() : null;
+        const canOpenVonce = access === 'member' || access === 'channel';
+        const city = session.city || null;
+        const sharedPub = shared.map(m => publicShared(m, {
+            masked: access === 'locked' && (!lfMs || m.t >= lfMs),
+            city, canOpenVonce,
+        }));
+        const personalPub = personal.map(m => publicPersonal(m,
             access === 'locked' && m.sender !== 'user' && (!lf || new Date(m.created_at) >= lf)));
-        if (msgs.length) await db.query(`UPDATE group_sessions SET last_seen_at = NOW() WHERE id = $1`, [session.id]);
-        return res.json({ success: true, messages: list, access, trial_remaining: access === 'trial' ? trialState(session, group).remaining : 0 });
+        const list = mergeTimeline(sharedPub, personalPub);
+        if (list.length) await db.query(`UPDATE group_sessions SET last_seen_at = NOW() WHERE id = $1`, [session.id]);
+        return res.json({
+            success: true, messages: list, access,
+            server_now: new Date().toISOString(),
+            trial_remaining: access === 'trial' ? trialState(session, group).remaining : 0,
+        });
     } catch (err) {
         return res.json({ success: false });
     }
 });
 
 // POST /api/user/groups/:id/heartbeat {sec} — soma o tempo de TRIAL (grupo
-// aberto na tela). Cruza o limite → marca locked_from (dali pra frente, blur).
+// aberto na tela). Cruza o limite → marca locked_from + dispara o chat de
+// convite de FIM DE TRIAL (groups.trial_end_chat_id), se configurado.
 router.post('/groups/:id/heartbeat', optionalUser, async (req, res) => {
     const groupId = parseInt(req.params.id, 10);
     if (!groupId) return res.json({ success: false });
@@ -797,6 +976,15 @@ router.post('/groups/:id/heartbeat', optionalUser, async (req, res) => {
                 `UPDATE group_sessions SET trial_used_seconds = $2, state = $3, updated_at = NOW() WHERE id = $1`,
                 [session.id, newUsed, JSON.stringify(state)]
             );
+            // trial acabou → a "modelo" chama no privado com a oferta (1x —
+            // startChatForIdentity não re-dispara se a conversa já existe)
+            if (group.trial_end_chat_id) {
+                try {
+                    const { startChatForIdentity } = require('./user-chats');
+                    startChatForIdentity(ident, group.trial_end_chat_id, req)
+                        .catch(e => logger.warn('[grupos] chat fim de trial falhou: ' + e.message));
+                } catch (_) {}
+            }
         } else {
             await db.query(
                 `UPDATE group_sessions SET trial_used_seconds = $2, updated_at = NOW() WHERE id = $1`,
@@ -833,34 +1021,36 @@ router.post('/groups/:id/send', optionalUser, async (req, res) => {
         if (access === 'locked') {
             return res.status(403).json({ success: false, error: 'vip_required', unlock: await groupUnlock(group) });
         }
+        const { rows: [{ n: sent }] } = await db.query(
+            `SELECT COUNT(*)::int AS n FROM group_messages WHERE session_id = $1 AND sender = 'user'`,
+            [session.id]
+        );
         // TRIAL: só UMA mensagem — na 2ª tentativa, popup de planos
-        if (access === 'trial') {
-            const { rows: [{ n: sent }] } = await db.query(
-                `SELECT COUNT(*)::int AS n FROM group_messages WHERE session_id = $1 AND sender = 'user'`,
-                [session.id]
-            );
-            if (sent >= 1) {
-                return res.status(403).json({ success: false, error: 'vip_required', unlock: await groupUnlock(group) });
-            }
+        if (access === 'trial' && sent >= 1) {
+            return res.status(403).json({ success: false, error: 'vip_required', unlock: await groupUnlock(group) });
         }
         const { rows: [mine] } = await db.query(
             `INSERT INTO group_messages (session_id, sender, type, content) VALUES ($1, 'user', 'text', $2) RETURNING *`,
             [session.id, text]
         );
-        // bots REAGEM (cena 'reacao') chegando nos próximos segundos via poll
+        // bots REAGEM chegando nos próximos segundos via poll. 1ª mensagem do
+        // lead → cena 'novato' (boas-vindas ao carne nova), senão 'reacao'.
         try {
-            const scene = await pickScene(groupId, { category: 'reacao', period: periodNow() });
+            let scene = null;
+            if (sent === 0) scene = await pickScene(groupId, 'novato');
+            if (!scene) scene = await pickScene(groupId, 'reacao');
             if (scene) await materializeScene(session, group, scene, new Date(Date.now() + 2000), 1);
         } catch (_) {}
         await db.query(`UPDATE group_sessions SET last_seen_at = NOW(), updated_at = NOW() WHERE id = $1`, [session.id]);
-        return res.json({ success: true, message: publicMsg(mine, {}, false) });
+        return res.json({ success: true, message: publicPersonal(mine, false) });
     } catch (err) {
         logger.error('Erro no send do grupo:', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
     }
 });
 
-// GET /api/user/groups/:id/media — galeria (membro ou canal free)
+// GET /api/user/groups/:id/media — galeria: agrega as pastas NÃO escondidas
+// (fotos e vídeos de arquivo) + coleção Bunny Stream + links manuais.
 router.get('/groups/:id/media', optionalUser, async (req, res) => {
     const groupId = parseInt(req.params.id, 10);
     if (!groupId) return res.status(400).json({ success: false, error: 'ID inválido' });
@@ -870,24 +1060,36 @@ router.get('/groups/:id/media', optionalUser, async (req, res) => {
         if (!gr.length) return res.status(404).json({ success: false, error: 'Grupo não encontrado' });
         const group = gr[0];
         await hydrateGroupMedia(group);
-        if (!group.is_free && !(await ownsGroup(ident.email, group))) {
-            // galeria TRAVADA: mostra a PRÉVIA real (thumbs) BORRADA no cliente
-            // — o acervo vira isca de venda (dá vontade de espiar). O borrão é
-            // CSS no cliente (mesma escolha do dono no resto do app).
-            let vidCount = 0, vidThumbs = [];
-            if (group.media_video_library_id && group.media_video_collection_id) {
-                try {
-                    const vids = await listCollectionVideos(group.media_video_library_id, group.media_video_collection_id);
-                    vidCount = (vids || []).length;
-                    vidThumbs = (vids || []).slice(0, 24).map(v => bunnyThumbUrl(v.guid, v.thumbnailFileName || 'thumbnail.jpg'));
-                } catch (_) {}
+
+        // agrega galeria: legado + pastas visíveis
+        const images = [...(group.media_image_urls || [])];
+        const fileVideos = [];
+        for (const key of Object.keys(group.folders || {})) {
+            if (group.folders[key].hidden) continue;
+            for (const f of (group.folder_media[key] || [])) {
+                if (f.kind === 'image' && images.indexOf(f.url) < 0) images.push(f.url);
+                if (f.kind === 'video') fileVideos.push(f.url);
             }
-            const imgs = Array.isArray(group.media_image_urls) ? group.media_image_urls : [];
-            // intercala fotos e capas de vídeo pra a grade de prévia parecer cheia
+        }
+        let streamVideos = [];
+        if (group.media_video_library_id && group.media_video_collection_id) {
+            try {
+                const vids = await listCollectionVideos(group.media_video_library_id, group.media_video_collection_id);
+                streamVideos = (vids || []).map(v => ({
+                    title: v.title || null,
+                    embed_url: bunnyEmbedUrl(group.media_video_library_id, v.guid),
+                    thumb_url: bunnyThumbUrl(v.guid, v.thumbnailFileName || 'thumbnail.jpg'),
+                }));
+            } catch (_) {}
+        }
+
+        if (!group.is_free && !(await ownsGroup(ident.email, group))) {
+            // galeria TRAVADA: PRÉVIA real (thumbs) borrada no cliente — isca
+            const vidThumbs = streamVideos.map(v => v.thumb_url).filter(Boolean);
             const preview = [];
             const maxP = 24;
             for (let i = 0; i < maxP; i++) {
-                if (i < imgs.length) preview.push(imgs[i]);
+                if (i < images.length) preview.push(images[i]);
                 if (preview.length >= maxP) break;
                 if (i < vidThumbs.length) preview.push(vidThumbs[i]);
                 if (preview.length >= maxP) break;
@@ -895,25 +1097,13 @@ router.get('/groups/:id/media', optionalUser, async (req, res) => {
             return res.json({
                 success: true,
                 locked: true,
-                photos: imgs.length,
-                videos: vidCount,
+                photos: images.length,
+                videos: streamVideos.length + fileVideos.length,
                 preview,
                 unlock: await groupUnlock(group),
             });
         }
-        const images = Array.isArray(group.media_image_urls) ? group.media_image_urls : [];
-        let videos = [];
-        if (group.media_video_library_id && group.media_video_collection_id) {
-            try {
-                const vids = await listCollectionVideos(group.media_video_library_id, group.media_video_collection_id);
-                videos = (vids || []).map(v => ({
-                    title: v.title || null,
-                    embed_url: bunnyEmbedUrl(group.media_video_library_id, v.guid),
-                    // capa: thumbnailFileName vem da API do Bunny (fallback padrão)
-                    thumb_url: bunnyThumbUrl(v.guid, v.thumbnailFileName || 'thumbnail.jpg'),
-                }));
-            } catch (_) {}
-        }
+        const videos = streamVideos.concat(fileVideos.map(u => ({ title: null, file_url: u, thumb_url: null })));
         return res.json({ success: true, images, videos });
     } catch (err) {
         logger.error('Erro na mídia do grupo:', err);
@@ -922,5 +1112,6 @@ router.get('/groups/:id/media', optionalUser, async (req, res) => {
 });
 
 module.exports = router;
-// usado pelo group-worker (cenas continuam rodando com o app fechado)
-module.exports.runBackgroundScenes = runBackgroundScenes;
+// usados pelo admin (invalidar cache da agenda ao salvar) e pela galeria
+module.exports.invalidateAgenda = invalidateAgenda;
+module.exports.hydrateGroupMedia = hydrateGroupMedia;
