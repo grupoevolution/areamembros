@@ -9360,7 +9360,7 @@ window.ChatApp = (function() {
                 icon: 'lock',
                 eyebrow: 'ACESSO EXCLUSIVO',
                 title: 'Conversa VIP 🔥',
-                subtitle: 'Pra conversar com a ' + c.name + ', libere seu acesso VIP — e fale sem limite com todas as mulheres online.',
+                subtitle: 'A ' + c.name + ' tá esperando sua mensagem 🔥',
                 ctaText: 'QUERO SER VIP',
                 track: { type: 'chat_paywall_click', meta: { chat_id: id } },
             });
@@ -9526,7 +9526,7 @@ window.ChatApp = (function() {
                     icon: 'lock',
                     eyebrow: 'ACESSO EXCLUSIVO',
                     title: 'Conversa VIP 🔥',
-                    subtitle: 'Pra conversar com a ' + data.chat.name + ', libere seu acesso VIP — e fale sem limite com todas as mulheres online.',
+                    subtitle: 'A ' + data.chat.name + ' tá esperando sua mensagem 🔥',
                     ctaText: 'QUERO SER VIP',
                     track: { type: 'chat_paywall_click', meta: { chat_id: id } },
                 });
@@ -9911,8 +9911,8 @@ window.ChatApp = (function() {
         // plano libera TODAS as conversas.
         const nome = (CUR && CUR.chat && CUR.chat.name) || '';
         const sub = subtitle || (nome
-            ? 'Pra continuar sua conversa com a ' + nome + ', libere seu acesso VIP — e fale sem limite com todas as mulheres online.'
-            : 'Libere o acesso e converse sem limite com todas as mulheres online.');
+            ? 'A ' + nome + ' tá esperando sua resposta 🔥'
+            : 'Libere e fale sem limites com todas elas 🔥');
         try { window.TRACK && TRACK.event('chat_paywall_open', { chat_id: cid, ctx: 'send' }); } catch (_) {}
         MVPaywall.openModal(u, {
             icon: 'lock',
@@ -18142,7 +18142,7 @@ window.profileUpgrade = async function() {
                 icon: 'lock',
                 eyebrow: 'ACESSO EXCLUSIVO',
                 title: 'Conversa VIP 🔥',
-                subtitle: 'Libere o acesso e converse sem limite com todas as mulheres online.',
+                subtitle: 'Libere e fale sem limites com todas elas 🔥',
                 ctaText: 'QUERO SER VIP',
                 track: { type: 'chat_paywall_click', meta: { ctx: 'profile' } },
             });
@@ -19383,7 +19383,7 @@ document.addEventListener('keydown', function(e) {
 .mvpw-offer-por{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:3px;}
 .mvpw-offer-price{font-size:36px;font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1;}
 .mvpw-offer-note{font-size:12.5px;color:#ff6482;font-weight:700;margin-top:6px;}
-.mvpw-buy{width:100%;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;background:#2a2530;color:#fff;margin-top:6px;}
+.mvpw-buy{width:100%;border:none;border-radius:12px;padding:12px;font-size:14px;font-weight:800;cursor:pointer;background:linear-gradient(90deg,#b3122e,#8f0e24);color:#fff;margin-top:6px;box-shadow:0 5px 16px rgba(179,18,46,.28);}
 .mvpw-buy.rec{background:linear-gradient(90deg,#ff1f3d,#e50914);color:#fff;box-shadow:0 8px 26px rgba(229,9,20,.4);}
 .mvpw-bigcta{letter-spacing:.02em;}
 .mvpw-plans{display:flex;flex-direction:column;gap:11px;margin-bottom:4px;text-align:center;}
@@ -19392,7 +19392,9 @@ document.addEventListener('keydown', function(e) {
 .mvpw-tag{position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#e50914;color:#fff;font-size:10px;font-weight:800;letter-spacing:.5px;padding:3px 9px;border-radius:999px;white-space:nowrap;}
 .mvpw-pname{font-size:13.5px;font-weight:800;color:#fff;letter-spacing:.04em;text-transform:uppercase;margin-bottom:3px;}
 .mvpw-prow{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap;margin-bottom:2px;justify-content:center;}
-.mvpw-price{font-size:21px;font-weight:800;color:#fff;}
+.mvpw-was{font-size:12.5px;color:#8a8288;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:2px;}
+.mvpw-was s{color:#8a8288;}
+.mvpw-price{font-size:27px;font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1.15;text-align:center;margin-bottom:6px;}
 .mvpw-permes{font-size:13px;color:#8a8288;font-weight:600;margin-left:-4px;}
 .mvpw-incl{font-size:12.5px;color:#a8a2a5;cursor:pointer;margin-bottom:10px;user-select:none;}
 .mvpw-incl i{font-style:normal;}
@@ -19435,14 +19437,17 @@ window.MVPaywall = (function () {
         const nm = (p.name || (rec ? 'PREMIUM' : 'VIP'));
         // popup compacto: sem o "ver o que está incluído" (benefícios ficam fora)
         const incl = '';
+        // hierarquia que converte: nome → "de X -40%" pequeno → PREÇO grande
+        // centralizado (sem /mês — a recorrência fica no rodapé "cancele
+        // quando quiser") → botão de AÇÃO colorido ("Liberar", não "Assinar")
         return '<div class="mvpw-plan' + (rec ? ' rec' : '') + '">'
             + (rec ? '<div class="mvpw-tag">MAIS ESCOLHIDO</div>' : '')
             + '<div class="mvpw-pname">' + esc(nm) + '</div>'
-            + '<div class="mvpw-prow"><span class="mvpw-price">' + esc(price) + '</span><span class="mvpw-permes">/mês</span>'
-            + (orig ? '<span class="mvpw-orig">' + esc(orig) + '</span>' : '')
-            + (off ? '<span class="mvpw-off">-' + off + '%</span>' : '') + '</div>'
+            + ((orig || off) ? '<div class="mvpw-was">' + (orig ? 'de <s>' + esc(orig) + '</s>' : '')
+                + (off ? ' <span class="mvpw-off">-' + off + '%</span>' : '') + '</div>' : '')
+            + '<div class="mvpw-price">' + esc(price) + '</div>'
             + incl
-            + '<button class="mvpw-buy' + (rec ? ' rec' : '') + '" data-mv-buy data-url="' + esc(p.checkout_url || unlock.checkout_url || '') + '">' + esc(rec ? ('Quero ' + nm) : ('Assinar ' + nm)) + '</button>'
+            + '<button class="mvpw-buy' + (rec ? ' rec' : '') + '" data-mv-buy data-url="' + esc(p.checkout_url || unlock.checkout_url || '') + '">' + esc(rec ? ('Quero ' + nm + ' 🔥') : ('Liberar ' + nm)) + '</button>'
             + '</div>';
     }
 
