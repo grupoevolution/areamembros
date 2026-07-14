@@ -9007,6 +9007,13 @@ function switchScreen(name) {
         reg.set(leaving, entry);
     }
 
+    // Aba "Conversas": garante que a sub-aba GRUPOS carregue por QUALQUER
+    // caminho (clique do menu, funil que joga direto no chat, deep link) — antes
+    // o checkTabs só rodava no clique do menu, então o funil não mostrava Grupos.
+    if (name === 'chat' && window.GroupApp && typeof GroupApp.checkTabs === 'function') {
+        try { GroupApp.checkTabs(); } catch (_) {}
+    }
+
     if (navigator.vibrate) navigator.vibrate(5);
 }
 
