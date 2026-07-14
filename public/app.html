@@ -11148,6 +11148,13 @@ window.GroupApp = (function () {
     }
 
     async function open(id) {
+        // Lead ANÔNIMO (funil): a LISTA de grupos é livre pra ele explorar, mas
+        // ENTRAR num grupo pede o e-mail — capta o lead no pico do desejo
+        // (mesmo padrão da mídia do chat). Guarda o grupo e abre após o login.
+        if (window.MV_ANONYMOUS === true) {
+            window.MV_pendingGroup = id;
+            if (typeof window.MV_openLoginModal === 'function') { window.MV_openLoginModal(); return; }
+        }
         stopTimers();
         switchScreen('groupconv');
         const nav = document.getElementById('bottomNav'); if (nav) nav.style.display = 'none';
@@ -18771,6 +18778,12 @@ document.addEventListener('keydown', function(e) {
                 // Dispara sequência do funíl
                 if (typeof window.tryTriggerCallAfterLogin === 'function') {
                     window.tryTriggerCallAfterLogin();
+                }
+                // Grupo pendente: o lead clicou pra ENTRAR num grupo, deu o
+                // e-mail → agora abre o grupo que ele queria.
+                if (window.MV_pendingGroup && window.GroupApp) {
+                    const gid = window.MV_pendingGroup; window.MV_pendingGroup = null;
+                    setTimeout(() => { try { GroupApp.open(gid); } catch (_) {} }, 250);
                 }
                 // Limpa cookie de funíl pra próximas sessões serem normais
                 document.cookie = 'mv_funnel=; path=/; max-age=0; SameSite=Lax';
