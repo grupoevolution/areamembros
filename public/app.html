@@ -8362,6 +8362,25 @@ body.is-slowconn .prod-cta-fixed {
 .ga-react.on { background: #e7f8ee; }
 .ga-react.on i { color: #1b7a44; }
 .ga-react:active { transform: scale(.92); }
+/* álbum estilo Telegram: várias mídias agrupadas numa bolha (grade) */
+.ga-album { display: grid; gap: 2px; border-radius: 12px; overflow: hidden; width: 232px; max-width: 100%; }
+.ga-album .cell { position: relative; overflow: hidden; cursor: pointer; background: #d8d2c8; aspect-ratio: 1; }
+.ga-album .cell img, .ga-album .cell video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ga-album .cell .vplay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 26px; color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.6); pointer-events: none; }
+.ga-album.n2 { grid-template-columns: 1fr 1fr; }
+.ga-album.n3 { grid-template-columns: 1fr 1fr; }
+.ga-album.n3 .cell:first-child { grid-column: 1 / -1; aspect-ratio: 2 / 1.15; }
+.ga-album.n4 { grid-template-columns: 1fr 1fr; }
+.ga-album.n5, .ga-album.n6 { grid-template-columns: repeat(3, 1fr); }
+.ga-album.n5 .cell:nth-child(-n+2) { grid-column: span 1; }
+.ga-album.n5 { grid-template-areas: "a a b" "c d e"; }
+.ga-album.n5 .cell:nth-child(1) { grid-area: a; aspect-ratio: auto; }
+.ga-album.n5 .cell:nth-child(2) { grid-area: b; } .ga-album.n5 .cell:nth-child(3) { grid-area: c; }
+.ga-album.n5 .cell:nth-child(4) { grid-area: d; } .ga-album.n5 .cell:nth-child(5) { grid-area: e; }
+/* pill de sistema centralizada ("Você entrou no grupo") — estilo WhatsApp */
+.ga-sys { align-self: center; background: #fdf3d8; color: #6f6a5e; font-size: 11.5px; padding: 5px 12px;
+    border-radius: 8px; margin: 8px 0; box-shadow: 0 1px 2px rgba(0,0,0,.08); text-align: center; }
 /* isca de visualização única (só membros abrem) */
 .ga-vonce { display: flex; align-items: center; gap: 11px; border: 1.5px dashed #e05a4e; border-radius: 12px;
     padding: 11px 13px; cursor: pointer; background: rgba(224,90,78,.04); min-width: 210px; }
@@ -10774,6 +10793,19 @@ window.GroupApp = (function () {
                 body.appendChild(ds);
             }
         }
+        // pill de sistema centralizada (ex.: "Você entrou no grupo").
+        // IMPORTANTE: avança o cursor do poll ANTES do return — sem isso o
+        // poll re-entrega a mesma pill a cada tick pra sempre.
+        if (m.type === 'system') {
+            if (m.created_at && CUR && (!CUR.lastTs || new Date(m.created_at) > new Date(CUR.lastTs))) {
+                CUR.lastTs = m.created_at;
+            }
+            const p = document.createElement('div');
+            p.className = 'ga-sys';
+            p.textContent = m.content || '';
+            body.appendChild(p);
+            return;
+        }
         const mine = m.sender === 'user';
         const d = document.createElement('div');
         d.className = 'ca-bub' + (mine ? ' mine' : '') + (m.masked ? ' ga-masked' : '');
@@ -10787,7 +10819,26 @@ window.GroupApp = (function () {
             inner += '<div class="ga-nm" style="color:' + nameColor(m.name) + ';">' + esc(m.name) + '</div>';
         }
         let isCta = false;
-        if (m.type === 'image' && m.media_url) {
+        const albumItems = (m.type === 'album' && !m.masked && m.meta && Array.isArray(m.meta.items))
+            ? m.meta.items.filter(it => it && it.url).slice(0, 6) : null;
+        if (albumItems && albumItems.length >= 2) {
+            // álbum: grade agrupada estilo Telegram; toque abre tela cheia e
+            // desliza SÓ entre as mídias deste álbum
+            let cells = '';
+            for (let ai = 0; ai < albumItems.length; ai++) {
+                const it = albumItems[ai];
+                const isV = it.kind === 'video';
+                cells += '<div class="cell" data-i="' + ai + '">'
+                    + (isV
+                        ? '<video src="' + esc(it.url) + '" playsinline muted preload="metadata"></video><span class="vplay">▶</span>'
+                        : '<img src="' + esc(it.url) + '" alt="" loading="lazy">')
+                    + '</div>';
+            }
+            inner += '<div class="ga-album n' + albumItems.length + '">' + cells + '</div>';
+            if (m.content) inner += '<div class="tx">' + esc(m.content) + '</div>';
+        } else if (m.type === 'album' && m.masked) {
+            inner += '<div class="tx" style="display:flex;align-items:center;gap:8px;color:#8a857d;"><span style="width:96px;height:56px;border-radius:8px;background:#d8cfc4;display:inline-block;"></span>Fotos</div>';
+        } else if (m.type === 'image' && m.media_url) {
             inner += '<img class="photo" src="' + esc(m.media_url) + '" alt="" loading="lazy" style="cursor:pointer;">';
             if (m.content) inner += '<div class="tx">' + esc(m.content) + '</div>';
         } else if (m.type === 'video' && m.media_url) {
@@ -10854,6 +10905,18 @@ window.GroupApp = (function () {
                 if (CUR && CUR.access === 'member') openMedia();
                 else openPopup();
             });
+        }
+        // álbum: cada célula abre tela cheia navegando entre as mídias DELE
+        if (albumItems && albumItems.length >= 2) {
+            const set = albumItems.map(it => it.kind === 'video'
+                ? { kind: 'vid', file: it.url } : { kind: 'img', url: it.url });
+            d.querySelectorAll('.ga-album .cell').forEach(c => c.addEventListener('click', () => {
+                MEDIA = set;
+                document.getElementById('gaMediaOv').classList.add('show');
+                const f = document.getElementById('gaMediaFull');
+                f._fromFeed = true; // fechar volta pro chat
+                openFull(parseInt(c.dataset.i, 10) || 0);
+            }));
         }
         // foto/vídeo do feed: toque abre TELA CHEIA; deslizar navega a galeria
         if (m.type === 'image' && m.media_url && !m.masked) {
