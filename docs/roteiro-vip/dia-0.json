@@ -1,0 +1,386 @@
+[
+  {
+    "day": 0,
+    "time": "00:14",
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "quem tá acordado 👀", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "eu kkkk sem sono nenhum", "gap_s": 12 },
+      { "p": 3, "g": "f", "t": "text", "text": "eu... marido capotou cedo e eu aqui 🙄", "gap_s": 18 },
+      { "p": 2, "g": "m", "t": "text", "text": "e ficou na vontade de que {nome3}? kkk", "gap_s": 15 },
+      { "p": 3, "g": "f", "t": "text", "text": "de conversa ué kkkkk sei la, depois te falo 🙈", "gap_s": 21 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "01:09",
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "gente não consigo dormir", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "vem conversar comigo então kk", "gap_s": 14 },
+      { "p": 1, "g": "f", "t": "text", "text": "sei... vc fala isso pra todas daqui", "gap_s": 17 },
+      { "p": 2, "g": "m", "t": "text", "text": "só pras que respondem 😏", "gap_s": 11 },
+      { "p": 1, "g": "f", "t": "text", "text": "então pq será que eu respondi hein", "gap_s": 19 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "01:48",
+    "messages": [
+      { "p": 1, "g": "f", "t": "image", "folder": "cama", "text": "a insônia me deixou assim... 🙈", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "meu deus que travesseiro sortudo", "gap_s": 16 },
+      { "p": 3, "g": "m", "t": "text", "text": "pronto, agora quem não dorme sou eu kkkk", "gap_s": 13 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "02:23",
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "vou tentar dormir vai... sonhem comigo 😘", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "depois daquela foto impossível não sonhar", "gap_s": 14 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "04:41",
+    "messages": [
+      { "p": 1, "g": "m", "t": "text", "text": "alguém vivo? insônia braba", "gap_s": 5 },
+      { "p": 2, "g": "f", "t": "text", "text": "eu, plantão do trabalho kkk a madrugada é nossa", "gap_s": 25 },
+      { "p": 1, "g": "m", "t": "text", "text": "então me faz companhia até o sol nascer", "gap_s": 18 },
+      { "p": 2, "g": "f", "t": "text", "text": "se merecer kkkk", "gap_s": 15 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "07:12",
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "bom diaaa grupo 🌞", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "bom dia gata", "gap_s": 11 },
+      { "p": 3, "g": "f", "t": "text", "text": "bom diaa gente, acordei agora kkk", "gap_s": 16 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "07:46",
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "acordei pensando numa coisa que não dá pra falar aqui kkkk", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "fala no privado então kk", "gap_s": 13 },
+      { "p": 1, "g": "f", "t": "text", "text": "quem sabe... se comportando talvez eu conte 😏", "gap_s": 17 },
+      { "p": 3, "g": "m", "t": "text", "text": "conta logo aqui, o grupo aguenta kkk", "gap_s": 12 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "08:27",
+    "messages": [
+      { "p": 1, "g": "f", "t": "image", "folder": "cotidiano", "text": "cafezinho de hoje ☕ ainda de pijama, julguem", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "que pijama abençoado", "gap_s": 15 },
+      { "p": 3, "g": "m", "t": "text", "text": "eu tomava esse café todo dia viu", "gap_s": 12 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "09:17",
+    "messages": [
+      { "p": 1, "g": "f", "t": "presentation", "text": "oi gente 🙈 sou a {nome}, {idade} anos, casada, de {cidade}... uma amiga me indicou esse grupo", "gap_s": 5 },
+      { "p": 2, "g": "f", "t": "text", "text": "bem vinda {nome1}!! 😍 vc vai amar aqui", "gap_s": 12 },
+      { "p": 3, "g": "m", "t": "text", "text": "chegou mais uma kkkk seja bem vinda", "gap_s": 9 },
+      { "p": 4, "g": "m", "t": "text", "text": "bem vinda {nome1}, fica bem a vontade", "gap_s": 14 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "09:52",
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "que tédio esse começo de dia gente", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "trabalhando aqui já... queria estar em casa", "gap_s": 16 },
+      { "p": 3, "g": "f", "t": "text", "text": "meu marido viajou hoje cedo... a casa tá um silêncio", "gap_s": 21 },
+      { "p": 2, "g": "m", "t": "text", "text": "isso foi um convite {nome3}? kkkk", "gap_s": 12 },
+      { "p": 3, "g": "f", "t": "text", "text": "interpreta como quiser 🙈", "gap_s": 18 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "10:36",
+    "messages": [
+      { "p": 1, "g": "f", "t": "image", "folder": "academia", "text": "treino pago 💪 alguém mais treina ou só eu sofro?", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "depois dessa foto eu começo segunda kkk", "gap_s": 14 },
+      { "p": 3, "g": "f", "t": "text", "text": "arrasou amiga 😍 que shape", "gap_s": 11 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "11:04",
+    "messages": [
+      { "p": 1, "g": "f", "t": "presentation", "text": "oii, sou a {nome}, {idade} anos, solteira, de {cidade}... me falaram que o papo aqui é bom kkk", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "e é kkkk bem vinda {nome1}", "gap_s": 10 },
+      { "p": 3, "g": "f", "t": "text", "text": "bem vindaaa 😍 senta que lá vem história", "gap_s": 13 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "11:47",
+    "messages": [
+      { "p": 1, "g": "f", "t": "presentation", "text": "oi 🙈 {nome}, {idade} anos, de {cidade}, casada mas mto entediada kkk", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "o final dessa frase me interessou kkkk bem vinda", "gap_s": 11 },
+      { "p": 3, "g": "f", "t": "text", "text": "bem vinda {nome1}, aqui tédio não existe", "gap_s": 14 },
+      { "p": 4, "g": "m", "t": "text", "text": "chegando as melhores hoje hein", "gap_s": 10 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "12:21",
+    "messages": [
+      { "p": 1, "g": "f", "t": "image", "folder": "comida", "text": "almocinho feito por mim... cozinho bem né 😏", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "casa comigo hoje", "gap_s": 13 },
+      { "p": 1, "g": "f", "t": "text", "text": "kkkk chega atrasado que a sobremesa sou eu", "gap_s": 19 },
+      { "p": 3, "g": "m", "t": "text", "text": "MDS esse grupo não tem meio termo kkkk", "gap_s": 10 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "13:11",
+    "messages": [
+      { "p": 1, "g": "m", "t": "text", "text": "esse horário depois do almoço devia ser proibido", "gap_s": 5 },
+      { "p": 2, "g": "f", "t": "text", "text": "nem me fala... queria tar deitada", "gap_s": 17 },
+      { "p": 1, "g": "m", "t": "text", "text": "deitada fazendo o que? kk", "gap_s": 13 },
+      { "p": 2, "g": "f", "t": "text", "text": "usa a imaginação 🙈", "gap_s": 16 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "14:26",
+    "messages": [
+      { "p": 1, "g": "f", "t": "presentation", "text": "oi gente, sou a {nome}, {idade} anos, casada há 12, de {cidade}... vim procurar o que falta em casa 🙈", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "chegou chegando kkkk bem vinda", "gap_s": 10 },
+      { "p": 3, "g": "f", "t": "text", "text": "amiga aqui vc encontra kkk bem vinda", "gap_s": 14 },
+      { "p": 2, "g": "m", "t": "text", "text": "12 anos é bastante tempo viu kkk", "gap_s": 12 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "15:04",
+    "messages": [
+      { "p": 1, "g": "f", "t": "image", "folder": "espelho", "text": "look de hoje aprovado? 🙈", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "aprovadíssimo... esse espelho tá com sorte", "gap_s": 14 },
+      { "p": 3, "g": "m", "t": "text", "text": "o look tá ótimo, o resto tá melhor kkkk", "gap_s": 11 },
+      { "p": 1, "g": "f", "t": "text", "text": "kkkkk atrevidos", "gap_s": 15 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "15:49",
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "gente ontem teve um papo aqui que eu fiquei até vermelha kkkk", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "qual? perdi tudo", "gap_s": 12 },
+      { "p": 1, "g": "f", "t": "text", "text": "quem viu viu 🙈 não repito", "gap_s": 15 },
+      { "p": 3, "g": "f", "t": "text", "text": "KKKKK eu vi... esse grupo não é pra amadores mesmo", "gap_s": 13 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "16:08",
+    "messages": [
+      { "p": 1, "g": "f", "t": "presentation", "text": "oiii sou a {nome}, {idade} anos, de {cidade} 🙈 primeira vez num grupo assim", "gap_s": 5 },
+      { "p": 2, "g": "f", "t": "text", "text": "bem vinda {nome1}! a primeira vez a gente nunca esquece kkk", "gap_s": 12 },
+      { "p": 3, "g": "m", "t": "text", "text": "seja bem vinda... pode perguntar tudo kk", "gap_s": 10 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "16:42",
+    "messages": [
+      { "p": 1, "g": "f", "t": "vonce", "kind": "foto", "folder": "lingerie", "text": "mandei uma coisinha só pra quem tá atento 🙈 corre que some", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "eu vi... preciso ver de novo urgente", "gap_s": 18 },
+      { "p": 3, "g": "m", "t": "text", "text": "como assim só uma vez???? volta", "gap_s": 12 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "17:14",
+    "messages": [
+      { "p": 1, "g": "m", "t": "presentation", "text": "e aí grupo, {nome}, {idade} anos, de {cidade}, solteiro e curioso kk", "gap_s": 5 },
+      { "p": 2, "g": "f", "t": "text", "text": "bem vindo {nome1} 😏", "gap_s": 13 },
+      { "p": 3, "g": "m", "t": "text", "text": "chegou concorrência kkkk", "gap_s": 10 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "17:41",
+    "messages": [
+      { "p": 1, "g": "f", "t": "image", "folder": "praia", "text": "com saudade desse dia 🌊 quem me leva de volta?", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "eu levo agora, só marcar", "gap_s": 14 },
+      { "p": 3, "g": "f", "t": "text", "text": "amiga que corpo é esse", "gap_s": 11 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "18:26",
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "saindo do trabalho agora... que dia longo gente", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "relaxa que agora começa a melhor parte do dia", "gap_s": 13 },
+      { "p": 1, "g": "f", "t": "text", "text": "a noite promete? kkk", "gap_s": 12 },
+      { "p": 2, "g": "m", "t": "text", "text": "aqui a noite sempre promete", "gap_s": 15 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "18:53",
+    "messages": [
+      { "p": 1, "g": "f", "t": "presentation", "text": "oi gente boa noite 🙈 sou a {nome}, {idade} anos, de {cidade}, divorciada e livre kkk", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "livre é a palavra chave kkkk bem vinda", "gap_s": 11 },
+      { "p": 3, "g": "f", "t": "text", "text": "bem vinda {nome1} 😍 chegou na melhor hora", "gap_s": 13 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "19:07",
+    "messages": [
+      { "p": 1, "g": "f", "t": "presentation", "text": "oii, {nome}, tenho {idade} anos, moro em {cidade}... tô meio tímida ainda kkk", "gap_s": 5 },
+      { "p": 2, "g": "f", "t": "text", "text": "relaxa {nome1}, aqui ninguém morde... só se pedir kkkk", "gap_s": 12 },
+      { "p": 3, "g": "m", "t": "text", "text": "bem vinda 😍", "gap_s": 9 },
+      { "p": 4, "g": "m", "t": "text", "text": "a timidez passa rápido nesse grupo, confia kk", "gap_s": 13 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "19:44",
+    "messages": [
+      { "p": 1, "g": "f", "t": "image", "folder": "banho", "text": "banho tomado... e agora, o que eu faço da noite? 🙈", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "agora vc me conta os detalhes desse banho kkk", "gap_s": 15 },
+      { "p": 3, "g": "m", "t": "text", "text": "imagina o cheiro desse perfume", "gap_s": 12 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "20:09",
+    "messages": [
+      { "p": 1, "g": "f", "t": "presentation", "text": "boa noite 🙈 sou a {nome}, {idade} anos, casada, de {cidade}... meu marido não sabe que eu tô aqui kkk", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "segredo guardado kkkk bem vinda", "gap_s": 10 },
+      { "p": 3, "g": "f", "t": "text", "text": "bem vinda {nome1}, o que ele não sabe não machuca kkk", "gap_s": 13 },
+      { "p": 4, "g": "m", "t": "text", "text": "essa chegou pra causar kkk", "gap_s": 11 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "20:24",
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "confissão da noite: hoje eu tô diferente... quem reparou?", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "reparei desde o bom dia kkk", "gap_s": 13 },
+      { "p": 3, "g": "m", "t": "text", "text": "diferente como? explica melhor kkkk", "gap_s": 11 },
+      { "p": 1, "g": "f", "t": "text", "text": "diferente tipo... sem paciência pra ser boazinha 🙈", "gap_s": 17 },
+      { "p": 2, "g": "m", "t": "text", "text": "a noite vai ser longa kkkk", "gap_s": 12 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "20:41",
+    "messages": [
+      { "p": 1, "g": "f", "t": "image", "folder": "lingerie", "text": "comprei hoje... valeu cada centavo? 🙈", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "valeu o boleto do ano inteiro", "gap_s": 14 },
+      { "p": 3, "g": "m", "t": "text", "text": "quem foi o motivo dessa compra kkk", "gap_s": 11 },
+      { "p": 1, "g": "f", "t": "text", "text": "quem sabe alguém daqui 😏", "gap_s": 16 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "20:57",
+    "messages": [
+      { "p": 1, "g": "f", "t": "presentation", "text": "oi amores 🙈 {nome}, {idade} aninhos, de {cidade}... me convenceram a entrar e já tô gostando", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "bem vinda {nome1} 😍 chegou na hora do fogo", "gap_s": 11 },
+      { "p": 3, "g": "f", "t": "text", "text": "bem vindaaa, senta com a gente kkk", "gap_s": 12 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "21:16",
+    "messages": [
+      { "p": 1, "g": "f", "t": "audio", "folder": "audios", "text": "gravei isso pensando em alguém daqui 🙊", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "essa voz devia ser crime", "gap_s": 16 },
+      { "p": 3, "g": "m", "t": "text", "text": "quem é o sortudo? kkkk", "gap_s": 12 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "21:29",
+    "messages": [
+      { "p": 1, "g": "f", "t": "vonce", "kind": "foto", "folder": "cama", "text": "só pra quem tá online AGORA... corre 🙈", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "MEU DEUS", "gap_s": 14 },
+      { "p": 3, "g": "m", "t": "text", "text": "quem viu viu kkkkk que noite", "gap_s": 10 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "21:47",
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "bora jogar? verdade ou desafio versão adulto kkk", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "verdade", "gap_s": 12 },
+      { "p": 1, "g": "f", "t": "text", "text": "qual foi seu pensamento mais safado de hoje?", "gap_s": 14 },
+      { "p": 2, "g": "m", "t": "text", "text": "envolvia esse grupo... e uma foto de mais cedo kkkk", "gap_s": 17 },
+      { "p": 3, "g": "f", "t": "text", "text": "KKKKK eu sabia, todo mundo pensou o mesmo", "gap_s": 11 },
+      { "p": 4, "g": "m", "t": "text", "text": "desafio fica pra próxima que eu tô com medo kkk", "gap_s": 13 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "22:03",
+    "messages": [
+      { "p": 1, "g": "f", "t": "presentation", "text": "oi gente 🙈 sou a {nome}, {idade} anos, de {cidade}... entrei escondida, depois conto de quem kkk", "gap_s": 5 },
+      { "p": 2, "g": "f", "t": "text", "text": "bem vinda {nome1} kkkk aqui todo mundo tem segredo", "gap_s": 12 },
+      { "p": 3, "g": "m", "t": "text", "text": "chegou cheia de mistério, gostei kk", "gap_s": 10 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "22:14",
+    "messages": [
+      { "p": 1, "g": "f", "t": "video", "folder": "videos", "text": "um videozinho pra esquentar a noite 🔥", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "socorro kkkk esse grupo vale ouro", "gap_s": 15 },
+      { "p": 3, "g": "m", "t": "text", "text": "salvei no coração", "gap_s": 11 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "22:31",
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "os melhores vídeos não cabem aqui no grupo kkk 🙈", "gap_s": 5 },
+      { "p": 1, "g": "f", "t": "cta", "text": "vai lá que hoje tem coisa nova", "label": "VER OS VÍDEOS 🔥", "link": "/?go=videos", "gap_s": 10 },
+      { "p": 2, "g": "m", "t": "text", "text": "confirmo, fui lá e voltei diferente kkkk", "gap_s": 14 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "22:49",
+    "messages": [
+      { "p": 1, "g": "m", "t": "presentation", "text": "fala grupo, {nome}, {idade} anos, de {cidade}... vim pelo que falaram e já vi que é verdade kk", "gap_s": 5 },
+      { "p": 2, "g": "f", "t": "text", "text": "bem vindo {nome1} 😏 espero que aguente o ritmo", "gap_s": 12 },
+      { "p": 3, "g": "m", "t": "text", "text": "aqui o ritmo é pesado parceiro kkkk", "gap_s": 10 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "23:06",
+    "messages": [
+      { "p": 1, "g": "f", "t": "vonce", "kind": "foto", "folder": "provocante", "text": "última da noite... aproveita que hoje eu tô boazinha 🙈", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "boazinha é modo de dizer né kkkk", "gap_s": 15 },
+      { "p": 3, "g": "m", "t": "text", "text": "essa madrugada vai ser difícil de dormir", "gap_s": 11 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "23:21",
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "esse grupo hoje tava impossível kkk", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "e amanhã promete mais", "gap_s": 13 },
+      { "p": 3, "g": "f", "t": "text", "text": "não sei se eu durmo depois dessa noite viu", "gap_s": 12 },
+      { "p": 2, "g": "m", "t": "text", "text": "então não dorme kkk fica com a gente", "gap_s": 14 }
+    ]
+  },
+  {
+    "day": 0,
+    "time": "23:39",
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "boa noite pra quem merece 😏", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "boa noite gata, sonha comigo", "gap_s": 12 },
+      { "p": 3, "g": "f", "t": "text", "text": "boa noite amores 😘 até amanhã", "gap_s": 10 }
+    ]
+  }
+]
