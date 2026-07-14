@@ -325,12 +325,44 @@ function bakeItem(group, item, mediaRR) {
                 : (kind === 'image' ? (group.media_image_urls || []) : []);
             media = pickRR((key || 'gallery') + ':' + kind, pool);
             if (!media) { if (!content) continue; type = 'text'; }
+        } else if (m.t === 'album') {
+            // álbum estilo Telegram: N fotos + N vídeos da MESMA pasta numa
+            // bolha só (grade agrupada no app). Compartilha o rodízio das
+            // mensagens avulsas — o que saiu em álbum não repete em foto solta.
+            const key = (m.folder || '').toString().trim();
+            const nF = Math.max(0, Math.min(6, parseInt(m.fotos, 10) || 0));
+            const nV = Math.max(0, Math.min(6, parseInt(m.videos, 10) || 0));
+            const poolF = folderFiles(key, 'image'), poolV = folderFiles(key, 'video');
+            const items = [];
+            for (let j = 0; j < nF && items.length < 6; j++) {
+                const u = pickRR(key + ':image', poolF);
+                if (u && !items.some(x => x.url === u)) items.push({ url: u, kind: 'image' });
+            }
+            for (let j = 0; j < nV && items.length < 6; j++) {
+                const u = pickRR(key + ':video', poolV);
+                if (u && !items.some(x => x.url === u)) items.push({ url: u, kind: 'video' });
+            }
+            if (items.length >= 2) {
+                type = 'album';
+                media = items[0].url; // capa (preview na lista)
+                meta = { items };
+            } else if (items.length === 1) {
+                // pasta sem material suficiente: degrada pra mídia única
+                type = items[0].kind === 'video' ? 'video' : 'image';
+                media = items[0].url;
+            } else { if (!content) continue; type = 'text'; }
         } else if (m.t === 'presentation') {
             type = 'image';
             const g = person ? person.g : 'f';
             const pres = (group.pres && group.pres[g]) || { bands: [], flat: [] };
             if (pres.bands.length) {
-                const band = pres.bands[Math.floor(rng() * pres.bands.length)];
+                // sorteio PONDERADO pelo tamanho da subpasta: faixa etária com
+                // mais foto aparece mais (o dono controla a proporção de
+                // idades só pela quantidade que sobe em cada subpasta)
+                const totW = pres.bands.reduce((s, b) => s + b.files.length, 0);
+                let roll = rng() * totW;
+                let band = pres.bands[0];
+                for (const b of pres.bands) { roll -= b.files.length; if (roll <= 0) { band = b; break; } }
                 media = pickRR('pres:' + g + ':' + band.label, band.files);
                 idadeMsg = band.min + (hashStr('a' + slot0 + ':' + i) % (band.max - band.min + 1));
             } else {
@@ -656,6 +688,14 @@ async function runEntryScript(session, group) {
     const st = sessionState(session);
     if (st.entry_done) return [];
     st.entry_done = true;
+    // pill de sistema estilo WhatsApp ("Você entrou no grupo") — sempre, 1x
+    try {
+        await db.query(
+            `INSERT INTO group_messages (session_id, sender, type, content, created_at)
+             VALUES ($1, 'bot', 'system', 'Você entrou no grupo', $2)`,
+            [session.id, new Date(Date.now() + 1500)]
+        );
+    } catch (_) {}
     const { rows: scenes } = await db.query(
         `SELECT * FROM group_scenes WHERE group_id = $1 AND active = true AND category = 'entrada' ORDER BY id`,
         [group.id]
@@ -673,7 +713,7 @@ async function runEntryScript(session, group) {
 
 // Mensagem pessoal (linha do group_messages) → formato da API
 function publicPersonal(m, masked) {
-    if (m.type === 'vonce') masked = false;
+    if (m.type === 'vonce' || m.type === 'system') masked = false;
     return {
         id: m.id,
         sender: m.sender,
@@ -819,6 +859,7 @@ router.get('/groups', optionalUser, async (req, res) => {
                         name: lastShared.name || 'Membro',
                         preview: masked ? maskContent(lastShared.content, lastShared.sid)
                             : (lastShared.type === 'image' || lastShared.type === 'vonce' ? 'Foto'
+                                : lastShared.type === 'album' ? 'Fotos'
                                 : lastShared.type === 'video' ? 'Vídeo'
                                 : lastShared.type === 'audio' ? 'Áudio'
                                 : (lastShared.content || 'Mensagem')),
@@ -896,7 +937,9 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
         }));
         const personalPub = personal.map(m => publicPersonal(m,
             access === 'locked' && m.sender !== 'user' && (!lf || new Date(m.created_at) >= lf)));
-        const list = mergeTimeline(sharedPub, personalPub).slice(-60);
+        // 150 de histórico na abertura: ~2-3h de grupo pra rolar (com o volume
+        // alto da agenda, 60 viravam só uns minutos) — peso ainda desprezível
+        const list = mergeTimeline(sharedPub, personalPub).slice(-150);
 
         await db.query(`UPDATE group_sessions SET last_seen_at = NOW(), updated_at = NOW() WHERE id = $1`, [session.id]);
 

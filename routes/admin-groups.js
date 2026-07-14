@@ -26,7 +26,7 @@ const { logger } = require('../lib/logger');
 const CATEGORIES = ['papo', 'pesado', 'apresentacao', 'midia', 'cta', 'reacao', 'novato', 'bomdia', 'boanoite', 'entrada'];
 const PERIODS = ['any', 'manha', 'tarde', 'noite', 'madrugada'];
 // tipos aceitos nos blocos de mensagem (cenas pessoais E itens da agenda)
-const MSG_TYPES = ['text', 'image', 'video', 'audio', 'presentation', 'cta', 'vonce'];
+const MSG_TYPES = ['text', 'image', 'video', 'audio', 'presentation', 'cta', 'vonce', 'album'];
 
 const urlList = (v) => {
     if (Array.isArray(v)) return v.map(s => String(s).trim()).filter(Boolean).slice(0, 500);
@@ -86,8 +86,10 @@ function cleanMessages(list) {
         pid: m.pid ? parseInt(m.pid, 10) : undefined,
         color: (m.color || '').toString().slice(0, 20) || undefined,
         folder: (m.folder || '').toString().trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40) || undefined,
+        fotos: m.fotos !== undefined ? intOr(m.fotos, 0, 0, 6) : undefined,   // só no album
+        videos: m.videos !== undefined ? intOr(m.videos, 0, 0, 6) : undefined, // só no album
         admin: m.admin === true ? true : undefined,
-    })).filter(m => m.text || m.label || ['image', 'video', 'audio', 'presentation', 'vonce'].includes(m.t));
+    })).filter(m => m.text || m.label || ['image', 'video', 'audio', 'presentation', 'vonce', 'album'].includes(m.t));
 }
 
 function invalidateAgendaCache(groupId) {
