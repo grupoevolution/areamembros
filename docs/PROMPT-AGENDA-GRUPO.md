@@ -51,11 +51,12 @@ Um array de ITENS. Cada item = um bloco de mensagens num dia × horário:
 |---|---|---|
 | `p` | 1, 2, 3… | slot da pessoa (mesmo número = mesma pessoa no bloco) |
 | `g` | `f` ou `m` | gênero do slot (opcional) |
-| `t` | `text` · `image` · `video` · `audio` · `presentation` · `vonce` · `cta` | tipo |
+| `t` | `text` · `image` · `video` · `audio` · `presentation` · `vonce` · `cta` · `album` | tipo |
 | `text` | string | texto / legenda / rótulo do botão |
 | `gap_s` | 2–600 | segundos depois da mensagem anterior |
-| `folder` | chave de pasta | de QUAL pasta do grupo sai a mídia (`image`/`video`/`audio`/`vonce`) |
+| `folder` | chave de pasta | de QUAL pasta do grupo sai a mídia (`image`/`video`/`audio`/`vonce`/`album`) |
 | `kind` | `foto` ou `video` | só no `vonce` (visualização única) |
+| `fotos` / `videos` | 0–6 (soma 2–6) | só no `album`: quantas fotos e vídeos da pasta entram na grade agrupada (estilo Telegram); `text` vira a legenda |
 | `label` | string (até 60) | só no `cta`: o texto DO botão (o `text` vira o texto em cima, opcional) |
 | `link` / `pid` / `color` | url / id de produto / cor | só no `cta` (botão) |
 | `admin` | `true` | mensagem do ADMINISTRADOR (selo dourado — canal free) |
