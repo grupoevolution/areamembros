@@ -255,31 +255,31 @@ async function loadAgenda(groupId) {
     _agendaCache.set(groupId, { at: Date.now(), items: rows });
     return rows;
 }
-function invalidateAgenda(groupId) { _agendaCache.delete(groupId); }
+function invalidateAgenda(groupId) { _agendaCache.delete(groupId); _fitaCache.delete(groupId); }
 
 function anchorMs(group) {
     const a = group.cycle_anchor || group.created_at;
     return a ? new Date(a).getTime() : Date.now();
 }
 
-// Rotação sem repetição: cada mensagem tem um offset próprio e anda +1 a cada
-// volta do ciclo — só repete quando a pasta inteira já rodou.
-function rotatePick(list, baseSeed, k, usedIdx) {
-    if (!Array.isArray(list) || !list.length) return null;
-    let idx = (baseSeed + k) % list.length;
-    let guard = list.length;
-    while (usedIdx && usedIdx.has(idx) && guard-- > 0) idx = (idx + 1) % list.length;
-    if (usedIdx) usedIdx.add(idx);
-    return list[idx];
-}
+// ── MODELO "FITA" ────────────────────────────────────────────────────────────
+// O roteiro é ASSADO uma vez: nome/idade/mídia resolvidos em valores concretos
+// (só {cidade} fica pra trocar por lead). No runtime o sistema só CORTA a fita
+// pelo relógio — sem render, sem sorteio, sem tocar o banco pra ler o
+// compartilhado. A mídia é CARIMBADA na montagem (modo A): round-robin nas
+// pastas do Bunny, sem repetir foto até esgotar a pasta.
 
-// Materializa (em memória) UMA ocorrência de um item da agenda no ciclo k.
-// Retorna mensagens {sid, t, name, gender, admin, type, content, media_url, meta}.
-// O conteúdo pode conter {cidade} — substituída por lead na hora de responder.
-function renderOccurrence(group, item, k, occMs) {
+// Assa UM item da agenda: resolve com seed FIXO por item (sem depender do
+// ciclo → a "pessoa"/foto é a mesma toda volta, como uma fita gravada).
+// mediaRR = estado de rodízio GLOBAL da fita (distribui as fotos sem repetir).
+// Retorna { day, timeMinutes, jitter, msgs: [{off, sid, name, gender, type, content, media_url, meta}] }.
+function bakeItem(group, item, mediaRR) {
     const msgs = Array.isArray(item.messages) ? item.messages : [];
-    if (!msgs.length) return [];
-    const seed = hashStr(group.id + ':' + item.id + ':' + k);
+    if (!msgs.length) return null;
+    // seed pela POSIÇÃO (dia:horário), não pelo id do banco → reimportar o mesmo
+    // roteiro mantém o mesmo elenco/idade (mexer numa linha não embaralha tudo).
+    const slot0 = (item.day | 0) + ':' + (item.time_minutes | 0);
+    const seed = hashStr(group.id + ':' + slot0);
     const rng = mulberry32(seed);
     const femaleRatio = Number.isFinite(+group.female_ratio) ? +group.female_ratio : 80;
     const slotMap = {};
@@ -295,21 +295,25 @@ function renderOccurrence(group, item, k, occMs) {
         slotMap[slot] = { n, g: gender };
         return slotMap[slot];
     };
-    const usedPerList = new Map(); // evita 2 msgs da mesma ocorrência com a mesma mídia
-    const usedFor = (key) => { if (!usedPerList.has(key)) usedPerList.set(key, new Set()); return usedPerList.get(key); };
     const folderFiles = (key, kind) =>
         ((group.folder_media && group.folder_media[key]) || []).filter(f => f.kind === kind).map(f => f.url);
+    // rodízio global: pega a próxima foto da lista e anda +1 (não repete perto)
+    const pickRR = (rrKey, list) => {
+        if (!Array.isArray(list) || !list.length) return null;
+        const i = (mediaRR[rrKey] || 0) % list.length;
+        mediaRR[rrKey] = (mediaRR[rrKey] || 0) + 1;
+        return list[i];
+    };
 
     const out = [];
-    let t = occMs;
+    let off = 0;
     let idadeOcc = null;
     for (let i = 0; i < msgs.length; i++) {
         const m = msgs[i];
         const gap = Math.max(2, Math.min(600, parseInt(m.gap_s, 10) || (4 + Math.floor(rng() * 9))));
-        t += gap * 1000;
+        off += gap * 1000;
         const isAdmin = m.admin === true;
         const person = isAdmin ? null : bySlot(m.p || 1, m.g === 'm' || m.g === 'f' ? m.g : null);
-        const mseed = hashStr('m' + item.id + ':' + i);
         let type = 'text', content = (m.text || '').slice(0, 1000) || null, media = null, meta = null;
         let idadeMsg = null;
 
@@ -319,7 +323,7 @@ function renderOccurrence(group, item, k, occMs) {
             const key = (m.folder || '').toString().trim();
             const pool = key ? folderFiles(key, kind)
                 : (kind === 'image' ? (group.media_image_urls || []) : []);
-            media = rotatePick(pool, mseed, k, usedFor(key + ':' + kind));
+            media = pickRR((key || 'gallery') + ':' + kind, pool);
             if (!media) { if (!content) continue; type = 'text'; }
         } else if (m.t === 'presentation') {
             type = 'image';
@@ -327,11 +331,11 @@ function renderOccurrence(group, item, k, occMs) {
             const pres = (group.pres && group.pres[g]) || { bands: [], flat: [] };
             if (pres.bands.length) {
                 const band = pres.bands[Math.floor(rng() * pres.bands.length)];
-                media = rotatePick(band.files, mseed, k, usedFor('pres:' + g));
-                idadeMsg = band.min + ((mseed + k * 3) % (band.max - band.min + 1));
+                media = pickRR('pres:' + g + ':' + band.label, band.files);
+                idadeMsg = band.min + (hashStr('a' + slot0 + ':' + i) % (band.max - band.min + 1));
             } else {
-                media = rotatePick(pres.flat, mseed, k, usedFor('pres:' + g));
-                idadeMsg = 19 + ((mseed + k * 3) % 15);
+                media = pickRR('pres:' + g, pres.flat);
+                idadeMsg = 19 + (hashStr('a' + slot0 + ':' + i) % 15);
             }
             if (idadeOcc == null) idadeOcc = idadeMsg;
             if (!media) { if (!content) continue; type = 'text'; }
@@ -342,11 +346,10 @@ function renderOccurrence(group, item, k, occMs) {
             const kind = m.kind === 'foto' ? 'foto' : 'video';
             meta = { kind };
             const key = (m.folder || '').toString().trim();
-            if (key) media = rotatePick(folderFiles(key, kind === 'foto' ? 'image' : 'video'), mseed, k, usedFor(key + ':vonce'));
+            if (key) media = pickRR(key + ':vonce', folderFiles(key, kind === 'foto' ? 'image' : 'video'));
         } else if (m.t === 'cta') {
             type = 'cta';
             // label = texto DO botão; content vira o texto em cima (opcional).
-            // Sem label (formato antigo), o content é o rótulo do botão.
             meta = { link_url: m.link || null, product_id: m.pid || null, cta_color: m.color || '#25a55f' };
             const label = (m.label || '').toString().slice(0, 60);
             if (label) meta.label = label;
@@ -358,42 +361,75 @@ function renderOccurrence(group, item, k, occMs) {
         if (content) {
             content = content.replace(/\{nome(\d+)\}/gi, (_, d) => bySlot(parseInt(d, 10), null).n);
             content = content.replace(/\{nome\}/gi, person ? person.n : (group.name || 'Admin'));
-            const idade = idadeMsg != null ? idadeMsg : (idadeOcc != null ? idadeOcc : 19 + ((mseed + k) % 15));
+            const idade = idadeMsg != null ? idadeMsg : (idadeOcc != null ? idadeOcc : 19 + (hashStr('a' + slot0 + ':' + i) % 15));
             content = content.replace(/\{idade\}/gi, String(idade));
+            // {cidade} FICA — trocado por lead no serve (publicShared)
         }
         // botão "puro" (só label, sem texto em cima) é válido
         if (!content && !media && type !== 'vonce' && !(type === 'cta' && meta && meta.label)) continue;
         if (isAdmin) meta = Object.assign({}, meta || {}, { admin: true });
         out.push({
-            sid: `s${item.id}_${k}_${i}`,
-            t,
+            off,
+            sid: `s${item.id}_${i}`,
             name: isAdmin ? 'Admin' : person.n,
             gender: isAdmin ? null : person.g,
             type, content, media_url: media, meta,
         });
     }
-    return out;
+    if (!out.length) return null;
+    return {
+        day: item.day | 0,
+        timeMinutes: item.time_minutes | 0,
+        jitter: (hashStr('j' + slot0) % 46) * 1000, // segundos de respiro fixos
+        msgs: out,
+    };
 }
 
-// Todas as mensagens compartilhadas da AGENDA com fromMs < t <= toMs
-function computeAgendaWindow(group, items, fromMs, toMs) {
-    if (!items.length) return [];
+// Assa a fita inteira do grupo (1x). Round-robin de mídia compartilhado entre
+// todos os itens → as fotos se espalham pela fita sem repetir de perto.
+async function buildFita(group) {
+    await hydrateGroupMedia(group);
+    const items = await loadAgenda(group.id);
+    const mediaRR = {};
+    const fita = [];
+    for (const item of items) {
+        const baked = bakeItem(group, item, mediaRR);
+        if (baked) fita.push(baked);
+    }
+    return fita;
+}
+
+// Cache da fita por grupo. Reassa quando a agenda é editada (invalidateAgenda)
+// ou a cada 30 min (pega foto nova na pasta sem precisar re-importar).
+const _fitaCache = new Map(); // groupId -> { at, fita }
+async function getFita(group) {
+    const c = _fitaCache.get(group.id);
+    if (c && Date.now() - c.at < 30 * 60000) return c.fita;
+    const fita = await buildFita(group);
+    _fitaCache.set(group.id, { at: Date.now(), fita });
+    return fita;
+}
+
+// Corta a fita pela janela [fromMs, toMs] — só data + cópia rasa, ZERO render.
+// Cada ocorrência do ciclo k stampa o horário absoluto e um sid único.
+function sliceFita(group, fita, fromMs, toMs) {
+    if (!fita || !fita.length) return [];
     const anchor = anchorMs(group);
     const cycleDays = Math.max(1, Math.min(60, group.cycle_days | 0 || 7));
-    const cycleMs = cycleDays * 86400000;
+    const cycleLen = cycleDays * 86400000;
     const out = [];
-    const kMin = Math.max(0, Math.floor((fromMs - anchor) / cycleMs) - 1);
-    const kMax = Math.floor((toMs - anchor) / cycleMs);
-    for (const item of items) {
-        const day = Math.min(Math.max(0, item.day | 0), cycleDays - 1);
-        const offset = (day * 1440 + Math.min(Math.max(0, item.time_minutes | 0), 1439)) * 60000;
+    const kMin = Math.max(0, Math.floor((fromMs - anchor) / cycleLen) - 1);
+    const kMax = Math.floor((toMs - anchor) / cycleLen);
+    for (const it of fita) {
+        const day = Math.min(Math.max(0, it.day | 0), cycleDays - 1);
+        const base = (day * 1440 + Math.min(Math.max(0, it.timeMinutes | 0), 1439)) * 60000 + it.jitter;
         for (let k = kMin; k <= kMax; k++) {
-            const occ = anchor + k * cycleMs + offset
-                + (hashStr('j' + item.id + ':' + k) % 46) * 1000; // jitter natural por ciclo
+            const occ = anchor + k * cycleLen + base;
             if (occ > toMs) continue;
-            if (occ < fromMs - 8 * 3600000) continue; // ocorrência velha demais pra ter msg na janela
-            for (const msg of renderOccurrence(group, item, k, occ)) {
-                if (msg.t > fromMs && msg.t <= toMs) out.push(msg);
+            if (occ < fromMs - 8 * 3600000) continue;
+            for (const bm of it.msgs) {
+                const t = occ + bm.off;
+                if (t > fromMs && t <= toMs) out.push({ ...bm, sid: bm.sid + '_' + k, t });
             }
         }
     }
@@ -426,10 +462,10 @@ async function broadcastsWindow(groupId, fromMs, toMs) {
     } catch (_) { return []; }
 }
 
-// Janela compartilhada completa (agenda + broadcast), ordenada
-async function sharedWindow(group, fromMs, toMs) {
-    const items = await loadAgenda(group.id);
-    const agenda = computeAgendaWindow(group, items, fromMs, toMs);
+// Janela compartilhada completa (fita cortada + broadcast), ordenada
+async function servedShared(group, fromMs, toMs) {
+    const fita = await getFita(group);
+    const agenda = sliceFita(group, fita, fromMs, toMs);
     const casts = await broadcastsWindow(group.id, fromMs, toMs);
     const all = agenda.concat(casts);
     all.sort((a, b) => (a.t - b.t) || (a.sid < b.sid ? -1 : 1));
@@ -771,7 +807,7 @@ router.get('/groups', optionalUser, async (req, res) => {
             // preview de texto/tipo), iguais pra todo mundo
             const winFrom = now - windowHours(g) * 3600000;
             let shared = [];
-            try { shared = await sharedWindow(g, winFrom, now); } catch (_) {}
+            try { shared = await servedShared(g, winFrom, now); } catch (_) {}
             let last = null, unread = 0, masked = false;
             const lastShared = shared.length ? shared[shared.length - 1] : null;
             if (session) {
@@ -842,7 +878,7 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
 
         const now = Date.now();
         const winFrom = now - windowHours(group) * 3600000;
-        const shared = await sharedWindow(group, winFrom, now);
+        const shared = await servedShared(group, winFrom, now);
         const { rows: personal } = await db.query(
             `SELECT * FROM group_messages
              WHERE session_id = $1 AND created_at > to_timestamp($2 / 1000.0) AND created_at <= NOW()
@@ -926,7 +962,7 @@ router.get('/groups/:id/poll', optionalUser, async (req, res) => {
         if (!Number.isFinite(afterMs)) afterMs = now; // sem cursor: só o que vier daqui pra frente
         afterMs = Math.max(afterMs, winFrom);
 
-        const shared = await sharedWindow(group, afterMs, now);
+        const shared = await servedShared(group, afterMs, now);
         // date_trunc: cursor em ms vs microssegundos do Postgres (sem isso a
         // mesma mensagem volta em todo poll até o cursor passar dela)
         const { rows: personal } = await db.query(
