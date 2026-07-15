@@ -162,7 +162,8 @@ app.use(compression());
 app.use(cookieParser(process.env.SESSION_SECRET));
 
 // Parse de JSON (com limite de tamanho pra evitar abuse)
-app.use(express.json({ limit: '1mb' }));
+// 4mb: o import da agenda dos grupos pode trazer a semana inteira num arquivo
+app.use(express.json({ limit: '4mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 

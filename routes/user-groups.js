@@ -940,9 +940,10 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
         }));
         const personalPub = personal.map(m => publicPersonal(m,
             access === 'locked' && m.sender !== 'user' && (!lf || new Date(m.created_at) >= lf)));
-        // 150 de histórico na abertura: ~2-3h de grupo pra rolar (com o volume
-        // alto da agenda, 60 viravam só uns minutos) — peso ainda desprezível
-        const list = mergeTimeline(sharedPub, personalPub).slice(-150);
+        // 400 de histórico na abertura: ~6-8h de grupo pra rolar (pedido do
+        // dono — o lead precisa sentir que TEM MUITA coisa acontecendo).
+        // Fotos/vídeos carregam lazy, então o peso real é só o texto (~130KB).
+        const list = mergeTimeline(sharedPub, personalPub).slice(-400);
 
         await db.query(`UPDATE group_sessions SET last_seen_at = NOW(), updated_at = NOW() WHERE id = $1`, [session.id]);
 

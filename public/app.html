@@ -8381,6 +8381,21 @@ body.is-slowconn .prod-cta-fixed {
 /* pill de sistema centralizada ("Você entrou no grupo") — estilo WhatsApp */
 .ga-sys { align-self: center; background: #fdf3d8; color: #6f6a5e; font-size: 11.5px; padding: 5px 12px;
     border-radius: 8px; margin: 8px 0; box-shadow: 0 1px 2px rgba(0,0,0,.08); text-align: center; }
+/* pós-trial: o corpo INTEIRO fica borrado + cartão "seu tempo acabou" */
+.ga-blurall { filter: blur(9px); pointer-events: none; user-select: none; }
+#gaLockOv { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center;
+    justify-content: center; padding: 24px; pointer-events: none; }
+#gaLockOv .card { pointer-events: auto; background: rgba(16,12,14,.92); border: 1.5px solid rgba(229,9,20,.5);
+    border-radius: 20px; padding: 22px 20px 18px; max-width: 290px; width: 100%; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.55); backdrop-filter: blur(2px); }
+#gaLockOv .clock { font-size: 34px; line-height: 1; }
+#gaLockOv .tt { font-size: 26px; font-weight: 800; color: #ff4757; letter-spacing: 2px; margin: 6px 0 2px;
+    font-variant-numeric: tabular-nums; }
+#gaLockOv .t1 { font-size: 15.5px; font-weight: 800; color: #fff; margin-bottom: 4px; }
+#gaLockOv .s1 { font-size: 12px; color: #c9c0c4; line-height: 1.45; margin-bottom: 14px; }
+#gaLockOv button { width: 100%; background: linear-gradient(90deg,#ff1f3d,#e50914); border: none;
+    border-radius: 12px; padding: 13px; font-size: 14px; font-weight: 800; color: #fff; cursor: pointer;
+    font-family: inherit; letter-spacing: .5px; box-shadow: 0 8px 24px rgba(229,9,20,.4); }
 /* isca de visualização única (só membros abrem) */
 .ga-vonce { display: flex; align-items: center; gap: 11px; border: 1.5px dashed #e05a4e; border-radius: 12px;
     padding: 11px 13px; cursor: pointer; background: rgba(224,90,78,.04); min-width: 210px; }
@@ -11134,18 +11149,35 @@ window.GroupApp = (function () {
             + '<span class="txts"><b>Só membros falam nos grupos</b><span>entre e participe de tudo, sem censura</span></span>'
             + '<button class="go">ENTRAR →</button></div>';
         bar.style.display = 'block';
-        // aviso central no fim do corpo (1x)
+        // tempo acabou → o corpo INTEIRO fica borrado (a conversa segue
+        // acontecendo por trás, dá pra ver o movimento mas não ler nada) +
+        // cartão central com o cronômetro zerado e o botão dos planos
         const body = document.getElementById('gaBody');
-        if (body && !document.getElementById('gaLockNote')) {
-            const n = document.createElement('div');
-            n.id = 'gaLockNote';
-            n.className = 'ga-locknote';
-            n.innerHTML = '<div class="t1">🔒 O grupo continua ao vivo…<br>Entre pra ver e participar</div>';
-            body.appendChild(n);
-            scrollBottom();
+        if (body) body.classList.add('ga-blurall');
+        if (!document.getElementById('gaLockOv')) {
+            const ov = document.createElement('div');
+            ov.id = 'gaLockOv';
+            ov.innerHTML = '<div class="card">'
+                + '<div class="clock">⏳</div>'
+                + '<div class="tt">00:00</div>'
+                + '<div class="t1">Seu tempo grátis acabou</div>'
+                + '<div class="s1">O grupo continua AO VIVO — as meninas seguem postando agora. Entre pra não perder mais nada.</div>'
+                + '<button>🔓 QUERO ENTRAR</button></div>';
+            ov.querySelector('button').addEventListener('click', () => {
+                try { window.TRACK && TRACK.event('group_paywall_open', { group_id: CUR && CUR.id, ctx: 'lock_overlay' }); } catch (_) {}
+                openPopup();
+            });
+            document.getElementById('groupconv').appendChild(ov);
         }
         if (CUR.hbTimer) { clearInterval(CUR.hbTimer); CUR.hbTimer = null; }
         if (showPopup && !CUR.popupShown) { CUR.popupShown = true; openPopup(); }
+    }
+    // remove o estado de bloqueio visual (reabrir o grupo / virar membro)
+    function unlockUI() {
+        const body = document.getElementById('gaBody');
+        if (body) body.classList.remove('ga-blurall');
+        const ov = document.getElementById('gaLockOv');
+        if (ov) ov.remove();
     }
 
     // Aviso de RENOVAÇÃO no topo: assinatura do grupo/Passe vencendo em até
@@ -11249,6 +11281,7 @@ window.GroupApp = (function () {
         }
         stopTimers();
         switchScreen('groupconv');
+        unlockUI(); // limpa blur/overlay de um lock anterior (reabrir/virar membro)
         const nav = document.getElementById('bottomNav'); if (nav) nav.style.display = 'none';
         const body = document.getElementById('gaBody');
         body.innerHTML = '<div class="ca-day">Carregando…</div>';

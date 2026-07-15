@@ -16257,21 +16257,30 @@ function gaImportFile(input) {
     const reader = new FileReader();
     reader.onload = async () => {
         input.value = '';
-        let items;
-        try { items = JSON.parse(reader.result); } catch (e) { alert('Arquivo não é um JSON válido: ' + e.message); return; }
-        // aceita tanto o array direto quanto {items:[...]}
-        if (items && !Array.isArray(items) && Array.isArray(items.items)) items = items.items;
-        if (!Array.isArray(items) || !items.length) { alert('O arquivo precisa ser um array de itens [{day, time, messages}].'); return; }
+        let parsed;
+        try { parsed = JSON.parse(reader.result); } catch (e) { alert('Arquivo não é um JSON válido: ' + e.message); return; }
+        // aceita o array direto OU {items:[...], folders:{...}, presentation_*}
+        const wrapper = (parsed && !Array.isArray(parsed) && Array.isArray(parsed.items)) ? parsed : null;
+        const items = wrapper ? wrapper.items : parsed;
+        if (!Array.isArray(items) || !items.length) { alert('O arquivo precisa ser um array de itens [{day, time, messages}] ou {items:[...]}.'); return; }
         const replace = document.getElementById('gAgendaReplace').checked;
-        if (!confirm('Importar ' + items.length + ' item(ns)' + (replace ? ' SUBSTITUINDO a agenda atual' : ' somando à agenda atual') + '?')) return;
+        const hasCfg = wrapper && (wrapper.folders || wrapper.presentation_female_folder || wrapper.presentation_male_folder);
+        if (!confirm('Importar ' + items.length + ' item(ns)' + (replace ? ' SUBSTITUINDO a agenda atual' : ' somando à agenda atual')
+            + (hasCfg ? '\n\nO arquivo também traz o mapeamento de PASTAS de mídia — será aplicado ao grupo.' : '') + '?')) return;
         try {
+            const payload = { items, replace };
+            if (wrapper) {
+                if (wrapper.folders) payload.folders = wrapper.folders;
+                if (wrapper.presentation_female_folder) payload.presentation_female_folder = wrapper.presentation_female_folder;
+                if (wrapper.presentation_male_folder) payload.presentation_male_folder = wrapper.presentation_male_folder;
+            }
             const r = await fetch('/api/admin/groups/' + gid + '/schedule/import', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
-                body: JSON.stringify({ items, replace }),
+                body: JSON.stringify(payload),
             });
             const d = await r.json();
             if (!d.success) { alert('Erro: ' + (d.error || '')); return; }
-            alert(d.imported + ' item(ns) importado(s) ✅');
+            alert(d.imported + ' item(ns) importado(s) ✅' + (hasCfg ? '\nPastas de mídia aplicadas — recarregue o grupo pra ver.' : ''));
             gaLoadSchedule(gid);
         } catch (e) { alert('Erro: ' + e.message); }
     };

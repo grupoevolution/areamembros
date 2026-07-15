@@ -658,7 +658,26 @@ router.post('/:id/schedule/import', requireAdmin, async (req, res) => {
         if (!Array.isArray(items) || !items.length) {
             return res.status(400).json({ success: false, error: 'Envie um array de itens' });
         }
-        if (items.length > 1000) return res.status(400).json({ success: false, error: 'Máximo de 1000 itens por import' });
+        if (items.length > 2500) return res.status(400).json({ success: false, error: 'Máximo de 2500 itens por import' });
+        // o arquivo pode trazer a CONFIGURAÇÃO DE PASTAS junto (chave→caminho
+        // do Bunny + pastas de apresentação): importar já deixa o painel
+        // preenchido, sem digitação manual. Só sobrescreve o que vier.
+        const cfg = {};
+        if (req.body.folders && typeof req.body.folders === 'object') {
+            cfg.media_folders = JSON.stringify(parseMediaFolders(req.body.folders));
+        }
+        for (const k of ['presentation_female_folder', 'presentation_male_folder']) {
+            if (typeof req.body[k] === 'string' && req.body[k].trim()) {
+                cfg[k] = req.body[k].trim().replace(/^\/+|\/+$/g, '').slice(0, 200);
+            }
+        }
+        if (Object.keys(cfg).length) {
+            const cols = Object.keys(cfg);
+            await db.query(
+                `UPDATE groups SET ${cols.map((c, i) => `${c} = $${i + 2}`).join(', ')} WHERE id = $1`,
+                [id, ...cols.map(c => cfg[c])]
+            );
+        }
         const clean = [];
         for (const it of items) {
             const msgs = cleanMessages(it?.messages);
