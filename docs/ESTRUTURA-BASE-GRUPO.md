@@ -48,12 +48,12 @@ fogo, domingo de resenha, segunda de confissão…).
 
 | Tipo | Por dia | Regras |
 |---|---|---|
-| Apresentações MULHERES | 30–32 | espalhadas o dia todo; + 2–3 reações de boas-vindas cada |
-| Apresentações HOMENS | 3–5 no MÁXIMO | bem espalhadas (1 manhã, 1 tarde, 1–2 noite) |
-| Fotos avulsas | ~48 | assunto casa com horário; + 1–2 reações |
-| Álbuns | 3 (máx.) | `{t:"album", folder, fotos:3, videos:1}` — 1 tarde, 2 no pico |
-| Vonce | 8 | **SEMPRE de mulher**; 1 madrugada, 2 tarde, 5 pico/reta final |
-| Vídeos | ~12 | esquenta e pico; saem das pastas de assunto |
+| Apresentações MULHERES | 30–32 | espalhadas o dia todo; + 2–3 reações de boas-vindas cada; máx. 5/dia com {cidade} |
+| Apresentações HOMENS | 3–5 no MÁXIMO | bem espalhadas; mulheres elogiam SUTIL |
+| Fotos avulsas | ~32 | pasta casa com o momento: `bom-dia` manhã, `trabalho` comercial, `academia`, `sexy` (o grosso), `boa-noite` na reta final; + 1–2 reações |
+| Álbuns | 3 (máx.) | `{t:"album", folder:"sexy", vfolder:"videos-sexy", fotos:3, videos:1}` — 1 tarde, 2 no pico |
+| Vonce | 8 | **SEMPRE de mulher**, pasta `vonce` exclusiva; 1 madrugada, 2 tarde, 5 pico/reta final |
+| Vídeos | ~12 | esquenta e pico; `videos-sexy` (+1 `videos-academia` de dia) |
 | CTA | 1–2 | só no pico, alternando destino |
 
 ## Idades e apresentação
@@ -62,43 +62,44 @@ fogo, domingo de resenha, segunda de confissão…).
   idade do público — o lead se enxerga neles).
 - O motor sorteia a faixa etária **ponderada pelo nº de fotos da subpasta** —
   a proporção de idades é controlada pelo UPLOAD, não pelo roteiro.
+- Estilo da apresentação feminina (referência: canal Telegram do dono): curta
+  e direta, tipo "34 anos, casada 🔥 buscando só diversão aqui 🔞 pv
+  liberado". Mix de solteiras/casadas/maduras.
+- Apresentação MASCULINA: as mulheres elogiam de forma SUTIL ("chegou bonito
+  hoje kkk", "gostei desse 👀") — nunca exageradas.
+- **{cidade}: no MÁXIMO 5 apresentações femininas por dia** usam "de
+  {cidade}". As demais NÃO citam cidade nenhuma — raridade = credibilidade.
 
-## Pastas no Bunny (zero repetição no ciclo de 7 dias — ~800 mídias)
+## Pastas no Bunny (reformulação jul/2026 — por MOMENTO do dia, não assunto)
 
-Uma pasta-mãe por grupo (ex.: `grupo-vip/`), subpastas dentro. Assuntos são
-mapeados 1 a 1 em "Pastas de mídia" (chave = caminho); apresentação aponta só
-a pasta-mãe (subpastas de faixa são detectadas sozinhas). **Vídeos ficam em
-pastas SEPARADAS** (decisão do dono): `grupo-vip/videos/<assunto>`, mapeadas
-como chaves `videos-<assunto>` (ex.: `videos-cama` → `grupo-vip/videos/cama`).
-Tudo no Bunny STORAGE (não no Stream). No roteiro: `t:"video"` usa
-`folder:"videos-cama"`; álbum misto usa `folder:"cama"` (fotos) +
-`vfolder:"videos-cama"` (vídeos).
+Pasta-mãe por grupo (real: `IAGO GRUPOS/GRUPO VIP/`). Fotos e vídeos em
+pastas SEPARADAS (organização do dono). Tudo no Bunny STORAGE (não Stream).
+No roteiro: `t:"video"` usa `folder:"videos-sexy"`; álbum misto usa
+`folder:"sexy"` (fotos) + `vfolder:"videos-sexy"` (vídeos). Apresentação
+aponta só a pasta-mãe (subpastas de faixa detectadas sozinhas).
 
-| Pasta de fotos | Fotos | Pasta de vídeos | Vídeos |
-|---|---|---|---|
-| `cotidiano` | 45 | `videos/cotidiano` | 6 |
-| `academia` | 40 | `videos/academia` | 8 |
-| `comida` | 30 | – | – |
-| `espelho` | 40 | `videos/espelho` | 10 |
-| `banho` | 40 | `videos/banho` | 15 |
-| `cama` | 50 | `videos/cama` | 20 |
-| `lingerie` | 45 | `videos/lingerie` | 10 |
-| `provocante` | 50 | `videos/provocante` | 20 |
-| `praia` | 35 | `videos/praia` | 5 |
-| `trabalho` | 30 | – | – |
-| `festa` | 40 | `videos/festa` | 6 |
-| `rua` | 15 | – | – |
-| apresentação mulheres `19-21` | 15 | – |
-| apresentação mulheres `22-28` | 70 | – |
-| apresentação mulheres `29-36` | 70 | – |
-| apresentação mulheres `37-45` | 35 | – |
-| apresentação mulheres `46-55` | 20 | – |
-| apresentação homens `35-60` | 30 | – |
-| **TOTAL** | **700** | **100** |
+| Pasta | Conteúdo / quando | Uso/dia | Ideal | Pra começar |
+|---|---|---|---|---|
+| `bom-dia` | acordando, café, espreguiçando | 3–4 manhã | 25 | 15 |
+| `trabalho` | horário comercial (uniforme, pausa) | ~3 | 22 | 12 |
+| `academia` | treino | 2–3 | 20 | 12 |
+| `sexy` | **principal**: espelho, lingerie, banho, provocante | ~20 avulsas + álbuns | 200 | 100 |
+| `boa-noite` | na cama, indo dormir | 3–4 reta final | 25 | 15 |
+| `vonce` | EXCLUSIVAS pra visualização única (as mais fortes) | 8 | 55 | 30 |
+| `videos/sexy` | vídeos avulsos + álbuns + vonce vídeo | ~12–15 | 90 | 45 |
+| `videos/academia` | 1/dia no treino | 1 | 10 | 7 |
+| apresentação mulheres (5 faixas) | 19-21: poucas · 22-28 e 29-36: maioria · 37-45 · 46-55 | 30–32 | 210 (15/70/70/35/20) | 120 |
+| apresentação homens `35-60` | raros | 3–5 | 30 | 20 |
+| **TOTAL** | | | **~590 fotos + 100 vídeos** | **~330 + 52** |
 
-Dá pra começar com menos e engordar: a fita reassa a cada 30 min e pega mídia
-nova das pastas sem re-importar. O que NÃO pode é repetir dentro de 72h (a
-janela visível); repetir entre ciclos é invisível.
+Começar menor funciona: nada repete dentro das 72h visíveis (só entre
+semanas) e a fita pega mídia nova das pastas a cada 30 min, sem re-importar.
+
+## Mídia → conversa (regra de ouro)
+
+TODA mídia puxa interação: bom dia → respostas; foto sexy → reações + réplica
+da autora; vonce → desespero de quem viu + curiosidade de quem não viu;
+apresentação → boas-vindas. Mensagem de mídia solta sem reação não existe.
 
 ## Entrada do lead (camada pessoal, 1x por lead)
 
