@@ -16273,6 +16273,7 @@ function gaImportFile(input) {
                 if (wrapper.folders) payload.folders = wrapper.folders;
                 if (wrapper.presentation_female_folder) payload.presentation_female_folder = wrapper.presentation_female_folder;
                 if (wrapper.presentation_male_folder) payload.presentation_male_folder = wrapper.presentation_male_folder;
+                if (Array.isArray(wrapper.scenes)) payload.scenes = wrapper.scenes; // cenas embutidas (ex.: entrada)
             }
             const r = await fetch('/api/admin/groups/' + gid + '/schedule/import', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',

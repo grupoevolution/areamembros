@@ -678,6 +678,35 @@ router.post('/:id/schedule/import', requireAdmin, async (req, res) => {
                 [id, ...cols.map(c => cfg[c])]
             );
         }
+        // CENAS embutidas no arquivo (ex.: saudação de entrada): substitui as
+        // categorias que vierem e re-arma o gatilho de entrada dos leads que
+        // já entraram (senão a saudação nova nunca roda pra quem já abriu).
+        if (Array.isArray(req.body.scenes) && req.body.scenes.length) {
+            const cleanScenes = [];
+            for (const sc of req.body.scenes.slice(0, 100)) {
+                const cat = CATEGORIES.includes(sc?.category) ? sc.category : 'papo';
+                const per = PERIODS.includes(sc?.period) ? sc.period : 'any';
+                const msgs = cleanMessages(sc?.messages);
+                if (msgs.length) cleanScenes.push({ cat, per, weight: intOr(sc?.weight, 1, 1, 100), msgs });
+            }
+            const cats = [...new Set(cleanScenes.map(sc => sc.cat))];
+            if (cats.length) {
+                await db.query(`DELETE FROM group_scenes WHERE group_id = $1 AND category = ANY($2)`, [id, cats]);
+                for (const sc of cleanScenes) {
+                    await db.query(
+                        `INSERT INTO group_scenes (group_id, category, period, weight, messages)
+                         VALUES ($1, $2, $3, $4, $5::jsonb)`,
+                        [id, sc.cat, sc.per, sc.weight, JSON.stringify(sc.msgs)]
+                    );
+                }
+                if (cats.includes('entrada')) {
+                    await db.query(
+                        `UPDATE group_sessions SET state = state - 'entry_done'
+                         WHERE group_id = $1 AND state ? 'entry_done'`, [id]
+                    );
+                }
+            }
+        }
         const clean = [];
         for (const it of items) {
             const msgs = cleanMessages(it?.messages);
