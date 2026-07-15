@@ -11015,7 +11015,9 @@ window.GroupApp = (function () {
             + '<span style="width:19px;height:19px;border-radius:50%;border:2px solid ' + (sel ? '#f5c542' : '#5b555f') + ';display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + (sel ? '<span style="width:9px;height:9px;border-radius:50%;background:#f5c542;"></span>' : '') + '</span>'
             + '<span style="flex:1;min-width:0;"><span style="display:block;font-size:15px;font-weight:800;color:#fff;">' + esc(p.name || 'Plano') + '</span>'
             + '<span style="display:block;font-size:11.5px;color:#a89fae;">' + subFor(p, i) + '</span></span>'
-            + '<span style="font-size:18px;font-weight:800;color:#fff;">' + fmtR$(p.price) + '</span></div>';
+            // ancoragem: original_price configurado no painel aparece riscado em cima
+            + '<span style="text-align:right;">' + (p.original_price ? '<span style="display:block;font-size:11px;color:#8d8792;text-decoration:line-through;">' + fmtR$(p.original_price) + '</span>' : '')
+            + '<span style="font-size:18px;font-weight:800;color:#fff;">' + fmtR$(p.price) + '</span></span></div>';
         const passRow = (sel) => !pass ? '' :
             '<div style="text-align:center;font-size:10.5px;letter-spacing:2px;color:#8d8792;margin:12px 0 9px;">— OU LEVE TUDO —</div>'
             + '<div data-plan="pass" style="display:flex;align-items:center;gap:11px;border:1.5px solid ' + (sel ? '#f5c542' : 'rgba(245,197,66,.45)') + ';background:rgba(245,197,66,.06);border-radius:14px;padding:13px 14px;cursor:pointer;">'
@@ -11029,7 +11031,7 @@ window.GroupApp = (function () {
         let selPass = false;
         function paint() {
             ov.innerHTML = '<div style="background:#141013;border:1px solid rgba(255,255,255,.09);border-radius:20px;max-width:340px;width:100%;padding:20px 16px 14px;margin:auto;">'
-                + '<div style="width:46px;height:46px;border-radius:14px;background:#25a55f;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;"><svg width="22" height="22" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></div>'
+                + '<div style="width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#ff1f3d,#e50914);box-shadow:0 6px 18px rgba(229,9,20,.35);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;"><svg width="22" height="22" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></div>'
                 + '<div style="text-align:center;font-size:18px;font-weight:800;color:#fff;margin-bottom:5px;">' + esc(g.name || 'Grupo VIP') + '</div>'
                 + '<div style="text-align:center;font-size:12.5px;color:#a89fae;line-height:1.5;max-width:280px;margin:0 auto 15px;">' + sub + '</div>'
                 + plans.map((p, i) => row(p, i, !selPass && sel === i)).join('')
@@ -11066,15 +11068,27 @@ window.GroupApp = (function () {
         const bens = String(p.benefits
             || 'TODOS os grupos liberados — atuais e futuros\nAcervo completo: todas as fotos e vídeos de todos os grupos\nParticipe e converse sem nenhum limite\nGrupo novo lançou? Entra de graça pra você\nPagamento ÚNICO — nunca mais paga mensalidade\nSelo VIP: você no círculo fechado'
         ).split('\n').filter(Boolean).slice(0, 6);
-        ov.innerHTML = '<div style="background:linear-gradient(160deg,#241304,#140b03);border:1px solid rgba(245,197,66,.55);border-radius:20px;max-width:330px;width:100%;padding:24px 18px 14px;margin:auto;text-align:center;">'
+        // desconto real: original_price configurado no painel vira ancoragem
+        // ("de X por Y" + selo de %) — a copy de GRANDE OFERTA do Passe
+        const off = p.original_price && Number(p.original_price) > Number(p.price)
+            ? Math.round((1 - Number(p.price) / Number(p.original_price)) * 100) : 0;
+        ov.innerHTML = '<div style="position:relative;overflow:hidden;background:linear-gradient(165deg,#2a1804,#160c02 55%,#1d1103);border:1.5px solid rgba(245,197,66,.55);border-radius:22px;max-width:330px;width:100%;padding:22px 18px 14px;margin:auto;text-align:center;box-shadow:0 24px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,235,170,.18);">'
+            // brilho varrendo o cartão (mesma vibe do banner dourado da lista)
+            + '<span style="content:\'\';position:absolute;top:-60%;bottom:-60%;left:-70%;width:52px;background:linear-gradient(90deg,transparent,rgba(255,245,205,.14),transparent);transform:skewX(-20deg);animation:passShine 4.2s ease-in-out infinite;pointer-events:none;"></span>'
+            + '<div style="width:52px;height:52px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9a8,#f5c542 55%,#a8811f);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:23px;box-shadow:0 8px 22px rgba(245,197,66,.35);">👑</div>'
             + '<div style="font-size:10px;font-weight:800;letter-spacing:3px;color:#f5c542;">✦ PASSE VIP · ACESSO VITALÍCIO</div>'
-            + '<div style="font-size:23px;font-weight:800;color:#fff;margin:6px 0 4px;">TODOS OS GRUPOS,<br>PRA SEMPRE</div>'
-            + '<div style="font-size:12.5px;color:#cdbd8a;margin-bottom:14px;">Um pagamento. Zero mensalidade. Tudo aberto.</div>'
-            + '<div style="font-size:32px;font-weight:800;color:#f5c542;margin-bottom:12px;">' + fmtR$(p.price) + (p.original_price ? ' <span style="font-size:13px;color:#8d7a45;text-decoration:line-through;font-weight:600;">' + fmtR$(p.original_price) + '</span>' : '') + '</div>'
-            + '<div style="text-align:left;max-width:250px;margin:0 auto 16px;">' + bens.map(b => '<div style="font-size:12.5px;color:#e8ddc0;margin-bottom:6px;">✓ ' + esc(b) + '</div>').join('') + '</div>'
-            + '<button id="gaPassGo" style="width:100%;background:linear-gradient(180deg,#fbbf24,#f59e0b);border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:800;color:#241a05;letter-spacing:.5px;cursor:pointer;box-shadow:0 10px 30px rgba(245,158,11,.35);font-family:inherit;">QUERO TUDO LIBERADO</button>'
-            + '<div style="font-size:10.5px;color:#8d7a45;margin-top:10px;">🔒 Pagamento único e seguro</div>'
-            + '<button id="gaPassNo" style="display:block;margin:8px auto 0;background:none;border:none;color:#8d8792;font-size:13px;text-decoration:underline;cursor:pointer;font-family:inherit;padding:7px;">agora não</button>'
+            + '<div style="font-size:22px;font-weight:800;color:#fff;margin:6px 0 3px;line-height:1.15;">TODOS OS GRUPOS,<br>PRA SEMPRE</div>'
+            + '<div style="font-size:12.5px;color:#cdbd8a;margin-bottom:13px;">Um pagamento. Zero mensalidade. Tudo aberto.</div>'
+            + '<div style="background:rgba(245,197,66,.08);border:1px solid rgba(245,197,66,.3);border-radius:14px;padding:11px 12px 12px;margin-bottom:13px;">'
+            + (off ? '<div style="font-size:12px;color:#b8a568;">de <span style="text-decoration:line-through;">' + fmtR$(p.original_price) + '</span> por</div>' : '')
+            + '<div style="font-size:34px;font-weight:800;color:#f5c542;line-height:1.1;">' + fmtR$(p.price)
+            + (off ? ' <span style="display:inline-block;vertical-align:middle;background:#e50914;color:#fff;font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;margin-left:4px;">-' + off + '%</span>' : '') + '</div>'
+            + (off ? '<div style="font-size:10.5px;font-weight:700;letter-spacing:1px;color:#e8ddc0;margin-top:3px;">🔥 OFERTA POR TEMPO LIMITADO</div>' : '')
+            + '</div>'
+            + '<div style="text-align:left;max-width:262px;margin:0 auto 15px;">' + bens.map(b => '<div style="display:flex;gap:7px;align-items:flex-start;font-size:12.5px;color:#e8ddc0;margin-bottom:6px;line-height:1.35;"><span style="color:#f5c542;font-weight:800;flex-shrink:0;">✓</span><span>' + esc(b) + '</span></div>').join('') + '</div>'
+            + '<button id="gaPassGo" style="width:100%;background:linear-gradient(180deg,#ffd45e,#f59e0b);border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:800;color:#241a05;letter-spacing:.5px;cursor:pointer;box-shadow:0 10px 30px rgba(245,158,11,.4);font-family:inherit;">QUERO TUDO LIBERADO</button>'
+            + '<div style="font-size:10.5px;color:#b8a568;margin-top:10px;">🔒 Pagamento único e seguro · acesso na hora</div>'
+            + '<button id="gaPassNo" style="display:block;margin:7px auto 0;background:none;border:none;color:#8d8792;font-size:13px;text-decoration:underline;cursor:pointer;font-family:inherit;padding:7px;">agora não</button>'
             + '</div>';
         ov.querySelector('#gaPassGo').addEventListener('click', () => {
             try { window.TRACK && TRACK.event('group_paywall_click', { ctx: 'pass_banner', pass: true }); } catch (_) {}
