@@ -72,11 +72,15 @@ fogo, domingo de resenha, segunda de confissão…).
 
 ## Pastas no Bunny (reformulação jul/2026 — por MOMENTO do dia, não assunto)
 
-Pasta-mãe por grupo (real: `IAGO GRUPOS/GRUPO VIP/`). Fotos e vídeos em
-pastas SEPARADAS (organização do dono). Tudo no Bunny STORAGE (não Stream).
-No roteiro: `t:"video"` usa `folder:"videos-sexy"`; álbum misto usa
-`folder:"sexy"` (fotos) + `vfolder:"videos-sexy"` (vídeos). Apresentação
-aponta só a pasta-mãe (subpastas de faixa detectadas sozinhas).
+Pasta-mãe por grupo (real: `IAGO GRUPOS/GRUPO VIP/`). **FOTOS no Bunny
+STORAGE; VÍDEOS nas collections do Bunny STREAM** (setup real do dono): a
+chave de vídeo usa o prefixo `stream:` com os NOMES das collections separados
+por vírgula (`videos-sexy` → `stream:PRIVE,MDC,LB,AVULSOS`); a library é a do
+campo "Mídias do grupo" (media_video_library_id). Vídeo do Stream toca via
+thumb + player embed do Bunny (funciona em qualquer Android). No roteiro:
+`t:"video"` usa `folder:"videos-sexy"`; álbum misto usa `folder:"sexy"`
+(fotos) + `vfolder:"videos-sexy"` (vídeos). Apresentação aponta só a
+pasta-mãe (subpastas de faixa detectadas sozinhas).
 
 Consumo REAL do roteiro `semana-vip.json` (gerado jul/2026, ~1200 msgs/dia):
 "Mínimo" = pool que garante ZERO repetição dentro das 72h visíveis (uso de 3
@@ -91,7 +95,7 @@ rodízio repete entre os dias sem quebrar nada.
 | `sexy` (fotos avulsas + galerias) | ~42 | 130 | 300 |
 | `boa-noite` | 4 | 12 | 28 |
 | `vonce` (fotos exclusivas) | 10 | 30 | 70 |
-| `videos/sexy` (rajadas + galerias + vonce vídeo) | ~62 | 190 | 440 |
+| vídeos: `stream:PRIVE,MDC,LB,AVULSOS` (collections do Bunny STREAM, por nome — rajadas + galerias + vonce vídeo) | ~62 | 190 | 440 |
 | apresentação mulheres (5 faixas) | 62 | 190 | 435 (20/145/145/80/45) |
 | apresentação homens `35-60` | 4 | 12 | 30 |
 | **TOTAL** | | **~590** | **~1.370** |

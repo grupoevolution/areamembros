@@ -32,7 +32,7 @@ const router = express.Router();
 const db = require('../db');
 const { logger } = require('../lib/logger');
 const { optionalUser } = require('../lib/user-auth');
-const { listCollectionVideos, bunnyEmbedUrl, bunnyThumbUrl, listStorageMedia, listStorageSubfolders } = require('../lib/bunny');
+const { listCollectionVideos, bunnyEmbedUrl, bunnyThumbUrl, bunnyHlsUrl, resolveStreamCollection, listStorageMedia, listStorageSubfolders } = require('../lib/bunny');
 const { resolveCity } = require('../lib/geo');
 
 // ── Identidade (mesmo padrão do chat) ────────────────────────────────────────
@@ -216,8 +216,33 @@ async function hydrateGroupMedia(group) {
         group.folders = normalizeFolders(group.media_folders);
         group.folder_media = {};
         for (const key of Object.keys(group.folders)) {
-            try { group.folder_media[key] = await listStorageMedia(group.folders[key].path); }
-            catch (_) { group.folder_media[key] = []; }
+            const path = group.folders[key].path || '';
+            try {
+                if (/^stream:/i.test(path)) {
+                    // "stream:PRIVE,MDC" → vídeos das COLLECTIONS do Bunny Stream
+                    // (nome ou guid), usando a library configurada no grupo.
+                    // Tocam via thumb + player embed (mesmo esquema da galeria).
+                    const lib = group.media_video_library_id;
+                    const files = [];
+                    for (const nm of path.slice(7).split(',').map(x => x.trim()).filter(Boolean).slice(0, 10)) {
+                        const colId = await resolveStreamCollection(lib, nm);
+                        if (!colId) continue;
+                        for (const v of await listCollectionVideos(lib, colId)) {
+                            if (v.status != null && v.status !== 4) continue; // só encodados
+                            files.push({
+                                name: v.guid, kind: 'video',
+                                url: bunnyHlsUrl(v.guid) || bunnyEmbedUrl(lib, v.guid),
+                                embed: bunnyEmbedUrl(lib, v.guid),
+                                thumb: bunnyThumbUrl(v.guid, v.thumbnailFileName),
+                            });
+                        }
+                    }
+                    files.sort((a, b) => a.name.localeCompare(b.name)); // estável p/ rodízio
+                    group.folder_media[key] = files;
+                } else {
+                    group.folder_media[key] = await listStorageMedia(path);
+                }
+            } catch (_) { group.folder_media[key] = []; }
         }
         // compat com a camada pessoal (cenas usam listas de URL de imagem)
         group.media_folder_urls = {};
@@ -295,8 +320,10 @@ function bakeItem(group, item, mediaRR) {
         slotMap[slot] = { n, g: gender };
         return slotMap[slot];
     };
+    // retorna os ARQUIVOS (objetos) — vídeos do Stream carregam embed/thumb
     const folderFiles = (key, kind) =>
-        ((group.folder_media && group.folder_media[key]) || []).filter(f => f.kind === kind).map(f => f.url);
+        ((group.folder_media && group.folder_media[key]) || []).filter(f => f.kind === kind);
+    const streamMeta = (f) => (f && f.embed ? { embed: f.embed, thumb: f.thumb || null } : null);
     // rodízio global: pega a próxima foto da lista e anda +1 (não repete perto)
     const pickRR = (rrKey, list) => {
         if (!Array.isArray(list) || !list.length) return null;
@@ -322,8 +349,11 @@ function bakeItem(group, item, mediaRR) {
             const kind = m.t === 'image' ? 'image' : m.t;
             const key = (m.folder || '').toString().trim();
             const pool = key ? folderFiles(key, kind)
-                : (kind === 'image' ? (group.media_image_urls || []) : []);
-            media = pickRR((key || 'gallery') + ':' + kind, pool);
+                : (kind === 'image' ? (group.media_image_urls || []).map(u => ({ url: u })) : []);
+            const f = pickRR((key || 'gallery') + ':' + kind, pool);
+            media = f ? f.url : null;
+            const sm = streamMeta(f);
+            if (sm) meta = Object.assign({}, meta || {}, sm);
             if (!media) { if (!content) continue; type = 'text'; }
         } else if (m.t === 'album') {
             // álbum estilo Telegram: N fotos + N vídeos da MESMA pasta numa
@@ -338,12 +368,14 @@ function bakeItem(group, item, mediaRR) {
             const poolF = folderFiles(key, 'image'), poolV = folderFiles(vkey, 'video');
             const items = [];
             for (let j = 0; j < nF && items.length < 6; j++) {
-                const u = pickRR(key + ':image', poolF);
-                if (u && !items.some(x => x.url === u)) items.push({ url: u, kind: 'image' });
+                const f = pickRR(key + ':image', poolF);
+                if (f && !items.some(x => x.url === f.url)) items.push({ url: f.url, kind: 'image' });
             }
             for (let j = 0; j < nV && items.length < 6; j++) {
-                const u = pickRR(vkey + ':video', poolV);
-                if (u && !items.some(x => x.url === u)) items.push({ url: u, kind: 'video' });
+                const f = pickRR(vkey + ':video', poolV);
+                if (f && !items.some(x => x.url === f.url)) {
+                    items.push(Object.assign({ url: f.url, kind: 'video' }, streamMeta(f) || {}));
+                }
             }
             if (items.length >= 2) {
                 type = 'album';
@@ -381,7 +413,12 @@ function bakeItem(group, item, mediaRR) {
             const kind = m.kind === 'foto' ? 'foto' : 'video';
             meta = { kind };
             const key = (m.folder || '').toString().trim();
-            if (key) media = pickRR(key + ':vonce', folderFiles(key, kind === 'foto' ? 'image' : 'video'));
+            if (key) {
+                const f = pickRR(key + ':vonce', folderFiles(key, kind === 'foto' ? 'image' : 'video'));
+                media = f ? f.url : null;
+                const sm = streamMeta(f);
+                if (sm) Object.assign(meta, sm);
+            }
         } else if (m.t === 'cta') {
             type = 'cta';
             // label = texto DO botão; content vira o texto em cima (opcional).
@@ -1154,22 +1191,32 @@ router.get('/groups/:id/media', optionalUser, async (req, res) => {
         // agrega galeria: legado + pastas visíveis
         const images = [...(group.media_image_urls || [])];
         const fileVideos = [];
+        const folderStreamVideos = [];
         for (const key of Object.keys(group.folders || {})) {
             if (group.folders[key].hidden) continue;
             for (const f of (group.folder_media[key] || [])) {
                 if (f.kind === 'image' && images.indexOf(f.url) < 0) images.push(f.url);
-                if (f.kind === 'video') fileVideos.push(f.url);
+                if (f.kind === 'video') {
+                    // vídeo vindo de collection do Stream toca por embed (não <video src>)
+                    if (f.embed) folderStreamVideos.push({ title: null, embed_url: f.embed, thumb_url: f.thumb || null });
+                    else fileVideos.push(f.url);
+                }
             }
         }
-        let streamVideos = [];
+        let streamVideos = folderStreamVideos;
         if (group.media_video_library_id && group.media_video_collection_id) {
             try {
                 const vids = await listCollectionVideos(group.media_video_library_id, group.media_video_collection_id);
-                streamVideos = (vids || []).map(v => ({
-                    title: v.title || null,
-                    embed_url: bunnyEmbedUrl(group.media_video_library_id, v.guid),
-                    thumb_url: bunnyThumbUrl(v.guid, v.thumbnailFileName || 'thumbnail.jpg'),
-                }));
+                const seen = new Set(streamVideos.map(v => v.embed_url));
+                for (const v of (vids || [])) {
+                    const embed_url = bunnyEmbedUrl(group.media_video_library_id, v.guid);
+                    if (seen.has(embed_url)) continue;
+                    streamVideos.push({
+                        title: v.title || null,
+                        embed_url,
+                        thumb_url: bunnyThumbUrl(v.guid, v.thumbnailFileName || 'thumbnail.jpg'),
+                    });
+                }
             } catch (_) {}
         }
 
