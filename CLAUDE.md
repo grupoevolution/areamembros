@@ -50,6 +50,19 @@ a estrela; texto é tempero.
 6. **Compliance Meta:** o funil não pode ter comportamento que queime conta de
    anúncio. Não force navegador, não invente comportamento enganoso.
 
+## ⚠️ TRAVA ANTI-DESKTOP (leia antes de diagnosticar "site fora do ar")
+
+Em produção, acesso via DESKTOP recebe uma **página FALSA de erro 503**
+idêntica à do Cloudflare (`lib/device-check.js`) — o site parece derrubado de
+propósito (anti-clonagem; o público é mobile). O site NÃO está fora do ar.
+- Mobile (User-Agent) passa direto. Rotas `/api/`, `/webhook/`, `/health`
+  etc. são isentas.
+- Desbloqueio no PC: abrir qualquer rota com `?devkey=CHAVE` (a chave é a env
+  `DESKTOP_ACCESS_KEY`) — grava cookie `devbypass` por 30 dias e redireciona
+  limpando a URL. Ex.: `/admin?devkey=...`. A chave NÃO vai no caminho.
+- Antes de concluir que produção caiu: um 503 vindo com HTML "Cloudflare"
+  perfeito é provavelmente ESTA trava (curl/robôs parecem desktop).
+
 ## ONDE MORA CADA COISA (mapa rápido)
 
 - Vendas/webhooks: `routes/webhooks.js` + `lib/sales-processor.js` +
