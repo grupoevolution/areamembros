@@ -57,6 +57,7 @@ Um array de ITENS. Cada item = um bloco de mensagens num dia × horário:
 | `folder` | chave de pasta | de QUAL pasta do grupo sai a mídia (`image`/`video`/`audio`/`vonce`/`album`) |
 | `kind` | `foto` ou `video` | só no `vonce` (visualização única) |
 | `fotos` / `videos` | 0–6 (soma 2–6) | só no `album`: quantas fotos e vídeos da pasta entram na grade agrupada (estilo Telegram); `text` vira a legenda |
+| `vfolder` | chave de pasta | só no `album`: pasta separada de onde saem os VÍDEOS (fotos continuam vindo do `folder`); sem ele, tudo sai do `folder` |
 | `label` | string (até 60) | só no `cta`: o texto DO botão (o `text` vira o texto em cima, opcional) |
 | `link` / `pid` / `color` | url / id de produto / cor | só no `cta` (botão) |
 | `admin` | `true` | mensagem do ADMINISTRADOR (selo dourado — canal free) |

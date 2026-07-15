@@ -67,23 +67,27 @@ fogo, domingo de resenha, segunda de confissão…).
 
 Uma pasta-mãe por grupo (ex.: `grupo-vip/`), subpastas dentro. Assuntos são
 mapeados 1 a 1 em "Pastas de mídia" (chave = caminho); apresentação aponta só
-a pasta-mãe (subpastas de faixa são detectadas sozinhas). Vídeos moram DENTRO
-das pastas de assunto (o motor filtra por tipo).
+a pasta-mãe (subpastas de faixa são detectadas sozinhas). **Vídeos ficam em
+pastas SEPARADAS** (decisão do dono): `grupo-vip/videos/<assunto>`, mapeadas
+como chaves `videos-<assunto>` (ex.: `videos-cama` → `grupo-vip/videos/cama`).
+Tudo no Bunny STORAGE (não no Stream). No roteiro: `t:"video"` usa
+`folder:"videos-cama"`; álbum misto usa `folder:"cama"` (fotos) +
+`vfolder:"videos-cama"` (vídeos).
 
-| Pasta | Fotos | Vídeos |
-|---|---|---|
-| `cotidiano` | 45 | 6 |
-| `academia` | 40 | 8 |
-| `comida` | 30 | – |
-| `espelho` | 40 | 10 |
-| `banho` | 40 | 15 |
-| `cama` | 50 | 20 |
-| `lingerie` | 45 | 10 |
-| `provocante` | 50 | 20 |
-| `praia` | 35 | 5 |
-| `trabalho` | 30 | – |
-| `festa` | 40 | 6 |
-| `rua` | 15 | – |
+| Pasta de fotos | Fotos | Pasta de vídeos | Vídeos |
+|---|---|---|---|
+| `cotidiano` | 45 | `videos/cotidiano` | 6 |
+| `academia` | 40 | `videos/academia` | 8 |
+| `comida` | 30 | – | – |
+| `espelho` | 40 | `videos/espelho` | 10 |
+| `banho` | 40 | `videos/banho` | 15 |
+| `cama` | 50 | `videos/cama` | 20 |
+| `lingerie` | 45 | `videos/lingerie` | 10 |
+| `provocante` | 50 | `videos/provocante` | 20 |
+| `praia` | 35 | `videos/praia` | 5 |
+| `trabalho` | 30 | – | – |
+| `festa` | 40 | `videos/festa` | 6 |
+| `rua` | 15 | – | – |
 | apresentação mulheres `19-21` | 15 | – |
 | apresentação mulheres `22-28` | 70 | – |
 | apresentação mulheres `29-36` | 70 | – |

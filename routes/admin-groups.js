@@ -86,6 +86,7 @@ function cleanMessages(list) {
         pid: m.pid ? parseInt(m.pid, 10) : undefined,
         color: (m.color || '').toString().slice(0, 20) || undefined,
         folder: (m.folder || '').toString().trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40) || undefined,
+        vfolder: (m.vfolder || '').toString().trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40) || undefined, // álbum: pasta separada dos vídeos
         fotos: m.fotos !== undefined ? intOr(m.fotos, 0, 0, 6) : undefined,   // só no album
         videos: m.videos !== undefined ? intOr(m.videos, 0, 0, 6) : undefined, // só no album
         admin: m.admin === true ? true : undefined,

@@ -330,16 +330,19 @@ function bakeItem(group, item, mediaRR) {
             // bolha só (grade agrupada no app). Compartilha o rodízio das
             // mensagens avulsas — o que saiu em álbum não repete em foto solta.
             const key = (m.folder || '').toString().trim();
+            // vfolder: pasta separada pros vídeos do álbum (o dono organiza o
+            // Bunny com pastas só de foto e pastas só de vídeo)
+            const vkey = (m.vfolder || '').toString().trim() || key;
             const nF = Math.max(0, Math.min(6, parseInt(m.fotos, 10) || 0));
             const nV = Math.max(0, Math.min(6, parseInt(m.videos, 10) || 0));
-            const poolF = folderFiles(key, 'image'), poolV = folderFiles(key, 'video');
+            const poolF = folderFiles(key, 'image'), poolV = folderFiles(vkey, 'video');
             const items = [];
             for (let j = 0; j < nF && items.length < 6; j++) {
                 const u = pickRR(key + ':image', poolF);
                 if (u && !items.some(x => x.url === u)) items.push({ url: u, kind: 'image' });
             }
             for (let j = 0; j < nV && items.length < 6; j++) {
-                const u = pickRR(key + ':video', poolV);
+                const u = pickRR(vkey + ':video', poolV);
                 if (u && !items.some(x => x.url === u)) items.push({ url: u, kind: 'video' });
             }
             if (items.length >= 2) {
