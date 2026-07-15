@@ -672,6 +672,15 @@ router.post('/:id/schedule/import', requireAdmin, async (req, res) => {
         if (!clean.length) return res.status(400).json({ success: false, error: 'Nenhum item válido no JSON' });
         if (req.body?.replace === true) {
             await db.query(`DELETE FROM group_schedule_items WHERE group_id = $1`, [id]);
+            // roteiro novo do zero → reinicia o ciclo pra HOJE (meia-noite
+            // Brasília): o dia 0 importado começa a tocar imediatamente.
+            // Sem isso, a âncora fica na criação do grupo e o dia 0 só
+            // tocaria quando o ciclo desse a volta ("grupo vazio" no painel).
+            await db.query(
+                `UPDATE groups SET cycle_anchor =
+                    date_trunc('day', NOW() AT TIME ZONE 'America/Sao_Paulo') AT TIME ZONE 'America/Sao_Paulo'
+                 WHERE id = $1`, [id]
+            );
         }
         for (const it of clean) {
             await db.query(
