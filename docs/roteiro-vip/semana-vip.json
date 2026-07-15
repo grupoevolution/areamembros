@@ -5,7 +5,10 @@
   "academia": "IAGO GRUPOS/GRUPO VIP/academia",
   "sexy": "IAGO GRUPOS/GRUPO VIP/sexy",
   "boa-noite": "IAGO GRUPOS/GRUPO VIP/boa-noite",
-  "vonce": "IAGO GRUPOS/GRUPO VIP/vonce",
+  "vonce": {
+   "path": "IAGO GRUPOS/GRUPO VIP/vonce",
+   "hidden": true
+  },
   "videos-sexy": "IAGO GRUPOS/GRUPO VIP/videos/sexy"
  },
  "presentation_female_folder": "IAGO GRUPOS/GRUPO VIP/apresentacao-mulheres",
