@@ -1,0 +1,34 @@
+[
+  {
+    "category": "entrada",
+    "period": "any",
+    "weight": 1,
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "opa, chegou gente nova no grupo 👀", "gap_s": 4 },
+      { "p": 2, "g": "f", "t": "text", "text": "bem vindo!! chegou na hora certa viu kkk", "gap_s": 6 },
+      { "p": 3, "g": "m", "t": "text", "text": "seja bem vindo, aqui o negócio é sério kkkk", "gap_s": 5 }
+    ]
+  },
+  {
+    "category": "entrada",
+    "period": "any",
+    "weight": 1,
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "já que chegou gente nova... vou mandar uma coisinha especial 🙈", "gap_s": 7 },
+      { "p": 1, "g": "f", "t": "vonce", "kind": "foto", "text": "só pra galera de AGORA... corre que some 🙈", "gap_s": 5 },
+      { "p": 2, "g": "m", "t": "text", "text": "MEU DEUS eu vi", "gap_s": 6 },
+      { "p": 3, "g": "m", "t": "text", "text": "apaga não pelo amor kkkkk", "gap_s": 4 },
+      { "p": 4, "g": "f", "t": "text", "text": "kkkkk ela não perdoa, bem vindo ao grupo novato", "gap_s": 7 }
+    ]
+  },
+  {
+    "category": "entrada",
+    "period": "any",
+    "weight": 1,
+    "messages": [
+      { "p": 1, "g": "f", "t": "text", "text": "e aí novato, conseguiu abrir a foto? 👀", "gap_s": 8 },
+      { "p": 2, "g": "m", "t": "text", "text": "quem chegou agora tem que ser rápido aqui kkkk", "gap_s": 5 },
+      { "p": 1, "g": "f", "t": "text", "text": "fica com a gente que hoje ainda tem MUITO mais 🙈", "gap_s": 6 }
+    ]
+  }
+]

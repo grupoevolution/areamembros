@@ -78,22 +78,26 @@ No roteiro: `t:"video"` usa `folder:"videos-sexy"`; álbum misto usa
 `folder:"sexy"` (fotos) + `vfolder:"videos-sexy"` (vídeos). Apresentação
 aponta só a pasta-mãe (subpastas de faixa detectadas sozinhas).
 
-| Pasta | Conteúdo / quando | Uso/dia | Ideal | Pra começar |
-|---|---|---|---|---|
-| `bom-dia` | acordando, café, espreguiçando | 3–4 manhã | 25 | 15 |
-| `trabalho` | horário comercial (uniforme, pausa) | ~3 | 22 | 12 |
-| `academia` | treino | 2–3 | 20 | 12 |
-| `sexy` | **principal**: espelho, lingerie, banho, provocante | ~20 avulsas + álbuns | 200 | 100 |
-| `boa-noite` | na cama, indo dormir | 3–4 reta final | 25 | 15 |
-| `vonce` | EXCLUSIVAS pra visualização única (as mais fortes) | 8 | 55 | 30 |
-| `videos/sexy` | vídeos avulsos + álbuns + vonce vídeo | ~12–15 | 90 | 45 |
-| `videos/academia` | 1/dia no treino | 1 | 10 | 7 |
-| apresentação mulheres (5 faixas) | 19-21: poucas · 22-28 e 29-36: maioria · 37-45 · 46-55 | 30–32 | 210 (15/70/70/35/20) | 120 |
-| apresentação homens `35-60` | raros | 3–5 | 30 | 20 |
-| **TOTAL** | | | **~590 fotos + 100 vídeos** | **~330 + 52** |
+Consumo REAL do roteiro `semana-vip.json` (gerado jul/2026, ~1200 msgs/dia):
+"Mínimo" = pool que garante ZERO repetição dentro das 72h visíveis (uso de 3
+dias); "Ideal" = zero repetição nos 7 dias do ciclo. Com menos que o ideal, o
+rodízio repete entre os dias sem quebrar nada.
 
-Começar menor funciona: nada repete dentro das 72h visíveis (só entre
-semanas) e a fita pega mídia nova das pastas a cada 30 min, sem re-importar.
+| Pasta | Uso/dia | Mínimo (72h) | Ideal (7 dias) |
+|---|---|---|---|
+| `bom-dia` | 4 | 12 | 28 |
+| `trabalho` | 4 | 12 | 28 |
+| `academia` | 2 | 6 | 14 |
+| `sexy` (fotos avulsas + galerias) | ~42 | 130 | 300 |
+| `boa-noite` | 4 | 12 | 28 |
+| `vonce` (fotos exclusivas) | 10 | 30 | 70 |
+| `videos/sexy` (rajadas + galerias + vonce vídeo) | ~62 | 190 | 440 |
+| apresentação mulheres (5 faixas) | 62 | 190 | 435 (20/145/145/80/45) |
+| apresentação homens `35-60` | 4 | 12 | 30 |
+| **TOTAL** | | **~590** | **~1.370** |
+
+A fita pega mídia nova das pastas a cada 30 min, sem re-importar — dá pra
+abrir com o mínimo e engordar com o grupo rodando.
 
 ## Mídia → conversa (regra de ouro)
 
@@ -111,5 +115,10 @@ apresentação → boas-vindas. Mensagem de mídia solta sem reação não exist
 ## Visualização
 
 - Janela de **72h** (mensagem "viva" por 3 dias — contador de não lidas explode).
-- Abertura desce as últimas **150 mensagens** (~2–3h de fervo). Fase 2
+- Abertura desce as últimas **400 mensagens** (~6–8h de fervo). Fase 2
   planejada: paginação pra rolar até as 72h.
+- **Pós-trial**: o corpo do grupo fica todo BORRADO + cartão "⏳ 00:00 seu
+  tempo grátis acabou" com botão pros planos. A conversa segue por trás
+  (movimento visível, ilegível).
+- O `semana-vip.json` carrega o mapeamento de pastas junto: importar com
+  "substituir" configura as pastas do grupo E reinicia o ciclo pra hoje.
