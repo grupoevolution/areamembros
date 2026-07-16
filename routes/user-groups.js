@@ -225,7 +225,8 @@ async function hydrateGroupMedia(group) {
                     const lib = group.media_video_library_id;
                     const files = [];
                     for (const nm of path.slice(7).split(',').map(x => x.trim()).filter(Boolean).slice(0, 10)) {
-                        const colId = await resolveStreamCollection(lib, nm);
+                        // '*' = a library INTEIRA (todos os vídeos, com ou sem collection)
+                        const colId = nm === '*' ? '*' : await resolveStreamCollection(lib, nm);
                         if (!colId) continue;
                         for (const v of await listCollectionVideos(lib, colId)) {
                             if (v.status != null && v.status !== 4) continue; // só encodados
