@@ -680,7 +680,10 @@ async function materializeScene(session, group, scene, baseTime, gapScale) {
             content = content.replace(/\{nome(\d+)\}/gi, (_, d) => bySlot(parseInt(d, 10), null).n);
             content = content.replace(/\{nome\}/gi, person ? person.n : (group.name || 'Admin'));
             content = content.replace(/\{idade\}/gi, String(19 + rand(15)));
-            content = content.replace(/\{cidade\}/gi, session.city || pick(FALLBACK_CITIES));
+            // sem geo: capital ESTÁVEL por sessão (senão cada msg sorteia uma
+            // cidade diferente e a saudação "sou de {cidade}" se contradiz)
+            content = content.replace(/\{cidade\}/gi,
+                session.city || FALLBACK_CITIES[hashStr('c' + session.id) % FALLBACK_CITIES.length]);
         }
         if (m.t === 'image') {
             type = 'image';
@@ -908,12 +911,14 @@ router.get('/groups', optionalUser, async (req, res) => {
                     };
                 }
             } else {
-                // nunca entrou: número "cheio" pra dar curiosidade (estável por grupo)
+                // nunca entrou: número "cheio" pra dar curiosidade (estável por
+                // grupo) e preview REAL — o cadeado/borrão só aparece DEPOIS
+                // que o trial do lead esgota (pedido do dono: entrada limpa)
                 unread = Math.min(999, Math.max(shared.length, 40 + ((g.id * 37) % 160)));
-                masked = !g.is_free;
+                masked = false;
                 last = lastShared
-                    ? { name: masked ? null : lastShared.name, preview: masked ? maskContent(lastShared.content, lastShared.sid) : (lastShared.content || 'Mensagem'), at: new Date(lastShared.t).toISOString() }
-                    : (masked ? { name: null, preview: maskContent('primeira vez', 'g' + g.id), at: null } : null);
+                    ? { name: lastShared.name, preview: (lastShared.type === 'image' || lastShared.type === 'vonce' ? 'Foto' : lastShared.type === 'album' ? 'Fotos' : lastShared.type === 'video' ? 'Vídeo' : (lastShared.content || 'Mensagem')), at: new Date(lastShared.t).toISOString() }
+                    : null;
             }
             out.push({
                 id: g.id, name: g.name, avatar_url: g.avatar_url,

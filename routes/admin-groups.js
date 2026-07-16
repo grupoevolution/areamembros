@@ -671,6 +671,10 @@ router.post('/:id/schedule/import', requireAdmin, async (req, res) => {
                 cfg[k] = req.body[k].trim().replace(/^\/+|\/+$/g, '').slice(0, 200);
             }
         }
+        if (req.body.trial_seconds !== undefined) {
+            const t = parseInt(req.body.trial_seconds, 10);
+            if (Number.isFinite(t) && t >= 15 && t <= 3600) cfg.trial_seconds = t;
+        }
         if (Object.keys(cfg).length) {
             const cols = Object.keys(cfg);
             await db.query(
