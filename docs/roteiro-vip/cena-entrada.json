@@ -4,11 +4,10 @@
     "period": "any",
     "weight": 1,
     "messages": [
-      { "p": 1, "g": "f", "t": "text", "text": "opa, chegou gente nova no grupo 👀👀", "gap_s": 4 },
-      { "p": 2, "g": "f", "t": "text", "text": "olha gente!! tomara que seja daqui de {cidade} kkkk", "gap_s": 6 },
-      { "p": 3, "g": "f", "t": "text", "text": "ai meu deus se for de {cidade} eu caso... tá FALTANDO homem aqui kkkk", "gap_s": 7 },
-      { "p": 4, "g": "m", "t": "text", "text": "chegou concorrência então kkkk bem vindo parceiro", "gap_s": 5 },
-      { "p": 2, "g": "f", "t": "text", "text": "bem vindo!! fica a vontade e se apresenta depois 😏", "gap_s": 6 }
+      { "p": 1, "g": "f", "t": "text", "text": "gente olha, chegou homem novo no grupo 👀🔥", "gap_s": 3 },
+      { "p": 2, "g": "f", "t": "text", "text": "aiii tomara que seja de {cidade} kkkk", "gap_s": 4 },
+      { "p": 3, "g": "f", "t": "text", "text": "se for de {cidade} eu pego pra mim, aviso logo... tá EM FALTA homem aqui", "gap_s": 5 },
+      { "p": 2, "g": "f", "t": "text", "text": "bem vindo gato 😏 chegou no grupo mais safado do brasil", "gap_s": 4 }
     ]
   },
   {
@@ -16,12 +15,12 @@
     "period": "any",
     "weight": 1,
     "messages": [
-      { "p": 1, "g": "f", "t": "text", "text": "gente eu SOU de {cidade} e vou dar as boas vindas do MEU jeito 🙈", "gap_s": 6 },
-      { "p": 1, "g": "f", "t": "vonce", "kind": "foto", "text": "pra comemorar a chegada... visualização única, corre 🙈", "gap_s": 5 },
-      { "p": 2, "g": "m", "t": "text", "text": "MEU DEUS que recepção", "gap_s": 5 },
-      { "p": 3, "g": "m", "t": "text", "text": "ela mostrou TUDO kkkkk que mulher", "gap_s": 4 },
-      { "p": 4, "g": "f", "t": "text", "text": "kkkkk que safada, o novato nem imagina o que perdeu", "gap_s": 6 },
-      { "p": 2, "g": "m", "t": "text", "text": "novato se você conseguiu ver, fala AGORA kkkk", "gap_s": 5 }
+      { "p": 1, "g": "f", "t": "text", "text": "eu SOU de {cidade} e vou dar as boas vindas do meu jeito 🙈", "gap_s": 4 },
+      { "p": 1, "g": "f", "t": "vonce", "kind": "foto", "text": "a primeira é só pra te deixar curioso 🙈", "gap_s": 4 },
+      { "p": 1, "g": "f", "t": "vonce", "kind": "foto", "text": "e essa segunda é bem mais forte... corre 🔥", "gap_s": 5 },
+      { "p": 2, "g": "f", "t": "text", "text": "MULHER kkkkk ele acabou de chegar e você já mostrou TUDO", "gap_s": 4 },
+      { "p": 3, "g": "f", "t": "text", "text": "que safada kkkkk amei, é assim que recebe", "gap_s": 3 },
+      { "p": 4, "g": "m", "t": "text", "text": "confirmo: a segunda foto tá CRIMINOSA, quem viu viu", "gap_s": 4 }
     ]
   },
   {
@@ -29,12 +28,11 @@
     "period": "any",
     "weight": 1,
     "messages": [
-      { "p": 1, "g": "f", "t": "text", "text": "vou melhorar a recepção: um vídeo tbm... mas esse some RAPIDINHO 🙈🔥", "gap_s": 7 },
-      { "p": 1, "g": "f", "t": "vonce", "kind": "video", "text": "aproveita que hoje eu tô generosa... 1 visualização só", "gap_s": 5 },
-      { "p": 2, "g": "m", "t": "text", "text": "eu VI e não tô bem kkkkk", "gap_s": 5 },
-      { "p": 3, "g": "m", "t": "text", "text": "que delícia de vídeo, socorro", "gap_s": 4 },
-      { "p": 4, "g": "m", "t": "text", "text": "muito gostosa, esse grupo não existe", "gap_s": 5 },
-      { "p": 5, "g": "f", "t": "text", "text": "vocês assustam o menino kkkkk deixa ele respirar", "gap_s": 6 }
+      { "p": 1, "g": "f", "t": "text", "text": "peraí que a recepção oficial daqui é em VÍDEO 🙈🔥", "gap_s": 4 },
+      { "p": 1, "g": "f", "t": "vonce", "kind": "video", "text": "meu presente de boas vindas... 1 visualização só", "gap_s": 4 },
+      { "p": 1, "g": "f", "t": "vonce", "kind": "video", "text": "e mais um porque hoje eu tô impossível 😈", "gap_s": 5 },
+      { "p": 2, "g": "f", "t": "text", "text": "socorro kkkkk vocês querem matar o menino no primeiro minuto", "gap_s": 4 },
+      { "p": 3, "g": "f", "t": "text", "text": "esses vídeos tavam uma DELÍCIA, quem pegou pegou 🙈", "gap_s": 4 }
     ]
   },
   {
@@ -42,9 +40,10 @@
     "period": "any",
     "weight": 1,
     "messages": [
-      { "p": 1, "g": "f", "t": "text", "text": "e aí novato, tá gostando? manda um oi pra gente te conhecer 👀", "gap_s": 7 },
-      { "p": 2, "g": "f", "t": "text", "text": "fala de onde você é... quem sabe você não dá sorte por aqui kkkk", "gap_s": 6 },
-      { "p": 3, "g": "m", "t": "text", "text": "responde logo kkkk elas tão animadas hoje, aproveita", "gap_s": 5 }
+      { "p": 1, "g": "f", "t": "text", "text": "vou mandar o meu tbm vai... esse não conta pra ninguém 🙈", "gap_s": 4 },
+      { "p": 1, "g": "f", "t": "vonce", "kind": "video", "text": "rapidinho e SÓ pra quem chegou agora", "gap_s": 4 },
+      { "p": 2, "g": "f", "t": "text", "text": "pronto, recepção completa kkkk esse grupo não perdoa", "gap_s": 4 },
+      { "p": 3, "g": "f", "t": "text", "text": "agora fala com a gente novato... manda um oi e diz se você é de {cidade} mesmo 👀", "gap_s": 5 }
     ]
   },
   {
@@ -52,9 +51,8 @@
     "period": "any",
     "weight": 2,
     "messages": [
-      { "p": 1, "g": "f", "t": "text", "text": "olhaaa ele falou!! kkkk agora sim, seja MUITO bem vindo 😏", "gap_s": 4 },
-      { "p": 2, "g": "f", "t": "text", "text": "gostei dele já kkk conta mais: de onde você é?", "gap_s": 6 },
-      { "p": 3, "g": "m", "t": "text", "text": "deixa o cara respirar kkkk bem vindo mano", "gap_s": 5 }
+      { "p": 1, "g": "f", "t": "text", "text": "olhaaa ele falou!! kkkk agora sim, seja MUITO bem vindo 😏", "gap_s": 3 },
+      { "p": 2, "g": "f", "t": "text", "text": "gostei da voz dele já kkk conta: de onde você é?", "gap_s": 5 }
     ]
   },
   {
@@ -62,8 +60,8 @@
     "period": "any",
     "weight": 1,
     "messages": [
-      { "p": 1, "g": "f", "t": "text", "text": "uii chegou participando, adoro 👀", "gap_s": 4 },
-      { "p": 2, "g": "f", "t": "text", "text": "se você for de {cidade} eu já tô de olho em você kkkk", "gap_s": 6 }
+      { "p": 1, "g": "f", "t": "text", "text": "uii chegou participando, ADORO homem assim 👀", "gap_s": 3 },
+      { "p": 2, "g": "f", "t": "text", "text": "se você for de {cidade} mesmo, já tô de olho em você kkkk", "gap_s": 5 }
     ]
   },
   {
@@ -71,8 +69,8 @@
     "period": "any",
     "weight": 1,
     "messages": [
-      { "p": 1, "g": "f", "t": "text", "text": "kkkkk adorei esse aí", "gap_s": 4 },
-      { "p": 2, "g": "f", "t": "text", "text": "continua assim que você vai longe nesse grupo 😏", "gap_s": 5 }
+      { "p": 1, "g": "f", "t": "text", "text": "kkkkk adorei esse aí", "gap_s": 3 },
+      { "p": 2, "g": "f", "t": "text", "text": "continua assim que você vai ganhar mimo aqui 😏", "gap_s": 5 }
     ]
   },
   {
@@ -80,8 +78,7 @@
     "period": "any",
     "weight": 1,
     "messages": [
-      { "p": 1, "g": "f", "t": "text", "text": "hmm gostei da resposta 👀", "gap_s": 4 },
-      { "p": 2, "g": "m", "t": "text", "text": "o novato tá se soltando kkkk", "gap_s": 5 }
+      { "p": 1, "g": "f", "t": "text", "text": "hmm gostei da resposta 👀 esse aí sabe conversar", "gap_s": 4 }
     ]
   },
   {
@@ -89,8 +86,8 @@
     "period": "any",
     "weight": 1,
     "messages": [
-      { "p": 1, "g": "f", "t": "text", "text": "kkkk fala mais, a gente tá curiosa com você", "gap_s": 4 },
-      { "p": 2, "g": "f", "t": "text", "text": "manda uma foto sua depois pra gente te conhecer 🙈", "gap_s": 6 }
+      { "p": 1, "g": "f", "t": "text", "text": "kkkk fala mais, a gente tá curiosa com você", "gap_s": 3 },
+      { "p": 2, "g": "f", "t": "text", "text": "manda uma foto sua depois pra gente te conhecer 🙈", "gap_s": 5 }
     ]
   },
   {
@@ -98,8 +95,8 @@
     "period": "any",
     "weight": 1,
     "messages": [
-      { "p": 1, "g": "f", "t": "text", "text": "esse novato promete viu kkkk", "gap_s": 4 },
-      { "p": 2, "g": "f", "t": "text", "text": "vem no privado depois que a gente conversa melhor 🙈", "gap_s": 6 }
+      { "p": 1, "g": "f", "t": "text", "text": "esse novato promete viu kkkk", "gap_s": 3 },
+      { "p": 2, "g": "f", "t": "text", "text": "vem no privado depois que a gente se conhece melhor 🙈", "gap_s": 5 }
     ]
   }
 ]
