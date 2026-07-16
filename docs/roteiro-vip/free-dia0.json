@@ -1,0 +1,1766 @@
+{
+ "folders": {
+  "bom-dia": "IAGO GRUPOS/GRUPO VIP/bom-dia",
+  "academia": "IAGO GRUPOS/GRUPO VIP/academia",
+  "trabalho": "IAGO GRUPOS/GRUPO VIP/trabalho",
+  "sexy": "IAGO GRUPOS/GRUPO VIP/sexy",
+  "boa-noite": "IAGO GRUPOS/GRUPO VIP/boa-noite",
+  "videos-sexy": "stream:AVULSOS,LB"
+ },
+ "presentation_female_folder": "IAGO GRUPOS/GRUPO VIP/apresentacao-mulheres",
+ "presentation_male_folder": "IAGO GRUPOS/GRUPO VIP/apresentacao-homens",
+ "scenes": [
+  {
+   "category": "entrada",
+   "period": "any",
+   "weight": 1,
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "text": "opa, chegou gente nova 👀 seja bem vindo!",
+     "gap_s": 4
+    },
+    {
+     "p": 2,
+     "g": "f",
+     "t": "text",
+     "text": "fica a vontade... aqui posta coisa boa o dia INTEIRO 🔥",
+     "gap_s": 5
+    }
+   ]
+  },
+  {
+   "category": "entrada",
+   "period": "any",
+   "weight": 1,
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "text": "e um aviso de amiga: isso aqui é só a VITRINE... o conteúdo pesado e a conversa com as meninas rolam no GRUPO VIP 😈",
+     "gap_s": 7
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "label": "CONHECER O GRUPO VIP 🔥",
+     "link": "/?group=2",
+     "gap_s": 5
+    }
+   ]
+  }
+ ],
+ "items": [
+  {
+   "day": 0,
+   "time": "00:13",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 13,
+     "folder": "bom-dia",
+     "text": "só passando pra deixar isso aqui 🙈"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 20,
+     "text": "minha humilde reação: 🔥🔥🔥"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "00:50",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 27,
+     "folder": "bom-dia",
+     "text": "quem tava com saudade levanta a mão"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 7,
+     "text": "sem condições kkkk"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 14,
+     "text": "a musa atacou de novo"
+    },
+    {
+     "p": 4,
+     "g": "f",
+     "t": "text",
+     "gap_s": 21,
+     "text": "aiii que linda"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "01:22",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 28,
+     "text": "concordo demais kkkk"
+    },
+    {
+     "p": 2,
+     "g": "f",
+     "t": "text",
+     "gap_s": 8,
+     "text": "hoje acordei no modo saliente, culpa de vcs"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "07:15",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 26,
+     "folder": "bom-dia",
+     "text": "noite boa galerinha do grupo 🌙 pv liberado 🔥"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 6,
+     "text": "que mulher meu deus"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "07:37",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 13,
+     "text": "alguém on agora?"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 20,
+     "text": "esse grupo hoje tá pegando fogo"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "07:53",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "presentation",
+     "gap_s": 27,
+     "text": "bom dia a todos 😌 {nome}, {idade} anos, solteira 🔥 pv liberado 😈"
+    },
+    {
+     "p": 2,
+     "g": "f",
+     "t": "text",
+     "gap_s": 7,
+     "text": "amiga que linda!!"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "08:10",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 4,
+     "text": "bom diaaaa grupo 🌞"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 11,
+     "text": "bom dia gata"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 18,
+     "text": "bom dia princesa"
+    },
+    {
+     "p": 4,
+     "g": "f",
+     "t": "text",
+     "gap_s": 25,
+     "text": "bom dia amigaa"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "08:12",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "video",
+     "gap_s": 14,
+     "folder": "videos-sexy",
+     "text": "toma, um esquenta pra vcs 🔥"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "video",
+     "gap_s": 4,
+     "folder": "videos-sexy"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 28,
+     "text": "MARAVILHOSA"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 8,
+     "text": "socorro kkkk"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "08:46",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 15,
+     "folder": "bom-dia",
+     "text": "dia de retocar a marquinha 🙈 eu amei e vcs???"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 22,
+     "text": "perfeita demais"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "09:04",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 29,
+     "folder": "bom-dia",
+     "text": "qual nota vcs dão pro meu look? 👀"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 9,
+     "text": "acabou comigo essa foto"
+    },
+    {
+     "p": 3,
+     "g": "f",
+     "t": "text",
+     "gap_s": 16,
+     "text": "arrasou demais"
+    },
+    {
+     "p": 4,
+     "g": "m",
+     "t": "text",
+     "gap_s": 23,
+     "text": "que isso mulher"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "09:31",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 30,
+     "folder": "bom-dia",
+     "text": "vamos ali 🤭 quem vem comigo?"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 10,
+     "text": "absurdo de linda"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 17,
+     "text": "o grupo não merece tanto"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "09:44",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 24,
+     "text": "que dia gente viu"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 4,
+     "text": "cadê todo mundo?"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "10:14",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 11,
+     "text": "to olhando tudo caladinha kkkk"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 18,
+     "text": "melhor grupo que já entrei, sério"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "10:33",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 25,
+     "folder": "academia",
+     "text": "acordei assim... julguem 🙈"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 5,
+     "text": "chega doeu de tão boa"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 12,
+     "text": "impossível não reagir"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "10:48",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 19,
+     "folder": "sexy",
+     "text": "saindo do banho agora 💦"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 26,
+     "text": "a melhor do grupo, falei"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "11:13",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "presentation",
+     "gap_s": 6,
+     "text": "oie, me chamo {nome}, tenho {idade} anos e tô solteira 🙈 quero conhecer alguém legal aqui ❤️"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 13,
+     "text": "vou salvar no coração"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "11:24",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 20,
+     "folder": "sexy",
+     "text": "essa saia é demais pro trabalho? kkk"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 27,
+     "text": "que corpo é esse"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "11:49",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 7,
+     "text": "🔥 o que rola no GRUPO VIP não pode nem ficar aqui... lá é SEM censura, conversa liberada e conteúdo pesado o dia inteiro",
+     "admin": true
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "gap_s": 6,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2",
+     "admin": true
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "12:13",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "video",
+     "gap_s": 21,
+     "folder": "videos-sexy",
+     "text": "choveu conteúdo AGORA"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 28,
+     "text": "deusa é pouco"
+    },
+    {
+     "p": 3,
+     "g": "f",
+     "t": "text",
+     "gap_s": 8,
+     "text": "que corpo mulher 😍"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "12:26",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 15,
+     "text": "o pv tá um caos depois de hoje kkkk"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 22,
+     "text": "impossível trabalhar com esse grupo aberto"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "12:45",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 29,
+     "folder": "trabalho",
+     "text": "tédio bateu, foto vai 🙈"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 9,
+     "text": "me apaixonei de novo"
+    },
+    {
+     "p": 3,
+     "g": "f",
+     "t": "text",
+     "gap_s": 16,
+     "text": "linda linda linda"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "13:05",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 23,
+     "folder": "sexy",
+     "text": "me arrumando pra nada, como sempre kk"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 30,
+     "text": "assim eu não aguento"
+    },
+    {
+     "p": 3,
+     "g": "f",
+     "t": "text",
+     "gap_s": 10,
+     "text": "maravilhosa amiga"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "13:32",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 17,
+     "text": "gente que calor insuportável"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 24,
+     "text": "hoje eu não saio daqui"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "13:51",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 4,
+     "text": "me contem novidade aí"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 11,
+     "text": "esse grupo devia pagar meu psicólogo kkkk"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "14:04",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "presentation",
+     "gap_s": 18,
+     "text": "{idade} anos, casada 🔥 buscando apenas diversão aqui no grupo 🔞 pv liberado"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 25,
+     "text": "nota mil"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "14:23",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "sextou dentro de mim todo dia 🔥"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 12,
+     "text": "sem palavras aqui"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 19,
+     "text": "que fase abençoada desse grupo"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "14:43",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "video",
+     "gap_s": 26,
+     "folder": "videos-sexy",
+     "text": "sequência especial pra quem ficou"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "video",
+     "gap_s": 4,
+     "folder": "videos-sexy"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 13,
+     "text": "a foto do dia com certeza"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 20,
+     "text": "como pode"
+    },
+    {
+     "p": 4,
+     "g": "m",
+     "t": "text",
+     "gap_s": 27,
+     "text": "delícia de foto"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "15:02",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 7,
+     "text": "tô esperando o pico de hoje 👀"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 14,
+     "text": "quem mais fica só de olho aí levanta a mão kk"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "15:15",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 21,
+     "folder": "sexy",
+     "text": "olha o presente de hoje 🙈"
+    },
+    {
+     "p": 2,
+     "g": "f",
+     "t": "text",
+     "gap_s": 28,
+     "text": "perfeita gata"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "15:38",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 8,
+     "text": "😈 aqui é só a amostra. no VIP as meninas mandam TUDO — visualização única, vídeos completos e você pode conversar com elas",
+     "admin": true
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "gap_s": 6,
+     "label": "QUERO O VIP AGORA 😈",
+     "link": "/?group=2",
+     "admin": true
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "15:49",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 22,
+     "folder": "trabalho",
+     "text": "avaliem o conjunto novo 👀"
+    },
+    {
+     "p": 2,
+     "g": "f",
+     "t": "text",
+     "gap_s": 29,
+     "text": "amei amiga"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 9,
+     "text": "isso devia ser proibido kkk"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "16:10",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 16,
+     "folder": "trabalho",
+     "text": "fiquei bem de vermelho? responde aí"
+    },
+    {
+     "p": 2,
+     "g": "f",
+     "t": "text",
+     "gap_s": 23,
+     "text": "que foto boa"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "16:29",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "vonce",
+     "gap_s": 30,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "mandei uma coisinha... corre que some 🙈"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 10,
+     "text": "meu dia melhorou 300%"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 17,
+     "text": "tô passado"
+    },
+    {
+     "p": 4,
+     "g": "m",
+     "t": "text",
+     "gap_s": 24,
+     "text": "que espetáculo"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "16:50",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 4,
+     "folder": "sexy",
+     "text": "cheirosa e sem compromisso 😏"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 11,
+     "text": "ela sabe o que faz kkkk"
+    },
+    {
+     "p": 3,
+     "g": "f",
+     "t": "text",
+     "gap_s": 18,
+     "text": "diva demais"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "17:04",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 25,
+     "text": "já quero que seja noite logo"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 5,
+     "text": "o nível de hoje tá alto hein"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "17:26",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 12,
+     "folder": "sexy",
+     "text": "meu espelho tá me elogiando hoje kkk"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 19,
+     "text": "covardia isso"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 26,
+     "text": "a mais linda dessa terra"
+    },
+    {
+     "p": 4,
+     "g": "m",
+     "t": "text",
+     "gap_s": 6,
+     "text": "pqp que foto"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "17:33",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 13,
+     "text": "👀 curtiu as fotos? isso é 1% do que rola no VIP agora mesmo... entra e vê com seus olhos",
+     "admin": true
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "gap_s": 6,
+     "label": "VER O GRUPO VIP 👀",
+     "link": "/?group=2",
+     "admin": true
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "17:51",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 27,
+     "text": "vcs não prestam kkkkk amo"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 7,
+     "text": "sinto que hoje vai ter surpresa"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "18:04",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 14,
+     "folder": "sexy",
+     "text": "de pijaminha esperando nada 🙈"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 21,
+     "text": "eu tava precisando disso hoje"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 28,
+     "text": "obrigado meu deus por esse grupo"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "18:23",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 8,
+     "folder": "sexy",
+     "text": "essa foto quase não veio... aproveitem"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 15,
+     "text": "essa vai pra galeria mental kkk"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "18:33",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 22,
+     "folder": "sexy",
+     "text": "treino pago, shape em dia 💪"
+    },
+    {
+     "p": 2,
+     "g": "f",
+     "t": "text",
+     "gap_s": 29,
+     "text": "tá um espetáculo"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "18:53",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "presentation",
+     "gap_s": 9,
+     "text": "oi amores, {nome}, {idade} aninhos 🙈 divorciada e pronta pra viver"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 16,
+     "text": "me acabou"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "19:10",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 23,
+     "folder": "sexy",
+     "text": "café e essa carinha de sono ☕"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 30,
+     "text": "que benção"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 10,
+     "text": "o nível daqui é surreal"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "19:25",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "vonce",
+     "gap_s": 17,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "só pra quem tá online AGORA"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 24,
+     "text": "apaga não pelo amor"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 4,
+     "text": "melhor coisa que vi hoje"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "19:34",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "video",
+     "gap_s": 11,
+     "folder": "videos-sexy",
+     "text": "o estoque de hoje tá generoso kk"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "video",
+     "gap_s": 4,
+     "folder": "videos-sexy"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 25,
+     "text": "linda demais gata"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 5,
+     "text": "minha pressão subiu kkk"
+    },
+    {
+     "p": 4,
+     "g": "m",
+     "t": "text",
+     "gap_s": 12,
+     "text": "que pecado"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "19:49",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "video",
+     "gap_s": 19,
+     "folder": "videos-sexy",
+     "text": "pra animar essa hora"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 26,
+     "text": "a boa do grupo"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 6,
+     "text": "5 estrelas"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "20:08",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 13,
+     "text": "deu uma acalmada... suspeito kkk"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 20,
+     "text": "voltei, o que perdi?"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "20:14",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 27,
+     "folder": "sexy",
+     "text": "produzida e perigosa 🔥"
+    },
+    {
+     "p": 2,
+     "g": "f",
+     "t": "text",
+     "gap_s": 7,
+     "text": "amiga vc não existe"
+    },
+    {
+     "p": 3,
+     "g": "f",
+     "t": "text",
+     "gap_s": 14,
+     "text": "que inveja boa kkk"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "20:30",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 21,
+     "folder": "sexy",
+     "text": "luz boa demais pra desperdiçar"
+    },
+    {
+     "p": 2,
+     "g": "f",
+     "t": "text",
+     "gap_s": 28,
+     "text": "deusa!!"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "20:38",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "video",
+     "gap_s": 8,
+     "folder": "videos-sexy",
+     "text": "modo boazinha: desligado 😈"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "video",
+     "gap_s": 4,
+     "folder": "videos-sexy"
+    },
+    {
+     "p": 2,
+     "g": "f",
+     "t": "text",
+     "gap_s": 22,
+     "text": "impecável amiga"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 29,
+     "text": "vou olhar de novo umas 10x"
+    },
+    {
+     "p": 4,
+     "g": "m",
+     "t": "text",
+     "gap_s": 9,
+     "text": "isso sim é conteúdo"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "20:53",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 16,
+     "text": "perdeu nada não... AINDA kk"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 23,
+     "text": "alguém salva as coisas daqui? pergunta séria kkk"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "20:58",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 30,
+     "folder": "sexy",
+     "text": "uma do ângulo que vcs gostam 👀"
+    },
+    {
+     "p": 2,
+     "g": "f",
+     "t": "text",
+     "gap_s": 10,
+     "text": "vc tá cada dia melhor"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 17,
+     "text": "tá querendo me matar né"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "21:11",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "video",
+     "gap_s": 24,
+     "folder": "videos-sexy",
+     "text": "já que pediram tanto..."
+    },
+    {
+     "p": 2,
+     "g": "f",
+     "t": "text",
+     "gap_s": 4,
+     "text": "poderosa demais"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 11,
+     "text": "affff que mulher"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "21:25",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "presentation",
+     "gap_s": 18,
+     "text": "chegando agora: {nome}, {idade} anos, de {cidade} 🔥 me tratem bem kkk"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 25,
+     "text": "impecável"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 5,
+     "text": "tô sem reação... quase kkk"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "21:31",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 12,
+     "text": "🔞 as fotos que NÃO podem ser postadas aqui estão bombando no VIP nesse exato momento",
+     "admin": true
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "gap_s": 6,
+     "label": "DESBLOQUEAR O VIP 🔞",
+     "link": "/?group=2",
+     "admin": true
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "21:43",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 26,
+     "text": "salvar não, viver o momento kkkk"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 6,
+     "text": "esse grupo às 22h é outra dimensão"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "21:56",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 13,
+     "folder": "sexy",
+     "text": "domingou... mentira, só tô gata kk"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 20,
+     "text": "o grupo parou aqui né"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 27,
+     "text": "que perigo"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "22:07",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 7,
+     "folder": "sexy",
+     "text": "a legging que causa na academia kkk"
+    },
+    {
+     "p": 2,
+     "g": "f",
+     "t": "text",
+     "gap_s": 14,
+     "text": "kkkk amiga assim vc mata os homens daqui"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 21,
+     "text": "manda mais pelo amor"
+    },
+    {
+     "p": 4,
+     "g": "m",
+     "t": "text",
+     "gap_s": 28,
+     "text": "a foto tá ótima mas a mulher tá melhor"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "22:16",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "vonce",
+     "gap_s": 8,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "visualização única pros atentos 👀"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 15,
+     "text": "uau simplesmente"
+    },
+    {
+     "p": 3,
+     "g": "f",
+     "t": "text",
+     "gap_s": 22,
+     "text": "musa!!"
+    },
+    {
+     "p": 4,
+     "g": "m",
+     "t": "text",
+     "gap_s": 29,
+     "text": "chegou destruindo hoje"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "22:30",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 9,
+     "text": "🔥 mais de 12 mil membros já estão no VIP... só falta você. lá as meninas respondem no privado",
+     "admin": true
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "gap_s": 6,
+     "label": "ENTRAR AGORA 🔥",
+     "link": "/?group=2",
+     "admin": true
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "22:38",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "presentation",
+     "gap_s": 23,
+     "text": "{nome} aqui 👋 {idade} anos, cansada de gente sem graça... me impressiona 😏"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 30,
+     "text": "essa doeu no coração kkk"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 10,
+     "text": "que privilégio estar aqui"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "22:52",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 17,
+     "folder": "boa-noite",
+     "text": "direto do provador 🙈 compro?"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 24,
+     "text": "olha ISSO gente"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "23:03",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 4,
+     "folder": "boa-noite",
+     "text": "decote estratégico sim, e daí kkk"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 11,
+     "text": "me declaro fã"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 18,
+     "text": "top demais"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "23:14",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "video",
+     "gap_s": 25,
+     "folder": "videos-sexy",
+     "text": "rajada surpresa 🔥🔥"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "video",
+     "gap_s": 4,
+     "folder": "videos-sexy"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 12,
+     "text": "que gata"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 19,
+     "text": "vou precisar de água"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "23:23",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "gap_s": 26,
+     "folder": "boa-noite",
+     "text": "boa tarde com essa energia 🔥"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 6,
+     "text": "perfeita não existe... existia"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "23:43",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "gap_s": 5,
+     "text": "boa noite pra quem merece 😏"
+    },
+    {
+     "p": 2,
+     "g": "m",
+     "t": "text",
+     "gap_s": 12,
+     "text": "boa noite gata, sonha comigo"
+    },
+    {
+     "p": 3,
+     "g": "m",
+     "t": "text",
+     "gap_s": 19,
+     "text": "boa noite princesa"
+    }
+   ]
+  }
+ ]
+}
