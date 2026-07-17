@@ -945,20 +945,23 @@ router.get('/groups', optionalUser, async (req, res) => {
                 owned, locked_preview: masked,
                 members_count: g.members_count, online_count: g.online_count,
                 last, unread,
-                // horário da última mensagem — pra ordenar por atividade
-                _lastAt: lastShared ? lastShared.t : 0,
+                _lastAt: lastShared ? lastShared.t : 0, // atividade
+                _pin: g.pinned === true,                // FIXADO no painel (ex.: VIP)
             });
         }
-        // ordena por ATIVIDADE (última mensagem mais recente sobe), como as
-        // conversas. Regras que vêm antes: fixados/comprados no topo; o grupo
-        // FREE (canal-vitrine) fica FIXO no topo, fora da dança de atividade.
+        // ordem: FREE (canal) no topo → grupo(s) FIXADO(s) no painel (o VIP,
+        // logo abaixo do free) → grupos comprados → o resto por ATIVIDADE
+        // (última mensagem mais recente sobe, como as conversas).
         out.sort((a, b) => {
             const fa = a.is_free ? 1 : 0, fb = b.is_free ? 1 : 0;
             if (fa !== fb) return fb - fa;                 // free primeiro
-            if (a.pinned !== b.pinned) return b.pinned - a.pinned; // depois fixados/comprados
+            const pa = a._pin ? 1 : 0, pb = b._pin ? 1 : 0;
+            if (pa !== pb) return pb - pa;                 // fixado (VIP) em 2º
+            const oa = a.owned ? 1 : 0, ob = b.owned ? 1 : 0;
+            if (oa !== ob) return ob - oa;                 // comprados depois
             return (b._lastAt || 0) - (a._lastAt || 0);    // resto por atividade
         });
-        out.forEach(o => { delete o._lastAt; });
+        out.forEach(o => { delete o._lastAt; delete o._pin; });
         let pass = null;
         try {
             const passId = await groupPassProductId();
