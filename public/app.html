@@ -9753,11 +9753,16 @@ window.ChatApp = (function() {
             body.scrollTop = body.scrollHeight;
         }
         RENDERING = false;
-        renderChoices(QUEUE._awaiting);
+        // usa o estado ATUAL (CUR.awaiting), não o congelado na fila: um poll
+        // que chegou DURANTE a animação pode ter avançado 'delay' → 'input';
+        // decidir pelo valor velho escondia a barra de digitar com um
+        // "digitando…" eterno (só saía fechando e reabrindo a conversa)
+        const awNow = (CUR && CUR.awaiting !== undefined) ? CUR.awaiting : QUEUE._awaiting;
+        renderChoices(awNow);
         updateInputBar();
         // Entre uma mensagem e outra (pacing no servidor), mostra "digitando…" no
         // rodapé pra dar o ritmo de conversa real enquanto a próxima não chega.
-        if (CUR && CUR.nextSoon && QUEUE._awaiting === 'delay') {
+        if (CUR && CUR.nextSoon && awNow === 'delay') {
             const nm = (CUR.chat && CUR.chat.name) || 'Ela';
             showBottomStatus(nm + ' está digitando…');
         }
