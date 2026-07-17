@@ -131,7 +131,7 @@ function groupPayload(b) {
         members_count: intOr(b.members_count, 248, 2, 99999),
         online_count: intOr(b.online_count, 25, 1, 9999),
         invite_chat_ids: Array.isArray(b.invite_chat_ids)
-            ? b.invite_chat_ids.map(x => parseInt(x, 10)).filter(Boolean).slice(0, 3)
+            ? b.invite_chat_ids.map(x => parseInt(x, 10)).filter(Boolean).slice(0, 5)
             : null,
         invite_delay_seconds: intOr(b.invite_delay_seconds, 120, 5, 86400),
         display_order: intOr(b.display_order, 0, 0, 9999),

@@ -1024,7 +1024,7 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
         let invite = null;
         if (!group.is_free && !session.invited_at && Array.isArray(group.invite_chat_ids) && group.invite_chat_ids.length) {
             await db.query(`UPDATE group_sessions SET invited_at = NOW() WHERE id = $1`, [session.id]);
-            invite = { chat_ids: group.invite_chat_ids.slice(0, 3), delay_seconds: group.invite_delay_seconds || 120 };
+            invite = { chat_ids: group.invite_chat_ids.slice(0, 5), delay_seconds: group.invite_delay_seconds || 120 };
         }
 
         const until = access === 'member' ? await memberUntil(ident.email, group) : null;
