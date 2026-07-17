@@ -1,0 +1,188 @@
+// DIA 0 — Parte 6: diálogos extras (o tecido de conversa espalhado no dia)
+module.exports = ({ A, AM, F, V, VO, G, D, CTA }) => [
+
+    D('00:45', [
+        [1, 'm', 'pergunta séria pras casadas do grupo: o marido de vcs desconfia de algo?'],
+        [2, 'f', 'o meu acha que eu jogo candy crush até 2h da manhã kkkkk'],
+        [3, 'f', 'o meu nem o celular dele sabe desbloquear, imagina o meu kkk'],
+        [1, 'm', 'kkkkk a segurança da informação de vcs é impecável'],
+        [2, 'f', 'anos de treinamento amor kkkk'],
+    ]),
+    D('01:47', [
+        [1, 'f', 'que calor insuportável essa noite gente'],
+        [2, 'm', 'calor bom pra dormir de janela aberta... ou sem nada kk'],
+        [1, 'f', 'quem disse que eu tô com alguma coisa? kkkk'],
+        [2, 'm', 'pronto, agora eu que não durmo kkkk'],
+    ]),
+    D('02:35', [
+        [1, 'f', 'insônia nível: já contei carneirinho, já contei boleto, nada funciona'],
+        [2, 'm', 'conta outra coisa... tipo suas melhores lembranças kkk'],
+        [1, 'f', 'essas deixam AINDA mais acordada kkkk'],
+    ]),
+    D('04:30', [
+        [1, 'm', 'padaria abrindo e eu indo trabalhar... alguém acordado é claro que não né'],
+        [2, 'f', 'eu!! chegando do plantão... a gente se cruza kkk'],
+    ]),
+    D('06:33', [
+        [1, 'f', 'despertador tocou e a vontade de trabalhar não veio junto kkk'],
+        [2, 'f', 'ela nunca vem amiga, a gente que se obriga kkkk'],
+        [3, 'm', 'bom dia pras guerreiras do grupo kk'],
+    ]),
+    D('07:22', [
+        [1, 'f', 'sonhei que o grupo tinha acabado e acordei ANGUSTIADA kkkk'],
+        [2, 'm', 'pesadelo isso, não sonho kkkk'],
+        [3, 'f', 'kkkkk o grupo virou necessidade básica já'],
+        [1, 'f', 'água, comida, teto e esse grupo, nessa ordem kkk'],
+    ]),
+    D('08:41', [
+        [1, 'f', 'o entregador de hoje era um MONUMENTO gente'],
+        [2, 'f', 'pede outra coisa só pra ele voltar kkkk'],
+        [1, 'f', 'já pedi kkkkk chega em 40 minutos'],
+        [3, 'm', 'e os homens daqui, não contam? kkk'],
+        [1, 'f', 'vcs são o prato principal, ele é só o aperitivo kkkk'],
+    ]),
+    D('09:18', [
+        [1, 'f', 'meu horóscopo de hoje disse "dia de ousadia"... o universo mandou kkk'],
+        [2, 'm', 'que signo é esse que eu vou passar a acreditar kkk'],
+        [1, 'f', 'escorpião, óbvio kkkk'],
+        [3, 'f', 'escorpiana explica TUDO kkkkk'],
+    ]),
+    D('09:57', [
+        [1, 'm', 'to no trabalho fingindo produtividade e lendo o grupo kkk'],
+        [2, 'f', 'somos dois kkkk planilha aberta, grupo na frente'],
+        [1, 'm', 'se me demitirem a culpa é de vcs'],
+        [2, 'f', 'a recompensa compensa o risco kkkk'],
+    ]),
+    D('10:35', [
+        [1, 'f', 'comprei uma lingerie nova ontem e tô doida pra estrear 🙈'],
+        [2, 'm', 'estreia aqui, plateia garantida kkkk'],
+        [1, 'f', 'quem sabe hoje à noite... se o grupo se comportar'],
+        [3, 'm', 'DEFINE se comportar que eu faço qualquer coisa kkk'],
+        [1, 'f', 'participando e elogiando... vcs sabem kkkk'],
+    ]),
+    D('11:33', [
+        [1, 'f', 'gente a vizinha do 302 de novo com o som alto de "visita" kkkk'],
+        [2, 'f', 'KKKKK a do meu prédio é do 104, devem ser parentes'],
+        [3, 'm', 'e vcs aí ouvindo e anotando as ideias né kkkk'],
+        [1, 'f', 'anotando e me inspirando, próximo capítulo sou eu kkkk'],
+    ]),
+    D('12:09', [
+        [1, 'm', 'almoço de hoje: marmita triste e esse grupo pra alegrar'],
+        [2, 'f', 'a marmita é triste mas a sobremesa daqui é boa kkk'],
+        [1, 'm', 'a melhor da cidade kkkk'],
+    ]),
+    D('12:46', [
+        [1, 'f', 'enquete rápida: vcs preferem as casadas ou as solteiras do grupo? kkkk'],
+        [2, 'm', 'as casadas têm aquele tempero do proibido kkkk'],
+        [3, 'm', 'solteiras, menos dor de cabeça kkk'],
+        [4, 'f', 'e nós casadas E entediadas, valemos por dois kkkk'],
+        [1, 'f', 'KKKKK a categoria nova ganhou a enquete'],
+    ]),
+    D('13:10', [
+        [1, 'f', 'o cliente das 13h desmarcou... uma hora livre, o que eu faço? kkk'],
+        [2, 'm', 'fica aqui com a gente ué kkk'],
+        [1, 'f', 'era a resposta que eu queria kkkk'],
+    ]),
+    D('13:45', [
+        [1, 'f', 'to com um perfume novo que tá me deixando até convencida kkk'],
+        [2, 'm', 'descreve o cheiro pra nós imaginarmos kkk'],
+        [1, 'f', 'doce, quente... tipo eu kkkk'],
+        [3, 'f', 'amiga convencida e COM RAZÃO kkkk'],
+    ]),
+    D('14:12', [
+        [1, 'm', 'confissão: entrei aqui achando que era mais um grupo qualquer'],
+        [2, 'f', 'e hoje? kkk'],
+        [1, 'm', 'hoje é o app que eu mais abro no dia kkkkk'],
+        [2, 'f', 'mais um convertido kkkk bem vindo ao vício'],
+    ]),
+    D('15:27', [
+        [1, 'f', 'aquela hora da tarde que dá vontade de mandar tudo pro alto e ir pro motel kkk'],
+        [2, 'm', 'vontade compartilhada às 15h27 de hoje kkkk'],
+        [3, 'f', 'motel de tarde é outro nível, quem sabe sabe'],
+        [1, 'f', 'a {nome3} SABE claramente kkkkk'],
+    ]),
+    D('16:02', [
+        [1, 'f', 'tatuagem nova sarando... doeu mas ficou LINDA'],
+        [2, 'm', 'onde foi? pergunta técnica kkkk'],
+        [1, 'f', 'num lugar que só quem merece vê kkkk'],
+        [3, 'm', 'como se candidatar ao cargo de merecedor? kk'],
+    ]),
+    D('16:27', [
+        [1, 'f', 'to vendo o pessoal do trabalho fofocando e pensando: se eles soubessem do meu grupo secreto kkkk'],
+        [2, 'f', 'a vida dupla é o que nos mantém sãs kkkk'],
+        [3, 'm', 'heroínas anônimas kkkk'],
+    ]),
+    D('16:51', [
+        [1, 'm', 'daqui a pouco acaba o expediente e começa o segundo turno... o do grupo kkk'],
+        [2, 'f', 'o turno mais esperado do dia kkk'],
+        [1, 'm', 'hora extra aqui eu faço de graça kkkk'],
+    ]),
+    D('17:42', [
+        [1, 'f', 'engarrafamento gigante... pelo menos tenho vcs no banco do passageiro kkk'],
+        [2, 'm', 'dirige com cuidado que a noite precisa de vc inteira kk'],
+        [1, 'f', 'inteira e produzida, aguardem kkkk'],
+    ]),
+    D('18:17', [
+        [1, 'f', 'banho tomado, comida no fogo, celular na mão... multitarefa é meu sobrenome kkk'],
+        [2, 'm', 'a mulher perfeita existe e tá nesse grupo'],
+        [1, 'f', 'exagerado kkkk mas continua'],
+        [3, 'f', 'kkkk ele sabe das coisas, deixa'],
+    ]),
+    D('18:43', [
+        [1, 'm', 'cheguei agora... resumo das últimas horas por favor kkk'],
+        [2, 'f', 'resumo: vc perdeu MUITA coisa kkk'],
+        [1, 'm', 'sempre eu kkkk vou parar de trabalhar'],
+        [2, 'f', 'fica online à noite que compensa, prometo 😏'],
+    ]),
+    D('19:17', [
+        [1, 'f', 'novela começando e eu aqui... prioridades definidas kkk'],
+        [2, 'f', 'a novela daqui tem roteiro melhor kkkk'],
+        [3, 'm', 'e elenco melhor, com respeito às atrizes globais kkk'],
+    ]),
+    D('19:35', [
+        [1, 'f', 'meu ex me chamou no pv do insta... a audácia kkkk'],
+        [2, 'm', 'e vc respondeu?'],
+        [1, 'f', 'visualizei e vim pro grupo, aqui o nível é melhor kkkk'],
+        [3, 'f', 'UPGRADE certo kkkkk'],
+    ]),
+    D('20:00', [
+        [1, 'f', '20h em ponto... quem tá pronto pro que vem aí levanta a mão 🙋‍♀️'],
+        [2, 'm', '🙋 pronto desde as 19h kkk'],
+        [3, 'm', '🙋 cancelei até compromisso kkkk'],
+        [1, 'f', 'kkkk dedicação é isso, serão recompensados'],
+    ]),
+    D('20:25', [
+        [1, 'f', 'dica de amiga: não pisquem nas próximas horas'],
+        [2, 'm', 'colírio comprado kkkk'],
+        [3, 'f', 'ela sabe de algo que a gente não sabe 👀'],
+        [1, 'f', 'sei de TUDO amiga kkkk'],
+    ]),
+    D('20:42', [
+        [1, 'm', 'o grupo tá tão bom hoje que nem fui jantar'],
+        [2, 'f', 'janta homem kkkk precisa de energia pra noite'],
+        [1, 'm', 'verdade... 5 minutos e volto, NÃO mandem nada boa'],
+        [2, 'f', 'sem promessas 😏 corre'],
+    ]),
+    D('21:06', [
+        [1, 'f', 'confesso que fico me segurando pra não mandar certas coisas aqui kkkk'],
+        [2, 'm', 'NÃO SE SEGURA, liberdade total kkkk'],
+        [1, 'f', 'o problema é que depois eu não paro mais kkkk'],
+        [3, 'f', 'normal amiga, aqui ninguém para kkkk'],
+    ]),
+    D('21:29', [
+        [1, 'f', 'preparem os corações que 21h30 chegou 👀'],
+        [2, 'm', 'coração preparado, celular carregado kkk'],
+    ]),
+    D('22:32', [
+        [1, 'f', 'meu celular tá em 10% NESSA HORA, ódio kkkk'],
+        [2, 'm', 'carrega correndo mulher, vc não pode sair agora kkkk'],
+        [1, 'f', 'na tomada já, crise evitada kkkk'],
+        [3, 'f', 'o desespero dela kkkkk somos todos nós'],
+    ]),
+    D('23:30', [
+        [1, 'm', 'daqui a pouco meia noite e eu sem sono nenhum, culpa de quem?'],
+        [2, 'f', 'nossa, com certeza kkkk e sem arrependimento'],
+        [1, 'm', 'amanhã no trabalho eu lembro de vcs kkkk'],
+        [2, 'f', 'lembra com carinho 😏'],
+    ]),
+];

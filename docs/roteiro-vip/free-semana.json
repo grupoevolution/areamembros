@@ -1,0 +1,6373 @@
+{
+ "folders": {
+  "bom-dia": "IAGO GRUPOS/GRUPO VIP/bom-dia",
+  "academia": "IAGO GRUPOS/GRUPO VIP/academia",
+  "trabalho": "IAGO GRUPOS/GRUPO VIP/trabalho",
+  "sexy": "IAGO GRUPOS/GRUPO VIP/sexy",
+  "boa-noite": "IAGO GRUPOS/GRUPO VIP/boa-noite",
+  "apres-jovem": {
+   "path": "IAGO GRUPOS/GRUPO VIP/apresentacao-mulheres/22-28",
+   "hidden": true
+  },
+  "apres-media": {
+   "path": "IAGO GRUPOS/GRUPO VIP/apresentacao-mulheres/29-36",
+   "hidden": true
+  },
+  "apres-madura": {
+   "path": "IAGO GRUPOS/GRUPO VIP/apresentacao-mulheres/37-45",
+   "hidden": true
+  },
+  "videos-sexy": "stream:AVULSOS,LB"
+ },
+ "scenes": [
+  {
+   "category": "entrada",
+   "period": "any",
+   "weight": 1,
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "text": "🔔 você entrou na VITRINE do Membros VIP — aqui é só a amostra do que rola nos grupos",
+     "gap_s": 4
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "text": "👀 agora mesmo tem mulher de {cidade} ONLINE nos grupos conversando com os membros",
+     "gap_s": 6
+    }
+   ]
+  },
+  {
+   "category": "entrada",
+   "period": "any",
+   "weight": 1,
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "text": "😈 tem grupo pra tudo: casadas, vizinhas, novinhas, encontros... escolhe o teu e entra",
+     "gap_s": 7
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "label": "VER TODOS OS GRUPOS 🔥",
+     "link": "/?go=groups",
+     "gap_s": 5
+    }
+   ]
+  }
+ ],
+ "items": [
+  {
+   "day": 0,
+   "time": "00:18",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 o GRUPO VIP tá com a resenha PEGADA agora — quem entrar nessa hora pega tudo ao vivo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "00:40",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 mais uma: Karina acabou de entrar no CLUBE DAS CASADAS 😈"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "01:05",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "uma das fotos que rolou AGORA lá no VIZINHAS SAFADAS 👀"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "07:12",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "bom dia 😏 hoje os grupos amanheceram MOVIMENTADOS, olha só 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "07:36",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "olha o clima do CLUBE DAS CASADAS nesse exato momento 🔥"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "08:23",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "uma das fotos que rolou AGORA lá no VIZINHAS SAFADAS 👀"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "08:56",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-jovem",
+     "text": "🔥 Juliana, 27 anos — ONLINE AGORA no SÓ VALE NUDES e respondendo todo mundo 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "09:33",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Camila acabou de entrar no NOVINHAS +18 👀"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "10:15",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "😈 Fernanda, 44 anos, casada... acabou de postar no ENCONTROS & SEXO. Corre 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO ENCONTROS & SEXO 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "10:32",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "essa foto tá SEM censura lá no CRENTES SAFADAS 😈",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO CRENTES SAFADAS 🔥",
+     "dtext": "Disponível apenas no CRENTES SAFADAS"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "11:03",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Larissa entrou agora no PUTARIA 24H... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "11:33",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 o NAMORO E AMIZADE tá com a resenha PEGADA agora — quem entrar nessa hora pega tudo ao vivo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NAMORO E AMIZADE 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "11:48",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Marcos entrou no GRUPO VIP agora — os homens tão chegando, corre 👀"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "12:18",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "trabalho",
+     "text": "isso aqui é só o que PODE ser mostrado... imagina o resto 😈"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "12:47",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "direto do VIZINHAS SAFADAS pra vitrine 🔥"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "13:08",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "as meninas do SÓ VALE NUDES não têm limite... prova 👇"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "13:31",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Amanda entrou no NOVINHAS +18 👀"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "14:01",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "📊 mais de 300 mensagens na última hora no ENCONTROS & SEXO... e você perdendo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO ENCONTROS & SEXO 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "14:22",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "foto liberada da resenha de hoje no CRENTES SAFADAS 🙈"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "14:41",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "trabalho",
+     "text": "o nível das mulheres do PUTARIA 24H 👑"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "15:10",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-jovem",
+     "text": "👀 Bruna, 26 anos — entrou AO VIVO no NAMORO E AMIZADE agora. Ela conversa 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NAMORO E AMIZADE 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "15:34",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 mais uma: Patrícia acabou de entrar no GRUPO VIP 😈"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "15:55",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "os primeiros segundos são grátis... o resto é no CLUBE DAS CASADAS 😈",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO CLUBE DAS CASADAS 🔥",
+     "dtext": "O vídeo completo tá no CLUBE DAS CASADAS",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "16:24",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "o que tem embaixo desse borrão? só quem tá no VIZINHAS SAFADAS sabe 👀",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO VIZINHAS SAFADAS 🔥",
+     "dtext": "Disponível apenas no VIZINHAS SAFADAS"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "16:40",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "🔞 Vanessa, 35 anos, solteira — mandou visualização única no SÓ VALE NUDES faz 2 minutos 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "17:11",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Diego entrou no NOVINHAS +18 agora — os homens tão chegando, corre 👀"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "17:34",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "🔥 Aline, 32 anos — a mais elogiada do ENCONTROS & SEXO hoje. Tá online 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO ENCONTROS & SEXO 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "17:54",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "😏 Renata, 30 anos — procurando papo AGORA no CRENTES SAFADAS 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "18:20",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "só um gostinho do que rolou hoje cedo lá dentro 👀"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "18:36",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "prévia liberada — o vídeo completo tá no NAMORO E AMIZADE 🔥",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO NAMORO E AMIZADE 🔥",
+     "dtext": "O vídeo completo tá no NAMORO E AMIZADE",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "18:57",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Rafael entrou no GRUPO VIP agora — os homens tão chegando, corre 👀"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "19:21",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "😈 a noite no CLUBE DAS CASADAS começou — visualizações únicas rolando AGORA"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CLUBE DAS CASADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "19:45",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "vitrine atualizada: o VIZINHAS SAFADAS tá ASSIM hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "20:04",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-jovem",
+     "text": "💣 Débora, 23 anos, divorciada — soltou um vídeo no SÓ VALE NUDES que tá dando o que falar 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "20:19",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "censurada AQUI... liberada no NOVINHAS +18 🔥",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO NOVINHAS +18 🔥",
+     "dtext": "Disponível apenas no NOVINHAS +18"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "20:35",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "👀 as meninas tão escolhendo os privados de hoje no ENCONTROS & SEXO... só entra quem tá lá"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO ENCONTROS & SEXO 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "20:53",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "👑 Michele, 40 anos — a novata que tá dominando o CRENTES SAFADAS. Online agora 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "21:10",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "uma cortesia das meninas do PUTARIA 24H 🙈"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "21:19",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Simone acabou de entrar no NAMORO E AMIZADE 👀"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "21:36",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "📍 Adriana, 38 anos — tá pertinho de você, no GRUPO VIP agora 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "21:50",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Gabriela entrou agora no CLUBE DAS CASADAS... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "22:05",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 recorde de hoje: 47 fotos postadas no VIZINHAS SAFADAS numa tarde"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO VIZINHAS SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "22:18",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "5 segundos pra você entender o nível do SÓ VALE NUDES 👀",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO SÓ VALE NUDES 🔥",
+     "dtext": "O vídeo completo tá no SÓ VALE NUDES",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "22:35",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "boa-noite",
+     "text": "se aqui fora já é assim, imagina lá dentro 😈"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "22:51",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "boa-noite",
+     "text": "essa foi a foto mais comentada do ENCONTROS & SEXO hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "23:00",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "essa eu só mostro no CRENTES SAFADAS 😏",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO CRENTES SAFADAS 🔥",
+     "dtext": "Disponível apenas no CRENTES SAFADAS"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "23:14",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Jéssica entrou no PUTARIA 24H 👀"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "23:35",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "boa-noite",
+     "text": "olha o clima do NAMORO E AMIZADE nesse exato momento 🔥"
+    }
+   ]
+  },
+  {
+   "day": 0,
+   "time": "23:55",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "boa noite por aqui... lá nos grupos a madrugada tá SÓ começando 😈"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "00:18",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "direto do SÓ VALE NUDES pra vitrine 🔥"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "00:46",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Kelly acabou de entrar no NOVINHAS +18 👀"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "01:11",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "📊 mais de 300 mensagens na última hora no ENCONTROS & SEXO... e você perdendo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO ENCONTROS & SEXO 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "07:15",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "bom dia 😏 hoje os grupos amanheceram MOVIMENTADOS, olha só 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "07:29",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "isso aqui é só o que PODE ser mostrado... imagina o resto 😈"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "08:24",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "🔥 Mariana, 37 anos — ONLINE AGORA no ENCONTROS & SEXO e respondendo todo mundo 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO ENCONTROS & SEXO 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "08:49",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Natália acabou de entrar no CRENTES SAFADAS 👀"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "09:29",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "direto do PUTARIA 24H pra vitrine 🔥"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "10:05",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "academia",
+     "text": "as meninas do NAMORO E AMIZADE não têm limite... prova 👇"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "10:32",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "foto liberada da resenha de hoje no GRUPO VIP 🙈"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "11:00",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Rafaela entrou agora no CLUBE DAS CASADAS... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "11:25",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "📊 mais de 300 mensagens na última hora no VIZINHAS SAFADAS... e você perdendo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO VIZINHAS SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "11:49",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-jovem",
+     "text": "😈 Thaís, 28 anos, casada... acabou de postar no SÓ VALE NUDES. Corre 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "12:26",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "essa foto tá SEM censura lá no NOVINHAS +18 😈",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO NOVINHAS +18 🔥",
+     "dtext": "Disponível apenas no NOVINHAS +18"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "12:50",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Thiago entrou no ENCONTROS & SEXO agora — os homens tão chegando, corre 👀"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "13:12",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "😈 a noite no CRENTES SAFADAS começou — visualizações únicas rolando AGORA"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "13:31",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "o nível das mulheres do PUTARIA 24H 👑"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "14:03",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-jovem",
+     "text": "👀 Bianca, 25 anos — entrou AO VIVO no NAMORO E AMIZADE agora. Ela conversa 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NAMORO E AMIZADE 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "14:23",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "o que tem embaixo desse borrão? só quem tá no GRUPO VIP sabe 👀",
+     "dest": "/?group=2",
+     "dlabel": "VER NO GRUPO VIP 🔥",
+     "dtext": "Disponível apenas no GRUPO VIP"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "14:48",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "assiste a prévia e vem pro CLUBE DAS CASADAS kkk",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO CLUBE DAS CASADAS 🔥",
+     "dtext": "O vídeo completo tá no CLUBE DAS CASADAS",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "15:08",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Luana entrou no VIZINHAS SAFADAS 👀"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "15:30",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "trabalho",
+     "text": "só um gostinho do que rolou hoje cedo lá dentro 👀"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "16:05",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "vitrine atualizada: o NOVINHAS +18 tá ASSIM hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "16:18",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 mais uma: Nicole acabou de entrar no ENCONTROS & SEXO 😈"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "16:40",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-jovem",
+     "text": "🔞 Sandra, 23 anos, solteira — mandou visualização única no CRENTES SAFADAS faz 2 minutos 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "17:12",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Talita acabou de entrar no PUTARIA 24H 👀"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "17:31",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "🔥 Viviane, 39 anos — a mais elogiada do NAMORO E AMIZADE hoje. Tá online 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NAMORO E AMIZADE 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "17:50",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "os primeiros segundos são grátis... o resto é no GRUPO VIP 😈",
+     "dest": "/?group=2",
+     "dlabel": "ASSISTIR NO GRUPO VIP 🔥",
+     "dtext": "O vídeo completo tá no GRUPO VIP",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "18:21",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "👀 as meninas tão escolhendo os privados de hoje no CLUBE DAS CASADAS... só entra quem tá lá"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CLUBE DAS CASADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "18:37",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "😏 Carol, 32 anos — procurando papo AGORA no VIZINHAS SAFADAS 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO VIZINHAS SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "19:06",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "uma cortesia das meninas do SÓ VALE NUDES 🙈"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "19:25",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Duda entrou agora no NOVINHAS +18... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "19:51",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "se aqui fora já é assim, imagina lá dentro 😈"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "20:04",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Milena entrou no CRENTES SAFADAS 👀"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "20:19",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 recorde de hoje: 47 fotos postadas no PUTARIA 24H numa tarde"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO PUTARIA 24H 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "20:34",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "prévia liberada — o vídeo completo tá no NAMORO E AMIZADE 🔥",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO NAMORO E AMIZADE 🔥",
+     "dtext": "O vídeo completo tá no NAMORO E AMIZADE",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "20:52",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "essa foi a foto mais comentada do GRUPO VIP hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "21:10",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Carlos entrou no CLUBE DAS CASADAS agora — os homens tão chegando, corre 👀"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "21:18",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 o VIZINHAS SAFADAS tá com a resenha PEGADA agora — quem entrar nessa hora pega tudo ao vivo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO VIZINHAS SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "21:35",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "olha o clima do SÓ VALE NUDES nesse exato momento 🔥"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "21:52",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-jovem",
+     "text": "💣 Yasmin, 25 anos, divorciada — soltou um vídeo no NOVINHAS +18 que tá dando o que falar 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NOVINHAS +18 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "22:02",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-jovem",
+     "text": "👑 Andressa, 24 anos — a novata que tá dominando o ENCONTROS & SEXO. Online agora 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO ENCONTROS & SEXO 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "22:16",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "uma das fotos que rolou AGORA lá no CRENTES SAFADAS 👀"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "22:34",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 mais uma: Lorena acabou de entrar no PUTARIA 24H 😈"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "22:50",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "censurada AQUI... liberada no NAMORO E AMIZADE 🔥",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO NAMORO E AMIZADE 🔥",
+     "dtext": "Disponível apenas no NAMORO E AMIZADE"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "23:00",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "📍 Sabrina, 31 anos — tá pertinho de você, no GRUPO VIP agora 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "23:18",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "essa eu só mostro no CLUBE DAS CASADAS 😏",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO CLUBE DAS CASADAS 🔥",
+     "dtext": "Disponível apenas no CLUBE DAS CASADAS"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "23:35",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "boa-noite",
+     "text": "isso aqui é só o que PODE ser mostrado... imagina o resto 😈"
+    }
+   ]
+  },
+  {
+   "day": 1,
+   "time": "23:55",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "boa noite por aqui... lá nos grupos a madrugada tá SÓ começando 😈"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "00:17",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "😈 a noite no CRENTES SAFADAS começou — visualizações únicas rolando AGORA"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "00:37",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Vanessa acabou de entrar no PUTARIA 24H 👀"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "01:00",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "foto liberada da resenha de hoje no NAMORO E AMIZADE 🙈"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "07:17",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "bom dia 😏 hoje os grupos amanheceram MOVIMENTADOS, olha só 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "07:47",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Eduardo entrou no PUTARIA 24H agora — os homens tão chegando, corre 👀"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "08:12",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "🔥 Evelyn, 29 anos — ONLINE AGORA no NAMORO E AMIZADE e respondendo todo mundo 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NAMORO E AMIZADE 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "08:48",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "as meninas do GRUPO VIP não têm limite... prova 👇"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "09:30",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "foto liberada da resenha de hoje no CLUBE DAS CASADAS 🙈"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "10:17",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "o nível das mulheres do VIZINHAS SAFADAS 👑"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "10:31",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Priscila entrou agora no SÓ VALE NUDES... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "11:04",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-jovem",
+     "text": "😈 Tatiane, 24 anos, casada... acabou de postar no NOVINHAS +18. Corre 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NOVINHAS +18 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "11:26",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "academia",
+     "text": "só um gostinho do que rolou hoje cedo lá dentro 👀"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "11:54",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "essa foto tá SEM censura lá no CRENTES SAFADAS 😈",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO CRENTES SAFADAS 🔥",
+     "dtext": "Disponível apenas no CRENTES SAFADAS"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "12:28",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "😈 a noite no PUTARIA 24H começou — visualizações únicas rolando AGORA"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO PUTARIA 24H 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "12:51",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Elaine entrou no NAMORO E AMIZADE 👀"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "13:05",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "o que tem embaixo desse borrão? só quem tá no GRUPO VIP sabe 👀",
+     "dest": "/?group=2",
+     "dlabel": "VER NO GRUPO VIP 🔥",
+     "dtext": "Disponível apenas no GRUPO VIP"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "13:35",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 mais uma: Fabiana acabou de entrar no CLUBE DAS CASADAS 😈"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "13:56",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "vitrine atualizada: o VIZINHAS SAFADAS tá ASSIM hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "14:31",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "👀 as meninas tão escolhendo os privados de hoje no SÓ VALE NUDES... só entra quem tá lá"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "14:42",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Letícia acabou de entrar no NOVINHAS +18 👀"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "15:13",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "trabalho",
+     "text": "uma cortesia das meninas do ENCONTROS & SEXO 🙈"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "15:34",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "trabalho",
+     "text": "se aqui fora já é assim, imagina lá dentro 😈"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "15:52",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "👀 Paula, 30 anos — entrou AO VIVO no PUTARIA 24H agora. Ela conversa 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO PUTARIA 24H 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "16:24",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "🔞 Raquel, 45 anos, solteira — mandou visualização única no NAMORO E AMIZADE faz 2 minutos 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NAMORO E AMIZADE 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "16:46",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "5 segundos pra você entender o nível do GRUPO VIP 👀",
+     "dest": "/?group=2",
+     "dlabel": "ASSISTIR NO GRUPO VIP 🔥",
+     "dtext": "O vídeo completo tá no GRUPO VIP",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "17:11",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Felipe entrou no CLUBE DAS CASADAS agora — os homens tão chegando, corre 👀"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "17:30",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "essa foi a foto mais comentada do VIZINHAS SAFADAS hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "17:49",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 recorde de hoje: 47 fotos postadas no SÓ VALE NUDES numa tarde"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "18:13",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "olha o clima do NOVINHAS +18 nesse exato momento 🔥"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "18:45",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "🔥 Daniela, 32 anos — a mais elogiada do ENCONTROS & SEXO hoje. Tá online 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO ENCONTROS & SEXO 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "19:00",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "assiste a prévia e vem pro CRENTES SAFADAS kkk",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO CRENTES SAFADAS 🔥",
+     "dtext": "O vídeo completo tá no CRENTES SAFADAS",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "19:30",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Juliana entrou agora no PUTARIA 24H... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "19:42",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "😏 Camila, 37 anos — procurando papo AGORA no NAMORO E AMIZADE 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NAMORO E AMIZADE 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "20:05",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "os primeiros segundos são grátis... o resto é no GRUPO VIP 😈",
+     "dest": "/?group=2",
+     "dlabel": "ASSISTIR NO GRUPO VIP 🔥",
+     "dtext": "O vídeo completo tá no GRUPO VIP",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "20:25",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Fernanda entrou no CLUBE DAS CASADAS 👀"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "20:40",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "uma das fotos que rolou AGORA lá no VIZINHAS SAFADAS 👀"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "20:52",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "isso aqui é só o que PODE ser mostrado... imagina o resto 😈"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "21:10",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "direto do NOVINHAS +18 pra vitrine 🔥"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "21:20",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 o ENCONTROS & SEXO tá com a resenha PEGADA agora — quem entrar nessa hora pega tudo ao vivo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO ENCONTROS & SEXO 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "21:34",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "💣 Larissa, 29 anos, divorciada — soltou um vídeo no CRENTES SAFADAS que tá dando o que falar 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "21:51",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "📊 mais de 300 mensagens na última hora no PUTARIA 24H... e você perdendo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO PUTARIA 24H 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "22:06",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "censurada AQUI... liberada no NAMORO E AMIZADE 🔥",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO NAMORO E AMIZADE 🔥",
+     "dtext": "Disponível apenas no NAMORO E AMIZADE"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "22:23",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "as meninas do GRUPO VIP não têm limite... prova 👇"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "22:32",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "essa eu só mostro no CLUBE DAS CASADAS 😏",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO CLUBE DAS CASADAS 🔥",
+     "dtext": "Disponível apenas no CLUBE DAS CASADAS"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "22:47",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 mais uma: Amanda acabou de entrar no VIZINHAS SAFADAS 😈"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "22:59",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "👑 Bruna, 31 anos — a novata que tá dominando o SÓ VALE NUDES. Online agora 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "23:22",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "📍 Patrícia, 33 anos — tá pertinho de você, no NOVINHAS +18 agora 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NOVINHAS +18 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "23:32",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Gustavo entrou no ENCONTROS & SEXO agora — os homens tão chegando, corre 👀"
+    }
+   ]
+  },
+  {
+   "day": 2,
+   "time": "23:55",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "boa noite por aqui... lá nos grupos a madrugada tá SÓ começando 😈"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "00:13",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "👀 as meninas tão escolhendo os privados de hoje no GRUPO VIP... só entra quem tá lá"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "00:44",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "só um gostinho do que rolou hoje cedo lá dentro 👀"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "01:01",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 mais uma: Nicole acabou de entrar no VIZINHAS SAFADAS 😈"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "07:11",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "bom dia 😏 hoje os grupos amanheceram MOVIMENTADOS, olha só 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "07:51",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "🔥 Aline, 29 anos — ONLINE AGORA no CLUBE DAS CASADAS e respondendo todo mundo 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CLUBE DAS CASADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "08:20",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Renata entrou agora no VIZINHAS SAFADAS... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "09:07",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "o nível das mulheres do SÓ VALE NUDES 👑"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "09:38",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "só um gostinho do que rolou hoje cedo lá dentro 👀"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "10:15",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Débora entrou no ENCONTROS & SEXO 👀"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "10:37",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "👀 as meninas tão escolhendo os privados de hoje no CRENTES SAFADAS... só entra quem tá lá"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "11:02",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "😈 Michele, 37 anos, casada... acabou de postar no PUTARIA 24H. Corre 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO PUTARIA 24H 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "11:36",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Renan entrou no NAMORO E AMIZADE agora — os homens tão chegando, corre 👀"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "11:57",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "academia",
+     "text": "vitrine atualizada: o GRUPO VIP tá ASSIM hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "12:21",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "essa foto tá SEM censura lá no CLUBE DAS CASADAS 😈",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO CLUBE DAS CASADAS 🔥",
+     "dtext": "Disponível apenas no CLUBE DAS CASADAS"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "12:44",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "trabalho",
+     "text": "uma cortesia das meninas do VIZINHAS SAFADAS 🙈"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "13:15",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "trabalho",
+     "text": "se aqui fora já é assim, imagina lá dentro 😈"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "13:32",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "👀 Simone, 32 anos — entrou AO VIVO no NOVINHAS +18 agora. Ela conversa 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NOVINHAS +18 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "13:59",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "o que tem embaixo desse borrão? só quem tá no ENCONTROS & SEXO sabe 👀",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO ENCONTROS & SEXO 🔥",
+     "dtext": "Disponível apenas no ENCONTROS & SEXO"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "14:25",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "🔞 Adriana, 31 anos, solteira — mandou visualização única no CRENTES SAFADAS faz 2 minutos 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "14:46",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "essa foi a foto mais comentada do PUTARIA 24H hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "15:18",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "olha o clima do NAMORO E AMIZADE nesse exato momento 🔥"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "15:36",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 recorde de hoje: 47 fotos postadas no GRUPO VIP numa tarde"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "15:53",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "prévia liberada — o vídeo completo tá no CLUBE DAS CASADAS 🔥",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO CLUBE DAS CASADAS 🔥",
+     "dtext": "O vídeo completo tá no CLUBE DAS CASADAS",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "16:24",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Bruno entrou no VIZINHAS SAFADAS agora — os homens tão chegando, corre 👀"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "16:40",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 mais uma: Gabriela acabou de entrar no SÓ VALE NUDES 😈"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "17:05",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "uma das fotos que rolou AGORA lá no NOVINHAS +18 👀"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "17:36",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "isso aqui é só o que PODE ser mostrado... imagina o resto 😈"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "17:58",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Marcos entrou no CRENTES SAFADAS agora — os homens tão chegando, corre 👀"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "18:24",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Jéssica acabou de entrar no PUTARIA 24H 👀"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "18:46",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "🔥 Karina, 33 anos — a mais elogiada do NAMORO E AMIZADE hoje. Tá online 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NAMORO E AMIZADE 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "18:57",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "5 segundos pra você entender o nível do GRUPO VIP 👀",
+     "dest": "/?group=2",
+     "dlabel": "ASSISTIR NO GRUPO VIP 🔥",
+     "dtext": "O vídeo completo tá no GRUPO VIP",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "19:21",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 o CLUBE DAS CASADAS tá com a resenha PEGADA agora — quem entrar nessa hora pega tudo ao vivo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CLUBE DAS CASADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "19:50",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "😏 Mariana, 34 anos — procurando papo AGORA no VIZINHAS SAFADAS 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO VIZINHAS SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "20:11",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "💣 Natália, 43 anos, divorciada — soltou um vídeo no SÓ VALE NUDES que tá dando o que falar 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "20:23",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "📊 mais de 300 mensagens na última hora no NOVINHAS +18... e você perdendo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NOVINHAS +18 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "20:40",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "direto do ENCONTROS & SEXO pra vitrine 🔥"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "20:52",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "censurada AQUI... liberada no CRENTES SAFADAS 🔥",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO CRENTES SAFADAS 🔥",
+     "dtext": "Disponível apenas no CRENTES SAFADAS"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "21:03",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "😈 a noite no PUTARIA 24H começou — visualizações únicas rolando AGORA"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO PUTARIA 24H 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "21:21",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "👑 Rafaela, 31 anos — a novata que tá dominando o NAMORO E AMIZADE. Online agora 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NAMORO E AMIZADE 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "21:39",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Diego entrou no GRUPO VIP agora — os homens tão chegando, corre 👀"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "21:53",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Thaís entrou agora no CLUBE DAS CASADAS... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "22:03",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "as meninas do VIZINHAS SAFADAS não têm limite... prova 👇"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "22:19",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "foto liberada da resenha de hoje no SÓ VALE NUDES 🙈"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "22:33",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "assiste a prévia e vem pro NOVINHAS +18 kkk",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO NOVINHAS +18 🔥",
+     "dtext": "O vídeo completo tá no NOVINHAS +18",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "22:46",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Bianca entrou no ENCONTROS & SEXO 👀"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "23:06",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "📍 Luana, 39 anos — tá pertinho de você, no CRENTES SAFADAS agora 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "23:22",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "boa-noite",
+     "text": "o nível das mulheres do PUTARIA 24H 👑"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "23:34",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "essa eu só mostro no NAMORO E AMIZADE 😏",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO NAMORO E AMIZADE 🔥",
+     "dtext": "Disponível apenas no NAMORO E AMIZADE"
+    }
+   ]
+  },
+  {
+   "day": 3,
+   "time": "23:55",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "boa noite por aqui... lá nos grupos a madrugada tá SÓ começando 😈"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "00:17",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "uma cortesia das meninas do SÓ VALE NUDES 🙈"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "00:49",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 recorde de hoje: 47 fotos postadas no NOVINHAS +18 numa tarde"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NOVINHAS +18 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "01:01",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Raquel entrou agora no ENCONTROS & SEXO... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "07:14",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "bom dia 😏 hoje os grupos amanheceram MOVIMENTADOS, olha só 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "07:29",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Sandra acabou de entrar no NOVINHAS +18 👀"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "08:11",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "vitrine atualizada: o ENCONTROS & SEXO tá ASSIM hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "09:00",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "🔥 Talita, 30 anos — ONLINE AGORA no CRENTES SAFADAS e respondendo todo mundo 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "09:28",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "uma cortesia das meninas do PUTARIA 24H 🙈"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "10:12",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "😈 Viviane, 45 anos, casada... acabou de postar no NAMORO E AMIZADE. Corre 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NAMORO E AMIZADE 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "10:46",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "academia",
+     "text": "se aqui fora já é assim, imagina lá dentro 😈"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "11:02",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "essa foto tá SEM censura lá no CLUBE DAS CASADAS 😈",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO CLUBE DAS CASADAS 🔥",
+     "dtext": "Disponível apenas no CLUBE DAS CASADAS"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "11:34",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 recorde de hoje: 47 fotos postadas no VIZINHAS SAFADAS numa tarde"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO VIZINHAS SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "11:59",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Carol entrou agora no SÓ VALE NUDES... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "12:22",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "essa foi a foto mais comentada do NOVINHAS +18 hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "12:49",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Duda entrou no ENCONTROS & SEXO 👀"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "13:13",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "o que tem embaixo desse borrão? só quem tá no CRENTES SAFADAS sabe 👀",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO CRENTES SAFADAS 🔥",
+     "dtext": "Disponível apenas no CRENTES SAFADAS"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "13:39",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 mais uma: Milena acabou de entrar no PUTARIA 24H 😈"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "14:02",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Yasmin acabou de entrar no NAMORO E AMIZADE 👀"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "14:20",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "os primeiros segundos são grátis... o resto é no GRUPO VIP 😈",
+     "dest": "/?group=2",
+     "dlabel": "ASSISTIR NO GRUPO VIP 🔥",
+     "dtext": "O vídeo completo tá no GRUPO VIP",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "14:43",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 o CLUBE DAS CASADAS tá com a resenha PEGADA agora — quem entrar nessa hora pega tudo ao vivo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CLUBE DAS CASADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "15:15",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "olha o clima do VIZINHAS SAFADAS nesse exato momento 🔥"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "15:38",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "uma das fotos que rolou AGORA lá no SÓ VALE NUDES 👀"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "16:05",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "👀 Andressa, 31 anos — entrou AO VIVO no NOVINHAS +18 agora. Ela conversa 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NOVINHAS +18 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "16:30",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "🔞 Lorena, 30 anos, solteira — mandou visualização única no ENCONTROS & SEXO faz 2 minutos 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO ENCONTROS & SEXO 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "16:47",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "isso aqui é só o que PODE ser mostrado... imagina o resto 😈"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "17:10",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Sabrina entrou agora no PUTARIA 24H... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "17:28",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "🔥 Kelly, 35 anos — a mais elogiada do NAMORO E AMIZADE hoje. Tá online 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NAMORO E AMIZADE 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "17:58",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "📊 mais de 300 mensagens na última hora no GRUPO VIP... e você perdendo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "18:21",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "prévia liberada — o vídeo completo tá no CLUBE DAS CASADAS 🔥",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO CLUBE DAS CASADAS 🔥",
+     "dtext": "O vídeo completo tá no CLUBE DAS CASADAS",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "18:46",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Evelyn entrou no VIZINHAS SAFADAS 👀"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "19:08",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "😏 Priscila, 30 anos — procurando papo AGORA no SÓ VALE NUDES 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "19:20",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "direto do NOVINHAS +18 pra vitrine 🔥"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "19:49",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "as meninas do ENCONTROS & SEXO não têm limite... prova 👇"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "20:06",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "foto liberada da resenha de hoje no CRENTES SAFADAS 🙈"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "20:22",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "💣 Tatiane, 42 anos, divorciada — soltou um vídeo no PUTARIA 24H que tá dando o que falar 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO PUTARIA 24H 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "20:37",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "censurada AQUI... liberada no NAMORO E AMIZADE 🔥",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO NAMORO E AMIZADE 🔥",
+     "dtext": "Disponível apenas no NAMORO E AMIZADE"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "20:54",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Rafael entrou no GRUPO VIP agora — os homens tão chegando, corre 👀"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "21:06",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 mais uma: Elaine acabou de entrar no CLUBE DAS CASADAS 😈"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "21:17",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "👑 Fabiana, 42 anos — a novata que tá dominando o VIZINHAS SAFADAS. Online agora 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO VIZINHAS SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "21:32",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "o nível das mulheres do SÓ VALE NUDES 👑"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "21:52",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Letícia acabou de entrar no NOVINHAS +18 👀"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "22:08",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "só um gostinho do que rolou hoje cedo lá dentro 👀"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "22:23",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "😈 a noite no CRENTES SAFADAS começou — visualizações únicas rolando AGORA"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "22:35",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "👀 as meninas tão escolhendo os privados de hoje no PUTARIA 24H... só entra quem tá lá"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO PUTARIA 24H 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "22:51",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "boa-noite",
+     "text": "vitrine atualizada: o NAMORO E AMIZADE tá ASSIM hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "23:05",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "📍 Paula, 40 anos — tá pertinho de você, no GRUPO VIP agora 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "23:14",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "essa eu só mostro no CLUBE DAS CASADAS 😏",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO CLUBE DAS CASADAS 🔥",
+     "dtext": "Disponível apenas no CLUBE DAS CASADAS"
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "23:29",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "5 segundos pra você entender o nível do VIZINHAS SAFADAS 👀",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO VIZINHAS SAFADAS 🔥",
+     "dtext": "O vídeo completo tá no VIZINHAS SAFADAS",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 4,
+   "time": "23:55",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "boa noite por aqui... lá nos grupos a madrugada tá SÓ começando 😈"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "00:14",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 mais uma: Mariana acabou de entrar no CRENTES SAFADAS 😈"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "00:47",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 o PUTARIA 24H tá com a resenha PEGADA agora — quem entrar nessa hora pega tudo ao vivo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO PUTARIA 24H 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "01:15",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "essa foi a foto mais comentada do NAMORO E AMIZADE hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "07:16",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "bom dia 😏 hoje os grupos amanheceram MOVIMENTADOS, olha só 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "07:40",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "se aqui fora já é assim, imagina lá dentro 😈"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "08:23",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "essa foi a foto mais comentada do NAMORO E AMIZADE hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "09:07",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "🔥 Daniela, 44 anos — ONLINE AGORA no GRUPO VIP e respondendo todo mundo 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "09:41",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Juliana entrou no CLUBE DAS CASADAS 👀"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "10:07",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "academia",
+     "text": "olha o clima do VIZINHAS SAFADAS nesse exato momento 🔥"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "10:32",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "😈 Camila, 32 anos, casada... acabou de postar no SÓ VALE NUDES. Corre 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "11:00",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 mais uma: Fernanda acabou de entrar no NOVINHAS +18 😈"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "11:24",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "academia",
+     "text": "uma das fotos que rolou AGORA lá no ENCONTROS & SEXO 👀"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "11:57",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Larissa acabou de entrar no CRENTES SAFADAS 👀"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "12:18",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "essa foto tá SEM censura lá no PUTARIA 24H 😈",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO PUTARIA 24H 🔥",
+     "dtext": "Disponível apenas no PUTARIA 24H"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "12:53",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 o NAMORO E AMIZADE tá com a resenha PEGADA agora — quem entrar nessa hora pega tudo ao vivo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NAMORO E AMIZADE 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "13:16",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "📊 mais de 300 mensagens na última hora no GRUPO VIP... e você perdendo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "13:41",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "assiste a prévia e vem pro CLUBE DAS CASADAS kkk",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO CLUBE DAS CASADAS 🔥",
+     "dtext": "O vídeo completo tá no CLUBE DAS CASADAS",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "14:04",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "👀 Amanda, 33 anos — entrou AO VIVO no VIZINHAS SAFADAS agora. Ela conversa 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO VIZINHAS SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "14:18",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "trabalho",
+     "text": "isso aqui é só o que PODE ser mostrado... imagina o resto 😈"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "14:52",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Thiago entrou no NOVINHAS +18 agora — os homens tão chegando, corre 👀"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "15:18",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "trabalho",
+     "text": "direto do ENCONTROS & SEXO pra vitrine 🔥"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "15:33",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "🔞 Bruna, 36 anos, solteira — mandou visualização única no CRENTES SAFADAS faz 2 minutos 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "15:57",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "o que tem embaixo desse borrão? só quem tá no PUTARIA 24H sabe 👀",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO PUTARIA 24H 🔥",
+     "dtext": "Disponível apenas no PUTARIA 24H"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "16:27",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Patrícia entrou agora no NAMORO E AMIZADE... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "16:41",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "trabalho",
+     "text": "as meninas do GRUPO VIP não têm limite... prova 👇"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "17:10",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-jovem",
+     "text": "🔥 Vanessa, 27 anos — a mais elogiada do CLUBE DAS CASADAS hoje. Tá online 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CLUBE DAS CASADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "17:38",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "foto liberada da resenha de hoje no VIZINHAS SAFADAS 🙈"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "17:55",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Aline entrou no SÓ VALE NUDES 👀"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "18:14",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "os primeiros segundos são grátis... o resto é no NOVINHAS +18 😈",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO NOVINHAS +18 🔥",
+     "dtext": "O vídeo completo tá no NOVINHAS +18",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "18:46",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "😈 a noite no ENCONTROS & SEXO começou — visualizações únicas rolando AGORA"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO ENCONTROS & SEXO 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "19:08",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "o nível das mulheres do CRENTES SAFADAS 👑"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "19:25",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "😏 Renata, 29 anos — procurando papo AGORA no PUTARIA 24H 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO PUTARIA 24H 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "19:49",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 mais uma: Débora acabou de entrar no NAMORO E AMIZADE 😈"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "20:03",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Michele acabou de entrar no GRUPO VIP 👀"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "20:26",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "💣 Simone, 43 anos, divorciada — soltou um vídeo no CLUBE DAS CASADAS que tá dando o que falar 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CLUBE DAS CASADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "20:34",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "só um gostinho do que rolou hoje cedo lá dentro 👀"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "20:52",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "👀 as meninas tão escolhendo os privados de hoje no SÓ VALE NUDES... só entra quem tá lá"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "21:05",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Adriana entrou agora no NOVINHAS +18... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "21:25",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 recorde de hoje: 47 fotos postadas no ENCONTROS & SEXO numa tarde"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO ENCONTROS & SEXO 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "21:31",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "censurada AQUI... liberada no CRENTES SAFADAS 🔥",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO CRENTES SAFADAS 🔥",
+     "dtext": "Disponível apenas no CRENTES SAFADAS"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "21:52",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "vitrine atualizada: o PUTARIA 24H tá ASSIM hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "22:07",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "prévia liberada — o vídeo completo tá no NAMORO E AMIZADE 🔥",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO NAMORO E AMIZADE 🔥",
+     "dtext": "O vídeo completo tá no NAMORO E AMIZADE",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "22:21",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-jovem",
+     "text": "👑 Gabriela, 26 anos — a novata que tá dominando o GRUPO VIP. Online agora 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "22:30",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Jéssica entrou no CLUBE DAS CASADAS 👀"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "22:52",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "essa eu só mostro no VIZINHAS SAFADAS 😏",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO VIZINHAS SAFADAS 🔥",
+     "dtext": "Disponível apenas no VIZINHAS SAFADAS"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "23:01",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "📍 Karina, 44 anos — tá pertinho de você, no SÓ VALE NUDES agora 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "23:22",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "boa-noite",
+     "text": "uma cortesia das meninas do NOVINHAS +18 🙈"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "23:31",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "boa-noite",
+     "text": "se aqui fora já é assim, imagina lá dentro 😈"
+    }
+   ]
+  },
+  {
+   "day": 5,
+   "time": "23:48",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "boa noite por aqui... lá nos grupos a madrugada tá SÓ começando 😈"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "00:23",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "uma das fotos que rolou AGORA lá no GRUPO VIP 👀"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "00:43",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Priscila entrou agora no CLUBE DAS CASADAS... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "01:12",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "📊 mais de 300 mensagens na última hora no VIZINHAS SAFADAS... e você perdendo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO VIZINHAS SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "07:10",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "bom dia 😏 hoje os grupos amanheceram MOVIMENTADOS, olha só 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "07:50",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "olha o clima do CLUBE DAS CASADAS nesse exato momento 🔥"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "08:22",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-media",
+     "text": "🔥 Natália, 30 anos — ONLINE AGORA no VIZINHAS SAFADAS e respondendo todo mundo 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO VIZINHAS SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "08:58",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "bom-dia",
+     "text": "uma das fotos que rolou AGORA lá no SÓ VALE NUDES 👀"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "09:33",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Rafaela acabou de entrar no NOVINHAS +18 👀"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "10:20",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "academia",
+     "text": "isso aqui é só o que PODE ser mostrado... imagina o resto 😈"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "10:40",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "😈 Thaís, 39 anos, casada... acabou de postar no CRENTES SAFADAS. Corre 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "11:07",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Carlos entrou no PUTARIA 24H agora — os homens tão chegando, corre 👀"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "11:23",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Bianca entrou agora no NAMORO E AMIZADE... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "11:55",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "📊 mais de 300 mensagens na última hora no GRUPO VIP... e você perdendo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "12:16",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "essa foto tá SEM censura lá no CLUBE DAS CASADAS 😈",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO CLUBE DAS CASADAS 🔥",
+     "dtext": "Disponível apenas no CLUBE DAS CASADAS"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "12:47",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "direto do VIZINHAS SAFADAS pra vitrine 🔥"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "13:19",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-jovem",
+     "text": "👀 Luana, 28 anos — entrou AO VIVO no SÓ VALE NUDES agora. Ela conversa 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "13:41",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "as meninas do NOVINHAS +18 não têm limite... prova 👇"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "14:02",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "o que tem embaixo desse borrão? só quem tá no ENCONTROS & SEXO sabe 👀",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO ENCONTROS & SEXO 🔥",
+     "dtext": "Disponível apenas no ENCONTROS & SEXO"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "14:20",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "foto liberada da resenha de hoje no CRENTES SAFADAS 🙈"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "14:51",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "o nível das mulheres do PUTARIA 24H 👑"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "15:12",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "5 segundos pra você entender o nível do NAMORO E AMIZADE 👀",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO NAMORO E AMIZADE 🔥",
+     "dtext": "O vídeo completo tá no NAMORO E AMIZADE",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "15:38",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "😈 a noite no GRUPO VIP começou — visualizações únicas rolando AGORA"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "16:00",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "🔞 Nicole, 39 anos, solteira — mandou visualização única no CLUBE DAS CASADAS faz 2 minutos 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CLUBE DAS CASADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "16:25",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Sandra entrou no VIZINHAS SAFADAS 👀"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "16:54",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 mais uma: Talita acabou de entrar no SÓ VALE NUDES 😈"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "17:09",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-jovem",
+     "text": "🔥 Viviane, 26 anos — a mais elogiada do NOVINHAS +18 hoje. Tá online 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NOVINHAS +18 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "17:27",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "só um gostinho do que rolou hoje cedo lá dentro 👀"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "17:56",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "😏 Carol, 39 anos — procurando papo AGORA no CRENTES SAFADAS 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "18:21",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "vitrine atualizada: o PUTARIA 24H tá ASSIM hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "18:39",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "assiste a prévia e vem pro NAMORO E AMIZADE kkk",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO NAMORO E AMIZADE 🔥",
+     "dtext": "O vídeo completo tá no NAMORO E AMIZADE",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "19:01",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Duda acabou de entrar no GRUPO VIP 👀"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "19:21",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Milena entrou agora no CLUBE DAS CASADAS... e já se apresentou 🔥"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "19:50",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "👀 as meninas tão escolhendo os privados de hoje no VIZINHAS SAFADAS... só entra quem tá lá"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO VIZINHAS SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "20:05",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "💣 Yasmin, 42 anos, divorciada — soltou um vídeo no SÓ VALE NUDES que tá dando o que falar 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO SÓ VALE NUDES 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "20:21",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "👑 Andressa, 41 anos — a novata que tá dominando o NOVINHAS +18. Online agora 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NOVINHAS +18 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "20:39",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "uma cortesia das meninas do ENCONTROS & SEXO 🙈"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "20:51",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "se aqui fora já é assim, imagina lá dentro 😈"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "21:06",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "censurada AQUI... liberada no PUTARIA 24H 🔥",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO PUTARIA 24H 🔥",
+     "dtext": "Disponível apenas no PUTARIA 24H"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "21:16",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 recorde de hoje: 47 fotos postadas no NAMORO E AMIZADE numa tarde"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO NAMORO E AMIZADE 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "21:37",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "apres-madura",
+     "text": "📍 Lorena, 39 anos — tá pertinho de você, no GRUPO VIP agora 👇"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "21:51",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Sabrina entrou no CLUBE DAS CASADAS 👀"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "22:03",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 mais uma: Kelly acabou de entrar no VIZINHAS SAFADAS 😈"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "22:24",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "sexy",
+     "text": "essa foi a foto mais comentada do SÓ VALE NUDES hoje 🔥"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "22:36",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔔 Evelyn acabou de entrar no NOVINHAS +18 👀"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "22:53",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "image",
+     "admin": true,
+     "gap_s": 5,
+     "folder": "boa-noite",
+     "text": "olha o clima do ENCONTROS & SEXO nesse exato momento 🔥"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "23:07",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "🔥 o CRENTES SAFADAS tá com a resenha PEGADA agora — quem entrar nessa hora pega tudo ao vivo"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO CRENTES SAFADAS 🔥",
+     "link": "/?go=groups"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "23:19",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "foto",
+     "folder": "sexy",
+     "text": "essa eu só mostro no PUTARIA 24H 😏",
+     "dest": "/?go=groups",
+     "dlabel": "VER NO PUTARIA 24H 🔥",
+     "dtext": "Disponível apenas no PUTARIA 24H"
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "23:33",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "teaser",
+     "admin": true,
+     "gap_s": 5,
+     "kind": "video",
+     "folder": "videos-sexy",
+     "text": "os primeiros segundos são grátis... o resto é no NAMORO E AMIZADE 😈",
+     "dest": "/?go=groups",
+     "dlabel": "ASSISTIR NO NAMORO E AMIZADE 🔥",
+     "dtext": "O vídeo completo tá no NAMORO E AMIZADE",
+     "preview_s": 5
+    }
+   ]
+  },
+  {
+   "day": 6,
+   "time": "23:48",
+   "messages": [
+    {
+     "p": 1,
+     "g": "f",
+     "t": "text",
+     "admin": true,
+     "gap_s": 5,
+     "text": "boa noite por aqui... lá nos grupos a madrugada tá SÓ começando 😈"
+    },
+    {
+     "p": 1,
+     "g": "f",
+     "t": "cta",
+     "admin": true,
+     "gap_s": 4,
+     "label": "ENTRAR NO GRUPO VIP 🔥",
+     "link": "/?group=2"
+    }
+   ]
+  }
+ ]
+}
