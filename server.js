@@ -410,13 +410,16 @@ app.get('/p/:slug', async (req, res) => {
                 `SELECT id, name, avatar_url, is_free, members_count, online_count
                  FROM groups WHERE active = true ORDER BY display_order, id LIMIT 14`
             );
+            // SÓ na pressel de GRUPOS: foto vira inicial + nome suavizado (as
+            // fotos/nomes dos grupos podem queimar a conta de anúncio).
             groups = rows.map(clean);
         } else {
             const { rows } = await db.query(
                 `SELECT id, name, avatar_url, status_label, show_online
                  FROM chats WHERE active = true ORDER BY display_order, id LIMIT 14`
             );
-            chats = rows.map(clean);
+            // pressel de CONVERSAS fica como estava: foto e nome originais.
+            chats = rows;
         }
         // métrica: visita da pressel (não bloqueia a resposta)
         db.query(
