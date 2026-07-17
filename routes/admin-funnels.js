@@ -447,8 +447,11 @@ router.post('/:id/duplicate', requireAdmin, async (req, res) => {
             const v = src[k];
             return (v !== null && typeof v === 'object') ? JSON.stringify(v) : v;
         });
+        // active COPIA do original: duplicar um funil ativo pra trocar de link
+        // (caso real: conta de anúncio caiu) tem que nascer FUNCIONANDO — a
+        // cópia inativa mandava o lead pra tela de login sem aviso nenhum.
         cols.push('slug', 'name', 'active');
-        vals.push(slug, (src.name + ' (cópia)').slice(0, 120), false);
+        vals.push(slug, (src.name + ' (cópia)').slice(0, 120), src.active === true);
         const ph = cols.map((_, i) => '$' + (i + 1)).join(', ');
         const { rows: [copy] } = await db.query(
             `INSERT INTO funnels (${cols.join(', ')}) VALUES (${ph}) RETURNING *`, vals

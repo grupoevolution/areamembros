@@ -950,6 +950,20 @@ router.get('/chats/:id/poll', optionalUser, async (req, res) => {
         if (msgs.length) {
             await db.query(`UPDATE chat_sessions SET last_seen_at = NOW() WHERE id = $1`, [session.id]);
         }
+        // Re-lê o estado ATUAL da sessão: quando o chat-worker resume o delay
+        // em paralelo (corrida worker×poll), o snapshot local fica velho e o
+        // app receberia awaiting='delay' junto com a mensagem nova — em modo
+        // gated o input nunca aparecia até sair e reabrir a conversa.
+        try {
+            const { rows: [fresh] } = await db.query(
+                `SELECT awaiting, resume_at, paywalled_at FROM chat_sessions WHERE id = $1`, [session.id]
+            );
+            if (fresh) {
+                session.awaiting = fresh.awaiting;
+                session.resume_at = fresh.resume_at;
+                session.paywalled_at = fresh.paywalled_at;
+            }
+        } catch (_) {}
         // avisa o app que a sessão passou do paywall (o roteiro CONTINUA rodando;
         // é o lead que fica travado — digitar/ligar/atender exigem VIP).
         // Se ele COMPROU nesse meio-tempo, limpa a marca já no poll — é assim
