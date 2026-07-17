@@ -377,19 +377,46 @@ app.get('/p/:slug', async (req, res) => {
         // modo 'groups': prévia da LISTA DE GRUPOS (funil entry_type group_list
         // leva pra aba de grupos); padrão continua a prévia de conversas
         const mode = cfg.mode === 'groups' ? 'groups' : 'chats';
+        // COMPLIANCE META: a pressel é escaneada pelo robô do Facebook. Fotos
+        // podem ser bloqueadas e nomes "quentes" (safadas, putaria, nudes,
+        // sexo, corno, +18...) queimam a conta de anúncio. Então SÓ NA PRESSEL:
+        // troca a foto pela inicial (avatar_url = null) e limpa o nome. O app
+        // continua com foto e nome originais.
+        // nomes limpos por palavra-chave (versão "de anúncio" — nada que o robô
+        // do Meta pegue). Cai no sanitizador genérico se não casar nenhuma.
+        const SOFT_MAP = [
+            [/corn/i, 'Grupinho Discreto'], [/nude/i, 'Galeria Privada'],
+            [/putaria/i, 'Movimento 24H'], [/crente/i, 'Grupo da Fé'],
+            [/vizinha/i, 'Vizinhas Próximas'], [/encontro/i, 'Encontros'],
+            [/novinha/i, 'Novinhas'], [/casada/i, 'Clube das Casadas'],
+        ];
+        const HOT = /\b(safad\w*|putaria|nudes?|sexo|corn\w*|xota|buceta|gozo|piroca|\+?18\+?|xxx|porn\w*|puta|vadia|pelada?s?)\b/gi;
+        const ORPHAN = /^(dos?|das?|de|e|&|\+|da|do)$/i;
+        const softName = (n) => {
+            const raw = String(n || '');
+            for (const [re, out] of SOFT_MAP) if (re.test(raw)) return out;
+            let x = raw.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}️]/gu, ' ');
+            x = x.replace(HOT, ' ').replace(/[·\-–—|&+]+/g, ' ');
+            let words = x.split(/\s+/).filter(Boolean);
+            while (words.length && ORPHAN.test(words[words.length - 1])) words.pop();
+            while (words.length && ORPHAN.test(words[0])) words.shift();
+            x = words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+            return x || 'Grupo';
+        };
+        const clean = (r) => Object.assign({}, r, { name: softName(r.name), avatar_url: null });
         let chats = [], groups = [];
         if (mode === 'groups') {
             const { rows } = await db.query(
                 `SELECT id, name, avatar_url, is_free, members_count, online_count
                  FROM groups WHERE active = true ORDER BY display_order, id LIMIT 14`
             );
-            groups = rows;
+            groups = rows.map(clean);
         } else {
             const { rows } = await db.query(
                 `SELECT id, name, avatar_url, status_label, show_online
                  FROM chats WHERE active = true ORDER BY display_order, id LIMIT 14`
             );
-            chats = rows;
+            chats = rows.map(clean);
         }
         // métrica: visita da pressel (não bloqueia a resposta)
         db.query(

@@ -100,21 +100,35 @@ var DATA = __PRESSEL_DATA__;
         return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
     }
 
+    // avatar por INICIAL do nome (cor estável por nome) — usado quando não há
+    // foto (na pressel a foto é removida por compliance Meta). Mesmo estilo do
+    // app pra listas sem imagem.
+    function initialOf(nm) { var s = String(nm || '?').trim(); return (s.charAt(0) || '?').toUpperCase(); }
+    function colorOf(nm) {
+        var h = 0, s = String(nm || '');
+        for (var i = 0; i < s.length; i++) { h = (h * 31 + s.charCodeAt(i)) >>> 0; }
+        var palette = ['#c2410c', '#0369a1', '#7c2d12', '#166534', '#6d28d9', '#9d174d', '#0f766e', '#a16207', '#b91c1c', '#1e40af'];
+        return palette[h % palette.length];
+    }
+    function avatarStyle(c) {
+        if (c.avatar_url) return ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"';
+        return ' style="background:' + colorOf(c.name) + ';color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;"';
+    }
+    function avatarInner(c) { return c.avatar_url ? '' : esc(initialOf(c.name)); }
+
     // Status (stories) — todas as modelos com anel verde
     document.getElementById('statuses').innerHTML = chats.map(function (c) {
-        var bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
-        return '<div class="st"><div class="ring"><div class="ph"' + bg + '></div></div><div class="nm">' + esc(c.name) + '</div></div>';
+        return '<div class="st"><div class="ring"><div class="ph"' + avatarStyle(c) + '>' + avatarInner(c) + '</div></div><div class="nm">' + esc(c.name) + '</div></div>';
     }).join('');
 
     // Conversas: todas começam "online"; as mensagens CHEGAM ao vivo (sequência
     // abaixo) e ficam FIXAS — nada de aparecer e sumir. No modo grupos a linha
     // de baixo mostra o movimento ("N membros · M online").
     document.getElementById('list').innerHTML = chats.map(function (c, i) {
-        var bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
         var sub = isGroups
             ? esc((c.members_count || 200) + ' membros · ' + (c.online_count || 20) + ' online')
             : esc(c.status_label || 'online');
-        return '<div class="row" data-row="' + i + '"><div class="av"' + bg + '>' + (!isGroups && c.show_online !== false ? '<span class="dot"></span>' : '') + '</div>'
+        return '<div class="row" data-row="' + i + '"><div class="av"' + avatarStyle(c) + '>' + avatarInner(c) + (!isGroups && c.show_online !== false ? '<span class="dot"></span>' : '') + '</div>'
             + '<div class="mid"><div class="nm">' + esc(c.name) + '</div><div class="pv online" data-pv="' + i + '">' + sub + '</div></div></div>';
     }).join('');
 
