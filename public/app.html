@@ -9106,12 +9106,19 @@ function openExploreTab() {
 // ═══════════════ CHAT INTEGRADO (estilo WhatsApp — mesmo motor do /chat-lab) ═══════════════
 window.ChatApp = (function() {
     function visitorId() {
-        let v = localStorage.getItem('mv_chat_visitor');
-        if (!v) {
-            v = 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
-            localStorage.setItem('mv_chat_visitor', v);
+        // try/catch OBRIGATÓRIO: em webview (Instagram/TikTok/anônimo) o
+        // localStorage pode lançar — sem a proteção, a exceção aborta o IIFE
+        // inteiro do ChatApp e o app abre MORTO pro tráfego de anúncio.
+        try {
+            let v = localStorage.getItem('mv_chat_visitor');
+            if (!v) {
+                v = 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+                localStorage.setItem('mv_chat_visitor', v);
+            }
+            return v;
+        } catch (_) {
+            return 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
         }
-        return v;
     }
     const VID = visitorId();
     try { window.VID = VID; } catch(_) {}
@@ -19654,6 +19661,9 @@ document.addEventListener('keydown', function(e) {
 .mvpw-was{font-size:12.5px;color:#8a8288;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:2px;}
 .mvpw-was s{color:#8a8288;}
 .mvpw-price{font-size:27px;font-weight:800;color:#fff;letter-spacing:-.02em;line-height:1.15;text-align:center;margin-bottom:6px;}
+.mvpw-bens{text-align:left;margin:2px auto 10px;max-width:250px;}
+.mvpw-bens div{display:flex;gap:7px;align-items:flex-start;font-size:12px;color:#e7dfe4;line-height:1.4;margin-bottom:4px;}
+.mvpw-bens .ck{color:#37d67a;font-weight:800;flex-shrink:0;}
 .mvpw-permes{font-size:13px;color:#8a8288;font-weight:600;margin-left:-4px;}
 .mvpw-incl{font-size:12.5px;color:#a8a2a5;cursor:pointer;margin-bottom:10px;user-select:none;}
 .mvpw-incl i{font-style:normal;}
@@ -19694,8 +19704,14 @@ window.MVPaywall = (function () {
         const off = discount(p.price, p.original_price);
         const rec = p.is_recommended === true;
         const nm = (p.name || (rec ? 'PREMIUM' : 'VIP'));
-        // popup compacto: sem o "ver o que está incluído" (benefícios ficam fora)
-        const incl = '';
+        // benefícios do plano (campo Benefícios no painel, 1 por linha):
+        // é o que justifica o plano caro — bônus tipo "stories por 1 mês",
+        // "grupo liberado", "chamadas de vídeo". Sem benefícios cadastrados,
+        // o cartão continua compacto como antes.
+        const bens = String(p.benefits || '').split('\n').map(x => x.trim()).filter(Boolean).slice(0, 6);
+        const incl = bens.length
+            ? '<div class="mvpw-bens">' + bens.map(b => '<div><span class="ck">✓</span>' + esc(b) + '</div>').join('') + '</div>'
+            : '';
         // hierarquia que converte: nome → "de X -40%" pequeno → PREÇO grande
         // centralizado (sem /mês — a recorrência fica no rodapé "cancele
         // quando quiser") → botão de AÇÃO colorido ("Liberar", não "Assinar")
