@@ -16950,13 +16950,17 @@ async function loadAdminChats() {
 async function loadChatProductsDropdown(selectedId, callId, triggerIds, storyVipProductId) {
     try {
         const [pr, cr] = await Promise.all([
-            fetch('/api/admin/products', { credentials:'include' }).then(r => r.json()),
+            // include_plans=1 traz também os produtos OCULTOS (assinatura de
+            // chat / stories) pra vincular a conversa a eles
+            fetch('/api/admin/products?include_plans=1', { credentials:'include' }).then(r => r.json()),
             fetch('/api/admin/calls', { credentials:'include' }).then(r => r.json()).catch(() => ({})),
         ]);
         const products = pr.products || [];
+        // rótulo: produto de chat/stories ganha sufixo pra ficar óbvio qual é
+        const plabel = (p) => escHtmlAdmin(p.name) + (p.is_chat_plan ? ' · libera TODAS as conversas' : (p.is_story_plan ? ' · libera os stories' : ''));
         const sel = document.getElementById('cpProduct');
         if (sel) {
-            sel.innerHTML = '<option value="">— nenhum —</option>' + products.map(p => '<option value="'+p.id+'">'+escHtmlAdmin(p.name)+'</option>').join('');
+            sel.innerHTML = '<option value="">— nenhum (usa o plano de chat) —</option>' + products.map(p => '<option value="'+p.id+'">'+plabel(p)+'</option>').join('');
             if (selectedId) sel.value = selectedId;
         }
         // Produto que libera os Stories VIP desta modelo

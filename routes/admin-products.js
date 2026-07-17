@@ -67,6 +67,13 @@ function sanitizeBunnyFields(body) {
 
 router.get('/', requireAdmin, async (req, res) => {
     try {
+        // ?include_plans=1 → inclui os produtos OCULTOS (assinatura de chat /
+        // stories) pra aparecerem no dropdown "Produto vinculado" do chat. O
+        // catálogo normal (sem o param) segue escondendo eles.
+        const includePlans = req.query.include_plans === '1';
+        const planFilter = includePlans ? '' :
+            `WHERE COALESCE(p.is_chat_plan, false) = false
+              AND COALESCE(p.is_story_plan, false) = false`;
         const { rows: products } = await db.query(`
             SELECT p.*,
                    c.name as category_name,
@@ -94,8 +101,7 @@ router.get('/', requireAdmin, async (req, res) => {
                    ) as active_access_count
             FROM products p
             LEFT JOIN categories c ON c.id = p.category_id
-            WHERE COALESCE(p.is_chat_plan, false) = false
-              AND COALESCE(p.is_story_plan, false) = false
+            ${planFilter}
             ORDER BY p.display_order, p.created_at DESC
         `);
         
