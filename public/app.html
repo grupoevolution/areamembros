@@ -19664,6 +19664,20 @@ document.addEventListener('keydown', function(e) {
 .mvpw-bens{text-align:left;margin:2px auto 10px;max-width:250px;}
 .mvpw-bens div{display:flex;gap:7px;align-items:flex-start;font-size:12px;color:#e7dfe4;line-height:1.4;margin-bottom:4px;}
 .mvpw-bens .ck{color:#37d67a;font-weight:800;flex-shrink:0;}
+/* modelo PADRÃO (igual ao popup dos grupos): planos selecionáveis + CTA único */
+.mvpw-plan.sel2{cursor:pointer;text-align:left;transition:border-color .15s,background .15s;}
+.mvpw-plan.sel2.on{border-color:#f5c542;background:rgba(245,197,66,.07);}
+.mvpw-phead{display:flex;align-items:flex-start;gap:11px;}
+.mvpw-radio{width:19px;height:19px;border-radius:50%;border:2px solid #5b555f;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
+.mvpw-plan.on .mvpw-radio{border-color:#f5c542;}
+.mvpw-radio i{display:none;width:9px;height:9px;border-radius:50%;background:#f5c542;}
+.mvpw-plan.on .mvpw-radio i{display:block;}
+.mvpw-pmid{flex:1;min-width:0;}
+.mvpw-pmid .nm{font-size:15px;font-weight:800;color:#fff;}
+.mvpw-pright{text-align:right;flex-shrink:0;}
+.mvpw-pright .pp{font-size:18px;font-weight:800;color:#fff;}
+.mvpw-pright .ec{font-size:9.5px;font-weight:800;color:#37d67a;display:block;}
+.mvpw-cta2{width:100%;border:none;border-radius:13px;padding:15px;font-size:15px;font-weight:800;letter-spacing:.4px;color:#fff;cursor:pointer;font-family:inherit;background:linear-gradient(90deg,#ff1f3d,#e50914);box-shadow:0 8px 26px rgba(229,9,20,.4);margin-top:12px;}
 .mvpw-permes{font-size:13px;color:#8a8288;font-weight:600;margin-left:-4px;}
 .mvpw-incl{font-size:12.5px;color:#a8a2a5;cursor:pointer;margin-bottom:10px;user-select:none;}
 .mvpw-incl i{font-style:normal;}
@@ -19698,32 +19712,42 @@ window.MVPaywall = (function () {
     const LOCK = '<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
     const CROWN = '<svg viewBox="0 0 24 24" width="30" height="30" fill="#f5c542" stroke="#f5c542" stroke-width="1.2"><path d="M3 7l4 4 5-7 5 7 4-4-2 12H5L3 7z"/></svg>';
 
-    function planCard(p, unlock) {
+    // Cartão de plano no modelo PADRÃO (igual ao popup dos grupos): linha
+    // clicável com radio, preço à direita + "economize", e os benefícios
+    // (campo Benefícios do painel, 1 por linha) embaixo. A compra é no botão
+    // ÚNICO montado por plansHTML — o cartão não tem botão próprio.
+    function planCard(p, unlock, i, sel) {
         const price = fmtMoney(p.price) || '';
         const orig = fmtMoney(p.original_price);
         const off = discount(p.price, p.original_price);
         const rec = p.is_recommended === true;
         const nm = (p.name || (rec ? 'PREMIUM' : 'VIP'));
-        // benefícios do plano (campo Benefícios no painel, 1 por linha):
-        // é o que justifica o plano caro — bônus tipo "stories por 1 mês",
-        // "grupo liberado", "chamadas de vídeo". Sem benefícios cadastrados,
-        // o cartão continua compacto como antes.
-        const bens = String(p.benefits || '').split('\n').map(x => x.trim()).filter(Boolean).slice(0, 6);
+        const eco = (p.original_price && parseFloat(p.original_price) > parseFloat(p.price))
+            ? fmtMoney(parseFloat(p.original_price) - parseFloat(p.price)) : null;
+        const bens = String(p.benefits || '').split('\n').map(x => x.trim()).filter(Boolean).slice(0, 7);
         const incl = bens.length
             ? '<div class="mvpw-bens">' + bens.map(b => '<div><span class="ck">✓</span>' + esc(b) + '</div>').join('') + '</div>'
             : '';
-        // hierarquia que converte: nome → "de X -40%" pequeno → PREÇO grande
-        // centralizado (sem /mês — a recorrência fica no rodapé "cancele
-        // quando quiser") → botão de AÇÃO colorido ("Liberar", não "Assinar")
-        return '<div class="mvpw-plan' + (rec ? ' rec' : '') + '">'
+        return '<div class="mvpw-plan sel2' + (rec ? ' rec' : '') + (sel ? ' on' : '') + '" data-mv-plan="' + i + '" data-url="' + esc(p.checkout_url || unlock.checkout_url || '') + '" data-nm="' + esc(nm) + '">'
             + (rec ? '<div class="mvpw-tag">MAIS ESCOLHIDO</div>' : '')
-            + '<div class="mvpw-pname">' + esc(nm) + '</div>'
-            + ((orig || off) ? '<div class="mvpw-was">' + (orig ? 'de <s>' + esc(orig) + '</s>' : '')
-                + (off ? ' <span class="mvpw-off">-' + off + '%</span>' : '') + '</div>' : '')
-            + '<div class="mvpw-price">' + esc(price) + '</div>'
+            + '<div class="mvpw-phead">'
+            + '<span class="mvpw-radio"><i></i></span>'
+            + '<span class="mvpw-pmid"><span class="nm">' + esc(nm) + '</span></span>'
+            + '<span class="mvpw-pright">' + (orig ? '<span class="mvpw-orig" style="display:block;">' + esc(orig) + '</span>' : '')
+            + '<span class="pp">' + esc(price) + '</span>' + (eco ? '<span class="ec">economize ' + esc(eco) + '</span>' : '') + '</span>'
+            + '</div>'
             + incl
-            + '<button class="mvpw-buy' + (rec ? ' rec' : '') + '" data-mv-buy data-url="' + esc(p.checkout_url || unlock.checkout_url || '') + '">' + esc(rec ? ('Quero ' + nm + ' 🔥') : ('Liberar ' + nm)) + '</button>'
             + '</div>';
+    }
+    // planos + botão ÚNICO de compra (o texto/URL do botão refletem o plano
+    // selecionado — recomendado começa selecionado)
+    function plansHTML(plans, unlock) {
+        let sel = plans.findIndex(p => p.is_recommended === true);
+        if (sel < 0) sel = plans.length > 1 ? 1 : 0;
+        const chosen = plans[sel] || {};
+        return '<div class="mvpw-plans">' + plans.map((p, i) => planCard(p, unlock, i, i === sel)).join('') + '</div>'
+            + '<button class="mvpw-cta2" data-mv-cta data-url="' + esc(chosen.checkout_url || unlock.checkout_url || '') + '">'
+            + esc('Liberar ' + (chosen.name || 'VIP') + ' 🔥') + '</button>';
     }
 
     function bannerHTML(unlock, opts) {
@@ -19733,7 +19757,7 @@ window.MVPaywall = (function () {
         const plans = Array.isArray(unlock.plans) ? unlock.plans : [];
         let body;
         if (plans.length) {
-            body = '<div class="mvpw-plans">' + plans.map(p => planCard(p, unlock)).join('') + '</div>';
+            body = plansHTML(plans, unlock);
         } else if (opts.offer && opts.offer.price != null && opts.offer.price !== '') {
             // Oferta "de X por Y" com desconto destacado
             const p = fmtMoney(opts.offer.price);
@@ -19771,8 +19795,19 @@ window.MVPaywall = (function () {
         }
     }
     function wire(root, unlock, opts) {
-        root.querySelectorAll('[data-mv-buy]').forEach(b => b.addEventListener('click', () => {
-            // métrica: clique num plano do paywall (opts.track = {type, meta})
+        // planos selecionáveis (modelo padrão): clicar seleciona e atualiza o
+        // botão único (texto + URL de checkout do plano escolhido)
+        const cta = root.querySelector('[data-mv-cta]');
+        root.querySelectorAll('[data-mv-plan]').forEach(card => card.addEventListener('click', () => {
+            root.querySelectorAll('[data-mv-plan]').forEach(x => x.classList.remove('on'));
+            card.classList.add('on');
+            if (cta) {
+                cta.dataset.url = card.dataset.url || '';
+                cta.textContent = 'Liberar ' + (card.dataset.nm || 'VIP') + ' 🔥';
+            }
+        }));
+        // botão único de compra (modelo padrão) + botões avulsos (offer/single)
+        root.querySelectorAll('[data-mv-cta], [data-mv-buy]').forEach(b => b.addEventListener('click', () => {
             try {
                 if (window.TRACK && opts && opts.track && opts.track.type) {
                     TRACK.event(opts.track.type, Object.assign({ url: b.dataset.url || '' }, opts.track.meta || {}));
