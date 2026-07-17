@@ -10717,6 +10717,7 @@ window.GroupApp = (function () {
     function stopTimers() {
         if (CUR && CUR.pollTimer) clearInterval(CUR.pollTimer);
         if (CUR && CUR.hbTimer) clearInterval(CUR.hbTimer);
+        if (CUR && CUR.reactTimer) clearInterval(CUR.reactTimer);
     }
     function back() {
         stopTimers();
@@ -10741,17 +10742,56 @@ window.GroupApp = (function () {
             for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
             h = h >>> 0;
         }
-        const chance = (m.type === 'image' || m.type === 'vonce') ? 85 : 38;
+        const isMedia = (m.type === 'image' || m.type === 'vonce' || m.type === 'video' || m.type === 'album');
+        const chance = isMedia ? 88 : 42;
         if ((h % 100) >= chance) return [];
         const n = 1 + (h % 3);
         const out = [];
+        let appear = 8 + (h % 22); // 1ª reação surge ~8-30s depois da mensagem
         for (let i = 0; i < n; i++) {
             h = (Math.imul(h, 48271) + 11) >>> 0;
             const e = REACT_EMOJIS[h % REACT_EMOJIS.length];
             if (out.some(x => x.e === e)) continue;
-            out.push({ e, c: (h >> 4) % 9 }); // 0 = só o emoji, sem número
+            // target = quanto a reação chega NO PICO (mídia rende bem mais);
+            // appear = quando ela aparece (staggered — vão surgindo aos poucos)
+            const target = isMedia ? (3 + (h % 22)) : (1 + (h % 8));
+            out.push({ e, target, appear });
+            appear += 25 + (h % 110); // próxima reação surge mais tarde ainda
         }
         return out;
+    }
+    // Quanto de uma reação já "cresceu" dado o tempo desde que ela apareceu.
+    // Curva rápida no início e satura em ~40min (parece gente reagindo ao vivo).
+    function reactGrown(target, ageSec) {
+        if (ageSec <= 0) return 1;
+        const frac = Math.min(1, Math.pow(ageSec / 2400, 0.55));
+        return Math.max(1, Math.round(target * frac));
+    }
+    // Atualiza os números/visibilidade das reações de uma linha conforme a
+    // idade da mensagem. Chamada no render e por um ticker global.
+    function growReactRow(row) {
+        const born = parseInt(row.dataset.born, 10) || 0;
+        const age = born ? (Date.now() - born) / 1000 : 999999;
+        const mid = row.dataset.mid;
+        const mine = mid && myReacts()[mid];
+        let anyVisible = false;
+        row.querySelectorAll('.ga-react').forEach((chip, i) => {
+            const appear = parseInt(chip.dataset.appear, 10) || 0;
+            if (age < appear) { chip.style.display = 'none'; return; }
+            chip.style.display = '';
+            anyVisible = true;
+            const target = parseInt(chip.dataset.target, 10) || 0;
+            const base = reactGrown(target, age - appear);
+            const i2 = chip.querySelector('i');
+            if (i2) {
+                i2.dataset.base = base;
+                const on = i === 0 && mine;
+                if (on) chip.classList.add('on'); else if (i === 0) chip.classList.remove('on');
+                const val = base + (on ? 1 : 0);
+                i2.textContent = val > 0 ? val : '';
+            }
+        });
+        row.style.display = anyVisible ? 'flex' : 'none';
     }
     function myReacts() {
         try { return JSON.parse(localStorage.getItem('mv_greacts') || '{}'); } catch (_) { return {}; }
@@ -11095,23 +11135,23 @@ window.GroupApp = (function () {
         }
         body.appendChild(node);
 
-        // reações (chips) — logo abaixo da mensagem
+        // reações (chips) — nascem vazias e CRESCEM com o tempo (parecem gente
+        // reagindo ao vivo). O número/visibilidade é recalculado por um ticker.
         const reacts = seededReactions(m);
         if (reacts.length) {
-            const mine2 = myReacts();
             const row = document.createElement('div');
             row.className = 'ga-reacts';
-            row.innerHTML = reacts.map((r2, i) => {
-                const on = i === 0 && mine2[m.id];
-                const val = (r2.c || 0) + (on ? 1 : 0);
-                return '<span class="ga-react' + (on ? ' on' : '') + '" data-mid="' + m.id + '">' + r2.e
-                    + '<i data-base="' + (r2.c || 0) + '">' + (val > 0 ? val : '') + '</i></span>';
-            }).join('');
+            row.dataset.mid = m.id;
+            row.dataset.born = m.created_at ? new Date(m.created_at).getTime() : Date.now();
+            row.innerHTML = reacts.map(r2 =>
+                '<span class="ga-react" data-mid="' + m.id + '" data-target="' + r2.target + '" data-appear="' + r2.appear + '">'
+                + r2.e + '<i data-base="0"></i></span>').join('');
             row.querySelectorAll('.ga-react').forEach((chip, i) => {
                 if (i === 0) chip.addEventListener('click', () => toggleReact(m.id, chip));
                 else chip.addEventListener('click', () => chip.classList.toggle('on'));
             });
             body.appendChild(row);
+            growReactRow(row); // estado inicial já correto pra idade da msg
         }
         // cursor por TIMESTAMP (a timeline compartilhada não tem id numérico)
         if (m.created_at && CUR && (!CUR.lastTs || new Date(m.created_at) > new Date(CUR.lastTs))) {
@@ -11369,8 +11409,21 @@ window.GroupApp = (function () {
             } catch (_) {}
         }, 10000);
     }
+    // Ticker das reações: a cada 12s recalcula os números das reações visíveis
+    // (elas vão surgindo e crescendo com a idade da mensagem). Só roda com o
+    // grupo aberto e a aba visível — barato pra bateria.
+    function startReactTick() {
+        if (CUR && CUR.reactTimer) clearInterval(CUR.reactTimer);
+        if (CUR) CUR.reactTimer = setInterval(() => {
+            if (document.hidden) return;
+            const body = document.getElementById('gaBody');
+            if (!body) return;
+            body.querySelectorAll('.ga-reacts').forEach(growReactRow);
+        }, 12000);
+    }
     function startPoll() {
         if (CUR.pollTimer) clearInterval(CUR.pollTimer);
+        startReactTick();
         CUR.pollTimer = setInterval(async () => {
             if (!CUR) return;
             try {
