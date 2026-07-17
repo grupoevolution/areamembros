@@ -387,6 +387,25 @@ function bakeItem(group, item, mediaRR) {
                 type = items[0].kind === 'video' ? 'video' : 'image';
                 media = items[0].url;
             } else { if (!content) continue; type = 'text'; }
+        } else if (m.t === 'teaser') {
+            // VITRINE (grupo free): mídia real porém BLOQUEADA — foto borrada
+            // com cadeado / vídeo que toca só os primeiros segundos — com
+            // botão levando pro destino (outro grupo, produto, catálogo).
+            const kind = m.kind === 'video' ? 'video' : 'foto';
+            const key = (m.folder || '').toString().trim();
+            const f = key ? pickRR(key + ':teaser', folderFiles(key, kind === 'foto' ? 'image' : 'video')) : null;
+            media = f ? f.url : null;
+            if (!media) { if (!content) continue; type = 'text'; }
+            else {
+                type = 'teaser';
+                meta = Object.assign({
+                    kind,
+                    dest: (m.dest || '').toString().slice(0, 500) || null,
+                    dlabel: (m.dlabel || '').toString().slice(0, 60) || null,
+                    dtext: (m.dtext || '').toString().slice(0, 90) || null,
+                    preview_s: Math.max(3, Math.min(30, parseInt(m.preview_s, 10) || 5)),
+                }, streamMeta(f) || {});
+            }
         } else if (m.t === 'presentation') {
             type = 'image';
             const g = person ? person.g : 'f';
