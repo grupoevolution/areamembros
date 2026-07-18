@@ -10909,6 +10909,16 @@ window.GroupApp = (function () {
     function renderMsg(m) {
         const body = document.getElementById('gaBody');
         if (!body || !m) return;
+        // DEDUP: o grupo não tinha proteção contra mensagem repetida (o chat
+        // já tinha). O poll podia re-entregar a mesma msg e ela renderizava de
+        // novo — era isso que fazia "a mesma pessoa mandar 5x seguidas". Chave
+        // = m.id (sid string no compartilhado, id numérico no pessoal); ambos
+        // são estáveis por ocorrência, então nova ocorrência do ciclo passa.
+        if (CUR && m.id != null) {
+            if (!CUR._seen) CUR._seen = new Set();
+            if (CUR._seen.has(m.id)) return;
+            CUR._seen.add(m.id);
+        }
         // troca de dia → separador (HOJE / ONTEM / dia da semana)
         if (m.created_at && CUR) {
             const k = dayKeyOf(m.created_at);
@@ -11472,7 +11482,7 @@ window.GroupApp = (function () {
         document.getElementById('gaTgBanner').style.display = 'none';
         const { data } = await api('/api/user/groups/' + id + '/open');
         if (!data.success) { body.innerHTML = '<div class="ca-day">' + esc(data.error || 'erro ao abrir') + '</div>'; return; }
-        CUR = { id, group: data.group, access: data.access, unlock: data.unlock || null, lastTs: null, _dayKey: null, popupShown: false };
+        CUR = { id, group: data.group, access: data.access, unlock: data.unlock || null, lastTs: null, _dayKey: null, popupShown: false, _seen: new Set() };
         const g = data.group;
         document.getElementById('gaName').textContent = g.name;
         document.getElementById('gaStatus').textContent = g.members_count + ' membros · ' + g.online_count + ' online';
