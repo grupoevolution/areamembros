@@ -750,6 +750,21 @@ async function materializeScene(session, group, scene, baseTime, gapScale) {
 async function runEntryScript(session, group) {
     const st = sessionState(session);
     if (st.entry_done) return [];
+    // CLAIM ATÔMICO: sem isto, 2 requests concorrentes de /open (toque
+    // duplo, 2 abas, 2 aparelhos) liam entry_done=false os dois e rodavam a
+    // cena de entrada em DOBRO — era a causa real da "mesma pessoa 5x" (as
+    // cópias têm ids diferentes, então o dedup por id não pega). Só UM request
+    // ganha o UPDATE condicional; o outro sai sem inserir nada.
+    try {
+        const { rows: claim } = await db.query(
+            `UPDATE group_sessions
+                SET state = jsonb_set(COALESCE(state, '{}'::jsonb), '{entry_done}', 'true'::jsonb)
+              WHERE id = $1 AND COALESCE(state->>'entry_done', '') <> 'true'
+              RETURNING id`,
+            [session.id]
+        );
+        if (!claim.length) { st.entry_done = true; return []; }
+    } catch (_) { return []; }
     st.entry_done = true;
     // pill de sistema estilo WhatsApp ("Você entrou no grupo") — sempre, 1x
     try {
@@ -901,13 +916,17 @@ router.get('/groups', optionalUser, async (req, res) => {
         const { rows: groups } = await db.query(
             `SELECT * FROM groups WHERE active = true ORDER BY display_order, id`
         );
-        const out = [];
         const now = Date.now();
-        for (const g of groups) {
-            const owned = await ownsGroup(ident.email, g);
+        // posse do Passe: 1x pro request inteiro (era recalculada por grupo —
+        // com 12 grupos ativos virava dezenas de queries idênticas em série).
+        const passId = await groupPassProductId();
+        const hasPass = passId ? await ownsProduct(ident.email, passId) : false;
+        // processa os grupos EM PARALELO (era um await sequencial por grupo →
+        // ~48-60 round-trips em fila a cada abertura da aba Grupos)
+        const out = await Promise.all(groups.map(async (g) => {
+            const owned = g.is_free ? false
+                : (hasPass || (g.product_id ? await ownsProduct(ident.email, g.product_id) : false));
             const session = await findOrCreateSession(g.id, ident, false);
-            // última mensagem/contagem: computadas da agenda (sem mídia — só
-            // preview de texto/tipo), iguais pra todo mundo
             const winFrom = now - windowHours(g) * 3600000;
             let shared = [];
             try { shared = await servedShared(g, winFrom, now); } catch (_) {}
@@ -939,7 +958,7 @@ router.get('/groups', optionalUser, async (req, res) => {
                     ? { name: lastShared.name, preview: (lastShared.type === 'image' || lastShared.type === 'vonce' ? 'Foto' : lastShared.type === 'album' ? 'Fotos' : lastShared.type === 'video' ? 'Vídeo' : (lastShared.content || 'Mensagem')), at: new Date(lastShared.t).toISOString() }
                     : null;
             }
-            out.push({
+            return {
                 id: g.id, name: g.name, avatar_url: g.avatar_url,
                 is_free: g.is_free, pinned: g.pinned === true || owned,
                 owned, locked_preview: masked,
@@ -947,8 +966,8 @@ router.get('/groups', optionalUser, async (req, res) => {
                 last, unread,
                 _lastAt: lastShared ? lastShared.t : 0, // atividade
                 _pin: g.pinned === true,                // FIXADO no painel (ex.: VIP)
-            });
-        }
+            };
+        }));
         // ordem: FREE (canal) no topo → grupo(s) FIXADO(s) no painel (o VIP,
         // logo abaixo do free) → grupos comprados → o resto por ATIVIDADE
         // (última mensagem mais recente sobe, como as conversas).
@@ -964,10 +983,8 @@ router.get('/groups', optionalUser, async (req, res) => {
         out.forEach(o => { delete o._lastAt; delete o._pin; });
         let pass = null;
         try {
-            const passId = await groupPassProductId();
-            if (passId && !(await ownsProduct(ident.email, passId))) {
-                pass = await groupPassInfo();
-            }
+            // reusa passId/hasPass já calculados (sem re-consultar)
+            if (passId && !hasPass) pass = await groupPassInfo();
         } catch (_) {}
         return res.json({ success: true, groups: out, pass });
     } catch (err) {

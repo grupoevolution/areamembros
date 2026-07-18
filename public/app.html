@@ -8960,6 +8960,17 @@ function switchScreen(name) {
     // tela ativa sem passar por checkExistingSession()/showLoginScreen().
     if (typeof hideBootSplash === 'function') hideBootSplash();
 
+    // Ao SAIR de uma conversa/grupo (barra inferior, deep-link, etc.), mata os
+    // polls daquele módulo — senão ficam rodando órfãos em background pra
+    // sempre (2s do chat / 2,5s+heartbeat+reações do grupo) e o app fica
+    // "estranho/lento" com o tempo. Só para quando sai da tela da conversa.
+    try {
+        const cur = document.querySelector('.screen.active');
+        const leavingId = cur && cur.id;
+        if (name !== 'chatconv' && leavingId === 'chatconv' && window.ChatApp && ChatApp.stop) ChatApp.stop();
+        if (name !== 'groupconv' && leavingId === 'groupconv' && window.GroupApp && GroupApp.stop) GroupApp.stop();
+    } catch (_) {}
+
     // ─── Fase I (Android perf): otimizações de switchScreen ─────────────
     // Ordem CRÍTICA pra evitar layout thrashing no Android Chrome:
     //   1. READ: scrollTop da tela atual, refs DOM, classes
@@ -9530,6 +9541,7 @@ window.ChatApp = (function() {
 
     async function open(id) {
         stopPoll();
+        try { if (window.GroupApp && GroupApp.stop) GroupApp.stop(); } catch (_) {} // mata timers órfãos do grupo
         switchScreen('chatconv');
         // dentro da conversa a barra inferior some (igual WhatsApp)
         const nav = document.getElementById('bottomNav'); if (nav) nav.style.display = 'none';
@@ -10592,7 +10604,7 @@ window.ChatApp = (function() {
 
     return { loadList, open, back, send, photo, sendPhoto, unlock, closeVonce, onCall, refreshUnreadDot, openProfile, closeProfile,
              openStory, closeStory, storyNav, storyReply, openVipLocked,
-             gateInstall, isStandalone,
+             gateInstall, isStandalone, stop: stopPoll,
              curId: () => (CUR ? CUR.id : null) };
 })();
 
@@ -10714,6 +10726,7 @@ window.GroupApp = (function () {
     // ── GRUPO ABERTO ─────────────────────────────────────────────────────────
     let PASS = null; // plano do Passe Vitalício (banner dourado da lista)
     let CUR = null; // { id, group, access, unlock, lastId, pollTimer, hbTimer, popupShown }
+    let _opening = false; // guard de re-entrância do open() (evita /open duplo)
     function stopTimers() {
         if (CUR && CUR.pollTimer) clearInterval(CUR.pollTimer);
         if (CUR && CUR.hbTimer) clearInterval(CUR.hbTimer);
@@ -10916,8 +10929,16 @@ window.GroupApp = (function () {
         // são estáveis por ocorrência, então nova ocorrência do ciclo passa.
         if (CUR && m.id != null) {
             if (!CUR._seen) CUR._seen = new Set();
-            if (CUR._seen.has(m.id)) return;
+            if (CUR._seen.has(m.id)) {
+                // avança o cursor MESMO ao pular a duplicata — senão um poll só
+                // com msgs já vistas não movia lastTs e o servidor re-buscava a
+                // mesma janela a cada 2,5s (repetição + carga de banco à toa)
+                if (m.created_at && (!CUR.lastTs || new Date(m.created_at) > new Date(CUR.lastTs))) CUR.lastTs = m.created_at;
+                return;
+            }
             CUR._seen.add(m.id);
+            // limita o Set (sessão longa não cresce sem fim)
+            if (CUR._seen.size > 1500) { CUR._seen = new Set([...CUR._seen].slice(-1000)); }
         }
         // troca de dia → separador (HOJE / ONTEM / dia da semana)
         if (m.created_at && CUR) {
@@ -11454,7 +11475,15 @@ window.GroupApp = (function () {
                 if (list.length) {
                     const note = document.getElementById('gaLockNote');
                     if (note) note.remove(); // re-apenda no fim depois das novas
-                    for (const m of list) renderMsg(m);
+                    // try/catch POR mensagem: uma msg malformada não pode
+                    // abortar o loop (senão o cursor travava na anterior e o
+                    // poll re-entregava o mesmo lote a cada 2,5s — repetição
+                    // eterna). Além disso, avança o cursor pelo lote como rede.
+                    for (const m of list) {
+                        try { renderMsg(m); } catch (_) {
+                            if (m && m.created_at && (!CUR.lastTs || new Date(m.created_at) > new Date(CUR.lastTs))) CUR.lastTs = m.created_at;
+                        }
+                    }
                     if (CUR.access === 'locked') lockUI(false);
                     scrollBottom();
                 }
@@ -11470,7 +11499,11 @@ window.GroupApp = (function () {
             window.MV_pendingGroup = id;
             if (typeof window.MV_openLoginModal === 'function') { window.MV_openLoginModal(); return; }
         }
+        // guard de re-entrância: toque duplo na linha do grupo disparava 2+
+        // /open simultâneos (que alimentavam a corrida da cena de entrada)
+        if (_opening) return; _opening = true;
         stopTimers();
+        try { if (window.ChatApp && ChatApp.stop) ChatApp.stop(); } catch (_) {} // mata poll órfão do chat
         switchScreen('groupconv');
         unlockUI(); // limpa blur/overlay de um lock anterior (reabrir/virar membro)
         const nav = document.getElementById('bottomNav'); if (nav) nav.style.display = 'none';
@@ -11480,8 +11513,10 @@ window.GroupApp = (function () {
         document.getElementById('gaCtaBar').style.display = 'none';
         document.getElementById('gaMediaBanner').style.display = 'none';
         document.getElementById('gaTgBanner').style.display = 'none';
-        const { data } = await api('/api/user/groups/' + id + '/open');
-        if (!data.success) { body.innerHTML = '<div class="ca-day">' + esc(data.error || 'erro ao abrir') + '</div>'; return; }
+        let data;
+        try { ({ data } = await api('/api/user/groups/' + id + '/open')); }
+        finally { _opening = false; }
+        if (!data || !data.success) { body.innerHTML = '<div class="ca-day">' + esc((data && data.error) || 'erro ao abrir') + '</div>'; return; }
         CUR = { id, group: data.group, access: data.access, unlock: data.unlock || null, lastTs: null, _dayKey: null, popupShown: false, _seen: new Set() };
         const g = data.group;
         document.getElementById('gaName').textContent = g.name;
@@ -11495,7 +11530,7 @@ window.GroupApp = (function () {
             tg.onclick = () => { try { window.open(g.telegram_url, '_blank', 'noopener'); } catch (_) {} };
         }
         body.innerHTML = '<div class="ca-crypt">🔒 Suas mensagens são protegidas</div>';
-        for (const m of (data.messages || [])) renderMsg(m);
+        for (const m of (data.messages || [])) { try { renderMsg(m); } catch (_) {} }
         // cursor = relógio do SERVIDOR (o poll pega tudo que nascer daqui pra
         // frente, inclusive o roteiro de entrada com timestamps futuros)
         if (data.server_now) CUR.lastTs = data.server_now;
@@ -11705,7 +11740,7 @@ window.GroupApp = (function () {
         }
     }
 
-    return { tab, loadList, checkTabs, open, back, send, ctaClick, openMedia, closeMedia, closeFull, fullNav, openPass };
+    return { tab, loadList, checkTabs, open, back, send, ctaClick, openMedia, closeMedia, closeFull, fullNav, openPass, stop: stopTimers };
 })();
 
 // Deep-link do push de mensagem: /?chat=<id> abre a conversa direto
