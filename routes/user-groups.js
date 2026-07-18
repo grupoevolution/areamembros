@@ -817,9 +817,35 @@ function lockedFrom(session) {
     return lf ? new Date(lf) : null;
 }
 
+// CAP: quantos grupos PAGOS distintos o lead pode ABRIR antes de travar tudo.
+// Evita o "loop" de visitar todos os grupos de graça e nunca comprar.
+const GROUP_ACCESS_CAP = 3;
+
+// Conta os grupos PAGOS distintos que o lead JÁ ACESSOU (sessão que NÃO foi
+// travada pelo cap). Free e sessões 'capped' não contam. Cobre lead anônimo
+// (visitor) e logado (email) — as sessões migram no login.
+async function countAccessedGroups(ident) {
+    const email = ident.email || null, visitor = ident.visitor || null;
+    if (!email && !visitor) return 0;
+    try {
+        const { rows } = await db.query(
+            `SELECT COUNT(DISTINCT gs.group_id)::int AS n
+               FROM group_sessions gs JOIN groups g ON g.id = gs.group_id
+              WHERE g.is_free = false
+                AND COALESCE(gs.state->>'capped', '') <> 'true'
+                AND ( ($1::text IS NOT NULL AND LOWER(gs.customer_email) = $1)
+                      OR ($2::text IS NOT NULL AND gs.visitor_id = $2) )`,
+            [email, visitor]
+        );
+        return rows[0] ? rows[0].n : 0;
+    } catch (_) { return 0; }
+}
+
 async function accessState(ident, group, session) {
     if (group.is_free) return 'channel';
     if (await ownsGroup(ident.email, group)) return 'member';
+    // grupo travado pelo cap dos 3 → locked direto (independe do trial)
+    if (session && session.state && session.state.capped === true) return 'locked';
     const t = trialState(session, group);
     return t.remaining > 0 ? 'trial' : 'locked';
 }
@@ -1004,7 +1030,27 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
         if (!gr.length) return res.status(404).json({ success: false, error: 'Grupo não encontrado' });
         const group = gr[0];
         await hydrateGroupMedia(group);
-        const session = await findOrCreateSession(groupId, ident, true);
+        // CAP DE 3 GRUPOS: se este é um grupo PAGO NOVO pro lead (sem sessão
+        // ainda) e ele já acessou o limite, a sessão nasce TRAVADA (capped) —
+        // abre no popup de planos na hora. Grupos que ele já abriu e os
+        // comprados/free nunca são capados. Checa ANTES de criar a sessão.
+        const preSession = await findOrCreateSession(groupId, ident, false);
+        let capNew = false;
+        if (!preSession && !group.is_free && !(await ownsGroup(ident.email, group))) {
+            capNew = (await countAccessedGroups(ident)) >= GROUP_ACCESS_CAP;
+        }
+        const session = preSession || await findOrCreateSession(groupId, ident, true);
+        if (capNew) {
+            const st = sessionState(session);
+            st.capped = true;
+            session.trial_used_seconds = 999999; // trava o trial também (heartbeat/poll consistentes)
+            try {
+                await db.query(
+                    `UPDATE group_sessions SET state = $2, trial_used_seconds = 999999, updated_at = NOW() WHERE id = $1`,
+                    [session.id, JSON.stringify(st)]
+                );
+            } catch (_) {}
+        }
         await ensureSessionGeo(session, req);
         await cleanupPersonal(session, group);
         const access = await accessState(ident, group, session);
