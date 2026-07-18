@@ -10911,12 +10911,14 @@ window.GroupApp = (function () {
     }
 
     // ── separador de dia (a janela compartilhada cobre até 72h) ─────────────
-    function dayKeyOf(iso) { const d = new Date(iso); return d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate(); }
+    // dia em BRASÍLIA (a agenda é ancorada em Brasília; usar o fuso do aparelho
+    // deslocava HOJE/ONTEM pra quem tem o relógio em outro timezone). -3h fixo.
+    function brtParts(iso) { const d = new Date(new Date(iso).getTime() - 3 * 3600000); return d; }
+    function dayKeyOf(iso) { const d = brtParts(iso); return d.getUTCFullYear() + '-' + d.getUTCMonth() + '-' + d.getUTCDate(); }
     function dayLabelOf(iso) {
-        const now = new Date();
-        if (dayKeyOf(iso) === dayKeyOf(now)) return 'HOJE';
-        if (dayKeyOf(iso) === dayKeyOf(new Date(Date.now() - 86400000))) return 'ONTEM';
-        return ['DOMINGO', 'SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA', 'SÁBADO'][new Date(iso).getDay()];
+        if (dayKeyOf(iso) === dayKeyOf(Date.now())) return 'HOJE';
+        if (dayKeyOf(iso) === dayKeyOf(Date.now() - 86400000)) return 'ONTEM';
+        return ['DOMINGO', 'SEGUNDA-FEIRA', 'TERÇA-FEIRA', 'QUARTA-FEIRA', 'QUINTA-FEIRA', 'SEXTA-FEIRA', 'SÁBADO'][brtParts(iso).getUTCDay()];
     }
 
     function renderMsg(m) {

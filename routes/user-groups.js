@@ -1131,6 +1131,7 @@ router.get('/groups/:id/poll', optionalUser, async (req, res) => {
             trial_remaining: access === 'trial' ? trialState(session, group).remaining : 0,
         });
     } catch (err) {
+        logger.warn('[grupo] poll falhou: ' + (err && err.message)); // antes engolia em silêncio
         return res.json({ success: false });
     }
 });
@@ -1182,6 +1183,7 @@ router.post('/groups/:id/heartbeat', optionalUser, async (req, res) => {
             unlock: remaining > 0 ? null : await groupUnlock(group),
         });
     } catch (err) {
+        logger.warn('[grupo] heartbeat falhou: ' + (err && err.message));
         return res.json({ success: false });
     }
 });

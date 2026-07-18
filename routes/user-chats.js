@@ -798,6 +798,19 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
         const text = (req.body?.text || '').toString().trim().slice(0, 1000);
         const newMsgs = [];
 
+        // GATE do paywall: depois do bloco 🔒 (paywalled_at), um lead SEM VIP
+        // não avança o roteiro por NENHUM caminho. Antes o gate existia só no
+        // texto livre — se o roteiro tinha botões/input DEPOIS do 🔒, o lead
+        // consumia esse conteúdo de graça (vazamento de venda). Agora
+        // botão/input também caem no popup de assinar.
+        const isPaywalled = (session.awaiting === 'paywall' || session.paywalled_at) && !perm.is_vip;
+        if (isPaywalled && (choice !== undefined && choice !== null || text)) {
+            return res.status(403).json({
+                success: false, error: 'vip_required',
+                unlock: await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url),
+            });
+        }
+
         if (choice !== undefined && choice !== null && session.awaiting === 'buttons') {
             const stepIdx = Math.min(session.current_order, steps.length - 1);
             const step = steps[stepIdx];
@@ -1175,7 +1188,11 @@ async function resumeDelayed(limit) {
             }
         } catch (err) {
             logger.warn('[chat] resumeDelayed falhou na sessão ' + session.id + ': ' + err.message);
-            await db.query(`UPDATE chat_sessions SET awaiting = NULL WHERE id = $1`, [session.id]).catch(() => {});
+            // volta pra 'delay' (não NULL): a claim foi 'delay'→'resuming'; se
+            // deu erro TRANSITÓRIO (blip de banco), soltar de volta pra 'delay'
+            // deixa o worker tentar de novo no próximo tick. Antes ia pra NULL
+            // e a conversa morria em silêncio (input nunca mais aparecia).
+            await db.query(`UPDATE chat_sessions SET awaiting = 'delay' WHERE id = $1 AND awaiting = 'resuming'`, [session.id]).catch(() => {});
         }
     }
     return results;

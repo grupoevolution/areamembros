@@ -428,7 +428,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
         if (b.gate_media !== undefined) set('gate_media', !!b.gate_media);
         if (b.call_video_call_id !== undefined) set('call_video_call_id', b.call_video_call_id ? parseInt(b.call_video_call_id, 10) : null);
         if (b.trigger_product_ids !== undefined) set('trigger_product_ids', cleanTriggerIds(b.trigger_product_ids));
-        if (b.input_mode !== undefined) set('input_mode', INPUT_MODES.includes(b.input_mode) ? b.input_mode : 'always');
+        if (b.input_mode !== undefined) set('input_mode', INPUT_MODES.includes(b.input_mode) ? b.input_mode : 'gated');
         if (b.call_goto_key !== undefined) set('call_goto_key', (b.call_goto_key || '').trim().slice(0, 40) || null);
         if (b.tag !== undefined) set('tag', (b.tag || '').trim().slice(0, 30) || null);
         if (b.auto_start_minutes !== undefined) set('auto_start_minutes', Math.max(0, Math.min(10080, parseInt(b.auto_start_minutes, 10) || 0)));
@@ -732,7 +732,9 @@ router.post('/import', requireAdmin, async (req, res) => {
             REPLY_MODES.includes(c.reply_mode) ? c.reply_mode : 'vip',
             c.allow_photo === true,
             parseInt(c.display_order, 10) || 0,
-            INPUT_MODES.includes(c.input_mode) ? c.input_mode : 'always',
+            // default 'gated' (igual ao criar) — importar sem o campo não deve
+            // virar digitação livre e furar o gating do paywall
+            INPUT_MODES.includes(c.input_mode) ? c.input_mode : 'gated',
         ]);
         const chat = created[0];
         let imported = 0;
