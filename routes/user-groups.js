@@ -846,8 +846,28 @@ async function accessState(ident, group, session) {
     if (await ownsGroup(ident.email, group)) return 'member';
     // grupo travado pelo cap dos 3 → locked direto (independe do trial)
     if (session && session.state && session.state.capped === true) return 'locked';
+    // EX-MEMBRO (assinatura vencida/cancelada/reembolsada) não ganha trial
+    // novo: cai direto no paywall de renovação. Antes ele voltava pro 'trial'
+    // (60s grátis + 1 mensagem) em vez de ver os planos na hora.
+    if (await hadMembership(ident.email, group)) return 'locked';
     const t = trialState(session, group);
     return t.remaining > 0 ? 'trial' : 'locked';
+}
+
+// Já teve acesso (qualquer status) ao produto do grupo ou ao Passe? Se o
+// ownsGroup deu false e isto der true, é acesso que EXISTIU e não vale mais.
+async function hadMembership(email, group) {
+    if (!email) return false;
+    try {
+        const passId = await groupPassProductId();
+        const ids = [group.product_id, passId].filter(Boolean);
+        if (!ids.length) return false;
+        const { rows } = await db.query(
+            `SELECT 1 FROM user_access WHERE LOWER(email) = $1 AND product_id = ANY($2::int[]) LIMIT 1`,
+            [email, ids]
+        );
+        return rows.length > 0;
+    } catch (_) { return false; }
 }
 
 async function memberUntil(email, group) {
@@ -1137,7 +1157,9 @@ router.get('/groups/:id/poll', optionalUser, async (req, res) => {
         const { rows: gr } = await db.query(`SELECT * FROM groups WHERE id = $1 AND active = true`, [groupId]);
         if (!gr.length) return res.json({ success: false });
         const group = gr[0];
-        await hydrateGroupMedia(group);
+        // SEM hydrateGroupMedia aqui: o poll (2,5s por lead) não usa as pastas —
+        // a fita cacheada já tem as mídias carimbadas (buildFita hidrata sozinho
+        // quando reassa). Hidratar em todo poll era o maior custo de CPU do grupo.
         const session = await findOrCreateSession(groupId, ident, false);
         if (!session) return res.json({ success: true, messages: [] });
         const access = await accessState(ident, group, session);
