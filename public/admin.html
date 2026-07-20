@@ -4326,8 +4326,8 @@ a { color: inherit; text-decoration: none; }
                                 </div>
                                 <div class="form-row-grid-2" style="margin-bottom: 10px;">
                                     <div>
-                                        <label class="form-label">Offer ID Kirvano <span style="font-weight:400;opacity:.6;">(vários: separe por vírgula)</span></label>
-                                        <input type="text" class="form-input" id="pKirvanoOfferId" placeholder="cod1, cod2, cod3…" value="">
+                                        <label class="form-label">Offer ID Kirvano <span style="font-weight:400;opacity:.6;">(vírgula · :dias = validade · * no fim = Premium)</span></label>
+                                        <input type="text" class="form-input" id="pKirvanoOfferId" placeholder="cod-vip:33, cod-premium:33*" value="">
                                     </div>
                                     <div>
                                         <label class="form-label">Nome interno (opcional)</label>
@@ -4367,7 +4367,7 @@ a { color: inherit; text-decoration: none; }
                                 </div>
                                 <div class="form-row-grid-2" style="margin-bottom: 10px;">
                                     <div>
-                                        <label class="form-label">Offer ID PerfectPay <span style="font-weight:400;opacity:.6;">(vários: separe por vírgula)</span></label>
+                                        <label class="form-label">Offer ID PerfectPay <span style="font-weight:400;opacity:.6;">(vírgula · :dias = validade · * no fim = Premium)</span></label>
                                         <input type="text" class="form-input" id="pPerfectPayOfferId" placeholder="PPCB1, PPCB2…">
                                     </div>
                                     <div>
@@ -6710,6 +6710,7 @@ a { color: inherit; text-decoration: none; }
                             <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">URL do checkout *</label><input class="form-control" type="url" id="planCheckoutUrl" required placeholder="https://pay.kirvano.com/..." style="width:100%;"/></div>
                             <div style="display:flex; gap:10px; align-items:center;">
                                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="planRecommended"/> Plano recomendado (destaque)</label>
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-top:6px;"><input type="checkbox" id="planPremium"/> 💎 Plano PREMIUM (dourado — aparece nos paywalls de vídeos/status como "leve tudo")</label>
                                 <div style="flex:1;"></div>
                                 <div><label style="font-size:11px; color:rgba(255,255,255,.5);">Ordem: </label><input type="number" id="planOrder" value="0" min="0" max="99" style="width:60px; background:rgba(0,0,0,.3); color:#fff; border:1px solid rgba(255,255,255,.1); padding:4px 6px; border-radius:4px;"/></div>
                             </div>
@@ -8577,7 +8578,7 @@ async function editProduct(id) {
     const ko = kOffers[0];
     const ppo = ppOffers[0];
 
-    const codeDays = (o) => o.offer_id + (o.duration_days ? ':' + o.duration_days : '');
+    const codeDays = (o) => o.offer_id + (o.duration_days ? ':' + o.duration_days : '') + (o.is_premium ? '*' : '');
     set('pKirvanoOfferId', kOffers.filter(o => o.offer_id).map(codeDays).join(', '));
     set('pKirvanoOfferName', ko?.offer_name || '');
     set('pKirvanoCheckout', ko?.checkout_url || '');
@@ -8739,9 +8740,14 @@ async function saveProduct() {
     // (todos liberam o MESMO produto). Ótimo p/ planos diferentes do mesmo conteúdo.
     // ASSINATURA: sufixo :dias no código define a VALIDADE renovável do acesso.
     // Ex.: "cod-mensal:33, cod-trimestral:95, cod-vitalicio" (sem sufixo = pra sempre).
+    // PREMIUM: * no FIM do código marca a oferta como plano Premium ("leva
+    // tudo") — a venda dela libera também status + vídeos + grupo VIP (7 dias).
+    // Ex.: "cod-vip:33, cod-premium:33*"
     const splitCodes = (s) => (s || '').split(',').map(x => x.trim()).filter(Boolean).map(x => {
+        let premium = false;
+        if (x.endsWith('*')) { premium = true; x = x.slice(0, -1).trim(); }
         const m = x.match(/^(.*?):(\d{1,4})$/);
-        return m ? { code: m[1].trim(), days: parseInt(m[2], 10) || null } : { code: x, days: null };
+        return m ? { code: m[1].trim(), days: parseInt(m[2], 10) || null, premium } : { code: x, days: null, premium };
     });
     const kIds = splitCodes(get('pKirvanoOfferId'));
     if (kIds.length) {
@@ -8756,6 +8762,7 @@ async function saveProduct() {
                 is_acquisition: kIsAcq,
                 acquisition_role: kRole,
                 duration_days: c.days,
+                is_premium: c.premium,
             });
         }
     }
@@ -8772,6 +8779,7 @@ async function saveProduct() {
                 is_acquisition: ppIsAcq,
                 acquisition_role: ppRole,
                 duration_days: c.days,
+                is_premium: c.premium,
             });
         }
     }
@@ -18229,6 +18237,7 @@ function editPlan(pl) {
     document.getElementById('planBenefits').value = pl.benefits || '';
     document.getElementById('planCheckoutUrl').value = pl.checkout_url || '';
     document.getElementById('planRecommended').checked = !!pl.is_recommended;
+    const _pp = document.getElementById('planPremium'); if (_pp) _pp.checked = !!pl.is_premium;
     document.getElementById('planOrder').value = pl.display_order || 0;
     document.getElementById('planModalBackdrop').style.display = 'flex';
 }
@@ -18245,6 +18254,7 @@ async function savePlan(e) {
         benefits: document.getElementById('planBenefits').value.trim() || null,
         checkout_url: document.getElementById('planCheckoutUrl').value.trim() || null,
         is_recommended: document.getElementById('planRecommended').checked,
+        is_premium: !!document.getElementById('planPremium')?.checked,
         display_order: parseInt(document.getElementById('planOrder').value, 10) || 0,
     };
     try {

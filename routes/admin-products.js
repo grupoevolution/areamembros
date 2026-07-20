@@ -346,14 +346,15 @@ router.post('/', requireAdmin, async (req, res) => {
                         ? offer.acquisition_role : null;
                     await client.query(`
                         INSERT INTO product_offers
-                        (product_id, gateway, offer_id, offer_name, checkout_url, price, is_acquisition, acquisition_role, duration_days)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                        (product_id, gateway, offer_id, offer_name, checkout_url, price, is_acquisition, acquisition_role, duration_days, is_premium)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                     `, [
                         created.id, offer.gateway, offer.offer_id,
                         offer.offer_name || null, offer.checkout_url || null,
                         parseFloat(offer.price) || null,
                         isAcq, acqRole,
                         offer.duration_days ? parseInt(offer.duration_days, 10) : null,
+                        offer.is_premium === true,
                     ]);
                 }
             }
@@ -614,14 +615,15 @@ router.put('/:id', requireAdmin, async (req, res) => {
                         ? offer.acquisition_role : null;
                     await client.query(`
                         INSERT INTO product_offers
-                        (product_id, gateway, offer_id, offer_name, checkout_url, price, is_acquisition, acquisition_role, duration_days)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                        (product_id, gateway, offer_id, offer_name, checkout_url, price, is_acquisition, acquisition_role, duration_days, is_premium)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
                     `, [
                         productId, offer.gateway, offer.offer_id,
                         offer.offer_name || null, offer.checkout_url || null,
                         parseFloat(offer.price) || null,
                         isAcq, acqRole,
                         offer.duration_days ? parseInt(offer.duration_days, 10) : null,
+                        offer.is_premium === true,
                     ]);
                 }
             }
@@ -695,11 +697,11 @@ router.post('/:id/plans', requireAdmin, async (req, res) => {
     const productId = parseInt(req.params.id, 10);
     if (!productId) return res.status(400).json({ success: false, error: 'ID inválido' });
     try {
-        const { name, price, original_price, badge, benefits, checkout_url, is_recommended, display_order, active } = req.body || {};
+        const { name, price, original_price, badge, benefits, checkout_url, is_recommended, display_order, active, is_premium } = req.body || {};
         if (!name) return res.status(400).json({ success: false, error: 'Nome obrigatório' });
         const { rows } = await db.query(`
-            INSERT INTO product_plans (product_id, name, price, original_price, badge, benefits, checkout_url, is_recommended, display_order, active)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *
+            INSERT INTO product_plans (product_id, name, price, original_price, badge, benefits, checkout_url, is_recommended, display_order, active, is_premium)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *
         `, [
             productId, String(name).trim().slice(0, 80),
             parseFloat(price) || 0,
@@ -710,6 +712,7 @@ router.post('/:id/plans', requireAdmin, async (req, res) => {
             is_recommended === true,
             parseInt(display_order, 10) || 0,
             active !== false,
+            is_premium === true,
         ]);
         return res.json({ success: true, plan: rows[0] });
     } catch (err) {
@@ -723,7 +726,7 @@ router.put('/:id/plans/:planId', requireAdmin, async (req, res) => {
     const planId = parseInt(req.params.planId, 10);
     if (!planId) return res.status(400).json({ success: false, error: 'ID inválido' });
     try {
-        const { name, price, original_price, badge, benefits, checkout_url, is_recommended, display_order, active } = req.body || {};
+        const { name, price, original_price, badge, benefits, checkout_url, is_recommended, display_order, active, is_premium } = req.body || {};
         const updates = []; const values = []; let p = 1;
         if (name !== undefined) { updates.push(`name = $${p++}`); values.push(String(name).trim().slice(0, 80)); }
         if (price !== undefined) { updates.push(`price = $${p++}`); values.push(parseFloat(price) || 0); }
@@ -734,6 +737,7 @@ router.put('/:id/plans/:planId', requireAdmin, async (req, res) => {
         if (is_recommended !== undefined) { updates.push(`is_recommended = $${p++}`); values.push(!!is_recommended); }
         if (display_order !== undefined) { updates.push(`display_order = $${p++}`); values.push(parseInt(display_order, 10) || 0); }
         if (active !== undefined) { updates.push(`active = $${p++}`); values.push(!!active); }
+        if (is_premium !== undefined) { updates.push(`is_premium = $${p++}`); values.push(!!is_premium); }
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
         values.push(planId);
         const { rows } = await db.query(`UPDATE product_plans SET ${updates.join(', ')} WHERE id = $${p} RETURNING *`, values);
@@ -882,9 +886,9 @@ router.post('/import', requireAdmin, async (req, res) => {
                             const acqRole = isAcq && ['frontend','bump'].includes(o.acquisition_role) ? o.acquisition_role : null;
                             const durDays = parseInt(o.duration_days, 10);
                             await client.query(`
-                                INSERT INTO product_offers (product_id, gateway, offer_id, offer_name, checkout_url, price, is_active, is_acquisition, acquisition_role, duration_days)
-                                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-                            `, [pid, o.gateway, o.offer_id, o.offer_name || null, o.checkout_url || null, parseFloat(o.price) || null, o.is_active !== false, isAcq, acqRole, durDays > 0 ? durDays : null]);
+                                INSERT INTO product_offers (product_id, gateway, offer_id, offer_name, checkout_url, price, is_active, is_acquisition, acquisition_role, duration_days, is_premium)
+                                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+                            `, [pid, o.gateway, o.offer_id, o.offer_name || null, o.checkout_url || null, parseFloat(o.price) || null, o.is_active !== false, isAcq, acqRole, durDays > 0 ? durDays : null, o.is_premium === true]);
                         }
                     }
 
