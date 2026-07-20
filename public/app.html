@@ -11331,12 +11331,25 @@ window.GroupApp = (function () {
     // Aviso de RENOVAÇÃO no topo: assinatura do grupo/Passe vencendo em até
     // 2 dias — barra dourada fixa; toque abre o popup de planos pra renovar.
     // Sem isso o acesso morria em silêncio e o cliente achava que foi banido.
-    function renderExpiryNotice(until) {
+    function renderExpiryNotice(until, isBonus) {
         const old = document.getElementById('gaExpiryBar'); if (old) old.remove();
         if (!until || !CUR) return;
         const ms = new Date(until).getTime() - Date.now();
         if (isNaN(ms) || ms <= 0) return;
         const days = Math.ceil(ms / 86400000);
+        // BÔNUS do Premium (7 dias de grupo VIP): banner dourado fixo contando
+        // os dias — nos últimos 2 dias vira o aviso de renovação normal.
+        if (isBonus && days > 2) {
+            const bar = document.createElement('div');
+            bar.id = 'gaExpiryBar';
+            bar.style.cssText = 'display:flex;align-items:center;gap:8px;background:linear-gradient(90deg,rgba(64,48,10,.95),rgba(38,28,6,.95));border-bottom:1px solid rgba(212,175,55,.45);color:#f5d67b;font-size:12.5px;font-weight:700;padding:9px 14px;flex-shrink:0;';
+            bar.innerHTML = '<span style="flex:1;">🎁 Bônus Premium: grupo VIP liberado — '
+                + (days === 1 ? 'último dia' : 'faltam ' + days + ' dias')
+                + '</span><span style="background:rgba(212,175,55,.2);border:1px solid rgba(212,175,55,.45);color:#f5d67b;font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px;">💎</span>';
+            const body0 = document.getElementById('gaBody');
+            if (body0 && body0.parentNode) body0.parentNode.insertBefore(bar, body0);
+            return;
+        }
         if (days > 2) return;
         const txt = days <= 1 ? '⏳ Seu acesso vence HOJE' : '⏳ Seu acesso vence em 2 dias';
         const bar = document.createElement('div');
@@ -11484,7 +11497,7 @@ window.GroupApp = (function () {
         // frente, inclusive o roteiro de entrada com timestamps futuros)
         if (data.server_now) CUR.lastTs = data.server_now;
         applyFooter();
-        renderExpiryNotice(data.member_until);
+        renderExpiryNotice(data.member_until, data.member_bonus === true);
         scrollBottom();
         startPoll();
         startHeartbeat();
@@ -20180,7 +20193,19 @@ window.Explore = (function () {
             loadSeen();
             const all = d.videos;
             let list = shuffle(all.filter(v => !seen.has(v.id)));
-            if (!list.length) { seen.clear(); saveSeen(); list = shuffle(all); }
+            if (!list.length) {
+                if (d.has_access) {
+                    // VIP viu tudo: recomeça embaralhado (feed nunca acaba)
+                    seen.clear(); saveSeen(); list = shuffle(all);
+                } else {
+                    // SEM acesso e já viu todo o grátis: NÃO zera o contador
+                    // (zerar reabria o grátis pra sempre) — mostra o paywall.
+                    data.videos = shuffle(all);
+                    build();
+                    openPaywall();
+                    return;
+                }
+            }
             data.videos = list;
             build();
         } catch (_) { showEmpty(); }
@@ -20413,6 +20438,29 @@ window.Explore = (function () {
             // "agora não": sai do feed de vídeos e volta pra Home (sem travar o app)
             onClose: () => { closePaywall(); if (typeof switchScreen === 'function') switchScreen('home'); },
         });
+        // Opção "leve tudo": plano PREMIUM (dourado) abaixo do preço avulso —
+        // além dos vídeos, libera conversas + status. Só aparece se o dono
+        // marcou um plano como Premium no painel.
+        const prem = data && data.premium_plan;
+        if (prem && prem.checkout_url) {
+            const card = document.getElementById('tkPaywallCard');
+            const preco = (v) => { const n = parseFloat(v); return isNaN(n) ? '' : 'R$ ' + n.toFixed(2).replace('.', ','); };
+            const box = document.createElement('div');
+            box.style.cssText = 'margin-top:12px;border:1px solid rgba(212,175,55,.55);background:linear-gradient(135deg,rgba(64,48,10,.6),rgba(26,19,4,.8));border-radius:14px;padding:13px 14px;box-shadow:0 0 18px rgba(212,175,55,.15);';
+            box.innerHTML = '<div style="font-size:11px;font-weight:800;letter-spacing:.8px;color:#f5d67b;margin-bottom:5px;">💎 OU LEVE TUDO</div>'
+                + '<div style="font-size:13.5px;font-weight:800;color:#fff;">' + esc(prem.name || 'Premium') + ' — '
+                + (prem.original_price ? '<span style="text-decoration:line-through;opacity:.5;font-weight:600;">' + preco(prem.original_price) + '</span> ' : '')
+                + '<span style="color:#f5d67b;">' + preco(prem.price) + '</span></div>'
+                + '<div style="font-size:12px;color:rgba(255,255,255,.75);margin-top:4px;line-height:1.45;">'
+                + esc(prem.benefits || 'Vídeos ilimitados + conversas com todas as modelos + status VIP, tudo num pagamento só.')
+                + '</div>'
+                + '<button style="margin-top:10px;width:100%;background:linear-gradient(90deg,#d4af37,#f5d67b);border:none;color:#241a05;font-size:13px;font-weight:900;letter-spacing:.5px;padding:12px;border-radius:11px;cursor:pointer;">QUERO O PREMIUM 💎</button>';
+            box.querySelector('button').addEventListener('click', () => {
+                try { if (typeof TRACK !== 'undefined') TRACK.event('explore_premium_click', {}); } catch (_) {}
+                window.open(prem.checkout_url, '_blank', 'noopener,noreferrer');
+            });
+            if (card) card.appendChild(box);
+        }
         ov.classList.add('open');
         // fica de olho: pagou → destrava sozinho
         recheckAccess();

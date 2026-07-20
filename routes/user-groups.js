@@ -1115,6 +1115,21 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
 
         const until = access === 'member' ? await memberUntil(ident.email, group) : null;
 
+        // Acesso veio do BÔNUS do Premium (7 dias de grupo VIP)? O app mostra o
+        // banner dourado "você ganhou X dias" em vez de tratar como assinatura.
+        let memberBonus = false;
+        if (until && ident.email) {
+            try {
+                const { rows: mb } = await db.query(
+                    `SELECT 1 FROM user_access
+                     WHERE LOWER(email) = $1 AND product_id = $2 AND status = 'active'
+                       AND expires_at > NOW() AND metadata->>'premium_kind' = 'vip_group' LIMIT 1`,
+                    [ident.email, group.product_id]
+                );
+                memberBonus = mb.length > 0;
+            } catch (_) {}
+        }
+
         // galeria existe se qualquer pasta visível/coleção tiver conteúdo
         const hasFolderMedia = Object.keys(group.folders || {}).some(k =>
             !group.folders[k].hidden && (group.folder_media[k] || []).length);
@@ -1135,6 +1150,7 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
             messages: list,
             server_now: new Date().toISOString(),
             member_until: until,
+            member_bonus: memberBonus,
             unlock: (access === 'trial' || access === 'locked' || until)
                 ? await groupUnlock(group)
                 : null,

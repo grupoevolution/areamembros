@@ -1964,6 +1964,22 @@ async function loadExploreUnlock(productId, checkoutUrl) {
     return info;
 }
 
+// Plano PREMIUM (product_plans.is_premium) — oferecido nos paywalls de
+// vídeos/status como a opção "leve tudo" ao lado do preço avulso.
+async function loadPremiumPlan() {
+    try {
+        const { rows } = await db.query(
+            `SELECT pp.name, pp.price, pp.original_price, pp.badge, pp.benefits, pp.checkout_url,
+                    pp.product_id
+             FROM product_plans pp
+             JOIN products p ON p.id = pp.product_id
+             WHERE pp.is_premium = true AND pp.active = true AND p.is_active = true
+             ORDER BY pp.id LIMIT 1`
+        );
+        return rows.length ? rows[0] : null;
+    } catch (_) { return null; }
+}
+
 // PIX PENDENTE do cliente pra um produto: alimenta o popup "termina de pagar
 // seu Pix" (em vez de oferecer checkout novo pra quem JÁ gerou o código).
 // Validade de exibição: 30 minutos a partir do webhook de pendente.
@@ -2121,6 +2137,9 @@ router.get('/explore/feed', optionalUser, async (req, res) => {
                 offer_note: explorePwCopy(cfg.offer_note, EXPLORE_PW_NOTE),
             },
             unlock: hasAccess ? null : await loadExploreUnlock(productId, cfg.checkout_url || null),
+            // Opção "leve tudo": o plano Premium aparece no paywall dos vídeos
+            // junto do preço avulso (chat + status + vídeos num pagamento só)
+            premium_plan: hasAccess ? null : await loadPremiumPlan(),
             total_count: totalCount,
             videos,
         });
