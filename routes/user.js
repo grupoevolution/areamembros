@@ -1899,6 +1899,29 @@ async function loadExploreUnlock(productId, checkoutUrl) {
 // seu Pix" (em vez de oferecer checkout novo pra quem JÁ gerou o código).
 // Validade de exibição: 30 minutos a partir do webhook de pendente.
 const PIX_PENDING_MINUTES = 30;
+// Compra confirmada? Checa a posse de UM produto (inclui os OCULTOS do
+// catálogo, como o plano do chat/status). Usado pela tela de sucesso (?paid=)
+// pra só afirmar "acesso liberado" quando o webhook realmente gravou o acesso.
+router.get('/access/check', requireUser, async (req, res) => {
+    const pid = parseInt(req.query.product_id, 10);
+    if (!pid) return res.json({ success: true, owned: false });
+    try {
+        const e = String(req.user.email || '').toLowerCase().trim();
+        const { rows } = await db.query(
+            `SELECT 1 FROM user_access
+              WHERE LOWER(email) = $1 AND product_id = $2 AND status = 'active'
+                AND (expires_at IS NULL OR expires_at > NOW())
+             UNION ALL
+             SELECT 1 FROM gifts
+              WHERE LOWER(email) = $1 AND product_id = $2 AND status = 'active'
+                AND (expires_at IS NULL OR expires_at > NOW())
+             LIMIT 1`,
+            [e, pid]
+        );
+        return res.json({ success: true, owned: rows.length > 0 });
+    } catch (_) { return res.json({ success: true, owned: false }); }
+});
+
 router.get('/pix/pending', optionalUser, async (req, res) => {
     try {
         const email = req.user?.email || null;

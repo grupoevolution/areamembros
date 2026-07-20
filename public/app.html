@@ -7132,7 +7132,7 @@ body.is-slowconn .prod-cta-fixed {
             </div>
             <div class="acervo-stat-info">
                 <div class="acervo-stat-label">Seus acessos ativos</div>
-                <div class="acervo-stat-value"><em id="acervoCount">0</em> grupos liberados</div>
+                <div class="acervo-stat-value"><em id="acervoCount">0</em> conteúdos liberados</div>
             </div>
         </div>
 
@@ -9073,6 +9073,12 @@ function switchScreen(name) {
     // o checkTabs só rodava no clique do menu, então o funil não mostrava Grupos.
     if (name === 'chat' && window.GroupApp && typeof GroupApp.checkTabs === 'function') {
         try { GroupApp.checkTabs(); } catch (_) {}
+    }
+
+    // "Minhas Compras": liga o vigia (refresh imediato + re-checagem enquanto
+    // a tela estiver aberta); qualquer outra tela desliga.
+    if (typeof LibraryWatch !== 'undefined') {
+        try { if (name === 'library') LibraryWatch.enter(); else LibraryWatch.leave(); } catch (_) {}
     }
 
     if (navigator.vibrate) navigator.vibrate(5);
@@ -13633,6 +13639,36 @@ async function loadLibrary() {
     return null;
 }
 
+// ── Acervo: atualização automática ───────────────────────────────────────────
+// Entrar em "Minhas Compras" recarrega do servidor na hora — a compra por Pix
+// confirma minutos depois do checkout e, sem isso, o cliente via o acervo
+// velho/vazio até sair e entrar de novo ("comprei e não apareceu"). Enquanto a
+// tela fica aberta, re-checa a cada 12s + na volta do foco (mesmo padrão do
+// destravar sozinho do feed de vídeos).
+const LibraryWatch = {
+    _timer: null,
+    async refresh() {
+        if (!window.userIsLogged) return;
+        try { await loadLibrary(); renderLibrary(); } catch (_) {}
+    },
+    enter() {
+        this.refresh();
+        if (this._timer) return;
+        this._timer = setInterval(() => {
+            const sc = document.getElementById('library');
+            if (!sc || !sc.classList.contains('active') || document.hidden) return;
+            this.refresh();
+        }, 12000);
+    },
+    leave() {
+        if (this._timer) { clearInterval(this._timer); this._timer = null; }
+    },
+};
+document.addEventListener('visibilitychange', () => {
+    const sc = document.getElementById('library');
+    if (!document.hidden && sc && sc.classList.contains('active')) LibraryWatch.refresh();
+});
+
 /**
  * Inicializa dados quando cliente entra na home.
  * Carrega tudo em paralelo.
@@ -16590,6 +16626,7 @@ function handleGatewayReturn() {
         if (product) {
             populateSuccessScreen(product);
             switchScreen('success');
+            watchPurchaseConfirm(paidId);
             // Limpa query string pra não reativar em recarga
             const cleanUrl = window.location.pathname + window.location.hash;
             window.history.replaceState({}, '', cleanUrl);
@@ -16599,11 +16636,55 @@ function handleGatewayReturn() {
         if (attempts < 30) {
             setTimeout(() => tryShow(attempts + 1), 300);
         } else {
-            // Catalog não carregou ou produto não existe — mostra mensagem genérica
+            // Produto fora do catálogo visível (ex.: plano do chat, oculto) —
+            // mostra a tela genérica mas CONFIRMA o acesso do mesmo jeito
             switchScreen('success');
+            watchPurchaseConfirm(paidId);
         }
     };
     tryShow();
+}
+
+// Vigia da confirmação: a tela de sucesso só afirma "acesso liberado" quando o
+// webhook realmente gravou o acesso. Pix confirma com atraso — antes a tela
+// dizia "liberado" na hora e o cliente achava golpe ao ver o acervo vazio.
+let _payWatchTimer = null;
+function watchPurchaseConfirm(productId) {
+    if (_payWatchTimer) { clearInterval(_payWatchTimer); _payWatchTimer = null; }
+    const sub = document.getElementById('successSubtitle');
+    if (!productId) return;
+    let tries = 0;
+    let saidConfirming = false;
+    const check = async () => {
+        tries++;
+        // Auto-login pode resolver DEPOIS da tela abrir (corrida do boot):
+        // não desiste — espera o login aparecer e aí passa a conferir.
+        if (!window.userIsLogged) {
+            if (tries >= 40 && _payWatchTimer) { clearInterval(_payWatchTimer); _payWatchTimer = null; }
+            return;
+        }
+        if (!saidConfirming && sub) {
+            saidConfirming = true;
+            sub.textContent = 'Pagamento recebido! Confirmando e liberando seu acesso…';
+        }
+        try {
+            const r = await fetch('/api/user/access/check?product_id=' + encodeURIComponent(productId), { credentials: 'include' });
+            const d = await r.json();
+            if (d && d.owned) {
+                if (_payWatchTimer) { clearInterval(_payWatchTimer); _payWatchTimer = null; }
+                const ed = (window.currentProduct && window.currentProduct.extra_data) || {};
+                if (sub) sub.textContent = (ed.success_message || '').trim() || 'Tudo certo ✅ Seu acesso já está liberado no seu acervo.';
+                try { if (typeof loadHomeData === 'function') loadHomeData({ force: true }); } catch (_) {}
+                return;
+            }
+        } catch (_) {}
+        if (tries >= 40 && _payWatchTimer) {
+            clearInterval(_payWatchTimer); _payWatchTimer = null;
+            if (sub) sub.textContent = 'Pagamento em processamento… Assim que confirmar, seu acesso aparece sozinho em "Minhas Compras".';
+        }
+    };
+    check();
+    _payWatchTimer = setInterval(check, 8000);
 }
 
 function populateSuccessScreen(p) {
@@ -16626,7 +16707,11 @@ function populateSuccessScreen(p) {
         }
     }
     if (subtitleEl) {
-        subtitleEl.textContent = ed.success_message || 'Sua compra foi aprovada. Acesso liberado no seu acervo.';
+        // Não afirma "liberado" antes de confirmar: o watchPurchaseConfirm troca
+        // esta linha (pela copy do produto, se houver) quando o acesso EXISTE.
+        subtitleEl.textContent = window.userIsLogged
+            ? 'Pagamento recebido! Confirmando e liberando seu acesso…'
+            : 'Pagamento recebido! Entre com o e-mail que você usou na compra pra ver seu acesso.';
     }
     if (ctaBtn) {
         const label = (ed.success_cta_text || '').trim() || 'Ir pro meu acervo';
@@ -16646,6 +16731,9 @@ function handleSuccessCta() {
         window.open(url, '_blank', 'noopener,noreferrer');
         return;
     }
+    // Comprou sem estar logado (funil): manda pro login — o acervo só casa a
+    // compra pelo e-mail do checkout.
+    if (!window.userIsLogged) { switchScreen('login'); return; }
     // Default: vai pro acervo. Fase H: invalida o cache pra refletir a compra recem feita.
     if (typeof loadHomeData === 'function') loadHomeData({ force: true });
     switchScreen('library');
