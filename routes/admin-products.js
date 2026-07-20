@@ -880,10 +880,11 @@ router.post('/import', requireAdmin, async (req, res) => {
                             if (!o.gateway || !o.offer_id) continue;
                             const isAcq = !!o.is_acquisition;
                             const acqRole = isAcq && ['frontend','bump'].includes(o.acquisition_role) ? o.acquisition_role : null;
+                            const durDays = parseInt(o.duration_days, 10);
                             await client.query(`
-                                INSERT INTO product_offers (product_id, gateway, offer_id, offer_name, checkout_url, price, is_active, is_acquisition, acquisition_role)
-                                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-                            `, [pid, o.gateway, o.offer_id, o.offer_name || null, o.checkout_url || null, parseFloat(o.price) || null, o.is_active !== false, isAcq, acqRole]);
+                                INSERT INTO product_offers (product_id, gateway, offer_id, offer_name, checkout_url, price, is_active, is_acquisition, acquisition_role, duration_days)
+                                VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+                            `, [pid, o.gateway, o.offer_id, o.offer_name || null, o.checkout_url || null, parseFloat(o.price) || null, o.is_active !== false, isAcq, acqRole, durDays > 0 ? durDays : null]);
                         }
                     }
 
