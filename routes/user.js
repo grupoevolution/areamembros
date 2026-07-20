@@ -1843,7 +1843,8 @@ async function ownsExploreProduct(email, productId) {
     const e = email.toLowerCase().trim();
     try {
         const { rows } = await db.query(
-            `SELECT 1 FROM user_access WHERE LOWER(email) = $1 AND product_id = $2 AND status = 'active' LIMIT 1`, [e, productId]
+            `SELECT 1 FROM user_access WHERE LOWER(email) = $1 AND product_id = $2 AND status = 'active'
+             AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1`, [e, productId]
         );
         if (rows.length) return true;
         const { rows: g } = await db.query(
@@ -1868,7 +1869,9 @@ async function ownsExploreByOffers(email, rawCodes) {
     try {
         const { rows } = await db.query(
             `SELECT 1 FROM user_access ua JOIN product_offers po ON po.id = ua.offer_id
-             WHERE LOWER(ua.email) = $1 AND ua.status = 'active' AND po.offer_id = ANY($2::text[]) LIMIT 1`,
+             WHERE LOWER(ua.email) = $1 AND ua.status = 'active'
+               AND (ua.expires_at IS NULL OR ua.expires_at > NOW())
+               AND po.offer_id = ANY($2::text[]) LIMIT 1`,
             [email.toLowerCase().trim(), codes]
         );
         return rows.length > 0;
@@ -2005,6 +2008,12 @@ router.get('/explore/feed', optionalUser, async (req, res) => {
             videos = rows.map(resolveExploreVideo);
         }
 
+        // Quem NÃO tem acesso recebe SÓ os vídeos do grátis. Antes o JSON
+        // entregava as URLs jogáveis dos 200 vídeos e o corte era só visual no
+        // app — qualquer curioso com DevTools levava o feed VIP inteiro.
+        const totalCount = videos.length;
+        if (!hasAccess) videos = videos.slice(0, freeLimit);
+
         return res.json({
             success: true,
             enabled: cfg.enabled === true,
@@ -2020,6 +2029,7 @@ router.get('/explore/feed', optionalUser, async (req, res) => {
                 offer_note: explorePwCopy(cfg.offer_note, EXPLORE_PW_NOTE),
             },
             unlock: hasAccess ? null : await loadExploreUnlock(productId, cfg.checkout_url || null),
+            total_count: totalCount,
             videos,
         });
     } catch (err) {

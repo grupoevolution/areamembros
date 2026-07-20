@@ -20137,6 +20137,7 @@ window.Explore = (function () {
 
         const slides = [...feed.querySelectorAll('.tk-slide')];
         // play/pause + gates conforme o slide entra na tela
+        if (io) { try { io.disconnect(); } catch (_) {} }
         io = new IntersectionObserver((entries) => {
             entries.forEach(en => {
                 const idx = +en.target.dataset.index;
@@ -20281,6 +20282,20 @@ window.Explore = (function () {
                 data.unlock = null;
                 stopAccessWatch();
                 closePaywall();
+                // O feed grátis vem CORTADO do servidor — depois de pagar,
+                // rebusca a lista completa (senão o VIP fica só com a amostra).
+                try {
+                    const rf = await fetch('/api/user/explore/feed', { credentials: 'include' });
+                    const df = await rf.json();
+                    if (df && df.success && Array.isArray(df.videos) && df.videos.length) {
+                        data = df;
+                        loadSeen();
+                        let list = shuffle(df.videos.filter(v => !seen.has(v.id)));
+                        if (!list.length) list = shuffle(df.videos);
+                        data.videos = list;
+                        build();
+                    }
+                } catch (_) {}
                 playActive();
                 return true;
             }
