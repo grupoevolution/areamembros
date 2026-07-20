@@ -637,6 +637,68 @@ router.get('/catalog', optionalUser, async (req, res) => {
  * Backward-compatible: campos antigos (video_call, gallery, plans, etc) seguem
  * presentes. Frontend antigo continua funcionando sem alteração.
  */
+// ── Planos ativos (VIP/Premium/Status) pro card do acervo ────────────────────
+// A Assinatura do Chat e o Status VIP são produtos OCULTOS (não viram card de
+// conteúdo). Aqui eles viram o card de PLANO em "Minhas Compras": Premium
+// (dourado — a compra veio de uma oferta is_premium) ou VIP (prata), + Status
+// comprado à parte. Inclui a validade do bônus de grupo VIP do Premium.
+async function loadUserPlans(email) {
+    const e = String(email || '').toLowerCase().trim();
+    if (!e) return [];
+    const plans = [];
+    try {
+        const { rows: [chatProd] } = await db.query(
+            `SELECT id, name FROM products WHERE is_chat_plan = true AND is_active = true ORDER BY id LIMIT 1`
+        );
+        if (chatProd) {
+            const { rows: [acc] } = await db.query(
+                `SELECT ua.expires_at, COALESCE(po.is_premium, false) AS is_premium
+                 FROM user_access ua LEFT JOIN product_offers po ON po.id = ua.offer_id
+                 WHERE LOWER(ua.email) = $1 AND ua.product_id = $2 AND ua.status = 'active'
+                   AND (ua.expires_at IS NULL OR ua.expires_at > NOW())
+                 ORDER BY ua.id DESC LIMIT 1`,
+                [e, chatProd.id]
+            );
+            if (acc) {
+                const plan = {
+                    kind: acc.is_premium ? 'premium' : 'vip',
+                    product_id: chatProd.id,
+                    expires_at: acc.expires_at || null,
+                    group_bonus_until: null,
+                };
+                if (acc.is_premium) {
+                    const { rows: [gb] } = await db.query(
+                        `SELECT expires_at FROM user_access
+                         WHERE LOWER(email) = $1 AND status = 'active' AND expires_at > NOW()
+                           AND metadata->>'premium_kind' = 'vip_group'
+                         ORDER BY id DESC LIMIT 1`,
+                        [e]
+                    );
+                    if (gb) plan.group_bonus_until = gb.expires_at;
+                }
+                plans.push(plan);
+            }
+        }
+        // Status VIP comprado À PARTE (o extra do Premium não vira card próprio —
+        // já está explicado dentro do card dourado)
+        const { rows: [storyProd] } = await db.query(
+            `SELECT id FROM products WHERE is_story_plan = true AND is_active = true ORDER BY id LIMIT 1`
+        );
+        if (storyProd) {
+            const { rows: [sacc] } = await db.query(
+                `SELECT expires_at FROM user_access
+                 WHERE LOWER(email) = $1 AND product_id = $2 AND status = 'active'
+                   AND (expires_at IS NULL OR expires_at > NOW())
+                   AND COALESCE(metadata->>'premium_extra', '') <> 'true'
+                 ORDER BY id DESC LIMIT 1`,
+                [e, storyProd.id]
+            );
+            if (sacc) plans.push({ kind: 'story', product_id: storyProd.id, expires_at: sacc.expires_at || null, group_bonus_until: null });
+        }
+    } catch (_) {}
+    return plans;
+}
+
 router.get('/library', requireUser, async (req, res) => {
     const email = req.user.email;
 
@@ -760,6 +822,8 @@ router.get('/library', requireUser, async (req, res) => {
                 success: true,
                 email,
                 preview_mode: true,
+                // Preview vê o card dourado pro dono conferir o visual
+                plans: [{ kind: 'premium', product_id: null, expires_at: null, group_bonus_until: null }],
                 library: enrichedPreview,
             });
         }
@@ -826,6 +890,7 @@ router.get('/library', requireUser, async (req, res) => {
                 c.slug as category_slug,
                 ua.id as user_access_id,
                 ua.granted_at,
+                ua.expires_at as access_expires_at,
                 ua.status,
                 ua.gateway as purchase_gateway,
                 ua.sale_amount,
@@ -877,6 +942,9 @@ router.get('/library', requireUser, async (req, res) => {
               -- não viram card na biblioteca — o "produto" é o chat destravado.
               AND COALESCE(p.is_chat_plan, false) = false
               AND COALESCE(p.is_story_plan, false) = false
+              -- Extras do PREMIUM (vídeos/grupo VIP bônus) não viram card de
+              -- conteúdo — o card dourado do plano já explica o que tá incluso.
+              AND COALESCE(ua.metadata->>'premium_extra', '') <> 'true'
         `, [email, activeGateway]);
 
         // Produto vinculado a grupo sem access_url próprio: o "Acessar" leva
@@ -1112,6 +1180,7 @@ router.get('/library', requireUser, async (req, res) => {
             success: true,
             email,
             preview_mode: false,
+            plans: await loadUserPlans(email),
             library: merged,
         });
     } catch (err) {
