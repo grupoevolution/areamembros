@@ -38,7 +38,7 @@ const DEFAULT_LIVES = {
     lib_id: null,            // Library ID do Bunny (mesma das duas coleções)
     free_collection: null,   // coleção das lives LIBERADAS
     vip_collection: null,    // coleção das lives +18 TRAVADAS
-    window_hours: 3,         // de quanto em quanto tempo a "escalação" vira
+    cycle_days: 7,           // ciclo: as lives giram por N dias e recomeçam
     free_on_air: 5,          // quantas lives LIBERADAS ficam no ar ao mesmo tempo
     vip_on_air: 4,           // quantas lives +18 ficam no ar ao mesmo tempo
     free_seconds: 180,       // tempo grátis por dia na faixa liberada (seg)
@@ -85,25 +85,25 @@ function shuffleSeeded(arr, seed) {
     return out;
 }
 
-// Cache das listas do Bunny "assadas" por janela — 1 por (coleção, dia, janela).
-// A própria listCollectionVideos já tem cache de 5min; aqui evitamos reordenar.
+// Cache das listas do Bunny "assadas" por CICLO (embaralhadas 1x por ciclo).
 const _bakeCache = new Map();
-function bakeKey(col, dayKey, win) { return col + ':' + dayKey + ':' + win; }
 
-// VÁRIAS lives no ar ao mesmo tempo: a cada janela, sorteia a coleção e coloca
-// as primeiras `count` como transmissões simultâneas (uma modelo por vídeo).
-// Cada live fica "ao vivo" no seu próprio ponto do vídeo (o relógio dá a posição
-// e o vídeo dá loop → sempre no meio). A escalação vira a cada `window_hours`
-// (quem entra de manhã pega uma escalação, à tarde outra).
+// CICLO de N dias (padrão 7): a coleção é embaralhada UMA vez por ciclo e as
+// lives entram no ar em fila — uma NOVA a cada `slot` (= ciclo ÷ nº de lives),
+// e cada uma fica no ar por `count` slots. Assim as ~60 lives passam TODAS
+// durante os 7 dias sem repetir; no fim do ciclo, re-embaralha e recomeça.
+// Sempre há `count` no ar; a rotação é contínua (uma entra, a mais antiga sai).
+// Zero worker — tudo derivado do relógio.
 async function livesOnAir(cfg, collectionId, kind, count, nowMs) {
     if (!cfg.lib_id || !collectionId || count <= 0) return [];
-    const { dayKey, msOfDay } = brasiliaParts(nowMs);
-    const winMs = Math.max(1, Math.min(24, cfg.window_hours | 0 || 3)) * 3600 * 1000;
-    const winIdx = Math.floor(msOfDay / winMs);
-    const key = bakeKey(collectionId, dayKey, winIdx);
+    const cycleDays = Math.max(1, Math.min(60, cfg.cycle_days | 0 || 7));
+    const cycleMs = cycleDays * 86400 * 1000;
+    const cycleIdx = Math.floor(nowMs / cycleMs);
+    const posMs = nowMs - cycleIdx * cycleMs; // ms decorridos no ciclo atual
+    const key = collectionId + ':cyc:' + cycleIdx;
 
     let baked = _bakeCache.get(key);
-    if (!baked || Date.now() - baked.at > 5 * 60000) {
+    if (!baked || Date.now() - baked.at > 30 * 60000) {
         let vids = await listCollectionVideos(cfg.lib_id, collectionId);
         vids = (vids || []).filter(v => (v.status == null || v.status >= 4) && v.lengthSec > 0);
         if (!vids.length) return [];
@@ -112,24 +112,26 @@ async function livesOnAir(cfg, collectionId, kind, count, nowMs) {
         if (_bakeCache.size > 64) { const k = _bakeCache.keys().next().value; _bakeCache.delete(k); }
     }
 
-    const winStartMs = winIdx * winMs;
-    const elapsed = Math.floor((msOfDay - winStartMs) / 1000); // seg desde o início da janela
+    const N = baked.vids.length;
+    const slotMs = cycleMs / N;                 // intervalo entre entradas de live
+    const head = Math.floor(posMs / slotMs);    // índice da live que ENTROU por último
+    const nowSec = Math.floor(nowMs / 1000);
     const nameOf = (vid, i) => {
         const nm = (cfg.creator_names && cfg.creator_names[vid.guid]) || vid.title || null;
         return (nm && nm.trim()) || ('Live ' + (i + 1));
     };
-    const take = Math.min(count, baked.vids.length);
+    const take = Math.min(count, N);
     const out = [];
-    for (let i = 0; i < take; i++) {
-        const v = baked.vids[i];
-        // cada live num ponto diferente do próprio vídeo (offset por índice pra
-        // não começarem todas iguais); loop → está sempre "ao vivo"
-        const pos = (elapsed + i * 37) % v.lengthSec;
-        const eyeSeed = mulberry32(hashStr(v.guid) + Math.floor(msOfDay / 60000));
+    for (let k = 0; k < take; k++) {
+        // as `count` lives no ar = a que entrou por último e as anteriores
+        const idx = ((head - k) % N + N) % N;
+        const v = baked.vids[idx];
+        const pos = nowSec % v.lengthSec;         // relógio + loop → sempre "ao vivo"
+        const eyeSeed = mulberry32(hashStr(v.guid) + Math.floor(nowMs / 60000));
         out.push({
             guid: v.guid,
             kind,
-            name: nameOf(v, i),
+            name: nameOf(v, idx),
             hls_url: bunnyHlsUrl(v.guid),
             poster: bunnyThumbUrl(v.guid, v.thumbnailFileName),
             offset_sec: pos,
