@@ -8526,6 +8526,20 @@ async function editProduct(id) {
 
     // Tela de detalhe (extra_data)
     const ed = p.extra_data || {};
+    // Botão "Ver prévia"
+    try {
+        const pvb = ed.preview_button || {};
+        const pvbEn = document.getElementById('pPreviewBtnEnabled'); if (pvbEn) pvbEn.checked = pvb.enabled === true;
+        const pvbTx = document.getElementById('pPreviewBtnText'); if (pvbTx) pvbTx.value = pvb.text || '';
+        const pvbGr = document.getElementById('pPreviewBtnGroup');
+        if (pvbGr && pvb.group_id) {
+            const trySet = (n) => {
+                if (pvbGr.querySelector('option[value="' + pvb.group_id + '"]')) pvbGr.value = pvb.group_id;
+                else if (n > 0) setTimeout(() => trySet(n - 1), 200);
+            };
+            trySet(20);
+        } else if (pvbGr) { pvbGr.value = ''; }
+    } catch (_) {}
     const galleryItems = Array.isArray(ed.gallery) ? ed.gallery : [];
     const galleryUrls = galleryItems.map(g => typeof g === 'string' ? g : (g.url || '')).filter(Boolean);
     set('pGalleryUrls', galleryUrls.join('\n'));
@@ -8850,6 +8864,12 @@ async function saveProduct() {
         success_cta_text: get('pSuccessCtaText') || '',
         success_cta_url: get('pSuccessCtaUrl') || '',
         reviews,
+        // Botão "Ver prévia" da página do produto (leva pro grupo antes da compra)
+        preview_button: {
+            enabled: document.getElementById('pPreviewBtnEnabled')?.checked === true,
+            group_id: parseInt(document.getElementById('pPreviewBtnGroup')?.value, 10) || null,
+            text: (document.getElementById('pPreviewBtnText')?.value || '').trim().slice(0, 60),
+        },
     };
 
     const body = {
@@ -18400,9 +18420,26 @@ async function importProductsJSON(ev) {
             + '<div class="form-row"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pChatBtnEnabled" style="width:auto"/> Ativar botão de mensagem</label></div>'
             + '<div class="form-row"><label class="form-label">Conversa de destino</label><select id="pChatBtnChatId" class="form-input"><option value="">— selecione um chat —</option></select><div class="form-help">A conversa que abre ao clicar. Crie em Conversas (pode deixar oculta da lista).</div></div>'
             + '<div class="form-row"><label class="form-label">Texto do botão</label><input type="text" id="pChatBtnLabel" class="form-input" placeholder="Enviar mensagem" maxlength="60"/></div>'
-            + '<div class="form-row"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pChatBtnNotifyOpen" style="width:auto"/> 🔔 Modelo manda mensagem ao abrir o produto</label><div class="form-help">Ao entrar no produto, a conversa acima começa sozinha e o cliente recebe uma notificação (foto + nome + "enviou uma mensagem"). Fica salva no histórico mesmo sem clicar.</div></div>';
+            + '<div class="form-row"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pChatBtnNotifyOpen" style="width:auto"/> 🔔 Modelo manda mensagem ao abrir o produto</label><div class="form-help">Ao entrar no produto, a conversa acima começa sozinha e o cliente recebe uma notificação (foto + nome + "enviou uma mensagem"). Fica salva no histórico mesmo sem clicar.</div></div>'
+            + '<div style="margin-top:14px;border-top:1px solid rgba(255,255,255,.08);padding-top:12px;">'
+            + '<div class="form-row"><label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" id="pPreviewBtnEnabled" style="width:auto"/> 👀 Botão "Ver prévia" — leva pro GRUPO antes de comprar</label>'
+            + '<div class="form-help">Aparece na mesma área do botão de mensagem. O lead entra no grupo no modo teste grátis e vê o grupo VIVO — isca de venda.</div></div>'
+            + '<div class="form-row"><label class="form-label">Grupo da prévia</label><select id="pPreviewBtnGroup" class="form-input"><option value="">— selecione um grupo —</option></select></div>'
+            + '<div class="form-row"><label class="form-label">Texto do botão</label><input type="text" id="pPreviewBtnText" class="form-input" placeholder="Ver prévia 👀" maxlength="60"/></div>'
+            + '</div>';
         form.appendChild(chatBtnBlock);
         populateChatBtnSelect();
+        // dropdown de grupos da prévia
+        (async () => {
+            try {
+                const r = await fetch('/api/admin/groups', { credentials: 'include' }).then(x => x.json());
+                const sel = document.getElementById('pPreviewBtnGroup');
+                if (sel && Array.isArray(r.groups)) {
+                    sel.innerHTML = '<option value="">— selecione um grupo —</option>'
+                        + r.groups.map(g => '<option value="' + g.id + '">' + escHtmlAdmin(g.name) + '</option>').join('');
+                }
+            } catch (_) {}
+        })();
 
         // ── Entrega (pós-compra): mensagem que o chat de Suporte manda ao comprar ──
         const deliveryBlk = document.createElement('div');
@@ -18467,6 +18504,10 @@ async function importProductsJSON(ev) {
             +     '<input type="radio" name="pDeliveryMode" value="folder" style="margin-top:3px;flex-shrink:0;">'
             +     '<div><div style="font-weight:600;font-size:13px;color:var(--text);">🗂️ Pasta de conteúdo (galeria)</div><div style="font-size:12px;color:rgba(255,255,255,.55);margin-top:2px;">Vídeos + fotos dentro do app (Bunny Library + Collection).</div></div>'
             +   '</label>'
+            +   '<label class="delivery-radio" data-mode="app" style="display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid rgba(255,255,255,.12);border-radius:10px;cursor:pointer;background:rgba(255,255,255,.02);">'
+            +     '<input type="radio" name="pDeliveryMode" value="app" style="margin-top:3px;flex-shrink:0;">'
+            +     '<div><div style="font-weight:600;font-size:13px;color:var(--text);">🧭 Área do app (grupo, aba, conversa)</div><div style="font-size:12px;color:rgba(255,255,255,.55);margin-top:2px;">O "Acessar" leva pra um lugar DENTRO do app — ex.: o grupo que ele comprou, a aba Vídeos, uma conversa.</div></div>'
+            +   '</label>'
             + '</div>'
             // Sub-bloco LINK
             + '<div id="deliveryFieldsLink" style="display:none;">'
@@ -18475,6 +18516,18 @@ async function importProductsJSON(ev) {
             +     '<input type="text" class="form-input" id="pAccessUrlInline" placeholder="https://chat.whatsapp.com/... ou https://t.me/...">'
             +     '<div class="form-help">Esse link abre quando o cliente clica em "Acessar" no Acervo.</div>'
             +   '</div>'
+            + '</div>'
+            // Sub-bloco ÁREA DO APP (destino interno — mesmo seletor dos pushes)
+            + '<div id="deliveryFieldsApp" style="display:none;">'
+            +   '<div class="form-row">'
+            +     '<label class="form-label">Pra onde o "Acessar" leva</label>'
+            +     '<select class="form-input" id="pDelivDest"></select>'
+            +   '</div>'
+            +   '<div class="form-row">'
+            +     '<select class="form-input" id="pDelivDestPick" style="display:none;"></select>'
+            +     '<input type="text" class="form-input" id="pDelivUrl" style="display:none;margin-top:8px;" placeholder="/?group=1 ou URL">'
+            +   '</div>'
+            +   '<div class="form-help">O cliente clica em "Acessar" em Minhas Compras e cai direto nesse lugar do app (sem sair, sem link externo).</div>'
             + '</div>'
             // Sub-bloco CHAMADINHA
             + '<div id="deliveryFieldsCall" style="display:none;">'
@@ -18633,10 +18686,15 @@ async function importProductsJSON(ev) {
             const link   = document.getElementById('deliveryFieldsLink');
             const call   = document.getElementById('deliveryFieldsCall');
             const folder = document.getElementById('deliveryFieldsFolder');
+            const appBlk = document.getElementById('deliveryFieldsApp');
             const hidden = document.getElementById('pProductType');
             link.style.display   = (mode === 'link')   ? '' : 'none';
             call.style.display   = (mode === 'call')   ? '' : 'none';
             folder.style.display = (mode === 'folder') ? '' : 'none';
+            if (appBlk) appBlk.style.display = (mode === 'app') ? '' : 'none';
+            if (mode === 'app') {
+                try { destFillSelect('pDeliv'); loadDestLists().then(() => applyDestUI('pDeliv')); syncDelivAccessUrl(); } catch (_) {}
+            }
 
             // Fase L6: ao mostrar "pasta", sincroniza o atalho de fotos com o
             // textarea principal (que pode ter sido preenchido por editProduct).
@@ -18664,6 +18722,8 @@ async function importProductsJSON(ev) {
             // (Backend já ignora, mas é mais limpo e evita confusão visual.)
             if (mode !== 'link') {
                 const a = document.getElementById('pAccessUrlInline'); if (a) a.value = '';
+            }
+            if (mode !== 'link' && mode !== 'app') {
                 const a2 = document.getElementById('pAccessUrl'); if (a2) a2.value = '';
             }
             if (mode !== 'call') {
@@ -18681,6 +18741,24 @@ async function importProductsJSON(ev) {
                 const r = document.getElementById('pBunnyTestResult'); if (r) r.textContent = '';
             }
         }
+        // Destino interno escolhido → grava a URL no campo legado #pAccessUrl
+        // (o saveProduct já lê de lá; zero mudança no backend)
+        function syncDelivAccessUrl() {
+            try {
+                const checked = document.querySelector('input[name="pDeliveryMode"]:checked');
+                if (!checked || checked.value !== 'app') return;
+                const hidden = document.getElementById('pAccessUrl');
+                if (hidden) hidden.value = getDestUrl('pDeliv');
+            } catch (_) {}
+        }
+        window.syncDelivAccessUrl = syncDelivAccessUrl;
+        ['pDelivDest', 'pDelivDestPick', 'pDelivUrl'].forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('change', () => { if (id === 'pDelivDest') { try { applyDestUI('pDeliv'); } catch (_) {} } syncDelivAccessUrl(); });
+            el.addEventListener('input', syncDelivAccessUrl);
+        });
+
         // Listener nos radios
         document.querySelectorAll('input[name="pDeliveryMode"]').forEach(r => {
             r.addEventListener('change', e => { if (e.target.checked) applyDeliveryMode(e.target.value); });
@@ -18883,6 +18961,9 @@ async function importProductsJSON(ev) {
                 const pm = document.getElementById('pPostMsg'); if (pm) pm.value = '';
                 const pl = document.getElementById('pPostLink'); if (pl) pl.value = '';
                 const pdz = document.getElementById('pDiscountUrl'); if (pdz) pdz.value = '';
+                const pvbEn = document.getElementById('pPreviewBtnEnabled'); if (pvbEn) pvbEn.checked = false;
+                const pvbTx = document.getElementById('pPreviewBtnText'); if (pvbTx) pvbTx.value = '';
+                const pvbGr = document.getElementById('pPreviewBtnGroup'); if (pvbGr) pvbGr.value = '';
                 const prc = document.getElementById('pPostRec'); if (prc) Array.from(prc.options).forEach(o => o.selected = false);
                 const apl = document.getElementById('pAudioAutoplay'); if (apl) apl.checked = false;
                 const radio = document.querySelector('input[name="pDeliveryMode"][value="link"]');
@@ -18946,13 +19027,20 @@ async function importProductsJSON(ev) {
                     const hasVcId = !!(p.video_call_id);
                     const hasBunny = !!(p.bunny_library_id && p.bunny_collection_id);
                     const isCallType = (p.product_type === 'video_call');
+                    // access_url começando com "/" = destino DENTRO do app
+                    const isInternal = !!(p.access_url && /^\//.test(String(p.access_url).trim()));
                     let mode = 'link';
                     if (hasDirect || hasVcId || isCallType) mode = 'call';
                     else if (hasBunny) mode = 'folder';
+                    else if (isInternal) mode = 'app';
                     else mode = 'link';
 
                     // Popula campos do modo escolhido
-                    if (mode === 'link') {
+                    if (mode === 'app') {
+                        const hidden = document.getElementById('pAccessUrl');
+                        if (hidden) hidden.value = p.access_url || '';
+                        try { destFillSelect('pDeliv'); loadDestLists().then(() => setDestUrl('pDeliv', p.access_url || '/')); } catch (_) {}
+                    } else if (mode === 'link') {
                         const inline = document.getElementById('pAccessUrlInline');
                         const hidden = document.getElementById('pAccessUrl');
                         if (inline) inline.value = p.access_url || '';

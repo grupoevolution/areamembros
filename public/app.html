@@ -11862,6 +11862,12 @@ window.MVNotify = (function() {
 })();
 
 // Resolve o destino do clique numa notificação (chat / produto / aba / link).
+// Botão "Ver prévia" da página do produto: entra no grupo (modo teste grátis)
+window.openGroupPreview = function(groupId, productId) {
+    try { if (typeof TRACK !== 'undefined') TRACK.event('preview_group_click', { product_id: productId || null, group_id: groupId }); } catch (_) {}
+    if (window.GroupApp && groupId) GroupApp.open(parseInt(groupId, 10));
+};
+
 function mvNavigate(url) {
     if (!url) return;
     try {
@@ -14900,6 +14906,31 @@ function populateProductScreen(p) {
         }
     }
 
+    // === Botão "Ver prévia" → entra no GRUPO antes de comprar (modo teste) ===
+    // Isca de venda: o lead vê o grupo VIVO (trial) e volta pra comprar.
+    let pvBtnOld = document.querySelector('#product .product-preview-btn');
+    if (pvBtnOld) pvBtnOld.remove();
+    const pvCfg = (p.extra_data || {}).preview_button || {};
+    if (pvCfg.enabled && pvCfg.group_id && window.GroupApp) {
+        const gid = parseInt(pvCfg.group_id, 10);
+        const pvLabel = String(pvCfg.text || 'Ver prévia 👀').slice(0, 60);
+        const pb = document.createElement('button');
+        pb.type = 'button';
+        pb.className = 'product-chat-btn product-preview-btn';
+        pb.style.background = 'linear-gradient(135deg,#33383f,#1a1d22)';
+        pb.style.border = '1px solid rgba(255,255,255,.18)';
+        pb.setAttribute('onclick', 'openGroupPreview(' + gid + ',' + (p.id || 0) + ')');
+        pb.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">'
+            + '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>'
+            + '</svg><span>' + escapeHtmlData(pvLabel) + '</span>';
+        const chatBtnEl = document.querySelector('#product .product-chat-btn:not(.product-preview-btn)');
+        const bodyEl3 = document.querySelector('#product .prod-body');
+        const audioEl3 = document.querySelector('#product .product-audio-block');
+        if (chatBtnEl && chatBtnEl.parentNode) chatBtnEl.parentNode.insertBefore(pb, chatBtnEl.nextSibling);
+        else if (audioEl3 && audioEl3.parentNode) audioEl3.parentNode.insertBefore(pb, audioEl3.nextSibling);
+        else if (bodyEl3) bodyEl3.insertBefore(pb, bodyEl3.firstChild);
+    }
+
     // === Badge AO VIVO ===
     const liveEl = document.querySelector('#product .prod-live');
     if (liveEl) {
@@ -14978,7 +15009,9 @@ function populateProductScreen(p) {
             `;
             ctaBtn.onclick = () => {
                 if (typeof TRACK !== 'undefined') TRACK.event('cta_access_click', { product_id: p.id });
-                if (p.access_url) {
+                if (p.access_url && String(p.access_url).charAt(0) === '/') {
+                    if (typeof mvNavigate === 'function') mvNavigate(String(p.access_url));
+                } else if (p.access_url) {
                     window.open(p.access_url, '_blank', 'noopener,noreferrer');
                 } else if (p.main_video_url) {
                     window.open(p.main_video_url, '_blank', 'noopener,noreferrer');
@@ -15039,9 +15072,16 @@ function openLibraryItem(productId) {
         return;
     }
 
-    // Legado: tem access_url (WhatsApp/Telegram) — preserva comportamento atual
+    // access_url interno (começa com "/") = destino DENTRO do app configurado
+    // no painel (grupo, aba Vídeos, conversa…) — navega sem sair nem abrir aba
     if (product.access_url) {
-        window.open(product.access_url, '_blank', 'noopener,noreferrer');
+        const u = String(product.access_url);
+        if (u.charAt(0) === '/') {
+            if (typeof mvNavigate === 'function') mvNavigate(u);
+            return;
+        }
+        // Legado: link externo (WhatsApp/Telegram) — preserva comportamento
+        window.open(u, '_blank', 'noopener,noreferrer');
         showToast('library', '🔗', 'Abrindo em nova aba...');
         return;
     }
