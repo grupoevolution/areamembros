@@ -8134,7 +8134,7 @@ body.is-slowconn .prod-cta-fixed {
 /* Status emenda direto nas conversas (sem o degrau bege) + fotos maiores */
 .ca-stories { padding: 12px 16px 8px; background: #fff; }
 .ca-stories-row { display: flex; gap: 13px; overflow-x: auto; padding-bottom: 6px; }
-.ca-story-item { text-align: center; flex-shrink: 0; cursor: pointer; }
+.ca-story-item { text-align: center; flex-shrink: 0; cursor: pointer; position: relative; }
 .ca-story-item .ring { width: 66px; height: 66px; border-radius: 50%; padding: 2.5px; background: #d0c8c0; }
 .ca-story-item .ring.unseen { background: linear-gradient(135deg, #25D366, #128C7E); }
 .ca-story-item .ring .av { width: 100%; height: 100%; border-radius: 50%; background: #ddd6d0 center/cover no-repeat; border: 2px solid #fff; box-sizing: border-box; }
@@ -8143,7 +8143,8 @@ body.is-slowconn .prod-cta-fixed {
 .ca-live-ring { width: 66px; height: 66px; border-radius: 50%; padding: 3px; position: relative; background: conic-gradient(#e50914, #ff3b30, #ff7a45, #e50914); animation: caLiveSpin 2.6s linear infinite; }
 @keyframes caLiveSpin { to { transform: rotate(360deg); } }
 .ca-live-ring .av { width: 100%; height: 100%; border-radius: 50%; background: #2a1118 center/cover no-repeat; border: 2.5px solid #fff; box-sizing: border-box; animation: caLiveSpin 2.6s linear infinite reverse; }
-.ca-live-badge { position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%); background: linear-gradient(135deg, #e50914, #ff3b30); color: #fff; font-size: 8px; font-weight: 900; letter-spacing: .6px; padding: 2.5px 7px; border-radius: 999px; border: 2px solid #fff; display: flex; align-items: center; gap: 3px; white-space: nowrap; }
+/* selo AO VIVO FIXO (fora do anel que gira) — sobreposto na base da foto */
+.ca-live-badge { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); z-index: 2; background: linear-gradient(135deg, #e50914, #ff3b30); color: #fff; font-size: 8px; font-weight: 900; letter-spacing: .6px; padding: 2.5px 7px; border-radius: 999px; border: 2px solid #fff; display: flex; align-items: center; gap: 3px; white-space: nowrap; }
 .ca-live-badge .d { width: 4px; height: 4px; border-radius: 50%; background: #fff; animation: lvblink 1.1s infinite; }
 @media (prefers-reduced-motion: reduce) { .ca-live-ring, .ca-live-ring .av { animation: none !important; } }
 /* Viewer de stories (tela cheia, estilo Instagram) */
@@ -9215,7 +9216,7 @@ window.ChatApp = (function() {
         const liveItems = lives.map(l => {
             const bg = l.poster ? ' style="background-image:url(\'' + esc(l.poster) + '\')"' : '';
             return '<div class="ca-story-item" onclick="openExploreTab(\'lives\')">'
-                + '<div class="ca-live-ring"><div class="av"' + bg + '></div><div class="ca-live-badge"><span class="d"></span>AO VIVO</div></div>'
+                + '<div class="ca-live-ring"><div class="av"' + bg + '></div></div><div class="ca-live-badge"><span class="d"></span>AO VIVO</div>'
                 + '<div class="nm" style="color:#fff;font-weight:700;">' + esc(l.name) + '</div></div>';
         }).join('');
         if (!STORIES.length && !liveItems) return '';
@@ -20762,18 +20763,23 @@ window.Explore = (function () {
         if (ov) { ov.classList.remove('open'); ov.innerHTML = ''; }
         stopAccessWatch();
     }
-    window.__openExplorePaywall = function () { try { openPaywall(); } catch (_) {} };
-    function openPaywall() {
+    // opts.src = objeto com {paywall,unlock,premium_plan} (default: o feed de vídeos);
+    // opts.onClose = o que fazer ao fechar (default: volta pra Home); opts.watch =
+    // false desliga o auto-destravar (usado pelas Lives, que têm estado próprio).
+    window.__openExplorePaywall = function (opts) { try { openPaywall(opts || {}); } catch (_) {} };
+    function openPaywall(opts) {
+        opts = opts || {};
+        const src = opts.src || data;
         const ov = document.getElementById('tkPaywall');
         if (!ov || ov.classList.contains('open') || !window.MVPaywall) return;
         pauseAll();
-        const pw = (data && data.paywall) || {};
+        const pw = (src && src.paywall) || {};
         // POPUP PRÓPRIO DOS VÍDEOS: oferta avulsa (ex.: 19,90) + card Premium
         // embaixo. Os PLANOS do produto NÃO entram aqui — quando o código do
         // Premium foi ligado aos vídeos, o unlock resolvia pro produto do chat
         // e este popup virava o paywall das conversas (feedback do dono:
         // manter o popup dos vídeos, só ADICIONAR a opção Premium).
-        const unlock = Object.assign({}, data.unlock || {});
+        const unlock = Object.assign({}, (src && src.unlock) || {});
         if (pw.offer_price != null && (unlock.checkout_url || unlock.product_id)) unlock.plans = [];
         // card INTERNO (o overlay é flex e centraliza; o banner vai num filho,
         // senão os itens viram linha horizontal).
@@ -20785,13 +20791,13 @@ window.Explore = (function () {
             ctaText: pw.cta || 'QUERO ACESSO VIP',
             offer: { price: pw.offer_price, original_price: pw.offer_original_price, note: pw.offer_note },
             social: '+2.400 já viraram VIP esta semana',
-            // "agora não": sai do feed de vídeos e volta pra Home (sem travar o app)
-            onClose: () => { closePaywall(); if (typeof switchScreen === 'function') switchScreen('home'); },
+            // "agora não": comportamento configurável (vídeos → Home; Lives → fica)
+            onClose: opts.onClose || (() => { closePaywall(); if (typeof switchScreen === 'function') switchScreen('home'); }),
         });
         // Opção "leve tudo": plano PREMIUM (dourado) abaixo do preço avulso —
         // além dos vídeos, libera conversas + status. Só aparece se o dono
         // marcou um plano como Premium no painel.
-        const prem = data && data.premium_plan;
+        const prem = src && src.premium_plan;
         if (prem && prem.checkout_url) {
             const card = document.getElementById('tkPaywallCard');
             const preco = (v) => { const n = parseFloat(v); return isNaN(n) ? '' : 'R$ ' + n.toFixed(2).replace('.', ','); };
@@ -20816,9 +20822,9 @@ window.Explore = (function () {
             else if (card) card.appendChild(box);
         }
         ov.classList.add('open');
-        // fica de olho: pagou → destrava sozinho
-        recheckAccess();
-        startAccessWatch();
+        // fica de olho: pagou → destrava sozinho (só no feed de vídeos; as Lives
+        // passam watch:false porque têm estado próprio e não usam este `data`)
+        if (opts.watch !== false) { recheckAccess(); startAccessWatch(); }
     }
 
     function doShare() {
@@ -20892,9 +20898,11 @@ window.Lives = (function () {
         chevup: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>',
     };
     const VID = (window.VID || null);
-    const GOLD_NAMES = ['Bruno', 'Thiago', 'Marcos', 'Rafael', 'Diego', 'Lucas', 'Felipe', 'André', 'Gustavo', 'Renan', 'Caio', 'Eduardo', 'Vitor', 'Matheus'];
-    const CMT_CAST = ['Rodrigo', 'Thiago', 'Marcos', 'Felipe', 'Bruno', 'André', 'Diego', 'Léo', 'Caio', 'Igor'];
-    const CMT_PHR = ['que isso', 'a melhor live', 'mostra mais vai', 'cheguei agora, perdi muito?', 'ela responde a gente?', 'top demais', 'faz de novo', 'linda demais', 'valeu cada centavo', 'todo dia tem?', 'segue assim', 'melhor de todas'];
+    const GOLD_NAMES = ['Bruno', 'Thiago', 'Marcos', 'Rafael', 'Diego', 'Lucas', 'Felipe', 'André', 'Gustavo', 'Renan', 'Caio', 'Eduardo', 'Vitor', 'Matheus', 'Pedro', 'Gabriel', 'Rodrigo', 'Fábio', 'Ricardo', 'Leandro', 'Wesley', 'Douglas', 'Fernando', 'Alex'];
+    const CMT_CAST = ['Rodrigo', 'Thiago', 'Marcos', 'Felipe', 'Bruno', 'André', 'Diego', 'Léo', 'Caio', 'Igor', 'Wesley', 'Pedro', 'Gabriel', 'Vitor', 'Alex', 'Renan', 'Fábio', 'Lucas'];
+    // MAIORIA = interação com a live (perguntas, reações, pedidos); MINORIA = elogio
+    const CMT_INTERACT = ['manda um oi', 'responde eu 🙏', 'de onde vc é?', 'tá on faz tempo?', 'chega mais perto', 'faz sinal aí', 'me chama no chat', 'oi sumida', 'quantos anos?', 'posso te conhecer?', 'aqui de SP', 'boa noite gata', 'cheguei agora, perdi muito?', 'quem mais tá vendo?', 'ela é real?', 'me nota 🥺', 'manda beijo', 'faz de novo', 'não sai não', 'fica mais', 'to travado aqui', 'mostra o rosto', 'que sotaque é esse?', 'primeira vez aqui'];
+    const CMT_PRAISE = ['linda demais', 'que mulher 😍', 'perfeita', 'a mais gata', 'top demais', 'melhor live', 'vale muito', 'melhor de todas'];
     const HCOLORS = ['#e50914', '#ff3b30', '#ff7a8a', '#ffffff'];
 
     function fmtTime(s) { s = Math.max(0, s | 0); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
@@ -20993,8 +21001,7 @@ window.Lives = (function () {
             st.addEventListener('click', onStageTap);
             for (let i = 0; i < 4; i++) pushComment();
             cmtTimer = setInterval(pushComment, 2600);
-            goldTimer = setInterval(goldToast, 9000);
-            setTimeout(goldToast, 3000);
+            scheduleGold(6000); // 1ª notificação depois de ~6s, depois espaçadas
             if (cur.kind === 'free' && !data.has_access) startWatchClock();
         }
         startTick();
@@ -21051,19 +21058,36 @@ window.Lives = (function () {
     function pushComment() {
         const box = stage() && stage().querySelector('#lvCmts'); if (!box) return;
         const nm = CMT_CAST[Math.floor(Math.random() * CMT_CAST.length)];
-        const vip = Math.random() < 0.35;
+        const vip = Math.random() < 0.3;
+        // ~80% interação, ~20% elogio (pra parecer live de verdade)
+        const pool = Math.random() < 0.8 ? CMT_INTERACT : CMT_PRAISE;
+        const txt = pool[Math.floor(Math.random() * pool.length)];
         const el = document.createElement('div');
         el.className = 'lv-cmt';
         el.innerHTML = '<div class="lv-cmt-av">' + esc(nm.charAt(0)) + '</div>'
             + '<div class="lv-cmt-body"><div class="lv-cmt-name">' + esc(nm) + (vip ? ' <span class="lv-cmt-vip">VIP</span>' : '') + '</div>'
-            + '<div class="lv-cmt-txt">' + esc(CMT_PHR[Math.floor(Math.random() * CMT_PHR.length)]) + '</div></div>';
+            + '<div class="lv-cmt-txt">' + esc(txt) + '</div></div>';
         box.appendChild(el);
         while (box.childElementCount > 5) box.firstElementChild.remove();
     }
 
+    // notificação dourada: reagendada (25–45s), NUNCA duas na tela ao mesmo
+    // tempo, e nunca o mesmo nome duas vezes seguidas (bug: "Matheus" duplicado).
+    let _lastGold = null;
+    function scheduleGold(delay) {
+        if (goldTimer) clearTimeout(goldTimer);
+        goldTimer = setTimeout(() => {
+            goldToast();
+            scheduleGold(25000 + Math.floor(Math.random() * 20000));
+        }, delay);
+    }
     function goldToast() {
-        const box = stage() && stage().querySelector('#lvGold'); if (!box || box.childElementCount > 2) return;
-        const nm = GOLD_NAMES[Math.floor(Math.random() * GOLD_NAMES.length)];
+        const box = stage() && stage().querySelector('#lvGold');
+        if (!box || box.childElementCount > 0) return; // só 1 por vez
+        let nm = GOLD_NAMES[Math.floor(Math.random() * GOLD_NAMES.length)];
+        let guard = 0;
+        while (nm === _lastGold && guard++ < 6) nm = GOLD_NAMES[Math.floor(Math.random() * GOLD_NAMES.length)];
+        _lastGold = nm;
         const el = document.createElement('div');
         el.className = 'lv-gtoast';
         el.innerHTML = '<div class="gi">' + ICO.diamond + '</div><div class="gt"><b>' + esc(nm) + '</b> virou Premium</div>';
@@ -21102,15 +21126,18 @@ window.Lives = (function () {
     }
     function stopWatch() { if (watchTimer) { clearInterval(watchTimer); watchTimer = null; } }
 
-    // abre o MESMO popup da aba Vídeos (oferta 19,90 + Premium)
+    // abre o MESMO popup da aba Vídeos (oferta 19,90 + Premium) — POR CIMA da
+    // live, SEM navegar. (bug anterior: reaproveitava o feed e o onClose ia pra
+    // Home; agora o popup usa os dados das Lives e o "agora não" fica na live.)
     function unlock() {
         try { if (typeof TRACK !== 'undefined') TRACK.event('lives_paywall_click', { kind: cur && cur.kind }); } catch (_) {}
         pauseVideo();
-        // reaproveita o paywall dos vídeos: mostra o feed por trás e abre o popup
-        const stEl = stage(); if (stEl) { stEl.style.display = 'none'; stEl.classList.remove('on'); }
-        document.querySelectorAll('.tk-subtab').forEach(b => b.classList.toggle('on', b.dataset.sub === 'videos'));
-        const feed = document.getElementById('tkFeed'); if (feed) feed.style.display = '';
-        if (window.Explore) { Explore.open(); setTimeout(() => { if (window.__openExplorePaywall) window.__openExplorePaywall(); }, 250); }
+        if (!window.__openExplorePaywall || !data) return;
+        window.__openExplorePaywall({
+            src: data,          // paywall/unlock/premium_plan vêm de /api/user/lives
+            watch: false,       // as Lives não usam o auto-destravar do feed
+            onClose: () => { const ov = document.getElementById('tkPaywall'); if (ov) { ov.classList.remove('open'); ov.innerHTML = ''; } },
+        });
     }
     function tryComment() {
         // membro digita (simulado: some no rolo); não-membro → popup
@@ -21119,7 +21146,7 @@ window.Lives = (function () {
     }
 
     function pauseVideo() { const v = stage() && stage().querySelector('#lvBg video'); if (v) { try { v.pause(); } catch (_) {} } }
-    function stopTimers() { stopTick(); stopWatch(); if (cmtTimer) clearInterval(cmtTimer); if (goldTimer) clearInterval(goldTimer); cmtTimer = goldTimer = null; }
+    function stopTimers() { stopTick(); stopWatch(); if (cmtTimer) clearInterval(cmtTimer); if (goldTimer) clearTimeout(goldTimer); cmtTimer = goldTimer = null; }
     function pause() {
         stopTimers();
         pauseVideo();

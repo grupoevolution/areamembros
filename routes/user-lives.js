@@ -28,6 +28,15 @@ const { logger } = require('../lib/logger');
 const { optionalUser } = require('../lib/user-auth');
 const { listCollectionVideos, bunnyHlsUrl, bunnyThumbUrl, resolveStreamCollection } = require('../lib/bunny');
 
+// Nomes fictícios femininos pras lives (o título do vídeo no Bunny é nome de
+// arquivo — nunca aparece pro lead). Estável por vídeo via hash do guid.
+const LIVE_NAMES = ['Aline', 'Manu', 'Bia', 'Carol', 'Duda', 'Rafa', 'Nat', 'Lari',
+    'Bruna', 'Gabi', 'Isa', 'Jé', 'Kel', 'Lud', 'Mari', 'Nanda', 'Paola', 'Rafaela',
+    'Sabrina', 'Tati', 'Vivi', 'Yara', 'Amanda', 'Bianca', 'Camila', 'Dani', 'Elisa',
+    'Fernanda', 'Giovana', 'Helena', 'Ingrid', 'Júlia', 'Karol', 'Letícia', 'Marina',
+    'Priscila', 'Renata', 'Sofia', 'Thais', 'Valentina', 'Bella', 'Lorena', 'Malu',
+    'Mel', 'Pati', 'Raissa', 'Sté', 'Vic'];
+
 // A coleção pode vir como NOME ("Lives", "18") ou como GUID — resolve pro guid.
 // "*" / "todas" / vazio = TODOS os vídeos da library (sem sub-pasta).
 const _colResolve = new Map();
@@ -55,7 +64,7 @@ const DEFAULT_LIVES = {
     free_collection: null,   // coleção das lives LIBERADAS
     vip_collection: null,    // coleção das lives +18 TRAVADAS
     cycle_days: 7,           // ciclo: as lives giram por N dias e recomeçam
-    free_on_air: 4,          // lives LIBERADAS no ar (4 liberadas + 1 +18 = 1 a cada 5)
+    free_on_air: 2,          // lives LIBERADAS no ar (2 liberadas + 1 +18 = 3 no total)
     vip_on_air: 1,           // lives +18 no ar ao mesmo tempo
     free_seconds: 180,       // tempo grátis por dia na faixa liberada (3 min)
     creator_names: null,     // nomes opcionais por vídeo (fallback = título)
@@ -132,10 +141,8 @@ async function livesOnAir(cfg, collectionId, kind, count, nowMs) {
     const slotMs = cycleMs / N;                 // intervalo entre entradas de live
     const head = Math.floor(posMs / slotMs);    // índice da live que ENTROU por último
     const nowSec = Math.floor(nowMs / 1000);
-    const nameOf = (vid, i) => {
-        const nm = (cfg.creator_names && cfg.creator_names[vid.guid]) || vid.title || null;
-        return (nm && nm.trim()) || ('Live ' + (i + 1));
-    };
+    // Nome FICTÍCIO feminino, estável por vídeo (nunca o título/arquivo do Bunny)
+    const nameOf = (vid) => LIVE_NAMES[hashStr('nm' + vid.guid) % LIVE_NAMES.length];
     const take = Math.min(count, N);
     const out = [];
     for (let k = 0; k < take; k++) {
@@ -147,7 +154,7 @@ async function livesOnAir(cfg, collectionId, kind, count, nowMs) {
         out.push({
             guid: v.guid,
             kind,
-            name: nameOf(v, idx),
+            name: nameOf(v),
             hls_url: bunnyHlsUrl(v.guid),
             poster: bunnyThumbUrl(v.guid, v.thumbnailFileName),
             offset_sec: pos,
@@ -210,6 +217,32 @@ router.get('/lives', optionalUser, async (req, res) => {
             lives.push({ ...safe, locked: !hasAccess });
         }
 
+        // Info do popup (o MESMO da aba Vídeos: oferta 19,90 + Premium) — mandada
+        // junto pra Lives abrir o popup SEM navegar pra outra tela.
+        let paywall = null, unlock = null, premiumPlan = null;
+        if (!hasAccess) {
+            try {
+                const userApi = require('./user');
+                const cfgRow = await db.query(`SELECT value FROM gamification_config WHERE key = 'explore_config'`).catch(() => ({ rows: [] }));
+                const ex = cfgRow.rows[0]?.value || {};
+                let pid = ex.product_id ? parseInt(ex.product_id, 10) : null;
+                if (pid) {
+                    const { rows: [pp] } = await db.query(`SELECT 1 FROM products WHERE id = $1 AND (COALESCE(is_chat_plan,false)=true OR COALESCE(is_story_plan,false)=true)`, [pid]);
+                    if (pp) pid = null;
+                }
+                paywall = {
+                    offer_price: ex.offer_price != null ? ex.offer_price : 19.90,
+                    offer_original_price: ex.offer_original_price != null ? ex.offer_original_price : 49.90,
+                    offer_note: ex.offer_note || 'liberação imediata após o pagamento',
+                    cta: ex.paywall_cta || 'QUERO ACESSO VIP',
+                    title: 'Essa é +18 sem censura 🔥',
+                    text: 'Libera as lives sem censura e todos os vídeos — sem limite.',
+                };
+                unlock = await userApi.loadExploreUnlock(pid, ex.checkout_url || null);
+                premiumPlan = await userApi.loadPremiumPlan();
+            } catch (_) {}
+        }
+
         return res.json({
             success: true,
             enabled: true,
@@ -217,6 +250,7 @@ router.get('/lives', optionalUser, async (req, res) => {
             free_seconds: cfg.free_seconds,
             free_left: freeLeft,
             server_now: new Date(now).toISOString(),
+            paywall, unlock, premium_plan: premiumPlan,
             lives,
         });
     } catch (err) {
