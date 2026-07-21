@@ -7305,6 +7305,7 @@ body.is-slowconn .prod-cta-fixed {
                         <div class="p3-verified-badge" id="profileVerifiedBadge" data-level="0" title="">
                             <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17l-3.88-3.88a.996.996 0 10-1.41 1.41l4.59 4.59c.39.39 1.02.39 1.41 0L20.71 7.71a.996.996 0 10-1.41-1.41L9 16.17z"/></svg>
                         </div>
+                        <div class="p3-plan-crown" id="p3PlanCrown">👑</div>
                         <input type="file" id="profilePhotoInput" accept="image/*" style="display:none;" onchange="handleProfilePhotoUpload(this)">
                     </div>
 
@@ -8103,6 +8104,21 @@ body.is-slowconn .prod-cta-fixed {
 .ca-plan-badge { font-size: 10px; font-weight: 700; letter-spacing: .8px; color: #9a958d; border: 1px solid #ddd6cd; padding: 3px 10px; border-radius: 999px; background: #fff; }
 .ca-plan-badge.vip { color: #4a5058; background: linear-gradient(180deg, #eef0f4, #c9ced8); border-color: #b3bac6; }
 .ca-plan-badge.premium { color: #6d5320; background: linear-gradient(180deg, #f7e3a4, #eec95e); border-color: #d9b558; }
+/* "Seu plano" do Perfil + efeitos de avatar por plano */
+.p3-planbox{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:14px 16px;}
+.p3-planbox.vip{border-color:rgba(200,205,215,.35);background:linear-gradient(135deg,rgba(58,62,70,.42),rgba(22,24,28,.7));}
+.p3-planbox.premium{border-color:rgba(212,175,55,.55);background:linear-gradient(135deg,rgba(64,48,10,.5),rgba(26,19,4,.75));box-shadow:0 0 20px rgba(212,175,55,.14);}
+.p3-planbox-info{flex:1;min-width:0;}
+.p3-planbox-label{font-size:10px;font-weight:800;letter-spacing:1.2px;color:rgba(255,255,255,.45);margin-bottom:3px;}
+.p3-planbox-name{font-size:16px;font-weight:900;letter-spacing:.4px;color:#fff;}
+.p3-planbox-name.silver{color:#d7dbe2;}
+.p3-planbox-name.gold{color:#f5d67b;}
+.p3-planbox-sub{font-size:12px;color:rgba(255,255,255,.6);margin-top:3px;line-height:1.4;}
+.p3-planbox-bonus{margin-top:7px;font-size:12px;font-weight:700;color:#f5d67b;}
+.p3-planbox-btn{flex-shrink:0;background:linear-gradient(135deg,#e50914,#ff3b30);border:none;color:#fff;font-size:12.5px;font-weight:800;letter-spacing:.3px;padding:11px 16px;border-radius:12px;cursor:pointer;box-shadow:0 6px 16px rgba(229,9,20,.35);}
+.p3-avatar-circle.plan-vip{box-shadow:0 0 0 3px rgba(200,208,220,.75),0 0 24px rgba(200,208,220,.35);}
+.p3-avatar-circle.plan-premium{box-shadow:0 0 0 3px rgba(245,214,123,.9),0 0 26px rgba(212,175,55,.55);}
+.p3-plan-crown{position:absolute;top:-22px;left:50%;transform:translateX(-50%) rotate(-8deg);font-size:27px;display:none;filter:drop-shadow(0 3px 6px rgba(0,0,0,.5));z-index:2;pointer-events:none;}
 /* Instrução central da conversa vazia (maior, 2 linhas, centro da tela) */
 .ca-first-hint { margin: auto 0; align-self: center; background: #fff; border-radius: 14px; padding: 14px 20px; max-width: 240px; text-align: center; font-size: 15.5px; line-height: 1.5; color: #3d4852; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.07); }
 #chat .screen-scroll { background: #fff; padding-bottom: 100px; }
@@ -8619,9 +8635,12 @@ body.is-slowconn .prod-cta-fixed {
 .tk-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#888;font-size:14px;padding:30px;text-align:center;}
 /* Paywall do feed: cobre só os vídeos (z-index 50 < 500 da barra) — a barra de
    baixo continua visível e clicável, o lead pode ir pra outras partes do app. */
-.tk-paywall{position:absolute;left:0;right:0;top:0;bottom:0;z-index:50;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(8,6,7,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.tk-paywall{position:absolute;left:0;right:0;top:0;bottom:0;z-index:50;display:none;align-items:flex-start;justify-content:center;padding:16px 16px calc(104px + env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;background:rgba(8,6,7,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
 .tk-paywall.open{display:flex;}
-.tk-paywall .mvpw-inline{background:#141013;border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:26px 22px 18px;max-width:340px;box-shadow:0 30px 80px rgba(0,0,0,.6);}
+/* margin:auto no card: centraliza quando cabe e rola quando é maior que a
+   área útil — o conteúdo nunca fica escondido atrás da barra inferior */
+.tk-paywall #tkPaywallCard{margin:auto;width:100%;max-width:340px;}
+.tk-paywall .mvpw-inline{background:#141013;border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:26px 22px 18px;box-shadow:0 30px 80px rgba(0,0,0,.6);}
 </style>
 <div class="screen" id="tiktok">
     <div class="tk-brand">Vídeos</div>
@@ -13914,62 +13933,64 @@ async function renderProfilePlan(force) {
     // Compartilha o tipo do plano com o resto do app (badge das Conversas etc.)
     window.MV_PLAN_KIND = ps.current;
     try { applyPlanBadge(ps.current !== 'free'); } catch (_) {}
-    const fmtDia = (v) => { try { return new Date(v).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); } catch (_) { return ''; } };
-    const preco = (v) => { const n = parseFloat(v); return isNaN(n) ? '' : 'R$ ' + n.toFixed(2).replace('.', ','); };
-    const buyBtn = (plan, label, gold) => (plan && plan.checkout_url)
-        ? '<button onclick="window.open(\'' + escapeAttrData(plan.checkout_url) + '\',\'_blank\',\'noopener\')" style="margin-top:9px;width:100%;border:none;cursor:pointer;font-weight:900;letter-spacing:.4px;font-size:13px;padding:12px;border-radius:11px;'
-          + (gold ? 'background:linear-gradient(90deg,#d4af37,#f5d67b);color:#241a05;' : 'background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);')
-          + '">' + label + '</button>'
-        : '';
-    const cardStyle = (borda, fundo) => 'border:1px solid ' + borda + ';background:' + fundo + ';border-radius:14px;padding:14px 16px;';
 
+    // Efeito no avatar: aro prata (VIP) / aro dourado + coroa (Premium)
+    try {
+        const av = document.getElementById('profileAvatarInner');
+        const crown = document.getElementById('p3PlanCrown');
+        if (av) {
+            av.classList.remove('plan-vip', 'plan-premium');
+            if (ps.current === 'vip') av.classList.add('plan-vip');
+            if (ps.current === 'premium') av.classList.add('plan-premium');
+        }
+        if (crown) crown.style.display = ps.current === 'premium' ? 'block' : 'none';
+    } catch (_) {}
+
+    const fmtDia = (v) => { try { return new Date(v).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); } catch (_) { return ''; } };
     if (ps.current === 'premium') {
-        const bonus = ps.group_bonus_until
-            ? '<div style="margin-top:8px;font-size:12px;font-weight:700;color:#f5d67b;">🎁 Bônus: grupo VIP até ' + fmtDia(ps.group_bonus_until) + '</div>' : '';
-        box.innerHTML = '<div style="' + cardStyle('rgba(212,175,55,.55)', 'linear-gradient(135deg,rgba(64,48,10,.55),rgba(26,19,4,.75))') + 'box-shadow:0 0 20px rgba(212,175,55,.14);">'
-            + '<div style="font-size:11px;font-weight:800;letter-spacing:.8px;color:rgba(255,255,255,.5);margin-bottom:4px;">SEU PLANO</div>'
-            + '<div style="font-weight:900;letter-spacing:.6px;color:#f5d67b;font-size:16px;">💎 PREMIUM</div>'
-            + '<div style="font-size:12.5px;color:rgba(255,255,255,.8);margin-top:3px;line-height:1.45;">Tudo liberado: conversas, fotos, status VIP e todos os vídeos.</div>'
-            + (ps.expires_at ? '<div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-top:6px;">Válido até <b style="color:rgba(255,255,255,.85);">' + fmtDia(ps.expires_at) + '</b></div>' : '')
-            + bonus
-            + '</div>';
+        box.innerHTML = '<div class="p3-planbox premium">'
+            + '<div class="p3-planbox-info">'
+            + '<div class="p3-planbox-label">SEU PLANO</div>'
+            + '<div class="p3-planbox-name gold">\ud83d\udc8e PREMIUM</div>'
+            + '<div class="p3-planbox-sub">Tudo liberado: conversas, fotos, status e v\u00eddeos'
+            + (ps.expires_at ? ' \u00b7 v\u00e1lido at\u00e9 ' + fmtDia(ps.expires_at) : '') + '</div>'
+            + (ps.group_bonus_until ? '<div class="p3-planbox-bonus">\ud83c\udf81 Grupo VIP de b\u00f4nus at\u00e9 ' + fmtDia(ps.group_bonus_until) + '</div>' : '')
+            + '</div></div>';
         return;
     }
-    if (ps.current === 'vip') {
-        const up = ps.premium_plan;
-        box.innerHTML = '<div style="' + cardStyle('rgba(200,205,215,.4)', 'linear-gradient(135deg,rgba(58,62,70,.5),rgba(22,24,28,.75))') + '">'
-            + '<div style="font-size:11px;font-weight:800;letter-spacing:.8px;color:rgba(255,255,255,.5);margin-bottom:4px;">SEU PLANO</div>'
-            + '<div style="font-weight:900;letter-spacing:.6px;color:#d7dbe2;font-size:16px;">⭐ VIP</div>'
-            + '<div style="font-size:12.5px;color:rgba(255,255,255,.78);margin-top:3px;line-height:1.45;">Conversas liberadas com todas as modelos.</div>'
-            + (ps.expires_at ? '<div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-top:6px;">Válido até <b style="color:rgba(255,255,255,.85);">' + fmtDia(ps.expires_at) + '</b></div>' : '')
-            + (up ? ('<div style="margin-top:11px;border-top:1px solid rgba(255,255,255,.1);padding-top:11px;">'
-                + '<div style="font-size:12px;font-weight:800;color:#f5d67b;">💎 Vire PREMIUM por ' + preco(up.price) + '</div>'
-                + '<div style="font-size:11.5px;color:rgba(255,255,255,.65);margin-top:3px;line-height:1.4;">' + escapeHtml(up.benefits || 'Status VIP + todos os vídeos + 7 dias de grupo VIP, além das conversas.') + '</div>'
-                + buyBtn(up, 'QUERO O PREMIUM 💎', true)
-                + '</div>') : '')
-            + '</div>';
-        return;
-    }
-    // free
-    const v = ps.vip_plan, p = ps.premium_plan;
-    if (!v && !p) { box.innerHTML = ''; return; }
-    box.innerHTML = '<div style="' + cardStyle('rgba(255,255,255,.12)', 'rgba(255,255,255,.04)') + '">'
-        + '<div style="font-size:11px;font-weight:800;letter-spacing:.8px;color:rgba(255,255,255,.5);margin-bottom:4px;">SEU PLANO</div>'
-        + '<div style="font-weight:900;font-size:15px;color:#fff;">Gratuito</div>'
-        + '<div style="font-size:12.5px;color:rgba(255,255,255,.65);margin-top:3px;">Desbloqueie as conversas e o conteúdo completo:</div>'
-        + (v ? ('<div style="margin-top:11px;border:1px solid rgba(200,205,215,.3);border-radius:11px;padding:10px 12px;">'
-            + '<div style="font-size:13px;font-weight:800;color:#d7dbe2;">⭐ ' + escapeHtml(v.name || 'VIP') + ' — ' + preco(v.price) + '</div>'
-            + '<div style="font-size:11.5px;color:rgba(255,255,255,.6);margin-top:2px;">' + escapeHtml(v.benefits || 'Conversas liberadas com todas as modelos.') + '</div>'
-            + buyBtn(v, 'QUERO O VIP ⭐', false)
-            + '</div>') : '')
-        + (p ? ('<div style="margin-top:9px;border:1px solid rgba(212,175,55,.5);border-radius:11px;padding:10px 12px;background:linear-gradient(135deg,rgba(64,48,10,.45),rgba(26,19,4,.6));">'
-            + '<div style="font-size:13px;font-weight:800;color:#f5d67b;">💎 ' + escapeHtml(p.name || 'PREMIUM') + ' — '
-            + (p.original_price ? '<span style="text-decoration:line-through;opacity:.5;font-weight:600;">' + preco(p.original_price) + '</span> ' : '')
-            + preco(p.price) + '</div>'
-            + '<div style="font-size:11.5px;color:rgba(255,255,255,.65);margin-top:2px;">' + escapeHtml(p.benefits || 'Tudo liberado: conversas + status + vídeos + 7 dias de grupo VIP.') + '</div>'
-            + buyBtn(p, 'QUERO TUDO 💎', true)
-            + '</div>') : '')
+    const hasUpgrade = !!(ps.premium_plan || (ps.current === 'free' && ps.vip_plan));
+    box.innerHTML = '<div class="p3-planbox' + (ps.current === 'vip' ? ' vip' : '') + '">'
+        + '<div class="p3-planbox-info">'
+        + '<div class="p3-planbox-label">SEU PLANO</div>'
+        + '<div class="p3-planbox-name' + (ps.current === 'vip' ? ' silver' : '') + '">' + (ps.current === 'vip' ? '\u2b50 VIP' : 'Gratuito') + '</div>'
+        + '<div class="p3-planbox-sub">'
+        + (ps.current === 'vip'
+            ? 'Conversas liberadas' + (ps.expires_at ? ' \u00b7 v\u00e1lido at\u00e9 ' + fmtDia(ps.expires_at) : '')
+            : 'Desbloqueie conversas, status e v\u00eddeos')
+        + '</div></div>'
+        + (hasUpgrade ? '<button class="p3-planbox-btn" onclick="openPlanUpgrade()">Fazer upgrade \u2728</button>' : '')
         + '</div>';
+}
+
+// Popup de upgrade (bot\u00e3o do Perfil): free escolhe VIP ou Premium; VIP v\u00ea
+// s\u00f3 o Premium. Usa o MESMO motor de popup do resto do sistema (MVPaywall).
+function openPlanUpgrade() {
+    const ps = _planStatusCache.data;
+    if (!ps || !window.MVPaywall) return;
+    const plans = [];
+    if (ps.current === 'free' && ps.vip_plan) plans.push(Object.assign({}, ps.vip_plan, { is_recommended: false }));
+    if (ps.premium_plan) plans.push(Object.assign({}, ps.premium_plan, { is_recommended: true, badge: ps.premium_plan.badge || 'MAIS COMPLETO' }));
+    if (!plans.length) return;
+    MVPaywall.openModal({ plans }, {
+        icon: 'crown',
+        eyebrow: 'UPGRADE',
+        title: ps.current === 'vip' ? 'Vire PREMIUM \ud83d\udc8e' : 'Desbloqueie tudo \ud83d\udd25',
+        subtitle: ps.current === 'vip'
+            ? 'Status VIP + todos os v\u00eddeos + 7 dias de grupo VIP \u2014 al\u00e9m das suas conversas.'
+            : 'Escolhe o seu plano e libera agora:',
+        ctaText: 'FAZER UPGRADE',
+        track: { type: 'profile_upgrade_click' },
+    });
 }
 
 function renderLibrary() {
@@ -20549,10 +20570,17 @@ window.Explore = (function () {
         if (!ov || ov.classList.contains('open') || !window.MVPaywall) return;
         pauseAll();
         const pw = (data && data.paywall) || {};
+        // POPUP PRÓPRIO DOS VÍDEOS: oferta avulsa (ex.: 19,90) + card Premium
+        // embaixo. Os PLANOS do produto NÃO entram aqui — quando o código do
+        // Premium foi ligado aos vídeos, o unlock resolvia pro produto do chat
+        // e este popup virava o paywall das conversas (feedback do dono:
+        // manter o popup dos vídeos, só ADICIONAR a opção Premium).
+        const unlock = Object.assign({}, data.unlock || {});
+        if (pw.offer_price != null && (unlock.checkout_url || unlock.product_id)) unlock.plans = [];
         // card INTERNO (o overlay é flex e centraliza; o banner vai num filho,
         // senão os itens viram linha horizontal).
         ov.innerHTML = '<div id="tkPaywallCard"></div>';
-        MVPaywall.renderInline(document.getElementById('tkPaywallCard'), data.unlock || {}, {
+        MVPaywall.renderInline(document.getElementById('tkPaywallCard'), unlock, {
             icon: 'lock',
             title: pw.title || 'Isso foi só a amostra 🔥',
             subtitle: pw.text || 'Acesso TOTAL a todos os vídeos, sem limite nenhum — com conteúdo novo entrando todo dia.',

@@ -515,6 +515,13 @@ let server;
         process.exit(1);
     }
 
+    // Regulariza compras Premium antigas (selo + extras) — idempotente, não
+    // bloqueia o boot (roda em paralelo ao listen).
+    try {
+        const { backfillPremiumAccesses } = require('./lib/sales-processor');
+        backfillPremiumAccesses().catch(() => {});
+    } catch (_) {}
+
     server = app.listen(PORT, () => {
         logger.info('============================================');
         logger.info(`Area de Membros 2.0 - Fase 0`);
