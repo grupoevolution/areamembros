@@ -651,8 +651,13 @@ async function loadUserPlans(email) {
             `SELECT id, name FROM products WHERE is_chat_plan = true AND is_active = true ORDER BY id LIMIT 1`
         );
         if (chatProd) {
+            // Premium detectado pela OFERTA (is_premium) OU pelo SELO gravado
+            // no acesso (metadata.premium) — o selo é o que segura quando o
+            // painel recria as ofertas e o vínculo ua.offer_id se perde.
             const { rows: [acc] } = await db.query(
-                `SELECT ua.expires_at, COALESCE(po.is_premium, false) AS is_premium
+                `SELECT ua.expires_at,
+                        (COALESCE(po.is_premium, false)
+                         OR COALESCE(ua.metadata->>'premium', '') = 'true') AS is_premium
                  FROM user_access ua LEFT JOIN product_offers po ON po.id = ua.offer_id
                  WHERE LOWER(ua.email) = $1 AND ua.product_id = $2 AND ua.status = 'active'
                    AND (ua.expires_at IS NULL OR ua.expires_at > NOW())
@@ -1979,10 +1984,9 @@ async function loadPremiumPlan() {
              WHERE pp.is_premium = true AND pp.active = true AND p.is_active = true
              ORDER BY pp.id LIMIT 1`
         );
-        if (!rows.length) return null;
-        const plan = rows[0];
+        const plan = rows.length ? rows[0] : null;
         // Sem link no plano → herda o da oferta Premium (product_offers.is_premium)
-        if (!plan.checkout_url) {
+        if (plan && !plan.checkout_url) {
             try {
                 const { rows: [off] } = await db.query(
                     `SELECT checkout_url FROM product_offers
@@ -1994,7 +1998,32 @@ async function loadPremiumPlan() {
                 if (off) plan.checkout_url = off.checkout_url;
             } catch (_) {}
         }
-        return plan.checkout_url ? plan : null;
+        if (plan && plan.checkout_url) return plan;
+        // FALLBACK: nenhum plano marcado no painel — monta a opção Premium
+        // direto da OFERTA marcada com * (nome/preço/link dela). Assim o dono
+        // só precisa do * pra tudo funcionar; o plano refinado é opcional.
+        try {
+            const { rows: [off2] } = await db.query(
+                `SELECT po.checkout_url, po.price, po.offer_name, po.product_id
+                 FROM product_offers po
+                 JOIN products p ON p.id = po.product_id
+                 WHERE COALESCE(po.is_premium, false) = true AND po.is_active = true
+                   AND po.checkout_url IS NOT NULL AND p.is_active = true
+                 ORDER BY po.id LIMIT 1`
+            );
+            if (off2) {
+                return {
+                    name: off2.offer_name || 'PREMIUM',
+                    price: off2.price,
+                    original_price: null,
+                    badge: null,
+                    benefits: null,
+                    checkout_url: off2.checkout_url,
+                    product_id: off2.product_id,
+                };
+            }
+        } catch (_) {}
+        return null;
     } catch (_) { return null; }
 }
 
@@ -2047,6 +2076,21 @@ router.get('/plan-status', requireUser, async (req, res) => {
             } catch (_) {}
             if (premiumPlan && !premiumPlan.checkout_url) premiumPlan = null;
             if (vipPlan && !vipPlan.checkout_url) vipPlan = null;
+            // FALLBACKS quando não há plano cadastrado/marcado: monta direto
+            // das ofertas do produto (Premium = oferta com *, VIP = sem *)
+            if (!premiumPlan) premiumPlan = await loadPremiumPlan();
+            if (!vipPlan) {
+                try {
+                    const { rows: [voff] } = await db.query(
+                        `SELECT checkout_url, price, offer_name FROM product_offers
+                         WHERE product_id = $1 AND is_active = true
+                           AND COALESCE(is_premium, false) = false AND checkout_url IS NOT NULL
+                         ORDER BY priority DESC, id LIMIT 1`,
+                        [chatProd.id]
+                    );
+                    if (voff) vipPlan = { name: voff.offer_name || 'VIP', price: voff.price, original_price: null, badge: null, benefits: null, checkout_url: voff.checkout_url, is_premium: false };
+                } catch (_) {}
+            }
         }
         return res.json({
             success: true,

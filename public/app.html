@@ -20270,8 +20270,14 @@ window.Explore = (function () {
 
     async function open() {
         if (loaded) {
-            // reabriu a aba: se já estourou o limite grátis, mostra o paywall de novo
-            if (data && !data.has_access && loadSeen().size >= (data.free_limit || 9999)) openPaywall();
+            // Reabriu a aba: grátis ESGOTADO reabre o paywall — vale tanto por
+            // limite (viu free_limit) quanto por acabar os vídeos disponíveis
+            // (quando há menos vídeos grátis que o limite). Sem isso o lead
+            // voltava pra aba e ficava numa tela travada sem botão de compra.
+            const s = data && !data.has_access ? loadSeen().size : 0;
+            const exhausted = data && !data.has_access
+                && (s >= (data.free_limit || 9999) || (data._freeCount > 0 && s >= data._freeCount));
+            if (exhausted) openPaywall();
             else playActive();
             return;
         }
@@ -20285,6 +20291,7 @@ window.Explore = (function () {
             // tudo, recomeça do zero (embaralhado de novo) pra o feed nunca acabar.
             loadSeen();
             const all = d.videos;
+            data._freeCount = all.length; // qtos vídeos o não-pagante tem de fato
             let list = shuffle(all.filter(v => !seen.has(v.id)));
             if (!list.length) {
                 if (d.has_access) {
@@ -20335,12 +20342,17 @@ window.Explore = (function () {
         // só rodava ao rolar pro próximo). Este slide-isca fecha o ciclo:
         // arrastou pra cima depois do grátis → paywall.
         if (data && !data.has_access && data.videos.length) {
-            feed.innerHTML += '<div class="tk-slide tk-slide-locked" data-index="' + data.videos.length + '" style="display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%,#2a0508,#0a0203);">'
+            feed.innerHTML += '<div class="tk-slide tk-slide-locked" data-index="' + data.videos.length + '" style="display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%,#2a0508,#0a0203);cursor:pointer;">'
                 + '<div style="text-align:center;padding:0 36px;">'
                 + '<div style="font-size:44px;margin-bottom:14px;">🔒</div>'
                 + '<div style="font-size:17px;font-weight:800;color:#fff;line-height:1.35;">Os mais quentes estão logo aqui…</div>'
                 + '<div style="font-size:13px;color:rgba(255,255,255,.65);margin-top:8px;">Libera o acesso pra continuar vendo</div>'
+                + '<button style="margin-top:16px;background:linear-gradient(90deg,#e50914,#ff3b30);border:none;color:#fff;font-size:14px;font-weight:900;letter-spacing:.4px;padding:14px 28px;border-radius:12px;cursor:pointer;box-shadow:0 6px 18px rgba(229,9,20,.4);">LIBERAR ACESSO 🔥</button>'
                 + '</div></div>';
+            // Qualquer toque no slide travado (re)abre o popup de compra —
+            // a tela NUNCA fica morta sem caminho pra comprar.
+            const bait = feed.querySelector('.tk-slide-locked');
+            if (bait) bait.addEventListener('click', () => { try { openPaywall(); } catch (_) {} });
         }
 
         const slides = [...feed.querySelectorAll('.tk-slide')];
