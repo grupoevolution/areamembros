@@ -680,6 +680,13 @@ async function loadUserPlans(email) {
                         [e]
                     );
                     if (gb) plan.group_bonus_until = gb.expires_at;
+                    // id do grupo VIP (fixado) — atalho clicável em Minhas Compras
+                    try {
+                        const { rows: [pg] } = await db.query(
+                            `SELECT id FROM groups WHERE pinned = true AND active = true ORDER BY id LIMIT 1`
+                        );
+                        if (pg) plan.vip_group_id = pg.id;
+                    } catch (_) {}
                 } else {
                     // VIP: anexa o plano Premium pro CTA de upgrade no card prata
                     plan.upgrade = await loadPremiumPlan();
@@ -2201,6 +2208,33 @@ function explorePwCopy(saved, fallback) {
     return EXPLORE_LEGACY[v] || v;
 }
 
+// Identidade do Explorar: e-mail logado ou visitante anônimo (mv_chat_visitor)
+function exploreIdentity(req) {
+    const email = String(req.user?.email || '').toLowerCase().trim();
+    if (email && !email.endsWith('@preview.local')) return email;
+    const raw = String(req.query?.visitor_id || req.body?.visitor_id || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
+    return raw ? 'v:' + raw : null;
+}
+
+// POST /explore/seen {ids:[...]} — marca vídeos assistidos NO SERVIDOR.
+// O contador do grátis deixa de ser só localStorage: trocar de celular ou
+// limpar o navegador não zera mais o limite (a trava segue a pessoa).
+router.post('/explore/seen', optionalUser, async (req, res) => {
+    try {
+        const ident = exploreIdentity(req);
+        if (!ident) return res.json({ success: true });
+        let ids = Array.isArray(req.body?.ids) ? req.body.ids : (req.body?.id != null ? [req.body.id] : []);
+        ids = ids.map(v => String(v).slice(0, 90)).filter(Boolean).slice(0, 300);
+        if (!ids.length) return res.json({ success: true });
+        await db.query(
+            `INSERT INTO explore_seen (identity, video_id)
+             SELECT $1, unnest($2::text[]) ON CONFLICT DO NOTHING`,
+            [ident, ids]
+        );
+        return res.json({ success: true });
+    } catch (_) { return res.json({ success: true }); }
+});
+
 router.get('/explore/feed', optionalUser, async (req, res) => {
     try {
         const cfgRow = await db.query(`SELECT value FROM gamification_config WHERE key = 'explore_config'`).catch(() => ({ rows: [] }));
@@ -2245,6 +2279,18 @@ router.get('/explore/feed', optionalUser, async (req, res) => {
         const totalCount = videos.length;
         if (!hasAccess) videos = videos.slice(0, freeLimit);
 
+        // O que esta PESSOA já assistiu (servidor — segue o e-mail/visitante)
+        let watchedIds = [];
+        try {
+            const ident = exploreIdentity(req);
+            if (ident) {
+                const { rows: seenRows } = await db.query(
+                    `SELECT video_id FROM explore_seen WHERE identity = $1 LIMIT 3000`, [ident]
+                );
+                watchedIds = seenRows.map(r => r.video_id);
+            }
+        } catch (_) {}
+
         return res.json({
             success: true,
             enabled: cfg.enabled === true,
@@ -2264,6 +2310,7 @@ router.get('/explore/feed', optionalUser, async (req, res) => {
             // junto do preço avulso (chat + status + vídeos num pagamento só)
             premium_plan: hasAccess ? null : await loadPremiumPlan(),
             total_count: totalCount,
+            watched_ids: watchedIds,
             videos,
         });
     } catch (err) {
@@ -2507,6 +2554,16 @@ router.post('/login/promote', async (req, res) => {
                     [String(result.email).toLowerCase(), vid]
                 );
             } catch (_) { /* tabela de chat pode não existir em banco antigo */ }
+            // Vídeos assistidos como anônimo passam pro e-mail (o contador do
+            // grátis segue a pessoa, não o aparelho)
+            try {
+                await db.query(
+                    `INSERT INTO explore_seen (identity, video_id)
+                     SELECT $1, video_id FROM explore_seen WHERE identity = $2
+                     ON CONFLICT DO NOTHING`,
+                    [String(result.email).toLowerCase(), 'v:' + vid]
+                );
+            } catch (_) {}
         }
         // Login OK — registra origem do funíl
         if (funnel_slug) {

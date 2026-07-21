@@ -161,10 +161,15 @@ router.put('/paywall-product', requireAdmin, async (req, res) => {
             const price = money(input.price);
             const orig = money(input.original_price);
             const url = (input.checkout_url || '').trim().slice(0, 1000) || null;
+            // O slot "PREMIUM" deste card É a fonte da verdade do plano Premium:
+            // o código colocado nele libera automaticamente status + vídeos +
+            // grupo VIP (7 dias) na venda. O dono controla tudo por aqui.
+            const isPremium = /premium/i.test(String(planName || ''));
             await db.query(
-                `UPDATE product_plans SET price = COALESCE($2, price), original_price = $3, checkout_url = $4
+                `UPDATE product_plans SET price = COALESCE($2, price), original_price = $3, checkout_url = $4,
+                        is_premium = $6
                  WHERE id = $1 AND product_id = $5`,
-                [planId, price, orig, url, productId]
+                [planId, price, orig, url, productId, isPremium]
             );
             const code = (input.offer_code || '').trim().slice(0, 100);
             // desativa ofertas ANTIGAS deste produto/plano que não são mais o código atual
@@ -175,13 +180,13 @@ router.put('/paywall-product', requireAdmin, async (req, res) => {
             );
             if (code) {
                 await db.query(
-                    `INSERT INTO product_offers (product_id, gateway, offer_id, offer_name, checkout_url, price, is_active)
-                     VALUES ($1, $2, $3, $4, $5, $6, true)
+                    `INSERT INTO product_offers (product_id, gateway, offer_id, offer_name, checkout_url, price, is_active, is_premium)
+                     VALUES ($1, $2, $3, $4, $5, $6, true, $7)
                      ON CONFLICT (gateway, offer_id) DO UPDATE SET
                         product_id = EXCLUDED.product_id, offer_name = EXCLUDED.offer_name,
                         checkout_url = EXCLUDED.checkout_url, price = EXCLUDED.price,
-                        is_active = true, updated_at = NOW()`,
-                    [productId, gateway, code, planName, url, price]
+                        is_active = true, is_premium = EXCLUDED.is_premium, updated_at = NOW()`,
+                    [productId, gateway, code, planName, url, price, isPremium]
                 );
             }
         }

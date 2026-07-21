@@ -13857,49 +13857,71 @@ function renderProductCard(product) {
 function renderPlanCard(plan) {
     const fmtDia = (v) => { try { return new Date(v).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); } catch (_) { return ''; } };
     const validade = plan.expires_at
-        ? '<div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-top:6px;">Válido até <b style="color:rgba(255,255,255,.85);">' + fmtDia(plan.expires_at) + '</b> — renova a cada pagamento</div>'
-        : '<div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-top:6px;">Sem vencimento</div>';
+        ? '<div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-top:5px;">Válido até <b style="color:rgba(255,255,255,.85);">' + fmtDia(plan.expires_at) + '</b> — renova a cada pagamento</div>'
+        : '';
+    // Atalho clicável: cada acesso do plano vira uma linha que LEVA pro lugar
+    // (Conversas/Status/Vídeos/Grupo VIP) — pedido do dono: "subdividir os
+    // produtos que ele tem acesso e clicar já abre".
+    const atalho = (emoji, label, sub, onclick) =>
+        '<div onclick="' + onclick + '" style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:10px 12px;margin-top:8px;cursor:pointer;">'
+        + '<div style="font-size:19px;line-height:1;">' + emoji + '</div>'
+        + '<div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:800;color:#fff;">' + label + '</div>'
+        + (sub ? '<div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:1px;">' + sub + '</div>' : '')
+        + '</div><div style="color:rgba(255,255,255,.4);font-size:17px;">›</div></div>';
+
     if (plan.kind === 'premium') {
-        const bonus = plan.group_bonus_until
-            ? '<div style="margin-top:8px;font-size:12px;font-weight:700;color:#f5d67b;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.35);border-radius:8px;padding:7px 10px;">🎁 Bônus: grupo VIP liberado até ' + fmtDia(plan.group_bonus_until) + '</div>'
-            : '';
+        const shortcuts = [
+            atalho('💬', 'Conversas', 'Todas as modelos liberadas', "switchScreen('chat')"),
+            atalho('👀', 'Status VIP', 'Stories secretos desbloqueados', "switchScreen('chat')"),
+            atalho('🎬', 'Vídeos', 'Feed completo, sem limite', 'openExploreTab()'),
+        ];
+        let n = 3;
+        if (plan.vip_group_id && plan.group_bonus_until) {
+            n = 4;
+            shortcuts.push(atalho('👑', 'Grupo VIP', '🎁 Bônus até ' + fmtDia(plan.group_bonus_until), 'GroupApp.open(' + parseInt(plan.vip_group_id, 10) + ')'));
+        }
         return '<div class="acervo-card" style="border:1px solid rgba(212,175,55,.55);background:linear-gradient(135deg,rgba(64,48,10,.55),rgba(26,19,4,.75));border-radius:14px;padding:14px 16px;box-shadow:0 0 20px rgba(212,175,55,.14);">'
-            + '<div style="display:flex;align-items:flex-start;gap:11px;">'
-            + '<div style="font-size:26px;line-height:1;">💎</div>'
+            + '<div style="display:flex;align-items:center;gap:10px;">'
+            + '<div style="font-size:24px;line-height:1;">💎</div>'
             + '<div style="flex:1;min-width:0;">'
             + '<div style="font-weight:900;letter-spacing:.6px;color:#f5d67b;font-size:15px;">PREMIUM ATIVO</div>'
-            + '<div style="font-size:12.5px;color:rgba(255,255,255,.8);margin-top:3px;line-height:1.45;">Você tem TUDO liberado: conversas ilimitadas com todas as modelos, envio de fotos, status VIP e todos os vídeos.</div>'
-            + validade + bonus
-            + '</div></div></div>';
+            + '<div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:2px;">' + n + ' acessos liberados — toque pra abrir:</div>'
+            + validade
+            + '</div></div>'
+            + shortcuts.join('')
+            + '</div>';
     }
     if (plan.kind === 'vip') {
         const up = plan.upgrade;
-        const preco = (v) => { const n = parseFloat(v); return isNaN(n) ? '' : 'R$ ' + n.toFixed(2).replace('.', ','); };
+        const preco = (v) => { const nn = parseFloat(v); return isNaN(nn) ? '' : 'R$ ' + nn.toFixed(2).replace('.', ','); };
         const upgradeBox = (up && up.checkout_url)
             ? '<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.1);padding-top:10px;">'
-              + '<div style="font-size:12px;font-weight:800;color:#f5d67b;">💎 Vire PREMIUM por ' + preco(up.price) + ' — status + vídeos inclusos</div>'
+              + '<div style="font-size:12px;font-weight:800;color:#f5d67b;">💎 Vire PREMIUM por ' + preco(up.price) + ' — status + vídeos + grupo VIP inclusos</div>'
               + '<button onclick="window.open(\'' + escapeAttrData(up.checkout_url) + '\',\'_blank\',\'noopener\')" style="margin-top:8px;width:100%;background:linear-gradient(90deg,#d4af37,#f5d67b);border:none;color:#241a05;font-size:12.5px;font-weight:900;letter-spacing:.4px;padding:11px;border-radius:10px;cursor:pointer;">FAZER UPGRADE 💎</button>'
               + '</div>'
             : '';
         return '<div class="acervo-card" style="border:1px solid rgba(200,205,215,.4);background:linear-gradient(135deg,rgba(58,62,70,.5),rgba(22,24,28,.75));border-radius:14px;padding:14px 16px;">'
-            + '<div style="display:flex;align-items:flex-start;gap:11px;">'
-            + '<div style="font-size:24px;line-height:1;">⭐</div>'
+            + '<div style="display:flex;align-items:center;gap:10px;">'
+            + '<div style="font-size:22px;line-height:1;">⭐</div>'
             + '<div style="flex:1;min-width:0;">'
             + '<div style="font-weight:900;letter-spacing:.6px;color:#d7dbe2;font-size:15px;">VIP ATIVO</div>'
-            + '<div style="font-size:12.5px;color:rgba(255,255,255,.78);margin-top:3px;line-height:1.45;">Conversas liberadas com todas as modelos — responda e mande foto à vontade.</div>'
+            + '<div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:2px;">1 acesso liberado — toque pra abrir:</div>'
             + validade
+            + '</div></div>'
+            + atalho('💬', 'Conversas', 'Todas as modelos liberadas', "switchScreen('chat')")
             + upgradeBox
-            + '</div></div></div>';
+            + '</div>';
     }
     // status avulso
     return '<div class="acervo-card" style="border:1px solid rgba(185,107,255,.35);background:linear-gradient(135deg,rgba(60,30,90,.4),rgba(22,14,30,.7));border-radius:14px;padding:12px 16px;">'
-        + '<div style="display:flex;align-items:flex-start;gap:11px;">'
-        + '<div style="font-size:22px;line-height:1;">👀</div>'
+        + '<div style="display:flex;align-items:center;gap:10px;">'
+        + '<div style="font-size:20px;line-height:1;">👀</div>'
         + '<div style="flex:1;min-width:0;">'
         + '<div style="font-weight:900;letter-spacing:.5px;color:#c9a2ff;font-size:14px;">STATUS VIP ATIVO</div>'
-        + '<div style="font-size:12.5px;color:rgba(255,255,255,.78);margin-top:3px;line-height:1.45;">Você vê e responde os status secretos das modelos.</div>'
         + validade
-        + '</div></div></div>';
+        + '</div></div>'
+        + atalho('👀', 'Ver os status', 'Stories secretos das modelos', "switchScreen('chat')")
+        + '</div>';
 }
 
 // ── "Seu plano" no Perfil ────────────────────────────────────────────────────
@@ -20282,9 +20304,18 @@ window.Explore = (function () {
     // Memória de "já visto" por lead (no aparelho). Não repete vídeo e conta o
     // total assistido na vida pra decidir o paywall (X grátis → paga).
     let seen = null;
-    function loadSeen() { if (seen) return seen; try { seen = new Set(JSON.parse(localStorage.getItem('mv_explore_seen') || '[]')); } catch (_) { seen = new Set(); } return seen; }
+    function loadSeen() { if (seen) return seen; try { seen = new Set((JSON.parse(localStorage.getItem('mv_explore_seen') || '[]')).map(String)); } catch (_) { seen = new Set(); } return seen; }
     function saveSeen() { try { localStorage.setItem('mv_explore_seen', JSON.stringify([...seen].slice(-3000))); } catch (_) {} }
-    function markSeen(id) { if (id == null) return; loadSeen(); if (!seen.has(id)) { seen.add(id); saveSeen(); } }
+    // O contador do grátis vive no SERVIDOR (por e-mail/visitante): trocar de
+    // celular não zera mais o limite. O localStorage vira cache/espelho.
+    function pushSeen(ids) {
+        try {
+            const body = JSON.stringify({ ids, visitor_id: window.VID || null });
+            if (navigator.sendBeacon) navigator.sendBeacon('/api/user/explore/seen', new Blob([body], { type: 'application/json' }));
+            else fetch('/api/user/explore/seen', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+        } catch (_) {}
+    }
+    function markSeen(id) { if (id == null) return; id = String(id); loadSeen(); if (!seen.has(id)) { seen.add(id); saveSeen(); pushSeen([id]); } }
     function shuffle(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
     function esc(s) { try { return escapeHtmlData(s == null ? '' : String(s)); } catch (_) { return ''; } }
     function fmt(n) { n = n || 0; return n >= 1000 ? (n / 1000).toFixed(1).replace('.0', '') + 'k' : String(n); }
@@ -20304,16 +20335,25 @@ window.Explore = (function () {
         }
         loaded = true;
         try {
-            const r = await fetch('/api/user/explore/feed', { credentials: 'include' });
+            const r = await fetch('/api/user/explore/feed?visitor_id=' + encodeURIComponent(window.VID || ''), { credentials: 'include' });
             const d = await r.json();
             if (!d || !d.success || !Array.isArray(d.videos) || !d.videos.length) { showEmpty(); return; }
             data = d;
             // Ordem ALEATÓRIA por lead + sem repetir o que ele já viu. Se já viu
             // tudo, recomeça do zero (embaralhado de novo) pra o feed nunca acabar.
             loadSeen();
+            // Funde o histórico do SERVIDOR com o local (e sobe o que só o
+            // aparelho conhecia — migra os contadores antigos sem perder nada)
+            try {
+                const server = new Set((d.watched_ids || []).map(String));
+                const onlyLocal = [...seen].filter(id => !server.has(id));
+                server.forEach(id => seen.add(id));
+                saveSeen();
+                if (onlyLocal.length) pushSeen(onlyLocal.slice(0, 300));
+            } catch (_) {}
             const all = d.videos;
             data._freeCount = all.length; // qtos vídeos o não-pagante tem de fato
-            let list = shuffle(all.filter(v => !seen.has(v.id)));
+            let list = shuffle(all.filter(v => !seen.has(String(v.id))));
             if (!list.length) {
                 if (d.has_access) {
                     // VIP viu tudo: recomeça embaralhado (feed nunca acaba)
@@ -20335,48 +20375,101 @@ window.Explore = (function () {
         const e = document.getElementById('tkEmpty'); if (e) e.style.display = 'flex';
     }
 
+    // Renderização em BLOCOS: montar centenas de <video> de uma vez travava
+    // celular fraco (feedback do dono — freeze na aba Vídeos). Renderiza 24
+    // por vez e anexa mais quando o lead se aproxima do fim do que já existe.
+    const RENDER_CHUNK = 24;
+    let renderedCount = 0;
+
+    function slideHTML(v, i) {
+        const poster = v.poster ? ' poster="' + esc(v.poster) + '"' : '';
+        const hls = v.hls_url ? ' data-hls="' + esc(v.hls_url) + '"' : '';
+        const src = v.src ? ' data-src="' + esc(v.src) + '"' : '';
+        const audiogate = i === 0
+            ? '<div class="tk-audiogate" data-audiogate><div class="ring">' + SOUND + '</div><p>Toque para ativar o som</p></div>'
+              + '<div class="tk-swipeup"><div class="tk-swipeup-ico"><span></span><span></span><span></span></div><div class="tk-swipeup-tx">arraste pra cima pra ver mais</div></div>'
+            : '';
+        return '<div class="tk-slide" data-index="' + i + '">'
+            + '<video loop playsinline preload="' + (i === 0 ? 'auto' : 'none') + '" muted' + poster + hls + src + '></video>'
+            + '<div class="tk-meta"><div class="nm">' + esc(v.creator_name) + '</div><div class="cap">' + esc(v.caption) + '</div></div>'
+            + '<div class="tk-rail">'
+            + '<div class="tk-act like"><div class="b">' + HEART + '</div><span class="c">' + fmt(v.likes) + '</span></div>'
+            + '<div class="tk-act share"><div class="b">' + SHARE + '</div><span class="c">Enviar</span></div>'
+            + '<div class="tk-act sound"><div class="b">' + (audioUnlocked ? SOUND : SOUND_OFF) + '</div><span class="c">' + (audioUnlocked ? 'Som' : 'Mudo') + '</span></div>'
+            + '</div>'
+            + '<div class="tk-prog"><i></i></div>'
+            + audiogate
+            + '</div>';
+    }
+
+    function wireSlide(s, idx) {
+        const v = s.querySelector('video');
+        const fill = s.querySelector('.tk-prog i');
+        if (v && fill) v.addEventListener('timeupdate', () => { if (v.duration) fill.style.width = (v.currentTime / v.duration * 100) + '%'; });
+        const like = s.querySelector('.tk-act.like');
+        if (like) {
+            const toggle = () => {
+                like.classList.toggle('liked');
+                const c = like.querySelector('.c');
+                const base = data.videos[idx].likes || 0;
+                c.textContent = fmt(base + (like.classList.contains('liked') ? 1 : 0));
+            };
+            like.addEventListener('click', toggle);
+            s.addEventListener('dblclick', () => { if (!like.classList.contains('liked')) toggle(); });
+        }
+        const share = s.querySelector('.tk-act.share');
+        if (share) share.addEventListener('click', doShare);
+        const snd = s.querySelector('.tk-act.sound');
+        if (snd) snd.addEventListener('click', toggleSound);
+        const ag = s.querySelector('[data-audiogate]');
+        if (ag) ag.addEventListener('click', () => {
+            audioUnlocked = true; ag.classList.add('hidden');
+            const v2 = s.querySelector('video'); if (v2) { v2.muted = false; v2.play().catch(() => {}); }
+            updateSoundIcons();
+            // Lead anônimo: deixa ele curtir o vídeo com som por uns segundos e
+            // então pede o e-mail (gancho antes do popup).
+            if (window.MV_ANONYMOUS === true) {
+                setTimeout(() => {
+                    if (window.MV_ANONYMOUS === true && typeof window.MV_openLoginModal === 'function') window.MV_openLoginModal();
+                }, 3500);
+            }
+        });
+    }
+
+    // Fim do grátis: slide NEUTRO (só fundo escuro — sem texto/botão, pedido
+    // do dono). Ao chegar nele o popup abre por cima na hora (onActive); o
+    // toque também abre, por garantia.
+    function appendBait(feed) {
+        feed.insertAdjacentHTML('beforeend',
+            '<div class="tk-slide tk-slide-locked" data-index="' + data.videos.length + '" style="background:radial-gradient(circle at 50% 40%,#1c0406,#070203);cursor:pointer;"></div>');
+        const bait = feed.querySelector('.tk-slide-locked');
+        if (bait) {
+            io.observe(bait);
+            bait.addEventListener('click', () => { try { openPaywall(); } catch (_) {} });
+        }
+    }
+
+    function appendChunk() {
+        const feed = feedEl(); if (!feed || !data) return;
+        const end = Math.min(data.videos.length, renderedCount + RENDER_CHUNK);
+        if (end > renderedCount) {
+            let html = '';
+            for (let i = renderedCount; i < end; i++) html += slideHTML(data.videos[i], i);
+            feed.insertAdjacentHTML('beforeend', html);
+            const slides = feed.querySelectorAll('.tk-slide');
+            for (let i = renderedCount; i < end; i++) {
+                const s = slides[i];
+                if (s) { io.observe(s); wireSlide(s, i); }
+            }
+            renderedCount = end;
+        }
+        if (data && !data.has_access && data.videos.length && renderedCount >= data.videos.length && !feed.querySelector('.tk-slide-locked')) appendBait(feed);
+    }
+
     function build() {
         const feed = feedEl(); if (!feed) return;
-        feed.innerHTML = data.videos.map((v, i) => {
-            const poster = v.poster ? ' poster="' + esc(v.poster) + '"' : '';
-            const hls = v.hls_url ? ' data-hls="' + esc(v.hls_url) + '"' : '';
-            const src = v.src ? ' data-src="' + esc(v.src) + '"' : '';
-            const audiogate = i === 0
-                ? '<div class="tk-audiogate" data-audiogate><div class="ring">' + SOUND + '</div><p>Toque para ativar o som</p></div>'
-                  + '<div class="tk-swipeup"><div class="tk-swipeup-ico"><span></span><span></span><span></span></div><div class="tk-swipeup-tx">arraste pra cima pra ver mais</div></div>'
-                : '';
-            return '<div class="tk-slide" data-index="' + i + '">'
-                + '<video loop playsinline preload="' + (i === 0 ? 'auto' : 'none') + '" muted' + poster + hls + src + '></video>'
-                + '<div class="tk-meta"><div class="nm">' + esc(v.creator_name) + '</div><div class="cap">' + esc(v.caption) + '</div></div>'
-                + '<div class="tk-rail">'
-                + '<div class="tk-act like"><div class="b">' + HEART + '</div><span class="c">' + fmt(v.likes) + '</span></div>'
-                + '<div class="tk-act share"><div class="b">' + SHARE + '</div><span class="c">Enviar</span></div>'
-                + '<div class="tk-act sound"><div class="b">' + (audioUnlocked ? SOUND : SOUND_OFF) + '</div><span class="c">' + (audioUnlocked ? 'Som' : 'Mudo') + '</span></div>'
-                + '</div>'
-                + '<div class="tk-prog"><i></i></div>'
-                + audiogate
-                + '</div>';
-        }).join('');
-
-        // SEM acesso: o servidor só manda os vídeos grátis — sem um slide a
-        // mais, o lead assistia o último e ficava parado SEM paywall (o gate
-        // só rodava ao rolar pro próximo). Este slide-isca fecha o ciclo:
-        // arrastou pra cima depois do grátis → paywall.
-        if (data && !data.has_access && data.videos.length) {
-            feed.innerHTML += '<div class="tk-slide tk-slide-locked" data-index="' + data.videos.length + '" style="display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%,#2a0508,#0a0203);cursor:pointer;">'
-                + '<div style="text-align:center;padding:0 36px;">'
-                + '<div style="font-size:44px;margin-bottom:14px;">🔒</div>'
-                + '<div style="font-size:17px;font-weight:800;color:#fff;line-height:1.35;">Os mais quentes estão logo aqui…</div>'
-                + '<div style="font-size:13px;color:rgba(255,255,255,.65);margin-top:8px;">Libera o acesso pra continuar vendo</div>'
-                + '<button style="margin-top:16px;background:linear-gradient(90deg,#e50914,#ff3b30);border:none;color:#fff;font-size:14px;font-weight:900;letter-spacing:.4px;padding:14px 28px;border-radius:12px;cursor:pointer;box-shadow:0 6px 18px rgba(229,9,20,.4);">LIBERAR ACESSO 🔥</button>'
-                + '</div></div>';
-            // Qualquer toque no slide travado (re)abre o popup de compra —
-            // a tela NUNCA fica morta sem caminho pra comprar.
-            const bait = feed.querySelector('.tk-slide-locked');
-            if (bait) bait.addEventListener('click', () => { try { openPaywall(); } catch (_) {} });
-        }
-
-        const slides = [...feed.querySelectorAll('.tk-slide')];
+        feed.innerHTML = '';
+        renderedCount = 0;
         // play/pause + gates conforme o slide entra na tela
         if (io) { try { io.disconnect(); } catch (_) {} }
         io = new IntersectionObserver((entries) => {
@@ -20386,43 +20479,7 @@ window.Explore = (function () {
                 else { const v = en.target.querySelector('video'); if (v) v.pause(); }
             });
         }, { root: feed, threshold: 0.6 });
-        slides.forEach(s => io.observe(s));
-
-        // progresso + curtir + compartilhar
-        slides.forEach((s, idx) => {
-            const v = s.querySelector('video');
-            const fill = s.querySelector('.tk-prog i');
-            if (v && fill) v.addEventListener('timeupdate', () => { if (v.duration) fill.style.width = (v.currentTime / v.duration * 100) + '%'; });
-            const like = s.querySelector('.tk-act.like');
-            if (like) {
-                const toggle = () => {
-                    like.classList.toggle('liked');
-                    const c = like.querySelector('.c');
-                    const base = data.videos[idx].likes || 0;
-                    c.textContent = fmt(base + (like.classList.contains('liked') ? 1 : 0));
-                };
-                like.addEventListener('click', toggle);
-                s.addEventListener('dblclick', () => { if (!like.classList.contains('liked')) toggle(); });
-            }
-            const share = s.querySelector('.tk-act.share');
-            if (share) share.addEventListener('click', doShare);
-            const snd = s.querySelector('.tk-act.sound');
-            if (snd) snd.addEventListener('click', toggleSound);
-            const ag = s.querySelector('[data-audiogate]');
-            if (ag) ag.addEventListener('click', () => {
-                audioUnlocked = true; ag.classList.add('hidden');
-                const v2 = s.querySelector('video'); if (v2) { v2.muted = false; v2.play().catch(() => {}); }
-                updateSoundIcons();
-                // Lead anônimo: deixa ele curtir o vídeo com som por uns segundos e
-                // então pede o e-mail (gancho antes do popup).
-                if (window.MV_ANONYMOUS === true) {
-                    setTimeout(() => {
-                        if (window.MV_ANONYMOUS === true && typeof window.MV_openLoginModal === 'function') window.MV_openLoginModal();
-                    }, 3500);
-                }
-            });
-        });
-
+        appendChunk();
         // primeiro slide
         onActive(0);
     }
@@ -20431,6 +20488,8 @@ window.Explore = (function () {
 
     function onActive(i) {
         if (!data) return;
+        // chegou perto do fim do que está montado → anexa o próximo bloco
+        if (i >= renderedCount - 3) { try { appendChunk(); } catch (_) {} }
         const slides = feedEl().querySelectorAll('.tk-slide');
         // Lead ANÔNIMO (modo funil): só o 1º vídeo roda no fundo. Tentar rolar pro
         // próximo trava e abre o popup de e-mail (capta o lead antes de liberar).
@@ -20537,7 +20596,7 @@ window.Explore = (function () {
                     if (df && df.success && Array.isArray(df.videos) && df.videos.length) {
                         data = df;
                         loadSeen();
-                        let list = shuffle(df.videos.filter(v => !seen.has(v.id)));
+                        let list = shuffle(df.videos.filter(v => !seen.has(String(v.id))));
                         if (!list.length) list = shuffle(df.videos);
                         data.videos = list;
                         build();
@@ -20611,7 +20670,11 @@ window.Explore = (function () {
                 try { if (typeof TRACK !== 'undefined') TRACK.event('explore_premium_click', {}); } catch (_) {}
                 window.open(prem.checkout_url, '_blank', 'noopener,noreferrer');
             });
-            if (card) card.appendChild(box);
+            // Ordem pedida pelo dono: oferta dos vídeos → card PREMIUM → e só
+            // depois "pagamento seguro", prova social e o "agora não".
+            const foot = card ? card.querySelector('.mvpw-foot') : null;
+            if (foot && foot.parentNode) foot.parentNode.insertBefore(box, foot);
+            else if (card) card.appendChild(box);
         }
         ov.classList.add('open');
         // fica de olho: pagou → destrava sozinho
