@@ -3899,11 +3899,16 @@ a { color: inherit; text-decoration: none; }
                     <div style="background:rgba(76,217,100,.07); border:1px solid rgba(76,217,100,.3); border-radius:10px; padding:12px;">
                         <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:6px;">🟢 Coleção das lives LIBERADAS</div>
                         <input class="form-control" id="lvFreeCol" maxlength="80" placeholder="Collection ID da pasta liberada" style="width:100%;"/>
-                        <div style="margin-top:10px;"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Tempo grátis por dia (segundos)</label><input class="form-control" type="number" id="lvFreeSec" min="0" value="180" style="width:160px;"/><div class="form-help" style="margin-top:3px;">Quanto o lead grátis assiste por dia antes do popup. 180 = 3 minutos.</div></div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px;">
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Quantas no ar ao mesmo tempo</label><input class="form-control" type="number" id="lvFreeOnAir" min="0" max="30" value="5" style="width:100%;"/></div>
+                            <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Tempo grátis por dia (seg)</label><input class="form-control" type="number" id="lvFreeSec" min="0" value="180" style="width:100%;"/></div>
+                        </div>
+                        <div class="form-help" style="margin-top:6px;">Ex.: 5 = cinco modelos transmitindo juntas (o lead desliza entre elas). A cada janela, o sistema troca por outras da pasta. Tempo grátis: 180 = 3 min por dia antes do popup.</div>
                     </div>
                     <div style="background:rgba(229,9,20,.07); border:1px solid rgba(229,9,20,.3); border-radius:10px; padding:12px;">
                         <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:6px;">🔞 Coleção das lives +18 (travadas)</div>
                         <input class="form-control" id="lvVipCol" maxlength="80" placeholder="Collection ID da pasta +18" style="width:100%;"/>
+                        <div style="margin-top:10px;"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Quantas +18 no ar ao mesmo tempo</label><input class="form-control" type="number" id="lvVipOnAir" min="0" max="30" value="4" style="width:160px;"/></div>
                         <div class="form-help" style="margin-top:6px;">Essas aparecem embaçadas com o banner "VER SEM CENSURA" pra quem não é membro.</div>
                     </div>
                     <div><button class="btn-primary" onclick="saveLivesSettings()">Salvar Lives</button></div>
@@ -14747,6 +14752,8 @@ async function loadExplore() {
             setLv('lvWindow', lv.window_hours != null ? lv.window_hours : 3);
             setLv('lvFreeCol', lv.free_collection || '');
             setLv('lvVipCol', lv.vip_collection || '');
+            setLv('lvFreeOnAir', lv.free_on_air != null ? lv.free_on_air : 5);
+            setLv('lvVipOnAir', lv.vip_on_air != null ? lv.vip_on_air : 4);
             setLv('lvFreeSec', lv.free_seconds != null ? lv.free_seconds : 180);
         }
     } catch(_) {}
@@ -14760,6 +14767,8 @@ async function saveLivesSettings() {
         window_hours: parseInt(document.getElementById('lvWindow').value, 10) || 3,
         free_collection: document.getElementById('lvFreeCol').value.trim() || null,
         vip_collection: document.getElementById('lvVipCol').value.trim() || null,
+        free_on_air: parseInt(document.getElementById('lvFreeOnAir').value, 10) || 0,
+        vip_on_air: parseInt(document.getElementById('lvVipOnAir').value, 10) || 0,
         free_seconds: parseInt(document.getElementById('lvFreeSec').value, 10) || 0,
     }};
     try {

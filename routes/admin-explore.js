@@ -67,7 +67,7 @@ async function writeConfig(key, value, who) {
 
 const DEFAULT_LIVES = {
     enabled: false, lib_id: null, free_collection: null, vip_collection: null,
-    window_hours: 3, free_seconds: 180, creator_names: null,
+    window_hours: 3, free_on_air: 5, vip_on_air: 4, free_seconds: 180, creator_names: null,
 };
 
 // GET /settings — devolve as configs (Explorar + gate de PWA + Lives)
@@ -133,6 +133,8 @@ router.put('/settings', requireAdmin, async (req, res) => {
                 free_collection: sanitizeBunnyGuid(l.free_collection),
                 vip_collection: sanitizeBunnyGuid(l.vip_collection),
                 window_hours: Math.max(1, Math.min(24, parseInt(l.window_hours, 10) || 3)),
+                free_on_air: Math.max(0, Math.min(30, parseInt(l.free_on_air, 10) || 0)),
+                vip_on_air: Math.max(0, Math.min(30, parseInt(l.vip_on_air, 10) || 0)),
                 free_seconds: Math.max(0, Math.min(86400, parseInt(l.free_seconds, 10) || 0)),
             };
             await writeConfig('lives_config', next, req.admin?.username);

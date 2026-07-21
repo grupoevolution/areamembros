@@ -20889,6 +20889,7 @@ window.Lives = (function () {
         chat: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>',
         heartFill: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21.2l7.8-7.7 1-1.1a5.5 5.5 0 000-7.8z"/></svg>',
         diamond: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#241a05" stroke-width="2.4"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/><path d="M2 9h20M12 3l-3 6 3 12 3-12-3-6"/></svg>',
+        chevup: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>',
     };
     const VID = (window.VID || null);
     const GOLD_NAMES = ['Bruno', 'Thiago', 'Marcos', 'Rafael', 'Diego', 'Lucas', 'Felipe', 'André', 'Gustavo', 'Renan', 'Caio', 'Eduardo', 'Vitor', 'Matheus'];
@@ -20972,7 +20973,8 @@ window.Lives = (function () {
                 + '<div class="lv-locksub">' + (tempo ? 'Só membros veem. Libera e entra antes que acabe.' : 'Você viu só o começo. Libera agora e volta pra dentro.') + '</div>'
                 + '<button class="lv-lockcta" onclick="Lives.unlock()">' + ICO.eye + ' ' + (tempo ? 'VER SEM CENSURA' : 'CONTINUAR ASSISTINDO') + '</button>'
                 + '</div></div>';
-            if (cur.next_name) html += '<div class="lv-next">' + ICO.clock + ' Próxima live · <span class="lv-cap-av" style="width:20px;height:20px;"><div>' + esc((cur.next_name || '?').charAt(0)) + '</div></span> <b>' + esc(cur.next_name) + '</b></div>';
+            // com várias lives no ar: dica de arrastar pra ver as outras
+            if (data && data.lives.length > 1) html += '<div class="lv-next">' + ICO.chevup + ' arraste pra ver as outras lives</div>';
         } else {
             html += '<div class="lv-goldtoasts" id="lvGold"></div>'
                 + '<div class="lv-hearts" id="lvHearts"></div>'

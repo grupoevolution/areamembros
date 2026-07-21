@@ -38,7 +38,9 @@ const DEFAULT_LIVES = {
     lib_id: null,            // Library ID do Bunny (mesma das duas coleções)
     free_collection: null,   // coleção das lives LIBERADAS
     vip_collection: null,    // coleção das lives +18 TRAVADAS
-    window_hours: 3,         // de quanto em quanto tempo a grade "vira"
+    window_hours: 3,         // de quanto em quanto tempo a "escalação" vira
+    free_on_air: 5,          // quantas lives LIBERADAS ficam no ar ao mesmo tempo
+    vip_on_air: 4,           // quantas lives +18 ficam no ar ao mesmo tempo
     free_seconds: 180,       // tempo grátis por dia na faixa liberada (seg)
     creator_names: null,     // nomes opcionais por vídeo (fallback = título)
 };
@@ -88,57 +90,54 @@ function shuffleSeeded(arr, seed) {
 const _bakeCache = new Map();
 function bakeKey(col, dayKey, win) { return col + ':' + dayKey + ':' + win; }
 
-async function currentLive(cfg, collectionId, nowMs) {
-    if (!cfg.lib_id || !collectionId) return null;
+// VÁRIAS lives no ar ao mesmo tempo: a cada janela, sorteia a coleção e coloca
+// as primeiras `count` como transmissões simultâneas (uma modelo por vídeo).
+// Cada live fica "ao vivo" no seu próprio ponto do vídeo (o relógio dá a posição
+// e o vídeo dá loop → sempre no meio). A escalação vira a cada `window_hours`
+// (quem entra de manhã pega uma escalação, à tarde outra).
+async function livesOnAir(cfg, collectionId, kind, count, nowMs) {
+    if (!cfg.lib_id || !collectionId || count <= 0) return [];
     const { dayKey, msOfDay } = brasiliaParts(nowMs);
     const winMs = Math.max(1, Math.min(24, cfg.window_hours | 0 || 3)) * 3600 * 1000;
     const winIdx = Math.floor(msOfDay / winMs);
     const key = bakeKey(collectionId, dayKey, winIdx);
 
-    let grade = _bakeCache.get(key);
-    if (!grade || Date.now() - grade.at > 5 * 60000) {
+    let baked = _bakeCache.get(key);
+    if (!baked || Date.now() - baked.at > 5 * 60000) {
         let vids = await listCollectionVideos(cfg.lib_id, collectionId);
         vids = (vids || []).filter(v => (v.status == null || v.status >= 4) && v.lengthSec > 0);
-        if (!vids.length) return null;
-        const order = shuffleSeeded(vids, hashStr(key));
-        grade = { at: Date.now(), vids: order, total: order.reduce((s, v) => s + v.lengthSec, 0) };
-        _bakeCache.set(key, grade);
-        // evicção simples: não deixa o Map crescer sem limite
+        if (!vids.length) return [];
+        baked = { at: Date.now(), vids: shuffleSeeded(vids, hashStr(key)) };
+        _bakeCache.set(key, baked);
         if (_bakeCache.size > 64) { const k = _bakeCache.keys().next().value; _bakeCache.delete(k); }
     }
 
-    // posição dentro da janela (segundos), dobrada pela soma das durações →
-    // quem entra no meio da janela cai no meio da programação (parece ao vivo)
     const winStartMs = winIdx * winMs;
-    let pos = Math.floor((msOfDay - winStartMs) / 1000) % grade.total;
-    let idx = 0;
-    for (let i = 0; i < grade.vids.length; i++) {
-        if (pos < grade.vids[i].lengthSec) { idx = i; break; }
-        pos -= grade.vids[i].lengthSec;
-    }
-    const v = grade.vids[idx];
-    const nextV = grade.vids[(idx + 1) % grade.vids.length];
+    const elapsed = Math.floor((msOfDay - winStartMs) / 1000); // seg desde o início da janela
     const nameOf = (vid, i) => {
         const nm = (cfg.creator_names && cfg.creator_names[vid.guid]) || vid.title || null;
         return (nm && nm.trim()) || ('Live ' + (i + 1));
     };
-    // segundos até a próxima live entrar (pro contador "Próxima live")
-    const secToNext = grade.vids[idx].lengthSec - pos;
-    // espectadores: número estável por vídeo+minuto (oscila devagar, sem estado)
-    const eyeSeed = mulberry32(hashStr(v.guid) + Math.floor(msOfDay / 60000));
-    const viewers = 28 + Math.floor(eyeSeed() * 190);
-
-    return {
-        guid: v.guid,
-        name: nameOf(v, idx),
-        hls_url: bunnyHlsUrl(v.guid),
-        poster: bunnyThumbUrl(v.guid, v.thumbnailFileName),
-        offset_sec: pos,          // onde o player deve começar (segundos)
-        length_sec: v.lengthSec,
-        viewers,
-        next_name: nameOf(nextV, (idx + 1) % grade.vids.length),
-        next_in_sec: secToNext,
-    };
+    const take = Math.min(count, baked.vids.length);
+    const out = [];
+    for (let i = 0; i < take; i++) {
+        const v = baked.vids[i];
+        // cada live num ponto diferente do próprio vídeo (offset por índice pra
+        // não começarem todas iguais); loop → está sempre "ao vivo"
+        const pos = (elapsed + i * 37) % v.lengthSec;
+        const eyeSeed = mulberry32(hashStr(v.guid) + Math.floor(msOfDay / 60000));
+        out.push({
+            guid: v.guid,
+            kind,
+            name: nameOf(v, i),
+            hls_url: bunnyHlsUrl(v.guid),
+            poster: bunnyThumbUrl(v.guid, v.thumbnailFileName),
+            offset_sec: pos,
+            length_sec: v.lengthSec,
+            viewers: 28 + Math.floor(eyeSeed() * 190),
+        });
+    }
+    return out;
 }
 
 // ── tempo grátis por e-mail/visitante POR DIA (faixa liberada) ───────────────
@@ -168,8 +167,11 @@ router.get('/lives', optionalUser, async (req, res) => {
         const email = req.user?.email || null;
         const hasAccess = await exploreAccess(email);
 
-        const free = await currentLive(cfg, cfg.free_collection, now);
-        const vip = await currentLive(cfg, cfg.vip_collection, now);
+        // VÁRIAS lives no ar: N liberadas + N do +18 (números configuráveis)
+        const freeCount = Math.max(0, Math.min(30, cfg.free_on_air | 0));
+        const vipCount = Math.max(0, Math.min(30, cfg.vip_on_air | 0));
+        const freeLives = await livesOnAir(cfg, cfg.free_collection, 'free', freeCount, now);
+        const vipLives = await livesOnAir(cfg, cfg.vip_collection, 'vip', vipCount, now);
 
         // tempo grátis restante na faixa liberada (por dia)
         const { dayKey } = brasiliaParts(now);
@@ -180,11 +182,11 @@ router.get('/lives', optionalUser, async (req, res) => {
         }
 
         const lives = [];
-        if (free) lives.push({ ...free, kind: 'free', locked: false });
-        if (vip) {
+        for (const l of freeLives) lives.push({ ...l, locked: false });
+        for (const l of vipLives) {
             // +18: sem URL jogável pra quem não tem acesso (só poster borrado)
-            const safe = hasAccess ? vip : { name: vip.name, poster: vip.poster, viewers: vip.viewers, next_name: vip.next_name, next_in_sec: vip.next_in_sec };
-            lives.push({ ...safe, kind: 'vip', locked: !hasAccess });
+            const safe = hasAccess ? l : { guid: l.guid, kind: 'vip', name: l.name, poster: l.poster, viewers: l.viewers };
+            lives.push({ ...safe, locked: !hasAccess });
         }
 
         return res.json({
