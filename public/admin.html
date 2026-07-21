@@ -3887,6 +3887,28 @@ a { color: inherit; text-decoration: none; }
                     <div><button class="btn-primary" onclick="saveExploreSettings()">Salvar configurações</button></div>
                 </div>
 
+                <!-- ═══ CONFIG DAS LIVES ═══ -->
+                <div style="background:rgba(229,9,20,.05); border:1px solid rgba(229,9,20,.28); border-radius:14px; padding:18px; margin-bottom:18px; display:flex; flex-direction:column; gap:14px; max-width:760px;">
+                    <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#fff; cursor:pointer; font-weight:700;"><input type="checkbox" id="lvEnabled" style="width:18px; height:18px;"> 🔴 Ativar as "Lives" (aba dentro de Vídeos)</label>
+                    <div class="form-help" style="margin-top:-6px;">Uma live é um vídeo do Bunny tocando como se fosse ao vivo. Todos veem a mesma no mesmo horário. O título do vídeo no Bunny vira o nome da modelo; a capa vira o avatar. O acesso e o popup são os MESMOS da aba Vídeos (19,90 ou Premium).</div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Library ID (Bunny)</label><input class="form-control" id="lvLib" maxlength="20" placeholder="ex: 12345" style="width:100%;"/></div>
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Janela de troca (horas)</label><input class="form-control" type="number" id="lvWindow" min="1" max="24" value="3" style="width:100%;"/><div class="form-help" style="margin-top:3px;">De quanto em quanto tempo a programação vira (ex.: 3 = manhã, tarde, noite).</div></div>
+                    </div>
+                    <div style="background:rgba(76,217,100,.07); border:1px solid rgba(76,217,100,.3); border-radius:10px; padding:12px;">
+                        <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:6px;">🟢 Coleção das lives LIBERADAS</div>
+                        <input class="form-control" id="lvFreeCol" maxlength="80" placeholder="Collection ID da pasta liberada" style="width:100%;"/>
+                        <div style="margin-top:10px;"><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Tempo grátis por dia (segundos)</label><input class="form-control" type="number" id="lvFreeSec" min="0" value="180" style="width:160px;"/><div class="form-help" style="margin-top:3px;">Quanto o lead grátis assiste por dia antes do popup. 180 = 3 minutos.</div></div>
+                    </div>
+                    <div style="background:rgba(229,9,20,.07); border:1px solid rgba(229,9,20,.3); border-radius:10px; padding:12px;">
+                        <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:6px;">🔞 Coleção das lives +18 (travadas)</div>
+                        <input class="form-control" id="lvVipCol" maxlength="80" placeholder="Collection ID da pasta +18" style="width:100%;"/>
+                        <div class="form-help" style="margin-top:6px;">Essas aparecem embaçadas com o banner "VER SEM CENSURA" pra quem não é membro.</div>
+                    </div>
+                    <div><button class="btn-primary" onclick="saveLivesSettings()">Salvar Lives</button></div>
+                </div>
+
                 <!-- LISTA DE VÍDEOS -->
                 <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:10px;">Vídeos do feed</div>
                 <div id="exVideoList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px;"><div style="color:rgba(255,255,255,.4); font-size:13px;">Carregando...</div></div>
@@ -12153,6 +12175,7 @@ async function applyPushDest() {
     else if (dest === 'chats_tab') urlEl.value = '/?go=chats';
     else if (dest === 'groups_tab') urlEl.value = '/?go=groups';
     else if (dest === 'videos') urlEl.value = '/?go=videos';
+    else if (dest === 'lives') urlEl.value = '/?go=lives';
     // 'custom' deixa o admin digitar livremente em pushUrl
 }
 window.applyPushDest = applyPushDest;
@@ -12245,6 +12268,7 @@ const DEST_OPTS = [
     ['group',      '👥 Um grupo…'],
     ['groups_tab', '👥 Aba Grupos'],
     ['videos',     '🎬 Aba Vídeos'],
+    ['lives',      '🔴 Lives'],
     ['product',    '📦 Um produto…'],
     ['custom',     '✏️ URL personalizada'],
 ];
@@ -12301,6 +12325,7 @@ function getDestUrl(prefix) {
     if (dest === 'chats_tab') return '/?go=chats';
     if (dest === 'groups_tab') return '/?go=groups';
     if (dest === 'videos') return '/?go=videos';
+    if (dest === 'lives') return '/?go=lives';
     if (dest === 'custom') return custom || '/';
     return '/';
 }
@@ -12315,6 +12340,7 @@ function setDestUrl(prefix, url) {
     else if ((m = url.match(/[?&]p=(\d+)/))) { dest = 'product'; id = m[1]; }
     else if (/[?&]go=chats/.test(url)) dest = 'chats_tab';
     else if (/[?&]go=groups/.test(url)) dest = 'groups_tab';
+    else if (/[?&]go=lives/.test(url)) dest = 'lives';
     else if (/[?&](go=videos|videos=)/.test(url)) dest = 'videos';
     document.getElementById(prefix + 'Dest').value = dest;
     document.getElementById(prefix + 'Url').value = dest === 'custom' ? url : '/';
@@ -12336,6 +12362,7 @@ function destLabel(url) {
     if ((m = url.match(/[?&]p=(\d+)/))) return '📦 ' + destName('product', m[1]);
     if (/[?&]go=chats/.test(url)) return '🗨️ Aba Conversas';
     if (/[?&]go=groups/.test(url)) return '👥 Aba Grupos';
+    if (/[?&]go=lives/.test(url)) return '🔴 Lives';
     if (/[?&](go=videos|videos=)/.test(url)) return '🎬 Aba Vídeos';
     return url;
 }
@@ -14712,10 +14739,37 @@ async function loadExplore() {
             document.getElementById('exGateStories').checked = g.gate_stories !== false;
             document.getElementById('exGateViewOnce').checked = g.gate_view_once !== false;
             document.getElementById('exGateExplore').checked = g.gate_explore !== false;
+            // Lives
+            const lv = s.lives || {};
+            const setLv = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+            const lvEn = document.getElementById('lvEnabled'); if (lvEn) lvEn.checked = lv.enabled === true;
+            setLv('lvLib', lv.lib_id || '');
+            setLv('lvWindow', lv.window_hours != null ? lv.window_hours : 3);
+            setLv('lvFreeCol', lv.free_collection || '');
+            setLv('lvVipCol', lv.vip_collection || '');
+            setLv('lvFreeSec', lv.free_seconds != null ? lv.free_seconds : 180);
         }
     } catch(_) {}
     loadExploreVideos();
 }
+
+async function saveLivesSettings() {
+    const payload = { lives: {
+        enabled: document.getElementById('lvEnabled').checked,
+        lib_id: document.getElementById('lvLib').value.trim() || null,
+        window_hours: parseInt(document.getElementById('lvWindow').value, 10) || 3,
+        free_collection: document.getElementById('lvFreeCol').value.trim() || null,
+        vip_collection: document.getElementById('lvVipCol').value.trim() || null,
+        free_seconds: parseInt(document.getElementById('lvFreeSec').value, 10) || 0,
+    }};
+    try {
+        const r = await fetch('/api/admin/explore/settings', { method:'PUT', headers:{'Content-Type':'application/json'}, credentials:'include', body:JSON.stringify(payload) });
+        const d = await r.json();
+        if (!d.success) { alert('Erro: '+(d.error||'')); return; }
+        alert('Lives salvas ✓');
+    } catch(e) { alert('Erro: '+e.message); }
+}
+window.saveLivesSettings = saveLivesSettings;
 
 async function loadExploreVideos() {
     const list = document.getElementById('exVideoList');

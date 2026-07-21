@@ -65,12 +65,18 @@ async function writeConfig(key, value, who) {
     );
 }
 
-// GET /settings — devolve as duas configs (Explorar + gate de PWA)
+const DEFAULT_LIVES = {
+    enabled: false, lib_id: null, free_collection: null, vip_collection: null,
+    window_hours: 3, free_seconds: 180, creator_names: null,
+};
+
+// GET /settings — devolve as configs (Explorar + gate de PWA + Lives)
 router.get('/settings', requireAdmin, async (req, res) => {
     try {
         const explore = await readConfig('explore_config', DEFAULT_EXPLORE);
         const pwa_gate = await readConfig('pwa_gate_config', DEFAULT_PWA_GATE);
-        return res.json({ success: true, explore, pwa_gate });
+        const lives = await readConfig('lives_config', DEFAULT_LIVES);
+        return res.json({ success: true, explore, pwa_gate, lives });
     } catch (err) {
         logger.error('Erro lendo settings do Explorar:', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
@@ -116,6 +122,20 @@ router.put('/settings', requireAdmin, async (req, res) => {
                 text: (g.text || '').toString().trim().slice(0, 200) || DEFAULT_PWA_GATE.text,
             };
             await writeConfig('pwa_gate_config', next, req.admin?.username);
+        }
+        if (b.lives && typeof b.lives === 'object') {
+            const cur = await readConfig('lives_config', DEFAULT_LIVES);
+            const l = b.lives;
+            const next = {
+                ...cur,
+                enabled: l.enabled === true,
+                lib_id: sanitizeBunnyLib(l.lib_id),
+                free_collection: sanitizeBunnyGuid(l.free_collection),
+                vip_collection: sanitizeBunnyGuid(l.vip_collection),
+                window_hours: Math.max(1, Math.min(24, parseInt(l.window_hours, 10) || 3)),
+                free_seconds: Math.max(0, Math.min(86400, parseInt(l.free_seconds, 10) || 0)),
+            };
+            await writeConfig('lives_config', next, req.admin?.username);
         }
         return res.json({ success: true });
     } catch (err) {

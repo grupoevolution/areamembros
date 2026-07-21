@@ -8139,6 +8139,13 @@ body.is-slowconn .prod-cta-fixed {
 .ca-story-item .ring.unseen { background: linear-gradient(135deg, #25D366, #128C7E); }
 .ca-story-item .ring .av { width: 100%; height: 100%; border-radius: 50%; background: #ddd6d0 center/cover no-repeat; border: 2px solid #fff; box-sizing: border-box; }
 .ca-story-item .nm { font-size: 11px; color: #555; margin-top: 4px; max-width: 68px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* bolinha AO VIVO (live no ar) na fileira de status */
+.ca-live-ring { width: 66px; height: 66px; border-radius: 50%; padding: 3px; position: relative; background: conic-gradient(#e50914, #ff3b30, #ff7a45, #e50914); animation: caLiveSpin 2.6s linear infinite; }
+@keyframes caLiveSpin { to { transform: rotate(360deg); } }
+.ca-live-ring .av { width: 100%; height: 100%; border-radius: 50%; background: #2a1118 center/cover no-repeat; border: 2.5px solid #fff; box-sizing: border-box; animation: caLiveSpin 2.6s linear infinite reverse; }
+.ca-live-badge { position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%); background: linear-gradient(135deg, #e50914, #ff3b30); color: #fff; font-size: 8px; font-weight: 900; letter-spacing: .6px; padding: 2.5px 7px; border-radius: 999px; border: 2px solid #fff; display: flex; align-items: center; gap: 3px; white-space: nowrap; }
+.ca-live-badge .d { width: 4px; height: 4px; border-radius: 50%; background: #fff; animation: lvblink 1.1s infinite; }
+@media (prefers-reduced-motion: reduce) { .ca-live-ring, .ca-live-ring .av { animation: none !important; } }
 /* Viewer de stories (tela cheia, estilo Instagram) */
 #caStory { position: fixed; inset: 0; z-index: 740; background: #000; display: none; flex-direction: column; }
 #caStory.show { display: flex; }
@@ -8632,6 +8639,66 @@ body.is-slowconn .prod-cta-fixed {
 @keyframes tkSwipeUpBob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-8px)}}
 @keyframes tkSwipeFade{0%,82%{opacity:1}100%{opacity:0;visibility:hidden}}
 .tk-brand{position:absolute;top:calc(12px + env(safe-area-inset-top));left:0;right:0;text-align:center;z-index:7;color:#fff;font-weight:800;font-size:16px;letter-spacing:-.01em;text-shadow:0 1px 8px rgba(0,0,0,.7);pointer-events:none;}
+/* sub-abas Vídeos • Lives */
+.tk-subtabs{position:absolute;top:calc(10px + env(safe-area-inset-top));left:0;right:0;z-index:8;display:flex;justify-content:center;gap:26px;pointer-events:none;}
+.tk-subtab{pointer-events:auto;background:none;border:none;color:rgba(255,255,255,.6);font-size:15.5px;font-weight:800;padding:4px 2px 8px;position:relative;cursor:pointer;text-shadow:0 1px 8px rgba(0,0,0,.7);}
+.tk-subtab.on{color:#fff;}
+.tk-subtab.on::after{content:'';position:absolute;left:20%;right:20%;bottom:2px;height:3px;border-radius:3px;background:#e50914;}
+.tk-livedot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff3b30;margin-right:6px;vertical-align:1px;animation:lvblink 1.2s ease-in-out infinite;}
+@keyframes lvblink{50%{opacity:.25;}}
+/* palco das lives */
+.lv-stage{position:absolute;inset:0;z-index:6;display:none;background:#0a0a0c;overflow:hidden;}
+.lv-stage.on{display:block;}
+.lv-bg{position:absolute;inset:0;overflow:hidden;background:#16090f;}
+.lv-bg video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.lv-bg.blurred video{filter:blur(26px) saturate(1.15);transform:scale(1.18);}
+.lv-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.5) 0%,transparent 22%,transparent 55%,rgba(0,0,0,.72) 100%);}
+.lv-top{position:absolute;top:calc(46px + env(safe-area-inset-top));left:0;right:0;display:flex;justify-content:center;z-index:5;}
+.lv-cap{display:flex;align-items:center;gap:9px;background:rgba(10,8,12,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:6px 12px 6px 7px;}
+.lv-cap-av{width:30px;height:30px;border-radius:50%;padding:2px;background:linear-gradient(45deg,#e50914,#ff3b30);flex-shrink:0;background-size:cover;}
+.lv-cap-av>div{width:100%;height:100%;border-radius:50%;background:#2a1118 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff;}
+.lv-cap-name{font-size:13.5px;font-weight:800;color:#fff;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lv-cap-live{display:flex;align-items:center;gap:5px;background:linear-gradient(135deg,#e50914,#ff3b30);border-radius:999px;padding:3.5px 9px;font-size:10px;font-weight:900;letter-spacing:1px;color:#fff;}
+.lv-cap-live .d{width:5px;height:5px;border-radius:50%;background:#fff;animation:lvblink 1.1s infinite;}
+.lv-cap-eyes{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums;}
+.lv-free-chip{position:absolute;top:calc(90px + env(safe-area-inset-top));left:0;right:0;display:flex;justify-content:center;z-index:5;}
+.lv-free-chip>div{display:flex;align-items:center;gap:6px;background:rgba(212,175,55,.14);border:1px solid rgba(212,175,55,.4);color:#f5d67b;border-radius:999px;padding:4.5px 11px;font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;}
+.lv-hearts{position:absolute;right:12px;bottom:170px;width:70px;height:48%;pointer-events:none;z-index:4;}
+.lv-hearts svg{position:absolute;bottom:-30px;opacity:0;animation:lvrise 3.4s ease-out forwards;}
+@keyframes lvrise{0%{opacity:0;transform:translate(0,0) scale(.5);}12%{opacity:.95;}100%{opacity:0;transform:translate(var(--dx),-44vh) scale(1.05) rotate(var(--rot));}}
+.lv-goldtoasts{position:absolute;left:14px;right:80px;bottom:calc(96px + 34%);z-index:6;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.lv-gtoast{display:flex;align-items:center;gap:9px;align-self:flex-start;background:linear-gradient(90deg,rgba(64,48,10,.92),rgba(38,28,6,.92));border:1px solid rgba(245,214,123,.65);border-radius:999px;padding:8px 14px 8px 9px;box-shadow:0 6px 24px rgba(212,175,55,.35),inset 0 1px 0 rgba(255,255,255,.12);animation:lvgtin .45s cubic-bezier(.2,1.4,.4,1),lvgtout .4s ease-in 3.1s forwards;}
+@keyframes lvgtin{from{opacity:0;transform:translateX(-30px) scale(.85);}}
+@keyframes lvgtout{to{opacity:0;transform:translateY(-14px);}}
+.lv-gtoast .gi{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#d4af37,#f5d67b);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.lv-gtoast .gt{font-size:12.5px;font-weight:800;color:#f5d67b;white-space:nowrap;}
+.lv-gtoast .gt b{color:#fff;}
+.lv-comments{position:absolute;left:14px;right:84px;bottom:calc(160px + env(safe-area-inset-bottom));z-index:4;display:flex;flex-direction:column;gap:8px;max-height:30%;overflow:hidden;-webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 26%);mask-image:linear-gradient(180deg,transparent 0%,#000 26%);}
+.lv-cmt{display:flex;align-items:flex-start;gap:8px;animation:lvcmtin .35s ease-out;}
+@keyframes lvcmtin{from{opacity:0;transform:translateY(10px);}}
+.lv-cmt-av{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#fff;background:#3a2230;}
+.lv-cmt-body{background:rgba(10,8,12,.55);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);border-radius:13px;padding:6px 11px;max-width:100%;}
+.lv-cmt-name{font-size:11px;font-weight:800;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:5px;}
+.lv-cmt-vip{font-size:8px;font-weight:900;letter-spacing:.6px;color:#241a05;background:linear-gradient(90deg,#d4af37,#f5d67b);border-radius:4px;padding:1.5px 4px;}
+.lv-cmt-txt{font-size:13px;line-height:1.35;margin-top:1px;color:#fff;}
+.lv-bar{position:absolute;left:12px;right:12px;bottom:calc(100px + env(safe-area-inset-bottom));z-index:5;display:flex;align-items:center;gap:9px;}
+.lv-input{flex:1;display:flex;align-items:center;gap:8px;background:rgba(10,8,12,.55);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:12px 16px;color:rgba(255,255,255,.55);font-size:13.5px;cursor:pointer;}
+.lv-input svg{flex-shrink:0;opacity:.6;}
+.lv-rnd{width:46px;height:46px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;}
+.lv-rnd.heart{background:linear-gradient(135deg,#e50914,#ff3b30);color:#fff;box-shadow:0 6px 16px rgba(229,9,20,.4);}
+.lv-x{position:absolute;top:calc(48px + env(safe-area-inset-top));right:14px;z-index:7;width:34px;height:34px;border-radius:50%;background:rgba(10,8,12,.55);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.lv-lockwrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;padding:0 28px;}
+.lv-lockcard{text-align:center;max-width:320px;}
+.lv-lock18{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);border-radius:999px;font-size:10.5px;font-weight:900;letter-spacing:1.4px;padding:5px 12px;margin-bottom:12px;color:#fff;}
+.lv-lock18 .d{width:5px;height:5px;border-radius:50%;background:#ff3b30;animation:lvblink 1.1s infinite;}
+.lv-lockic{width:58px;height:58px;border-radius:17px;background:linear-gradient(135deg,#e50914,#ff3b30);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 14px 34px rgba(229,9,20,.45);}
+.lv-locktitle{font-size:21px;font-weight:900;line-height:1.25;color:#fff;text-wrap:balance;}
+.lv-locktitle em{font-style:normal;color:#f5d67b;}
+.lv-locksub{font-size:13.5px;color:rgba(255,255,255,.75);margin-top:7px;line-height:1.5;}
+.lv-lockcta{display:inline-flex;align-items:center;gap:8px;margin-top:16px;background:linear-gradient(90deg,#d4af37,#f5d67b);color:#241a05;border:none;font-size:14px;font-weight:900;letter-spacing:.5px;padding:15px 26px;border-radius:13px;cursor:pointer;box-shadow:0 10px 26px rgba(212,175,55,.35);}
+.lv-next{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(110px + env(safe-area-inset-bottom));z-index:5;display:flex;align-items:center;gap:8px;background:rgba(10,8,12,.55);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:7px 14px;font-size:12px;color:rgba(255,255,255,.8);white-space:nowrap;}
+.lv-next b{color:#fff;}
+@media (prefers-reduced-motion:reduce){.lv-hearts svg,.tk-livedot,.lv-cap-live .d{animation:none !important;}}
 .tk-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#888;font-size:14px;padding:30px;text-align:center;}
 /* Paywall do feed: cobre só os vídeos (z-index 50 < 500 da barra) — a barra de
    baixo continua visível e clicável, o lead pode ir pra outras partes do app. */
@@ -8643,10 +8710,16 @@ body.is-slowconn .prod-cta-fixed {
 .tk-paywall .mvpw-inline{background:#141013;border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:26px 22px 18px;box-shadow:0 30px 80px rgba(0,0,0,.6);}
 </style>
 <div class="screen" id="tiktok">
-    <div class="tk-brand">Vídeos</div>
+    <!-- sub-abas Vídeos • Lives (Lives só aparece quando ativado no painel) -->
+    <div class="tk-subtabs" id="tkSubtabs">
+        <button class="tk-subtab on" data-sub="videos" onclick="Explore.showSub('videos')">Vídeos</button>
+        <button class="tk-subtab" id="tkSubLives" data-sub="lives" style="display:none;" onclick="Explore.showSub('lives')"><span class="tk-livedot"></span>Lives</button>
+    </div>
     <div class="tk-feed" id="tkFeed"></div>
     <div class="tk-empty" id="tkEmpty" style="display:none;">Nenhum vídeo por aqui ainda.</div>
     <div class="tk-paywall" id="tkPaywall"></div>
+    <!-- palco das lives (preenchido por window.Lives) -->
+    <div class="lv-stage" id="lvStage" style="display:none;"></div>
 </div>
 
 <div class="bottom-nav" id="bottomNav">
@@ -9074,13 +9147,15 @@ function showSoonToast(msg) {
 
 // Aba inferior "Surpresa": vira "Explorar" (feed TikTok) quando ligada no painel.
 // Desligada → mantém o aviso "em breve".
-function openExploreTab() {
+function openExploreTab(sub) {
     const cfg = window.MV_EXPLORE || {};
-    if (cfg.enabled !== true) { showSoonToast('Novidade chegando em breve...'); return; }
+    const livesOn = (window.MV_LIVES || {}).enabled === true;
+    // se só Lives está ativo (Vídeos não), a aba ainda abre direto nas Lives
+    if (cfg.enabled !== true && !(sub === 'lives' && livesOn)) { showSoonToast('Novidade chegando em breve...'); return; }
     switchScreen('tiktok');
     document.querySelectorAll('.nav-item.active').forEach(n => n.classList.remove('active'));
     const b = document.getElementById('navSoon'); if (b) b.classList.add('active');
-    if (window.Explore) window.Explore.open();
+    if (window.Explore) window.Explore.showSub(sub === 'lives' && livesOn ? 'lives' : 'videos');
 }
 
 // ═══════════════ CHAT INTEGRADO (estilo WhatsApp — mesmo motor do /chat-lab) ═══════════════
@@ -9135,14 +9210,22 @@ window.ChatApp = (function() {
     let STORY = null; // { group, idx, timer, started }
     let LIST_CHATS = []; // últimos chats carregados (pra abrir o paywall VIP no clique)
     function storiesStripHtml() {
-        if (!STORIES.length) return '';
+        // bolinhas AO VIVO na frente (lives no ar) — levam pra aba Lives
+        const lives = (window.__LIVES_NOW || []);
+        const liveItems = lives.map(l => {
+            const bg = l.poster ? ' style="background-image:url(\'' + esc(l.poster) + '\')"' : '';
+            return '<div class="ca-story-item" onclick="openExploreTab(\'lives\')">'
+                + '<div class="ca-live-ring"><div class="av"' + bg + '></div><div class="ca-live-badge"><span class="d"></span>AO VIVO</div></div>'
+                + '<div class="nm" style="color:#fff;font-weight:700;">' + esc(l.name) + '</div></div>';
+        }).join('');
+        if (!STORIES.length && !liveItems) return '';
         const items = STORIES.map(g => {
             const bg = g.avatar_url ? ' style="background-image:url(\'' + esc(g.avatar_url) + '\')"' : '';
             return '<div class="ca-story-item" onclick="ChatApp.openStory(' + g.chat_id + ')">'
                 + '<div class="ring' + (g.has_unseen ? ' unseen' : '') + '"><div class="av"' + bg + '></div></div>'
                 + '<div class="nm">' + esc(g.name) + '</div></div>';
         }).join('');
-        return '<div class="ca-stories"><div class="ca-sec-label">Status</div><div class="ca-stories-row">' + items + '</div></div>';
+        return '<div class="ca-stories"><div class="ca-sec-label">Status</div><div class="ca-stories-row">' + liveItems + items + '</div></div>';
     }
     function ensureStoryEl() {
         let el = document.getElementById('caStory');
@@ -9323,12 +9406,16 @@ window.ChatApp = (function() {
         const scroll = document.getElementById('caListScroll');
         if (!scroll) return;
         try {
-            const [r, sr] = await Promise.all([
+            const livesEnabled = (window.MV_LIVES || {}).enabled === true;
+            const [r, sr, lr] = await Promise.all([
                 fetch('/api/user/chats?visitor_id=' + VID + funnelParam(), { credentials: 'include' }),
                 fetch('/api/user/chats/status?visitor_id=' + VID, { credentials: 'include' }).catch(() => null),
+                livesEnabled ? fetch('/api/user/lives?visitor_id=' + VID, { credentials: 'include' }).catch(() => null) : Promise.resolve(null),
             ]);
             const data = await r.json();
             try { const sd = sr && await sr.json(); STORIES = (sd && sd.success && Array.isArray(sd.stories)) ? sd.stories : []; } catch (_) { STORIES = []; }
+            // lives no ar → bolinhas AO VIVO na frente da fileira de status
+            try { const ld = lr && await lr.json(); window.__LIVES_NOW = (ld && ld.success && ld.enabled && Array.isArray(ld.lives)) ? ld.lives : []; } catch (_) { window.__LIVES_NOW = []; }
             const storiesHolder = document.getElementById('caStoriesFixed');
             if (storiesHolder) storiesHolder.innerHTML = storiesStripHtml();
             if (!data.success || !Array.isArray(data.chats) || data.chats.length === 0) {
@@ -11745,21 +11832,23 @@ window.GroupApp = (function () {
     try {
         const qs = window.location.search;
         const mg = qs.match(/[?&]group=(\d+)/);
-        const go = (qs.match(/[?&]go=(chats|groups|videos)/) || [])[1] || null;
+        const go = (qs.match(/[?&]go=(chats|groups|videos|lives)/) || [])[1] || null;
         if (!mg && !go) return;
         let tries = 0;
         const t = setInterval(() => {
             tries++;
             const ready = typeof switchScreen === 'function' && window.ChatApp && window.GroupApp;
-            // vídeos: espera a config do feed carregar (senão cai no toast "em breve")
+            // vídeos/lives: espera a config carregar (senão cai no toast "em breve")
             const videosPending = go === 'videos' && !(window.MV_EXPLORE && window.MV_EXPLORE.enabled === true);
-            if ((!ready || videosPending) && tries <= 40) return;
+            const livesPending = go === 'lives' && !(window.MV_LIVES && window.MV_LIVES.enabled === true);
+            if ((!ready || videosPending || livesPending) && tries <= 40) return;
             clearInterval(t);
             if (!ready) return;
             try {
                 if (mg) GroupApp.open(parseInt(mg[1], 10));
                 else if (go === 'chats') { switchScreen('chat'); ChatApp.loadList(); }
                 else if (go === 'groups') { switchScreen('chat'); GroupApp.tab('groups'); }
+                else if (go === 'lives' && typeof openExploreTab === 'function') openExploreTab('lives');
                 else if (go === 'videos' && typeof openExploreTab === 'function') openExploreTab();
             } catch (_) {}
             try { history.replaceState(null, '', window.location.pathname); } catch (_) {}
@@ -11871,6 +11960,7 @@ window.openGroupPreview = function(groupId, productId) {
 function mvNavigate(url) {
     if (!url) return;
     try {
+        if (/[?&]go=lives/.test(String(url))) { if (typeof openExploreTab === 'function') openExploreTab('lives'); return; }
         if (/[?&](videos=|go=videos)/.test(String(url))) { if (typeof openExploreTab === 'function') openExploreTab(); return; }
         const mc = String(url).match(/[?&]chat=(\d+)/);
         if (mc && window.ChatApp) { ChatApp.open(parseInt(mc[1], 10)); return; }
@@ -13882,6 +13972,10 @@ function renderPlanCard(plan) {
             atalho('🎬', 'Vídeos', 'Feed completo, sem limite', 'openExploreTab()'),
         ];
         let n = 3;
+        if ((window.MV_LIVES || {}).enabled === true) {
+            shortcuts.push(atalho('🔴', 'Lives', 'Sem censura, ao vivo', "openExploreTab('lives')"));
+            n = 4;
+        }
         if (plan.vip_group_id && plan.group_bonus_until) {
             n = 4;
             shortcuts.push(atalho('👑', 'Grupo VIP', '🎁 Bônus até ' + fmtDia(plan.group_bonus_until), 'GroupApp.open(' + parseInt(plan.vip_group_id, 10) + ')'));
@@ -15881,6 +15975,10 @@ function applyAppMetadata() {
     try {
         window.MV_PWA_GATE = (APP_DATA.config && APP_DATA.config.pwa_gate) || {};
         window.MV_EXPLORE = (APP_DATA.config && APP_DATA.config.explore) || {};
+        window.MV_LIVES = (APP_DATA.config && APP_DATA.config.lives) || {};
+        // sub-aba Lives só aparece quando ativada no painel
+        const livesTab = document.getElementById('tkSubLives');
+        if (livesTab) livesTab.style.display = (window.MV_LIVES.enabled === true) ? '' : 'none';
         const soonBtn = document.getElementById('navSoon');
         const soonLbl = document.getElementById('navSoonLabel');
         const soonBadge = document.getElementById('navSoonBadge');
@@ -20664,6 +20762,7 @@ window.Explore = (function () {
         if (ov) { ov.classList.remove('open'); ov.innerHTML = ''; }
         stopAccessWatch();
     }
+    window.__openExplorePaywall = function () { try { openPaywall(); } catch (_) {} };
     function openPaywall() {
         const ov = document.getElementById('tkPaywall');
         if (!ov || ov.classList.contains('open') || !window.MVPaywall) return;
@@ -20750,9 +20849,283 @@ window.Explore = (function () {
     }
 
     // Pausa tudo ao sair da aba (senão o áudio do vídeo vaza por cima das outras telas)
-    function pause() { pauseAll(); }
+    function pause() { pauseAll(); if (window.Lives) Lives.pause(); }
 
-    return { open, pause };
+    // Alterna entre o feed de Vídeos e a aba Lives (sub-abas no topo)
+    function showSub(which) {
+        const feed = feedEl();
+        const stage = document.getElementById('lvStage');
+        const pw = document.getElementById('tkPaywall');
+        document.querySelectorAll('.tk-subtab').forEach(b => b.classList.toggle('on', b.dataset.sub === which));
+        if (which === 'lives') {
+            pauseAll();
+            if (pw) pw.classList.remove('open');
+            if (feed) feed.style.display = 'none';
+            if (stage) { stage.style.display = 'block'; stage.classList.add('on'); }
+            if (window.Lives) Lives.open();
+        } else {
+            if (window.Lives) Lives.pause();
+            if (stage) { stage.style.display = 'none'; stage.classList.remove('on'); }
+            if (feed) feed.style.display = '';
+            open(); playActive();
+        }
+    }
+
+    return { open, pause, showSub };
+})();
+
+// ═══════════════ LIVES (aba dentro de Vídeos — vídeo do Bunny "ao vivo") ═══════════════
+window.Lives = (function () {
+    let data = null, cur = null, hls = null, tickTimer = null, heartTimer = null;
+    let cmtTimer = null, goldTimer = null, watchTimer = null, freeLeft = 0, audioCtx = null;
+    const stage = () => document.getElementById('lvStage');
+    const esc = (s) => { try { return escapeHtmlData(s == null ? '' : String(s)); } catch (_) { return ''; } };
+
+    const ICO = {
+        eye: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>',
+        x: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>',
+        clock: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+        lock: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
+        chat: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>',
+        heartFill: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21.2l7.8-7.7 1-1.1a5.5 5.5 0 000-7.8z"/></svg>',
+        diamond: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#241a05" stroke-width="2.4"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/><path d="M2 9h20M12 3l-3 6 3 12 3-12-3-6"/></svg>',
+    };
+    const VID = (window.VID || null);
+    const GOLD_NAMES = ['Bruno', 'Thiago', 'Marcos', 'Rafael', 'Diego', 'Lucas', 'Felipe', 'André', 'Gustavo', 'Renan', 'Caio', 'Eduardo', 'Vitor', 'Matheus'];
+    const CMT_CAST = ['Rodrigo', 'Thiago', 'Marcos', 'Felipe', 'Bruno', 'André', 'Diego', 'Léo', 'Caio', 'Igor'];
+    const CMT_PHR = ['que isso', 'a melhor live', 'mostra mais vai', 'cheguei agora, perdi muito?', 'ela responde a gente?', 'top demais', 'faz de novo', 'linda demais', 'valeu cada centavo', 'todo dia tem?', 'segue assim', 'melhor de todas'];
+    const HCOLORS = ['#e50914', '#ff3b30', '#ff7a8a', '#ffffff'];
+
+    function fmtTime(s) { s = Math.max(0, s | 0); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+
+    // som curto sintetizado (zero download; só toca depois do 1º toque)
+    let soundOk = false;
+    document.addEventListener('pointerdown', () => { soundOk = true; }, { once: true });
+    function chime() {
+        if (!soundOk) return;
+        try {
+            audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const t = audioCtx.currentTime;
+            [[1318.5, 0], [1975.5, .09]].forEach(([f, d]) => {
+                const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+                o.type = 'sine'; o.frequency.value = f;
+                g.gain.setValueAtTime(0.0001, t + d);
+                g.gain.linearRampToValueAtTime(.14, t + d + .02);
+                g.gain.exponentialRampToValueAtTime(.001, t + d + .5);
+                o.connect(g); g.connect(audioCtx.destination); o.start(t + d); o.stop(t + d + .55);
+            });
+        } catch (_) {}
+    }
+
+    let curIdx = 0;
+    async function open(kind) {
+        try {
+            const r = await fetch('/api/user/lives?visitor_id=' + encodeURIComponent(VID || ''), { credentials: 'include' });
+            const d = await r.json();
+            if (!d || !d.success || !d.enabled || !Array.isArray(d.lives) || !d.lives.length) { renderEmpty(); return; }
+            data = d;
+            freeLeft = (d.has_access) ? 999999 : (d.free_left || 0);
+            // abre na live pedida (bolinha AO VIVO) ou na liberada por padrão
+            curIdx = kind ? Math.max(0, d.lives.findIndex(l => l.kind === kind)) : d.lives.findIndex(l => l.kind === 'free');
+            if (curIdx < 0) curIdx = 0;
+            cur = d.lives[curIdx];
+            build();
+        } catch (_) { renderEmpty(); }
+    }
+    // troca de live (swipe vertical, como uma "próxima live")
+    function goLive(dir) {
+        if (!data || data.lives.length < 2) return;
+        curIdx = (curIdx + dir + data.lives.length) % data.lives.length;
+        cur = data.lives[curIdx];
+        build();
+    }
+
+    function renderEmpty() {
+        const st = stage(); if (!st) return;
+        st.innerHTML = '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.4);font-size:14px;padding:0 30px;text-align:center;">Nenhuma live rolando agora. Volte mais tarde 🔴</div>';
+    }
+
+    function build() {
+        const st = stage(); if (!st || !cur) return;
+        stopTimers();
+        const locked = cur.locked || (cur.kind === 'free' && !data.has_access && freeLeft <= 0);
+        const initial = (cur.name || '?').charAt(0).toUpperCase();
+        const avStyle = cur.poster ? 'style="background-image:url(' + esc(cur.poster) + ')"' : '';
+        let html = '<div class="lv-bg ' + (cur.locked ? 'blurred' : '') + '" id="lvBg">'
+            + (cur.hls_url ? '<video playsinline loop muted></video>' : '')
+            + '</div><div class="lv-shade"></div>'
+            + '<div class="lv-x" onclick="Explore.showSub(\'videos\')">' + ICO.x + '</div>'
+            + '<div class="lv-top"><div class="lv-cap">'
+            +   '<div class="lv-cap-av"><div ' + avStyle + '>' + (cur.poster ? '' : initial) + '</div></div>'
+            +   '<div class="lv-cap-name">' + esc(cur.name) + '</div>'
+            +   '<div class="lv-cap-live"><span class="d"></span>AO VIVO</div>'
+            +   '<div class="lv-cap-eyes">' + ICO.eye + '<span id="lvEyes">' + (cur.viewers || 0) + '</span></div>'
+            + '</div></div>';
+
+        if (locked) {
+            const tempo = (cur.kind === 'vip');
+            html += '<div class="lv-lockwrap"><div class="lv-lockcard">'
+                + '<div class="lv-lock18"><span class="d"></span>' + (tempo ? '+18 · SEM CENSURA' : 'SEU TEMPO GRÁTIS ACABOU') + '</div>'
+                + '<div class="lv-lockic">' + ICO.lock + '</div>'
+                + '<div class="lv-locktitle">' + (tempo ? 'Tá rolando <em>AGORA</em>,<br>sem censura' : 'A live <em>continua</em> rolando…') + '</div>'
+                + '<div class="lv-locksub">' + (tempo ? 'Só membros veem. Libera e entra antes que acabe.' : 'Você viu só o começo. Libera agora e volta pra dentro.') + '</div>'
+                + '<button class="lv-lockcta" onclick="Lives.unlock()">' + ICO.eye + ' ' + (tempo ? 'VER SEM CENSURA' : 'CONTINUAR ASSISTINDO') + '</button>'
+                + '</div></div>';
+            if (cur.next_name) html += '<div class="lv-next">' + ICO.clock + ' Próxima live · <span class="lv-cap-av" style="width:20px;height:20px;"><div>' + esc((cur.next_name || '?').charAt(0)) + '</div></span> <b>' + esc(cur.next_name) + '</b></div>';
+        } else {
+            html += '<div class="lv-goldtoasts" id="lvGold"></div>'
+                + '<div class="lv-hearts" id="lvHearts"></div>'
+                + '<div class="lv-comments" id="lvCmts"></div>';
+            if (cur.kind === 'free' && !data.has_access) html += '<div class="lv-free-chip"><div>' + ICO.clock + ' Grátis: <span id="lvFree">' + fmtTime(freeLeft) + '</span></div></div>';
+            html += '<div class="lv-bar"><div class="lv-input" onclick="Lives.tryComment()">' + ICO.chat + ' Comente na live…</div>'
+                + '<button class="lv-rnd heart" onclick="Lives.heart()">' + ICO.heartFill + '</button></div>';
+        }
+        st.innerHTML = html;
+
+        if (!locked && cur.hls_url) startVideo();
+        // swipe vertical troca de live (quando há mais de uma no ar)
+        attachSwipe(st);
+        if (!locked) {
+            // toque na tela manda coração (menos na barra e no X)
+            st.addEventListener('click', onStageTap);
+            for (let i = 0; i < 4; i++) pushComment();
+            cmtTimer = setInterval(pushComment, 2600);
+            goldTimer = setInterval(goldToast, 9000);
+            setTimeout(goldToast, 3000);
+            if (cur.kind === 'free' && !data.has_access) startWatchClock();
+        }
+        startTick();
+    }
+
+    function startVideo() {
+        const v = stage().querySelector('#lvBg video'); if (!v) return;
+        const url = cur.hls_url;
+        try {
+            if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = url; }
+            else if (window.Hls && window.Hls.isSupported()) { hls = new Hls({ maxBufferLength: 6, maxMaxBufferLength: 18 }); hls.loadSource(url); hls.attachMedia(v); }
+            else { v.src = url; }
+            v.muted = true; // começa mudo (autoplay), lead ativa o som ao tocar
+            v.addEventListener('loadedmetadata', () => { try { if (cur.offset_sec) v.currentTime = Math.min(cur.offset_sec, (v.duration || cur.length_sec) - 1); } catch (_) {} v.play().catch(() => {}); }, { once: true });
+        } catch (_) {}
+    }
+
+    // swipe vertical entre lives (leve: só escuta touchstart/end no palco)
+    let _swy = null;
+    function onTouchStart(e) { _swy = e.touches ? e.touches[0].clientY : e.clientY; }
+    function onTouchEnd(e) {
+        if (_swy == null) return;
+        const y = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+        const dy = y - _swy; _swy = null;
+        if (Math.abs(dy) > 60) goLive(dy < 0 ? 1 : -1);
+    }
+    function attachSwipe(st) {
+        st.removeEventListener('touchstart', onTouchStart); st.removeEventListener('touchend', onTouchEnd);
+        st.addEventListener('touchstart', onTouchStart, { passive: true });
+        st.addEventListener('touchend', onTouchEnd, { passive: true });
+    }
+
+    function onStageTap(e) {
+        if (e.target.closest('.lv-bar') || e.target.closest('.lv-x') || e.target.closest('.lv-lockcta')) return;
+        // 1º toque também tira o mudo do vídeo
+        const v = stage().querySelector('#lvBg video'); if (v && v.muted) { v.muted = false; v.play().catch(() => {}); }
+        heart(); heart();
+    }
+
+    function heart() {
+        const box = stage() && stage().querySelector('#lvHearts');
+        if (!box || box.childElementCount > 14) return;
+        const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        const size = 14 + Math.random() * 12;
+        s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('width', size); s.setAttribute('height', size);
+        s.innerHTML = '<path fill="' + HCOLORS[Math.floor(Math.random() * HCOLORS.length)] + '" d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21.2l7.8-7.7 1-1.1a5.5 5.5 0 000-7.8z"/>';
+        s.style.setProperty('--dx', (Math.random() * 40 - 26).toFixed(0) + 'px');
+        s.style.setProperty('--rot', (Math.random() * 40 - 20).toFixed(0) + 'deg');
+        s.style.right = (Math.random() * 34) + 'px';
+        box.appendChild(s);
+        setTimeout(() => s.remove(), 3500);
+    }
+
+    function pushComment() {
+        const box = stage() && stage().querySelector('#lvCmts'); if (!box) return;
+        const nm = CMT_CAST[Math.floor(Math.random() * CMT_CAST.length)];
+        const vip = Math.random() < 0.35;
+        const el = document.createElement('div');
+        el.className = 'lv-cmt';
+        el.innerHTML = '<div class="lv-cmt-av">' + esc(nm.charAt(0)) + '</div>'
+            + '<div class="lv-cmt-body"><div class="lv-cmt-name">' + esc(nm) + (vip ? ' <span class="lv-cmt-vip">VIP</span>' : '') + '</div>'
+            + '<div class="lv-cmt-txt">' + esc(CMT_PHR[Math.floor(Math.random() * CMT_PHR.length)]) + '</div></div>';
+        box.appendChild(el);
+        while (box.childElementCount > 5) box.firstElementChild.remove();
+    }
+
+    function goldToast() {
+        const box = stage() && stage().querySelector('#lvGold'); if (!box || box.childElementCount > 2) return;
+        const nm = GOLD_NAMES[Math.floor(Math.random() * GOLD_NAMES.length)];
+        const el = document.createElement('div');
+        el.className = 'lv-gtoast';
+        el.innerHTML = '<div class="gi">' + ICO.diamond + '</div><div class="gt"><b>' + esc(nm) + '</b> virou Premium</div>';
+        box.appendChild(el);
+        chime();
+        setTimeout(() => el.remove(), 3600);
+    }
+
+    // relógio de 1s: espectadores oscilando + contador do grátis
+    function startTick() {
+        stopTick();
+        tickTimer = setInterval(() => {
+            const st = stage(); if (!st) return;
+            const eyeEl = st.querySelector('#lvEyes');
+            if (eyeEl && cur) { const base = cur.viewers || 40; eyeEl.textContent = Math.max(20, base + Math.floor(Math.random() * 9) - 4); }
+        }, 2500);
+    }
+    function stopTick() { if (tickTimer) { clearInterval(tickTimer); tickTimer = null; } }
+
+    // acumula o tempo grátis no servidor (a cada 5s) + trava quando zera
+    function startWatchClock() {
+        stopWatch();
+        watchTimer = setInterval(() => {
+            freeLeft = Math.max(0, freeLeft - 1);
+            const el = stage() && stage().querySelector('#lvFree');
+            if (el) el.textContent = fmtTime(freeLeft);
+            if (freeLeft % 5 === 0) {
+                try {
+                    const body = JSON.stringify({ seconds: 5, visitor_id: VID });
+                    if (navigator.sendBeacon) navigator.sendBeacon('/api/user/lives/watch', new Blob([body], { type: 'application/json' }));
+                    else fetch('/api/user/lives/watch', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+                } catch (_) {}
+            }
+            if (freeLeft <= 0) { stopWatch(); build(); } // re-render → estado travado
+        }, 1000);
+    }
+    function stopWatch() { if (watchTimer) { clearInterval(watchTimer); watchTimer = null; } }
+
+    // abre o MESMO popup da aba Vídeos (oferta 19,90 + Premium)
+    function unlock() {
+        try { if (typeof TRACK !== 'undefined') TRACK.event('lives_paywall_click', { kind: cur && cur.kind }); } catch (_) {}
+        pauseVideo();
+        // reaproveita o paywall dos vídeos: mostra o feed por trás e abre o popup
+        const stEl = stage(); if (stEl) { stEl.style.display = 'none'; stEl.classList.remove('on'); }
+        document.querySelectorAll('.tk-subtab').forEach(b => b.classList.toggle('on', b.dataset.sub === 'videos'));
+        const feed = document.getElementById('tkFeed'); if (feed) feed.style.display = '';
+        if (window.Explore) { Explore.open(); setTimeout(() => { if (window.__openExplorePaywall) window.__openExplorePaywall(); }, 250); }
+    }
+    function tryComment() {
+        // membro digita (simulado: some no rolo); não-membro → popup
+        if (data && data.has_access) { pushComment(); return; }
+        unlock();
+    }
+
+    function pauseVideo() { const v = stage() && stage().querySelector('#lvBg video'); if (v) { try { v.pause(); } catch (_) {} } }
+    function stopTimers() { stopTick(); stopWatch(); if (cmtTimer) clearInterval(cmtTimer); if (goldTimer) clearInterval(goldTimer); cmtTimer = goldTimer = null; }
+    function pause() {
+        stopTimers();
+        pauseVideo();
+        try { if (hls) { hls.destroy(); hls = null; } } catch (_) {}
+        const st = stage(); if (st) st.removeEventListener('click', onStageTap);
+    }
+
+    return { open, pause, heart, goldToast, unlock, tryComment, goLive };
 })();
 </script>
 </body>

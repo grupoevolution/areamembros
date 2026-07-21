@@ -242,6 +242,7 @@ app.use('/api/admin/explore', require('./routes/admin-explore'));
 app.use('/api/user', require('./routes/user-chats'));
 app.use('/api/user', require('./routes/user-groups'));
 app.use('/api/user', require('./routes/user'));
+app.use('/api/user', require('./routes/user-lives'));
 
 
 // ----------------------------------------------------------------------------

@@ -1700,7 +1700,7 @@ router.get('/app-config', async (req, res) => {
                 WHERE key IN (
                     'app_config', 'login_config', 'profile_config', 'home_layout',
                     'reviews_list', 'flash_offers', 'live_notifications',
-                    'explore_config', 'pwa_gate_config'
+                    'explore_config', 'pwa_gate_config', 'lives_config'
                 )
             `),
             safe(`
@@ -1852,6 +1852,8 @@ router.get('/app-config', async (req, res) => {
                 free_limit: configs.explore_config.free_limit,
                 pwa_gate_after: configs.explore_config.pwa_gate_after,
             },
+            // Lives: só a flag pra mostrar a sub-aba (o resto vem de /api/user/lives)
+            lives: { enabled: (configs.lives_config || {}).enabled === true },
             pwa_gate: configs.pwa_gate_config,
             // Lista de produtos com progresso de visualização — vazia até ter player real
             continue_watching: [],
@@ -1987,6 +1989,29 @@ async function isPremiumCustomer(email) {
             [email.toLowerCase().trim()]
         );
         return rows.length > 0;
+    } catch (_) { return false; }
+}
+
+// Posse dos VÍDEOS resolvida do zero (produto da config + códigos + Premium),
+// com o MESMO guarda anti-produto-interno do feed. Reutilizada pela aba Lives
+// (mesma regra de acesso e mesmo popup).
+async function exploreAccess(email) {
+    try {
+        const cfgRow = await db.query(`SELECT value FROM gamification_config WHERE key = 'explore_config'`).catch(() => ({ rows: [] }));
+        const cfg = cfgRow.rows[0]?.value || {};
+        let productId = cfg.product_id ? parseInt(cfg.product_id, 10) : null;
+        if (productId) {
+            const { rows: [pp] } = await db.query(
+                `SELECT 1 FROM products WHERE id = $1
+                   AND (COALESCE(is_chat_plan, false) = true OR COALESCE(is_story_plan, false) = true)`,
+                [productId]
+            );
+            if (pp) productId = null;
+        }
+        let has = await ownsExploreProduct(email, productId);
+        if (!has) has = await ownsExploreByOffers(email, cfg.unlock_offer_codes);
+        if (!has) has = await isPremiumCustomer(email);
+        return has;
     } catch (_) { return false; }
 }
 
@@ -3023,3 +3048,7 @@ router.get('/notifications/feed', optionalUser, async (req, res) => {
 
 
 module.exports = router;
+// Helpers compartilhados com a aba Lives (mesma posse dos vídeos + mesmo popup)
+module.exports.exploreAccess = exploreAccess;
+module.exports.loadExploreUnlock = loadExploreUnlock;
+module.exports.loadPremiumPlan = loadPremiumPlan;
