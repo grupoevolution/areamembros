@@ -26,7 +26,23 @@ const router = express.Router();
 const db = require('../db');
 const { logger } = require('../lib/logger');
 const { optionalUser } = require('../lib/user-auth');
-const { listCollectionVideos, bunnyHlsUrl, bunnyThumbUrl } = require('../lib/bunny');
+const { listCollectionVideos, bunnyHlsUrl, bunnyThumbUrl, resolveStreamCollection } = require('../lib/bunny');
+
+// A coleção pode vir como NOME ("Lives", "18") ou como GUID — resolve pro guid.
+// "*" / "todas" / vazio = TODOS os vídeos da library (sem sub-pasta).
+const _colResolve = new Map();
+async function resolveCollection(libId, raw) {
+    const s = String(raw || '').trim();
+    if (!s) return null;
+    if (s === '*' || /^todas?$/i.test(s)) return '*';
+    const key = libId + '|' + s.toLowerCase();
+    const c = _colResolve.get(key);
+    if (c && Date.now() - c.at < 10 * 60000) return c.guid;
+    let guid = null;
+    try { guid = await resolveStreamCollection(libId, s); } catch (_) {}
+    _colResolve.set(key, { at: Date.now(), guid });
+    return guid;
+}
 
 // Reusa as checagens de posse dos vídeos (mesma regra: avulso OU Premium).
 // require LAZY (dentro da função) pra não depender da ordem de carga dos módulos.
@@ -169,11 +185,14 @@ router.get('/lives', optionalUser, async (req, res) => {
         const email = req.user?.email || null;
         const hasAccess = await exploreAccess(email);
 
-        // VÁRIAS lives no ar: N liberadas + N do +18 (números configuráveis)
+        // VÁRIAS lives no ar: N liberadas + N do +18 (números configuráveis).
+        // A coleção pode estar salva como NOME ou GUID → resolve pro guid aqui.
         const freeCount = Math.max(0, Math.min(30, cfg.free_on_air | 0));
         const vipCount = Math.max(0, Math.min(30, cfg.vip_on_air | 0));
-        const freeLives = await livesOnAir(cfg, cfg.free_collection, 'free', freeCount, now);
-        const vipLives = await livesOnAir(cfg, cfg.vip_collection, 'vip', vipCount, now);
+        const freeCol = await resolveCollection(cfg.lib_id, cfg.free_collection);
+        const vipCol = await resolveCollection(cfg.lib_id, cfg.vip_collection);
+        const freeLives = await livesOnAir(cfg, freeCol, 'free', freeCount, now);
+        const vipLives = await livesOnAir(cfg, vipCol, 'vip', vipCount, now);
 
         // tempo grátis restante na faixa liberada (por dia)
         const { dayKey } = brasiliaParts(now);

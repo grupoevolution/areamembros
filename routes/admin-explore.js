@@ -28,6 +28,12 @@ function sanitizeBunnyGuid(raw) {
     const s = (raw || '').toString().trim();
     return /^[a-zA-Z0-9\-_]+$/.test(s) ? s.slice(0, 60) : null;
 }
+// Coleção das Lives: aceita NOME (com espaço/acento) OU guid OU "*". Guarda o
+// texto como o dono digitou — o runtime resolve pro guid via Bunny.
+function sanitizeColRef(raw) {
+    const s = (raw || '').toString().trim().slice(0, 120);
+    return s || null;
+}
 
 // ── CONFIG (explore_config + pwa_gate_config) ────────────────────────────────
 const DEFAULT_EXPLORE = {
@@ -130,8 +136,8 @@ router.put('/settings', requireAdmin, async (req, res) => {
                 ...cur,
                 enabled: l.enabled === true,
                 lib_id: sanitizeBunnyLib(l.lib_id),
-                free_collection: sanitizeBunnyGuid(l.free_collection),
-                vip_collection: sanitizeBunnyGuid(l.vip_collection),
+                free_collection: sanitizeColRef(l.free_collection),
+                vip_collection: sanitizeColRef(l.vip_collection),
                 cycle_days: Math.max(1, Math.min(60, parseInt(l.cycle_days, 10) || 7)),
                 free_on_air: Math.max(0, Math.min(30, parseInt(l.free_on_air, 10) || 0)),
                 vip_on_air: Math.max(0, Math.min(30, parseInt(l.vip_on_air, 10) || 0)),
@@ -237,6 +243,21 @@ router.post('/videos/reorder', requireAdmin, async (req, res) => {
     } catch (err) {
         logger.error('Erro reordenando vídeos do Explorar:', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+// GET /bunny-collections?lib_id=123 — lista as pastas (coleções) do Bunny da
+// library, pro dono ver o NOME certo de cada pasta ao configurar as Lives.
+router.get('/bunny-collections', requireAdmin, async (req, res) => {
+    try {
+        const lib = sanitizeBunnyLib(req.query.lib_id);
+        if (!lib) return res.json({ success: false, error: 'Library ID inválido' });
+        const { listStreamCollections } = require('../lib/bunny');
+        const items = await listStreamCollections(lib);
+        return res.json({ success: true, collections: items });
+    } catch (err) {
+        logger.warn('Erro listando coleções Bunny: ' + err.message);
+        return res.json({ success: false, error: 'Não consegui listar as pastas' });
     }
 });
 
