@@ -67,7 +67,7 @@ async function writeConfig(key, value, who) {
 
 const DEFAULT_LIVES = {
     enabled: false, lib_id: null, free_collection: null, vip_collection: null,
-    cycle_days: 7, free_on_air: 5, vip_on_air: 4, free_seconds: 180, creator_names: null,
+    cycle_days: 7, free_on_air: 4, vip_on_air: 1, free_seconds: 180, creator_names: null,
 };
 
 // GET /settings — devolve as configs (Explorar + gate de PWA + Lives)

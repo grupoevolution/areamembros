@@ -39,9 +39,9 @@ const DEFAULT_LIVES = {
     free_collection: null,   // coleção das lives LIBERADAS
     vip_collection: null,    // coleção das lives +18 TRAVADAS
     cycle_days: 7,           // ciclo: as lives giram por N dias e recomeçam
-    free_on_air: 5,          // quantas lives LIBERADAS ficam no ar ao mesmo tempo
-    vip_on_air: 4,           // quantas lives +18 ficam no ar ao mesmo tempo
-    free_seconds: 180,       // tempo grátis por dia na faixa liberada (seg)
+    free_on_air: 4,          // lives LIBERADAS no ar (4 liberadas + 1 +18 = 1 a cada 5)
+    vip_on_air: 1,           // lives +18 no ar ao mesmo tempo
+    free_seconds: 180,       // tempo grátis por dia na faixa liberada (3 min)
     creator_names: null,     // nomes opcionais por vídeo (fallback = título)
 };
 async function loadCfg() {
