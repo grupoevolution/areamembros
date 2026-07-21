@@ -675,6 +675,9 @@ async function loadUserPlans(email) {
                         [e]
                     );
                     if (gb) plan.group_bonus_until = gb.expires_at;
+                } else {
+                    // VIP: anexa o plano Premium pro CTA de upgrade no card prata
+                    plan.upgrade = await loadPremiumPlan();
                 }
                 plans.push(plan);
             }
@@ -1976,9 +1979,85 @@ async function loadPremiumPlan() {
              WHERE pp.is_premium = true AND pp.active = true AND p.is_active = true
              ORDER BY pp.id LIMIT 1`
         );
-        return rows.length ? rows[0] : null;
+        if (!rows.length) return null;
+        const plan = rows[0];
+        // Sem link no plano → herda o da oferta Premium (product_offers.is_premium)
+        if (!plan.checkout_url) {
+            try {
+                const { rows: [off] } = await db.query(
+                    `SELECT checkout_url FROM product_offers
+                     WHERE product_id = $1 AND is_active = true AND COALESCE(is_premium, false) = true
+                       AND checkout_url IS NOT NULL
+                     ORDER BY priority DESC, id LIMIT 1`,
+                    [plan.product_id]
+                );
+                if (off) plan.checkout_url = off.checkout_url;
+            } catch (_) {}
+        }
+        return plan.checkout_url ? plan : null;
     } catch (_) { return null; }
 }
+
+// ── Status do plano + opções de upgrade (bloco "Seu plano" do Perfil) ────────
+// current: 'free' | 'vip' | 'premium'. vip_plan/premium_plan = planos de venda
+// do produto do chat (pro CTA de upgrade — free vê os dois, VIP só o Premium).
+router.get('/plan-status', requireUser, async (req, res) => {
+    const empty = { success: true, current: 'free', expires_at: null, group_bonus_until: null, vip_plan: null, premium_plan: null };
+    try {
+        const email = req.user.email;
+        let current = 'free', expiresAt = null, bonusUntil = null;
+        try {
+            if (await isPreviewEmail(email)) current = 'premium';
+        } catch (_) {}
+        if (current === 'free') {
+            const myPlans = await loadUserPlans(email);
+            const chatPlan = myPlans.find(p => p.kind === 'premium' || p.kind === 'vip') || null;
+            if (chatPlan) {
+                current = chatPlan.kind;
+                expiresAt = chatPlan.expires_at;
+                bonusUntil = chatPlan.group_bonus_until;
+            }
+        }
+        let vipPlan = null, premiumPlan = null;
+        const { rows: [chatProd] } = await db.query(
+            `SELECT id FROM products WHERE is_chat_plan = true AND is_active = true ORDER BY id LIMIT 1`
+        );
+        if (chatProd) {
+            const { rows: pl } = await db.query(
+                `SELECT name, price, original_price, badge, benefits, checkout_url, is_premium
+                 FROM product_plans WHERE product_id = $1 AND active = true ORDER BY display_order, id`,
+                [chatProd.id]
+            );
+            premiumPlan = pl.find(p => p.is_premium) || null;
+            vipPlan = pl.find(p => !p.is_premium) || null;
+            // Plano sem link próprio herda o link da OFERTA correspondente do
+            // produto (a oferta Premium é a marcada com is_premium)
+            try {
+                const { rows: offs } = await db.query(
+                    `SELECT checkout_url, COALESCE(is_premium, false) AS is_premium
+                     FROM product_offers
+                     WHERE product_id = $1 AND is_active = true AND checkout_url IS NOT NULL
+                     ORDER BY priority DESC, id`,
+                    [chatProd.id]
+                );
+                const premOff = offs.find(o => o.is_premium) || null;
+                const vipOff = offs.find(o => !o.is_premium) || null;
+                if (premiumPlan && !premiumPlan.checkout_url && premOff) premiumPlan.checkout_url = premOff.checkout_url;
+                if (vipPlan && !vipPlan.checkout_url && vipOff) vipPlan.checkout_url = vipOff.checkout_url;
+            } catch (_) {}
+            if (premiumPlan && !premiumPlan.checkout_url) premiumPlan = null;
+            if (vipPlan && !vipPlan.checkout_url) vipPlan = null;
+        }
+        return res.json({
+            success: true,
+            current,
+            expires_at: expiresAt,
+            group_bonus_until: bonusUntil,
+            vip_plan: vipPlan,
+            premium_plan: premiumPlan,
+        });
+    } catch (_) { return res.json(empty); }
+});
 
 // PIX PENDENTE do cliente pra um produto: alimenta o popup "termina de pagar
 // seu Pix" (em vez de oferecer checkout novo pra quem JÁ gerou o código).

@@ -7313,6 +7313,9 @@ body.is-slowconn .prod-cta-fixed {
                 </div>
             </div>
 
+            <!-- SEU PLANO — status VIP/Premium + upgrade (renderProfilePlan) -->
+            <div id="profilePlanBox" style="margin:0 0 18px;"></div>
+
             <!-- ONBOARDING / JORNADA — movido da home pro perfil -->
             <div class="onboarding-card" data-feature="onboarding" style="margin: 0 0 18px;">
                 <div class="onboarding-header">
@@ -7368,14 +7371,8 @@ body.is-slowconn .prod-cta-fixed {
             </div>
 
             <!-- FOOTER ACTIONS -->
-            <!-- Plano do cliente: Free (upgrade dourado → popup de planos) / VIP -->
-            <div class="p3-plan" id="p3PlanCard" style="display:none;">
-                <div>
-                    <div class="t1">Seu plano</div>
-                    <div class="t2" id="p3PlanName">Free</div>
-                </div>
-                <button class="p3-plan-btn" id="p3PlanBtn" onclick="profileUpgrade()">👑 Virar VIP</button>
-            </div>
+            <!-- (o card legado "Seu plano / VIP 👑" saiu daqui — o bloco novo
+                 #profilePlanBox lá em cima diferencia Free / ⭐ VIP / 💎 Premium) -->
             <!-- Instalar o PWA (fixo no perfil; some sozinho quando já instalado) -->
             <button class="p3-install-btn" id="p3InstallBtn" onclick="profileInstallApp()">
                 <span class="ic"><svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg></span>
@@ -8104,7 +8101,8 @@ body.is-slowconn .prod-cta-fixed {
 #chat .ca-header h1 { font-size: 21px; font-weight: 700; color: #111; margin: 0; }
 /* Selo do plano no topo (NÃO clicável): FREE quase invisível; VIP dourado */
 .ca-plan-badge { font-size: 10px; font-weight: 700; letter-spacing: .8px; color: #9a958d; border: 1px solid #ddd6cd; padding: 3px 10px; border-radius: 999px; background: #fff; }
-.ca-plan-badge.vip { color: #6d5320; background: linear-gradient(180deg, #f7e3a4, #eec95e); border-color: #d9b558; }
+.ca-plan-badge.vip { color: #4a5058; background: linear-gradient(180deg, #eef0f4, #c9ced8); border-color: #b3bac6; }
+.ca-plan-badge.premium { color: #6d5320; background: linear-gradient(180deg, #f7e3a4, #eec95e); border-color: #d9b558; }
 /* Instrução central da conversa vazia (maior, 2 linhas, centro da tela) */
 .ca-first-hint { margin: auto 0; align-self: center; background: #fff; border-radius: 14px; padding: 14px 20px; max-width: 240px; text-align: center; font-size: 15.5px; line-height: 1.5; color: #3d4852; font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.07); }
 #chat .screen-scroll { background: #fff; padding-bottom: 100px; }
@@ -9022,6 +9020,11 @@ function switchScreen(name) {
         try { if (name === 'library') LibraryWatch.enter(); else LibraryWatch.leave(); } catch (_) {}
     }
 
+    // Perfil: atualiza o bloco "Seu plano" (free/VIP/Premium + upgrades)
+    if (name === 'profile' && typeof renderProfilePlan === 'function') {
+        try { renderProfilePlan(); } catch (_) {}
+    }
+
     if (navigator.vibrate) navigator.vibrate(5);
 }
 
@@ -9399,21 +9402,10 @@ window.ChatApp = (function() {
             if (!data || data.vip === undefined) return;
             const vip = data.vip === true;
             window.MV_VIP = vip;
-            const b = document.getElementById('caPlanBadge');
-            if (b) {
-                b.style.display = 'inline-flex';
-                b.className = 'ca-plan-badge' + (vip ? ' vip' : '');
-                b.textContent = vip ? '👑 VIP' : 'FREE';
-            }
-            const card = document.getElementById('p3PlanCard');
-            if (card) {
-                card.style.display = 'flex';
-                card.className = 'p3-plan' + (vip ? ' vip' : '');
-                const nm = document.getElementById('p3PlanName');
-                if (nm) nm.textContent = vip ? 'VIP 👑' : 'Free';
-                const btn = document.getElementById('p3PlanBtn');
-                if (btn) btn.style.display = vip ? 'none' : '';
-            }
+            // Badge da aba Conversas: FREE / ⭐ VIP (prata) / 💎 PREMIUM (dourado).
+            // O tipo vem do plan-status (window.MV_PLAN_KIND, setado pelo
+            // renderProfilePlan); sem ele ainda, VIP genérico = prata.
+            if (typeof applyPlanBadge === 'function') applyPlanBadge(vip);
         } catch (_) {}
     }
 
@@ -13661,6 +13653,9 @@ async function loadHomeData(opts) {
     // Catálogo é renderizado por loadAppData (fonte única). Não re-renderizar aqui.
     renderLibrary();
     renderUserInfo();
+    // Aquece o plan-status (badge FREE/VIP/PREMIUM das Conversas + bloco do
+    // perfil ficam certos desde o boot) — não bloqueia a home.
+    try { renderProfilePlan(true); } catch (_) {}
     hideLoadingStates();
 }
 
@@ -13859,6 +13854,14 @@ function renderPlanCard(plan) {
             + '</div></div></div>';
     }
     if (plan.kind === 'vip') {
+        const up = plan.upgrade;
+        const preco = (v) => { const n = parseFloat(v); return isNaN(n) ? '' : 'R$ ' + n.toFixed(2).replace('.', ','); };
+        const upgradeBox = (up && up.checkout_url)
+            ? '<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.1);padding-top:10px;">'
+              + '<div style="font-size:12px;font-weight:800;color:#f5d67b;">💎 Vire PREMIUM por ' + preco(up.price) + ' — status + vídeos inclusos</div>'
+              + '<button onclick="window.open(\'' + escapeAttrData(up.checkout_url) + '\',\'_blank\',\'noopener\')" style="margin-top:8px;width:100%;background:linear-gradient(90deg,#d4af37,#f5d67b);border:none;color:#241a05;font-size:12.5px;font-weight:900;letter-spacing:.4px;padding:11px;border-radius:10px;cursor:pointer;">FAZER UPGRADE 💎</button>'
+              + '</div>'
+            : '';
         return '<div class="acervo-card" style="border:1px solid rgba(200,205,215,.4);background:linear-gradient(135deg,rgba(58,62,70,.5),rgba(22,24,28,.75));border-radius:14px;padding:14px 16px;">'
             + '<div style="display:flex;align-items:flex-start;gap:11px;">'
             + '<div style="font-size:24px;line-height:1;">⭐</div>'
@@ -13866,6 +13869,7 @@ function renderPlanCard(plan) {
             + '<div style="font-weight:900;letter-spacing:.6px;color:#d7dbe2;font-size:15px;">VIP ATIVO</div>'
             + '<div style="font-size:12.5px;color:rgba(255,255,255,.78);margin-top:3px;line-height:1.45;">Conversas liberadas com todas as modelos — responda e mande foto à vontade.</div>'
             + validade
+            + upgradeBox
             + '</div></div></div>';
     }
     // status avulso
@@ -13877,6 +13881,95 @@ function renderPlanCard(plan) {
         + '<div style="font-size:12.5px;color:rgba(255,255,255,.78);margin-top:3px;line-height:1.45;">Você vê e responde os status secretos das modelos.</div>'
         + validade
         + '</div></div></div>';
+}
+
+// ── "Seu plano" no Perfil ────────────────────────────────────────────────────
+// free → oferece VIP e Premium; VIP → oferece upgrade pro Premium; Premium →
+// card dourado de status. Dados de GET /api/user/plan-status (cache 60s).
+let _planStatusCache = { at: 0, data: null };
+
+// Badge do topo da aba Conversas — mesma diferenciação (⭐ prata / 💎 dourado)
+function applyPlanBadge(isVipFallback) {
+    const b = document.getElementById('caPlanBadge');
+    if (!b) return;
+    const known = window.MV_PLAN_KIND;
+    const kind = known || (isVipFallback ? 'vip' : 'free');
+    b.style.display = 'inline-flex';
+    b.className = 'ca-plan-badge' + (kind === 'premium' ? ' premium' : (kind === 'vip' ? ' vip' : ''));
+    b.textContent = kind === 'premium' ? '💎 PREMIUM' : (kind === 'vip' ? '⭐ VIP' : 'FREE');
+}
+async function renderProfilePlan(force) {
+    const box = document.getElementById('profilePlanBox');
+    if (!box) return;
+    if (!window.userIsLogged) { box.innerHTML = ''; return; }
+    let ps = _planStatusCache.data;
+    if (force || !ps || Date.now() - _planStatusCache.at > 60000) {
+        try {
+            const r = await fetch('/api/user/plan-status', { credentials: 'include' });
+            const d = await r.json();
+            if (d && d.success) { ps = d; _planStatusCache = { at: Date.now(), data: d }; }
+        } catch (_) {}
+    }
+    if (!ps) { box.innerHTML = ''; return; }
+    // Compartilha o tipo do plano com o resto do app (badge das Conversas etc.)
+    window.MV_PLAN_KIND = ps.current;
+    try { applyPlanBadge(ps.current !== 'free'); } catch (_) {}
+    const fmtDia = (v) => { try { return new Date(v).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }); } catch (_) { return ''; } };
+    const preco = (v) => { const n = parseFloat(v); return isNaN(n) ? '' : 'R$ ' + n.toFixed(2).replace('.', ','); };
+    const buyBtn = (plan, label, gold) => (plan && plan.checkout_url)
+        ? '<button onclick="window.open(\'' + escapeAttrData(plan.checkout_url) + '\',\'_blank\',\'noopener\')" style="margin-top:9px;width:100%;border:none;cursor:pointer;font-weight:900;letter-spacing:.4px;font-size:13px;padding:12px;border-radius:11px;'
+          + (gold ? 'background:linear-gradient(90deg,#d4af37,#f5d67b);color:#241a05;' : 'background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.2);')
+          + '">' + label + '</button>'
+        : '';
+    const cardStyle = (borda, fundo) => 'border:1px solid ' + borda + ';background:' + fundo + ';border-radius:14px;padding:14px 16px;';
+
+    if (ps.current === 'premium') {
+        const bonus = ps.group_bonus_until
+            ? '<div style="margin-top:8px;font-size:12px;font-weight:700;color:#f5d67b;">🎁 Bônus: grupo VIP até ' + fmtDia(ps.group_bonus_until) + '</div>' : '';
+        box.innerHTML = '<div style="' + cardStyle('rgba(212,175,55,.55)', 'linear-gradient(135deg,rgba(64,48,10,.55),rgba(26,19,4,.75))') + 'box-shadow:0 0 20px rgba(212,175,55,.14);">'
+            + '<div style="font-size:11px;font-weight:800;letter-spacing:.8px;color:rgba(255,255,255,.5);margin-bottom:4px;">SEU PLANO</div>'
+            + '<div style="font-weight:900;letter-spacing:.6px;color:#f5d67b;font-size:16px;">💎 PREMIUM</div>'
+            + '<div style="font-size:12.5px;color:rgba(255,255,255,.8);margin-top:3px;line-height:1.45;">Tudo liberado: conversas, fotos, status VIP e todos os vídeos.</div>'
+            + (ps.expires_at ? '<div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-top:6px;">Válido até <b style="color:rgba(255,255,255,.85);">' + fmtDia(ps.expires_at) + '</b></div>' : '')
+            + bonus
+            + '</div>';
+        return;
+    }
+    if (ps.current === 'vip') {
+        const up = ps.premium_plan;
+        box.innerHTML = '<div style="' + cardStyle('rgba(200,205,215,.4)', 'linear-gradient(135deg,rgba(58,62,70,.5),rgba(22,24,28,.75))') + '">'
+            + '<div style="font-size:11px;font-weight:800;letter-spacing:.8px;color:rgba(255,255,255,.5);margin-bottom:4px;">SEU PLANO</div>'
+            + '<div style="font-weight:900;letter-spacing:.6px;color:#d7dbe2;font-size:16px;">⭐ VIP</div>'
+            + '<div style="font-size:12.5px;color:rgba(255,255,255,.78);margin-top:3px;line-height:1.45;">Conversas liberadas com todas as modelos.</div>'
+            + (ps.expires_at ? '<div style="font-size:11.5px;color:rgba(255,255,255,.55);margin-top:6px;">Válido até <b style="color:rgba(255,255,255,.85);">' + fmtDia(ps.expires_at) + '</b></div>' : '')
+            + (up ? ('<div style="margin-top:11px;border-top:1px solid rgba(255,255,255,.1);padding-top:11px;">'
+                + '<div style="font-size:12px;font-weight:800;color:#f5d67b;">💎 Vire PREMIUM por ' + preco(up.price) + '</div>'
+                + '<div style="font-size:11.5px;color:rgba(255,255,255,.65);margin-top:3px;line-height:1.4;">' + escapeHtml(up.benefits || 'Status VIP + todos os vídeos + 7 dias de grupo VIP, além das conversas.') + '</div>'
+                + buyBtn(up, 'QUERO O PREMIUM 💎', true)
+                + '</div>') : '')
+            + '</div>';
+        return;
+    }
+    // free
+    const v = ps.vip_plan, p = ps.premium_plan;
+    if (!v && !p) { box.innerHTML = ''; return; }
+    box.innerHTML = '<div style="' + cardStyle('rgba(255,255,255,.12)', 'rgba(255,255,255,.04)') + '">'
+        + '<div style="font-size:11px;font-weight:800;letter-spacing:.8px;color:rgba(255,255,255,.5);margin-bottom:4px;">SEU PLANO</div>'
+        + '<div style="font-weight:900;font-size:15px;color:#fff;">Gratuito</div>'
+        + '<div style="font-size:12.5px;color:rgba(255,255,255,.65);margin-top:3px;">Desbloqueie as conversas e o conteúdo completo:</div>'
+        + (v ? ('<div style="margin-top:11px;border:1px solid rgba(200,205,215,.3);border-radius:11px;padding:10px 12px;">'
+            + '<div style="font-size:13px;font-weight:800;color:#d7dbe2;">⭐ ' + escapeHtml(v.name || 'VIP') + ' — ' + preco(v.price) + '</div>'
+            + '<div style="font-size:11.5px;color:rgba(255,255,255,.6);margin-top:2px;">' + escapeHtml(v.benefits || 'Conversas liberadas com todas as modelos.') + '</div>'
+            + buyBtn(v, 'QUERO O VIP ⭐', false)
+            + '</div>') : '')
+        + (p ? ('<div style="margin-top:9px;border:1px solid rgba(212,175,55,.5);border-radius:11px;padding:10px 12px;background:linear-gradient(135deg,rgba(64,48,10,.45),rgba(26,19,4,.6));">'
+            + '<div style="font-size:13px;font-weight:800;color:#f5d67b;">💎 ' + escapeHtml(p.name || 'PREMIUM') + ' — '
+            + (p.original_price ? '<span style="text-decoration:line-through;opacity:.5;font-weight:600;">' + preco(p.original_price) + '</span> ' : '')
+            + preco(p.price) + '</div>'
+            + '<div style="font-size:11.5px;color:rgba(255,255,255,.65);margin-top:2px;">' + escapeHtml(p.benefits || 'Tudo liberado: conversas + status + vídeos + 7 dias de grupo VIP.') + '</div>'
+            + buyBtn(p, 'QUERO TUDO 💎', true)
+            + '</div>') : '')
+        + '</div>';
 }
 
 function renderLibrary() {
@@ -20237,6 +20330,19 @@ window.Explore = (function () {
                 + '</div>';
         }).join('');
 
+        // SEM acesso: o servidor só manda os vídeos grátis — sem um slide a
+        // mais, o lead assistia o último e ficava parado SEM paywall (o gate
+        // só rodava ao rolar pro próximo). Este slide-isca fecha o ciclo:
+        // arrastou pra cima depois do grátis → paywall.
+        if (data && !data.has_access && data.videos.length) {
+            feed.innerHTML += '<div class="tk-slide tk-slide-locked" data-index="' + data.videos.length + '" style="display:flex;align-items:center;justify-content:center;background:radial-gradient(circle at 50% 35%,#2a0508,#0a0203);">'
+                + '<div style="text-align:center;padding:0 36px;">'
+                + '<div style="font-size:44px;margin-bottom:14px;">🔒</div>'
+                + '<div style="font-size:17px;font-weight:800;color:#fff;line-height:1.35;">Os mais quentes estão logo aqui…</div>'
+                + '<div style="font-size:13px;color:rgba(255,255,255,.65);margin-top:8px;">Libera o acesso pra continuar vendo</div>'
+                + '</div></div>';
+        }
+
         const slides = [...feed.querySelectorAll('.tk-slide')];
         // play/pause + gates conforme o slide entra na tela
         if (io) { try { io.disconnect(); } catch (_) {} }
@@ -20309,6 +20415,12 @@ window.Explore = (function () {
         }
         const watched = loadSeen().size; // vídeos únicos já assistidos na vida
         if (!data.has_access) {
+            // Chegou no slide-isca (depois do último grátis) → paywall na hora
+            if (i >= data.videos.length) {
+                pauseAll();
+                openPaywall();
+                return;
+            }
             // Gate de PWA: sem instalar, libera só pwa_gate_after vídeos
             if (gateExploreOn() && !gatePassed && window.ChatApp && !ChatApp.isStandalone() && watched >= (data.pwa_gate_after || 0) && watched < (data.free_limit || 9999)) {
                 pauseAll();
