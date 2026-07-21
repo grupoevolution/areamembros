@@ -1951,12 +1951,40 @@ async function ownsExploreByOffers(email, rawCodes) {
     const codes = parseOfferCodes(rawCodes);
     if (!codes.length) return false;
     try {
+        // Código que pertence ao produto INTERNO do chat só vale se for a
+        // oferta PREMIUM. Sem esse filtro, listar o código do Premium aqui
+        // fazia o VIP (mesmo produto do chat!) destravar os vídeos junto.
         const { rows } = await db.query(
-            `SELECT 1 FROM user_access ua JOIN product_offers po ON po.id = ua.offer_id
+            `SELECT 1 FROM user_access ua
+             JOIN product_offers po ON po.id = ua.offer_id
+             JOIN products p ON p.id = po.product_id
              WHERE LOWER(ua.email) = $1 AND ua.status = 'active'
                AND (ua.expires_at IS NULL OR ua.expires_at > NOW())
-               AND po.offer_id = ANY($2::text[]) LIMIT 1`,
+               AND po.offer_id = ANY($2::text[])
+               AND ( (COALESCE(p.is_chat_plan, false) = false AND COALESCE(p.is_story_plan, false) = false)
+                     OR COALESCE(po.is_premium, false) = true )
+             LIMIT 1`,
             [email.toLowerCase().trim(), codes]
+        );
+        return rows.length > 0;
+    } catch (_) { return false; }
+}
+
+// Cliente PREMIUM (produto do chat comprado pela oferta Premium, detectado
+// pela oferta OU pelo selo metadata.premium). Premium inclui os vídeos por
+// definição; VIP não — esta é a regra explícita, independente de config.
+async function isPremiumCustomer(email) {
+    if (!email) return false;
+    try {
+        const { rows } = await db.query(
+            `SELECT 1 FROM user_access ua
+             JOIN products p ON p.id = ua.product_id AND p.is_chat_plan = true
+             LEFT JOIN product_offers po ON po.id = ua.offer_id
+             WHERE LOWER(ua.email) = $1 AND ua.status = 'active'
+               AND (ua.expires_at IS NULL OR ua.expires_at > NOW())
+               AND (COALESCE(po.is_premium, false) = true OR ua.metadata->>'premium' = 'true')
+             LIMIT 1`,
+            [email.toLowerCase().trim()]
         );
         return rows.length > 0;
     } catch (_) { return false; }
@@ -2180,10 +2208,22 @@ router.get('/explore/access', optionalUser, async (req, res) => {
     try {
         const cfgRow = await db.query(`SELECT value FROM gamification_config WHERE key = 'explore_config'`).catch(() => ({ rows: [] }));
         const cfg = cfgRow.rows[0]?.value || {};
-        const productId = cfg.product_id ? parseInt(cfg.product_id, 10) : null;
+        let productId = cfg.product_id ? parseInt(cfg.product_id, 10) : null;
+        // Mesmo guarda do feed: produto interno do chat/status não conta
+        if (productId) {
+            try {
+                const { rows: [pp] } = await db.query(
+                    `SELECT 1 FROM products WHERE id = $1
+                       AND (COALESCE(is_chat_plan, false) = true OR COALESCE(is_story_plan, false) = true)`,
+                    [productId]
+                );
+                if (pp) productId = null;
+            } catch (_) {}
+        }
         const email = req.user?.email || null;
         let hasAccess = await ownsExploreProduct(email, productId);
         if (!hasAccess) hasAccess = await ownsExploreByOffers(email, cfg.unlock_offer_codes);
+        if (!hasAccess) hasAccess = await isPremiumCustomer(email);
         return res.json({ success: true, has_access: hasAccess });
     } catch (err) {
         return res.status(500).json({ success: false, error: 'Erro interno' });
@@ -2242,15 +2282,33 @@ router.get('/explore/feed', optionalUser, async (req, res) => {
         const freeLimit = Number.isFinite(+cfg.free_limit) ? Math.max(0, parseInt(cfg.free_limit, 10)) : 15;
         const pwaGateAfter = Number.isFinite(+cfg.pwa_gate_after) ? Math.max(0, parseInt(cfg.pwa_gate_after, 10)) : 2;
         let productId = cfg.product_id ? parseInt(cfg.product_id, 10) : null;
+        // Produto INTERNO (chat/status) nunca é "o produto dos vídeos": sem
+        // este guarda, o código do Premium na lista resolvia o produto do chat
+        // aqui e o VIP (mesmo produto!) ganhava o feed inteiro de graça.
+        if (productId) {
+            try {
+                const { rows: [pp] } = await db.query(
+                    `SELECT 1 FROM products WHERE id = $1
+                       AND (COALESCE(is_chat_plan, false) = true OR COALESCE(is_story_plan, false) = true)`,
+                    [productId]
+                );
+                if (pp) productId = null;
+            } catch (_) {}
+        }
         // Sem produto configurado mas COM códigos de oferta: resolve o produto
-        // pelo primeiro código — garante unlock.product_id pro popup do Pix
-        // pendente funcionar mesmo nessa configuração.
+        // pelo primeiro código NÃO-interno — garante unlock.product_id pro
+        // popup do Pix pendente funcionar mesmo nessa configuração.
         if (!productId) {
             const codes = parseOfferCodes(cfg.unlock_offer_codes);
             if (codes.length) {
                 try {
                     const { rows: [po] } = await db.query(
-                        `SELECT product_id FROM product_offers WHERE offer_id = ANY($1::text[]) AND product_id IS NOT NULL LIMIT 1`,
+                        `SELECT po.product_id FROM product_offers po
+                         JOIN products p ON p.id = po.product_id
+                         WHERE po.offer_id = ANY($1::text[]) AND po.product_id IS NOT NULL
+                           AND COALESCE(p.is_chat_plan, false) = false
+                           AND COALESCE(p.is_story_plan, false) = false
+                         LIMIT 1`,
                         [codes]
                     );
                     if (po) productId = po.product_id;
@@ -2260,6 +2318,8 @@ router.get('/explore/feed', optionalUser, async (req, res) => {
         const email = req.user?.email || null;
         let hasAccess = await ownsExploreProduct(email, productId);
         if (!hasAccess) hasAccess = await ownsExploreByOffers(email, cfg.unlock_offer_codes);
+        // Premium leva os vídeos por definição (VIP não)
+        if (!hasAccess) hasAccess = await isPremiumCustomer(email);
 
         // Pasta (coleção) do Bunny tem prioridade; senão, a lista manual de vídeos.
         let videos;
