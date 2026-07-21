@@ -212,9 +212,9 @@ router.get('/lives', optionalUser, async (req, res) => {
         const lives = [];
         for (const l of freeLives) lives.push({ ...l, locked: false });
         for (const l of vipLives) {
-            // +18: sem URL jogável pra quem não tem acesso (só poster borrado)
-            const safe = hasAccess ? l : { guid: l.guid, kind: 'vip', name: l.name, poster: l.poster, viewers: l.viewers };
-            lives.push({ ...safe, locked: !hasAccess });
+            // +18: o vídeo TOCA embaçado atrás do aviso (teaser, igual stories VIP)
+            // — o dono pediu explicitamente pra passar borrado, não tela preta.
+            lives.push({ ...l, locked: !hasAccess });
         }
 
         // Info do popup (o MESMO da aba Vídeos: oferta 19,90 + Premium) — mandada

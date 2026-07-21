@@ -8144,7 +8144,9 @@ body.is-slowconn .prod-cta-fixed {
 @keyframes caLiveSpin { to { transform: rotate(360deg); } }
 .ca-live-ring .av { width: 100%; height: 100%; border-radius: 50%; background: #2a1118 center/cover no-repeat; border: 2.5px solid #fff; box-sizing: border-box; animation: caLiveSpin 2.6s linear infinite reverse; }
 /* selo AO VIVO FIXO (fora do anel que gira) — sobreposto na base da foto */
-.ca-live-badge { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); z-index: 2; background: linear-gradient(135deg, #e50914, #ff3b30); color: #fff; font-size: 8px; font-weight: 900; letter-spacing: .6px; padding: 2.5px 7px; border-radius: 999px; border: 2px solid #fff; display: flex; align-items: center; gap: 3px; white-space: nowrap; }
+.ca-live-badge { position: absolute; left: 50%; top: 52px; transform: translateX(-50%); z-index: 2; background: linear-gradient(135deg, #e50914, #ff3b30); color: #fff; font-size: 8px; font-weight: 900; letter-spacing: .6px; padding: 2.5px 7px; border-radius: 999px; border: 2px solid #fff; display: flex; align-items: center; gap: 3px; white-space: nowrap; box-shadow: 0 0 0 0 rgba(229,9,20,.5); animation: caLivePulse 1.5s ease-in-out infinite; }
+@keyframes caLivePulse { 0%,100% { transform: translateX(-50%) scale(1); box-shadow: 0 0 0 0 rgba(229,9,20,.5); } 50% { transform: translateX(-50%) scale(1.08); box-shadow: 0 0 0 6px rgba(229,9,20,0); } }
+@media (prefers-reduced-motion: reduce) { .ca-live-badge { animation: none !important; } }
 .ca-live-badge .d { width: 4px; height: 4px; border-radius: 50%; background: #fff; animation: lvblink 1.1s infinite; }
 @media (prefers-reduced-motion: reduce) { .ca-live-ring, .ca-live-ring .av { animation: none !important; } }
 /* Viewer de stories (tela cheia, estilo Instagram) */
@@ -8687,15 +8689,32 @@ body.is-slowconn .prod-cta-fixed {
 .lv-input svg{flex-shrink:0;opacity:.6;}
 .lv-rnd{width:46px;height:46px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;}
 .lv-rnd.heart{background:linear-gradient(135deg,#e50914,#ff3b30);color:#fff;box-shadow:0 6px 16px rgba(229,9,20,.4);}
+.lv-rnd.sound{background:rgba(10,8,12,.55);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.18);color:#fff;}
+/* gate "toque pra ativar o som" (1ª vez) */
+.lv-soundgate{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(0,0,0,.35);cursor:pointer;}
+.lv-soundgate.hidden{display:none;}
+.lv-soundgate .ring{width:76px;height:76px;border-radius:50%;background:rgba(255,255,255,.14);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;color:#fff;animation:lvSndPulse 1.8s ease-in-out infinite;}
+.lv-soundgate .ring svg{width:30px;height:30px;}
+.lv-soundgate p{color:#fff;font-size:14px;font-weight:700;text-shadow:0 1px 8px rgba(0,0,0,.7);}
+@keyframes lvSndPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,255,255,.25);}50%{transform:scale(1.06);box-shadow:0 0 0 14px rgba(255,255,255,0);}}
 .lv-x{position:absolute;top:calc(48px + env(safe-area-inset-top));right:14px;z-index:7;width:34px;height:34px;border-radius:50%;background:rgba(10,8,12,.55);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
 .lv-lockwrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;padding:0 28px;}
 .lv-lockcard{text-align:center;max-width:320px;}
+/* +18 bem maior e mais quente (design top pedido pelo dono) */
+.lv-lockcard.xxx{max-width:360px;background:linear-gradient(180deg,rgba(30,4,8,.72),rgba(10,2,4,.82));border:1px solid rgba(245,214,123,.35);border-radius:22px;padding:26px 22px;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 40px rgba(229,9,20,.2);}
 .lv-lock18{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);border-radius:999px;font-size:10.5px;font-weight:900;letter-spacing:1.4px;padding:5px 12px;margin-bottom:12px;color:#fff;}
+.lv-lock18.hot{background:linear-gradient(135deg,#e50914,#ff3b30);border-color:transparent;font-size:12px;padding:7px 15px;box-shadow:0 6px 18px rgba(229,9,20,.5);animation:lvHotPulse 1.6s ease-in-out infinite;}
+@keyframes lvHotPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.05);}}
 .lv-lock18 .d{width:5px;height:5px;border-radius:50%;background:#ff3b30;animation:lvblink 1.1s infinite;}
+.lv-lock18.hot .d{background:#fff;}
 .lv-lockic{width:58px;height:58px;border-radius:17px;background:linear-gradient(135deg,#e50914,#ff3b30);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;box-shadow:0 14px 34px rgba(229,9,20,.45);}
+.xxx .lv-lockic{width:70px;height:70px;border-radius:20px;}
 .lv-locktitle{font-size:21px;font-weight:900;line-height:1.25;color:#fff;text-wrap:balance;}
+.xxx .lv-locktitle{font-size:27px;}
 .lv-locktitle em{font-style:normal;color:#f5d67b;}
 .lv-locksub{font-size:13.5px;color:rgba(255,255,255,.75);margin-top:7px;line-height:1.5;}
+.xxx .lv-locksub{font-size:14.5px;color:rgba(255,255,255,.82);}
+.lv-lockfoot{margin-top:12px;font-size:11.5px;color:rgba(245,214,123,.85);font-weight:700;}
 .lv-lockcta{display:inline-flex;align-items:center;gap:8px;margin-top:16px;background:linear-gradient(90deg,#d4af37,#f5d67b);color:#241a05;border:none;font-size:14px;font-weight:900;letter-spacing:.5px;padding:15px 26px;border-radius:13px;cursor:pointer;box-shadow:0 10px 26px rgba(212,175,55,.35);}
 .lv-next{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(110px + env(safe-area-inset-bottom));z-index:5;display:flex;align-items:center;gap:8px;background:rgba(10,8,12,.55);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:7px 14px;font-size:12px;color:rgba(255,255,255,.8);white-space:nowrap;}
 .lv-next b{color:#fff;}
@@ -20896,7 +20915,10 @@ window.Lives = (function () {
         heartFill: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1.1L12 21.2l7.8-7.7 1-1.1a5.5 5.5 0 000-7.8z"/></svg>',
         diamond: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#241a05" stroke-width="2.4"><path d="M6 3h12l4 6-10 12L2 9l4-6z"/><path d="M2 9h20M12 3l-3 6 3 12 3-12-3-6"/></svg>',
         chevup: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg>',
+        sound: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M19 5a9 9 0 010 14"/></svg>',
+        mute: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M23 9l-6 6M17 9l6 6"/></svg>',
     };
+    let lvSound = false; // som liberado nesta sessão (autoplay começa mudo)
     const VID = (window.VID || null);
     const GOLD_NAMES = ['Bruno', 'Thiago', 'Marcos', 'Rafael', 'Diego', 'Lucas', 'Felipe', 'André', 'Gustavo', 'Renan', 'Caio', 'Eduardo', 'Vitor', 'Matheus', 'Pedro', 'Gabriel', 'Rodrigo', 'Fábio', 'Ricardo', 'Leandro', 'Wesley', 'Douglas', 'Fernando', 'Alex'];
     const CMT_CAST = ['Rodrigo', 'Thiago', 'Marcos', 'Felipe', 'Bruno', 'André', 'Diego', 'Léo', 'Caio', 'Igor', 'Wesley', 'Pedro', 'Gabriel', 'Vitor', 'Alex', 'Renan', 'Fábio', 'Lucas'];
@@ -20934,6 +20956,7 @@ window.Lives = (function () {
             const d = await r.json();
             if (!d || !d.success || !d.enabled || !Array.isArray(d.lives) || !d.lives.length) { renderEmpty(); return; }
             data = d;
+            data._at = Date.now(); // marca a busca pra calcular a posição "ao vivo" do vídeo
             freeLeft = (d.has_access) ? 999999 : (d.free_left || 0);
             // abre na live pedida (bolinha AO VIVO) ou na liberada por padrão
             curIdx = kind ? Math.max(0, d.lives.findIndex(l => l.kind === kind)) : d.lives.findIndex(l => l.kind === 'free');
@@ -20942,10 +20965,17 @@ window.Lives = (function () {
             build();
         } catch (_) { renderEmpty(); }
     }
-    // troca de live (swipe vertical, como uma "próxima live")
+    // troca de live (swipe vertical). NÃO dá loop: no fim da fila, o grátis
+    // trava (abre o popup) em vez de reiniciar do começo — pedido do dono.
     function goLive(dir) {
-        if (!data || data.lives.length < 2) return;
-        curIdx = (curIdx + dir + data.lives.length) % data.lives.length;
+        if (!data || !data.lives.length) return;
+        const next = curIdx + dir;
+        if (next < 0) return;                 // topo: não faz nada
+        if (next >= data.lives.length) {      // fim da fila: não reinicia
+            if (!data.has_access) unlock();   // grátis → popup ("entra pra ver mais")
+            return;
+        }
+        curIdx = next;
         cur = data.lives[curIdx];
         build();
     }
@@ -20961,7 +20991,8 @@ window.Lives = (function () {
         const locked = cur.locked || (cur.kind === 'free' && !data.has_access && freeLeft <= 0);
         const initial = (cur.name || '?').charAt(0).toUpperCase();
         const avStyle = cur.poster ? 'style="background-image:url(' + esc(cur.poster) + ')"' : '';
-        let html = '<div class="lv-bg ' + (cur.locked ? 'blurred' : '') + '" id="lvBg">'
+        // O vídeo TOCA sempre (inclusive travado) — embaçado quando locked.
+        let html = '<div class="lv-bg ' + (locked ? 'blurred' : '') + '" id="lvBg">'
             + (cur.hls_url ? '<video playsinline loop muted></video>' : '')
             + '</div><div class="lv-shade"></div>'
             + '<div class="lv-x" onclick="Explore.showSub(\'videos\')">' + ICO.x + '</div>'
@@ -20974,12 +21005,13 @@ window.Lives = (function () {
 
         if (locked) {
             const tempo = (cur.kind === 'vip');
-            html += '<div class="lv-lockwrap"><div class="lv-lockcard">'
-                + '<div class="lv-lock18"><span class="d"></span>' + (tempo ? '+18 · SEM CENSURA' : 'SEU TEMPO GRÁTIS ACABOU') + '</div>'
+            html += '<div class="lv-lockwrap"><div class="lv-lockcard' + (tempo ? ' xxx' : '') + '">'
+                + '<div class="lv-lock18' + (tempo ? ' hot' : '') + '"><span class="d"></span>' + (tempo ? '🔞 +18 · SEM CENSURA' : 'SEU TEMPO GRÁTIS ACABOU') + '</div>'
                 + '<div class="lv-lockic">' + ICO.lock + '</div>'
-                + '<div class="lv-locktitle">' + (tempo ? 'Tá rolando <em>AGORA</em>,<br>sem censura' : 'A live <em>continua</em> rolando…') + '</div>'
-                + '<div class="lv-locksub">' + (tempo ? 'Só membros veem. Libera e entra antes que acabe.' : 'Você viu só o começo. Libera agora e volta pra dentro.') + '</div>'
-                + '<button class="lv-lockcta" onclick="Lives.unlock()">' + ICO.eye + ' ' + (tempo ? 'VER SEM CENSURA' : 'CONTINUAR ASSISTINDO') + '</button>'
+                + '<div class="lv-locktitle">' + (tempo ? 'Ela tirou <em>TUDO</em><br>ao vivo agora' : 'A live <em>continua</em> rolando…') + '</div>'
+                + '<div class="lv-locksub">' + (tempo ? 'Pelada, mostrando tudo, sem cortes e sem censura. Só quem é membro entra e vê ela AO VIVO.' : 'Você viu só o começo. Libera agora e volta pra dentro.') + '</div>'
+                + '<button class="lv-lockcta" onclick="Lives.unlock()">' + ICO.eye + ' ' + (tempo ? 'VER ELA SEM CENSURA' : 'CONTINUAR ASSISTINDO') + '</button>'
+                + (tempo ? '<div class="lv-lockfoot">🔒 Acesso na hora · +2.400 já entraram</div>' : '')
                 + '</div></div>';
             // com várias lives no ar: dica de arrastar pra ver as outras
             if (data && data.lives.length > 1) html += '<div class="lv-next">' + ICO.chevup + ' arraste pra ver as outras lives</div>';
@@ -20989,13 +21021,19 @@ window.Lives = (function () {
                 + '<div class="lv-comments" id="lvCmts"></div>';
             if (cur.kind === 'free' && !data.has_access) html += '<div class="lv-free-chip"><div>' + ICO.clock + ' Grátis: <span id="lvFree">' + fmtTime(freeLeft) + '</span></div></div>';
             html += '<div class="lv-bar"><div class="lv-input" onclick="Lives.tryComment()">' + ICO.chat + ' Comente na live…</div>'
+                + '<button class="lv-rnd sound" onclick="Lives.toggleSound(event)">' + (lvSound ? ICO.sound : ICO.mute) + '</button>'
                 + '<button class="lv-rnd heart" onclick="Lives.heart()">' + ICO.heartFill + '</button></div>';
         }
+        // gate de som na 1ª vez SÓ na live liberada (na travada o CTA manda; o
+        // vídeo fica de teaser embaçado por trás e o gate cobriria o aviso)
+        if (!lvSound && !locked) html += '<div class="lv-soundgate" id="lvSoundGate"><div class="ring">' + ICO.sound + '</div><p>Toque pra ativar o som</p></div>';
         st.innerHTML = html;
 
-        if (!locked && cur.hls_url) startVideo();
+        if (cur.hls_url) startVideo(); // toca sempre (embaçado quando travado)
         // swipe vertical troca de live (quando há mais de uma no ar)
         attachSwipe(st);
+        const gate = st.querySelector('#lvSoundGate');
+        if (gate) gate.addEventListener('click', (e) => { e.stopPropagation(); enableSound(); });
         if (!locked) {
             // toque na tela manda coração (menos na barra e no X)
             st.addEventListener('click', onStageTap);
@@ -21011,12 +21049,45 @@ window.Lives = (function () {
         const v = stage().querySelector('#lvBg video'); if (!v) return;
         const url = cur.hls_url;
         try {
+            try { if (hls) { hls.destroy(); hls = null; } } catch (_) {}
             if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = url; }
             else if (window.Hls && window.Hls.isSupported()) { hls = new Hls({ maxBufferLength: 6, maxMaxBufferLength: 18 }); hls.loadSource(url); hls.attachMedia(v); }
             else { v.src = url; }
-            v.muted = true; // começa mudo (autoplay), lead ativa o som ao tocar
-            v.addEventListener('loadedmetadata', () => { try { if (cur.offset_sec) v.currentTime = Math.min(cur.offset_sec, (v.duration || cur.length_sec) - 1); } catch (_) {} v.play().catch(() => {}); }, { once: true });
+            v.muted = !lvSound; // respeita o som já ativado
+            v.addEventListener('loadedmetadata', () => {
+                try {
+                    // POSIÇÃO AO VIVO: offset do servidor + tempo passado desde a busca,
+                    // dobrado pela duração (loop). Assim, voltar pra live NÃO reinicia —
+                    // continua de onde "estaria" tocando ao vivo.
+                    const len = v.duration || cur.length_sec || 1;
+                    const elapsed = data && data._at ? (Date.now() - data._at) / 1000 : 0;
+                    const livePos = ((cur.offset_sec || 0) + elapsed) % len;
+                    if (livePos > 0 && livePos < len - 0.5) v.currentTime = livePos;
+                } catch (_) {}
+                v.play().catch(() => {});
+            }, { once: true });
         } catch (_) {}
+    }
+
+    // ── SOM (like o feed de vídeos: gate na 1ª vez + botão) ──────────────────
+    function enableSound() {
+        lvSound = true;
+        const v = stage() && stage().querySelector('#lvBg video');
+        if (v) { v.muted = false; v.play().catch(() => {}); }
+        const gate = stage() && stage().querySelector('#lvSoundGate'); if (gate) gate.classList.add('hidden');
+        refreshSoundBtn();
+    }
+    function toggleSound(e) {
+        if (e) e.stopPropagation();
+        lvSound = !lvSound;
+        const v = stage() && stage().querySelector('#lvBg video');
+        if (v) { v.muted = !lvSound; if (lvSound) v.play().catch(() => {}); }
+        const gate = stage() && stage().querySelector('#lvSoundGate'); if (gate && lvSound) gate.classList.add('hidden');
+        refreshSoundBtn();
+    }
+    function refreshSoundBtn() {
+        const b = stage() && stage().querySelector('.lv-rnd.sound');
+        if (b) b.innerHTML = lvSound ? ICO.sound : ICO.mute;
     }
 
     // swipe vertical entre lives (leve: só escuta touchstart/end no palco)
@@ -21035,9 +21106,9 @@ window.Lives = (function () {
     }
 
     function onStageTap(e) {
-        if (e.target.closest('.lv-bar') || e.target.closest('.lv-x') || e.target.closest('.lv-lockcta')) return;
-        // 1º toque também tira o mudo do vídeo
-        const v = stage().querySelector('#lvBg video'); if (v && v.muted) { v.muted = false; v.play().catch(() => {}); }
+        if (e.target.closest('.lv-bar') || e.target.closest('.lv-x') || e.target.closest('.lv-lockcta') || e.target.closest('.lv-soundgate')) return;
+        // 1º toque na tela também libera o som (like o feed de vídeos)
+        if (!lvSound) enableSound();
         heart(); heart();
     }
 
@@ -21154,7 +21225,7 @@ window.Lives = (function () {
         const st = stage(); if (st) st.removeEventListener('click', onStageTap);
     }
 
-    return { open, pause, heart, goldToast, unlock, tryComment, goLive };
+    return { open, pause, heart, goldToast, unlock, tryComment, goLive, toggleSound };
 })();
 </script>
 </body>
