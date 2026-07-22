@@ -3117,6 +3117,10 @@ a { color: inherit; text-decoration: none; }
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                     Visão geral
                 </div>
+                <div class="nav-item" data-screen="results" onclick="switchAdminScreen(this, 'results', 'Resultados'); loadResults();">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6" rx="1"/><rect x="12" y="8" width="3" height="10" rx="1"/><rect x="17" y="5" width="3" height="13" rx="1"/></svg>
+                    Resultados
+                </div>
             </div>
 
             <div class="nav-section">
@@ -3296,6 +3300,52 @@ a { color: inherit; text-decoration: none; }
             <!-- ==================================================
                  DASHBOARD (ativo por default)
             ================================================== -->
+            <!-- ═══════════════ RESULTADOS (funil diário) ═══════════════ -->
+            <div class="screen-content" id="screen-results">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Resultados</h1>
+                        <p class="page-subtitle">Quantos acessaram → deixaram o e-mail → instalaram o app → compraram, dia a dia (horário de Brasília).</p>
+                    </div>
+                    <div class="page-actions">
+                        <button class="btn-secondary" onclick="loadResults()">Atualizar</button>
+                    </div>
+                </div>
+
+                <!-- período -->
+                <div style="display:flex; gap:8px; margin:4px 0 16px; flex-wrap:wrap;">
+                    <button class="btn-secondary rs-period on" data-days="7" onclick="rsSetPeriod(7, this)">7 dias</button>
+                    <button class="btn-secondary rs-period" data-days="14" onclick="rsSetPeriod(14, this)">14 dias</button>
+                    <button class="btn-secondary rs-period" data-days="30" onclick="rsSetPeriod(30, this)">30 dias</button>
+                </div>
+                <style>
+                .rs-period.on { background:rgba(229,9,20,.18); border-color:rgba(229,9,20,.55); color:#fff; }
+                .rs-kpi { cursor:pointer; transition:border-color .15s; }
+                .rs-kpi.on { border-color:rgba(229,9,20,.6); box-shadow:0 0 0 1px rgba(229,9,20,.35); }
+                .rs-bars { display:flex; align-items:flex-end; gap:6px; height:180px; padding:10px 4px 0; }
+                .rs-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0; }
+                .rs-bar { width:100%; max-width:34px; border-radius:6px 6px 2px 2px; background:linear-gradient(180deg,#ff3b30,#b00610); min-height:2px; position:relative; }
+                .rs-bar .v { position:absolute; top:-19px; left:50%; transform:translateX(-50%); font-size:10.5px; font-weight:700; color:rgba(255,255,255,.85); white-space:nowrap; }
+                .rs-bar-day { font-size:10px; color:rgba(255,255,255,.5); white-space:nowrap; }
+                </style>
+
+                <!-- resumo HOJE -->
+                <div style="font-size:12px; font-weight:700; letter-spacing:.6px; color:rgba(255,255,255,.55); margin-bottom:8px;">HOJE</div>
+                <div class="kpi-grid" id="rsToday" style="margin-bottom:18px;"></div>
+
+                <!-- gráfico diário (clica num card do período pra trocar a métrica) -->
+                <div style="font-size:12px; font-weight:700; letter-spacing:.6px; color:rgba(255,255,255,.55); margin-bottom:8px;">SOMA DO PERÍODO <span style="font-weight:400; text-transform:none; letter-spacing:0;">(toque num card pra ver o gráfico dele)</span></div>
+                <div class="kpi-grid" id="rsTotals" style="margin-bottom:18px;"></div>
+                <div style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:16px;">
+                    <div id="rsChartTitle" style="font-size:13px; font-weight:700; color:#fff; margin-bottom:6px;">Acessos por dia</div>
+                    <div class="rs-bars" id="rsChart"></div>
+                </div>
+
+                <!-- produtos mais vendidos -->
+                <div style="font-size:12px; font-weight:700; letter-spacing:.6px; color:rgba(255,255,255,.55); margin:20px 0 8px;">PRODUTOS MAIS VENDIDOS NO PERÍODO</div>
+                <div style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:6px 16px;" id="rsTopProducts"></div>
+            </div>
+
             <div class="screen-content active" id="screen-dashboard">
                 <div class="page-header">
                     <div>
@@ -13002,6 +13052,74 @@ document.addEventListener('keydown', e => {
 
 
 <script>
+// ═══════════════ RESULTADOS (funil diário) ═══════════════
+let _rsDays = 7, _rsMetric = 'accesses', _rsData = null;
+const RS_METRICS = {
+    accesses: { label: 'Acessos', title: 'Acessos por dia', money: false },
+    emails:   { label: 'E-mails novos', title: 'E-mails capturados por dia', money: false },
+    installs: { label: 'Instalaram o app', title: 'Instalações do app por dia', money: false },
+    sales:    { label: 'Vendas', title: 'Vendas por dia', money: false },
+    revenue:  { label: 'Faturamento', title: 'Faturamento por dia (R$)', money: true },
+};
+function rsMoney(v) { return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ','); }
+function rsSetPeriod(days, btn) {
+    _rsDays = days;
+    document.querySelectorAll('.rs-period').forEach(b => b.classList.toggle('on', b === btn));
+    loadResults();
+}
+function rsSetMetric(m) { _rsMetric = m; rsRender(); }
+async function loadResults() {
+    try {
+        const r = await fetch('/api/admin/results?days=' + _rsDays, { credentials: 'include' });
+        const d = await r.json();
+        if (!d.success) return;
+        _rsData = d;
+        rsRender();
+    } catch (_) {}
+}
+function rsCard(key, value, sub, clickable) {
+    const m = RS_METRICS[key];
+    return '<div class="kpi-card rs-kpi' + (clickable && key === _rsMetric ? ' on' : '') + '"'
+        + (clickable ? ' onclick="rsSetMetric(\'' + key + '\')"' : '') + '>'
+        + '<div class="kpi-card-head"><span class="kpi-label">' + m.label + '</span></div>'
+        + '<div class="kpi-value">' + (m.money ? rsMoney(value) : (value || 0).toLocaleString('pt-BR')) + '</div>'
+        + '<div><span class="kpi-trend-sub">' + sub + '</span></div></div>';
+}
+function rsRender() {
+    const d = _rsData; if (!d) return;
+    const keys = ['accesses', 'emails', 'installs', 'sales', 'revenue'];
+    const today = d.today || {};
+    document.getElementById('rsToday').innerHTML = keys.map(k => rsCard(k, today[k], 'hoje', false)).join('');
+    document.getElementById('rsTotals').innerHTML = keys.map(k => rsCard(k, d.totals[k], 'em ' + d.days + ' dias', true)).join('');
+    // gráfico de barras (CSS puro)
+    const m = RS_METRICS[_rsMetric];
+    document.getElementById('rsChartTitle').textContent = m.title;
+    const vals = d.series.map(r => r[_rsMetric] || 0);
+    const max = Math.max(1, ...vals);
+    document.getElementById('rsChart').innerHTML = d.series.map((r, i) => {
+        const v = vals[i];
+        const h = Math.max(2, Math.round(v / max * 140));
+        const dt = r.day.slice(8, 10) + '/' + r.day.slice(5, 7);
+        const shown = m.money ? (v ? Math.round(v) : '') : (v || '');
+        return '<div class="rs-bar-col"><div class="rs-bar" style="height:' + h + 'px;' + (v ? '' : 'opacity:.25;') + '">'
+            + (shown !== '' ? '<span class="v">' + shown + '</span>' : '') + '</div>'
+            + '<div class="rs-bar-day">' + dt + '</div></div>';
+    }).join('');
+    // top produtos
+    const tp = d.top_products || [];
+    document.getElementById('rsTopProducts').innerHTML = tp.length
+        ? tp.map((p, i) => '<div style="display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,.06);">'
+            + '<span style="width:22px; height:22px; border-radius:6px; background:rgba(229,9,20,.18); color:#ff8585; font-size:11px; font-weight:800; display:inline-flex; align-items:center; justify-content:center;">' + (i + 1) + '</span>'
+            + '<span style="flex:1; font-size:13px; color:#fff; font-weight:600;">' + escHtmlAdmin(p.name) + '</span>'
+            + '<span style="font-size:12px; color:rgba(255,255,255,.6);">' + p.n + ' venda' + (p.n > 1 ? 's' : '') + '</span>'
+            + '<span style="font-size:12px; font-weight:700; color:#7ddb9a;">' + rsMoney(p.net) + ' líq.</span>'
+            + '</div>').join('')
+        : '<div style="padding:16px 0; color:rgba(255,255,255,.45); font-size:13px;">Nenhuma venda no período ainda.</div>';
+}
+window.loadResults = loadResults;
+window.rsSetPeriod = rsSetPeriod;
+window.rsSetMetric = rsSetMetric;
+
 // ═══════════════ CHAMADAS DE VÍDEO (admin) ═══════════════
 function escHtmlAdmin(s) { return String(s||'').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 

@@ -187,6 +187,97 @@ router.get('/dashboard', requireAdmin, async (req, res) => {
 });
 
 
+/**
+ * GET /api/admin/results?days=N — funil diário simples (fuso Brasília):
+ * acessos (session_start) → e-mails novos (customers) → instalou o app
+ * (session_start com standalone, marcado pelo app) → vendas/faturamento
+ * (user_access por venda única) + produtos mais vendidos do período.
+ */
+router.get('/results', requireAdmin, async (req, res) => {
+    try {
+        const days = Math.max(1, Math.min(90, parseInt(req.query.days, 10) || 7));
+        const TZ = 'America/Sao_Paulo';
+        const since = `NOW() - INTERVAL '${days + 1} days'`; // 1 dia de folga pro fuso
+
+        const [acc, emails, installs, sales, topProds] = await Promise.all([
+            // acessos = aberturas do app (1 session_start por abertura)
+            db.query(`
+                SELECT (created_at AT TIME ZONE '${TZ}')::date AS day, COUNT(*)::int AS n
+                FROM tracking_events
+                WHERE event_type = 'session_start' AND created_at > ${since}
+                GROUP BY 1`),
+            // e-mails capturados = clientes NOVOS no dia
+            db.query(`
+                SELECT (created_at AT TIME ZONE '${TZ}')::date AS day, COUNT(*)::int AS n
+                FROM customers WHERE created_at > ${since}
+                GROUP BY 1`),
+            // instalou o app = pessoas DISTINTAS abrindo em modo instalado (PWA)
+            db.query(`
+                SELECT (created_at AT TIME ZONE '${TZ}')::date AS day,
+                       COUNT(DISTINCT COALESCE(LOWER(customer_email), metadata->>'vid'))::int AS n
+                FROM tracking_events
+                WHERE event_type = 'session_start' AND metadata->>'standalone' = 'true'
+                  AND created_at > ${since}
+                GROUP BY 1`),
+            // vendas por VENDA única (order bump não conta 2x) + faturamento
+            db.query(`
+                SELECT (t.granted_at AT TIME ZONE '${TZ}')::date AS day,
+                       COUNT(*)::int AS n,
+                       COALESCE(SUM(t.sale_amount), 0)::float AS revenue
+                FROM (
+                    SELECT DISTINCT ON (gateway, sale_id) gateway, sale_id, granted_at, sale_amount
+                    FROM user_access
+                    WHERE granted_by = 'webhook' AND sale_id IS NOT NULL AND granted_at > ${since}
+                    ORDER BY gateway, sale_id, granted_at
+                ) t
+                GROUP BY 1`),
+            // produtos mais vendidos do período (por item vendido)
+            db.query(`
+                SELECT p.name, COUNT(*)::int AS n, COALESCE(SUM(ua.net_amount), 0)::float AS net
+                FROM user_access ua
+                JOIN products p ON p.id = ua.product_id
+                WHERE ua.granted_by = 'webhook' AND ua.granted_at > NOW() - INTERVAL '${days} days'
+                GROUP BY p.name ORDER BY n DESC, net DESC LIMIT 8`),
+        ]);
+
+        // monta a série contínua de dias (Brasília), do mais antigo pro hoje
+        const map = {};
+        const put = (rows, key, field = 'n') => rows.forEach(r => {
+            const d = r.day.toISOString().slice(0, 10);
+            (map[d] = map[d] || {})[key] = r[field];
+        });
+        put(acc.rows, 'accesses'); put(emails.rows, 'emails'); put(installs.rows, 'installs');
+        put(sales.rows, 'sales'); put(sales.rows, 'revenue', 'revenue');
+
+        const { rows: [{ today }] } = await db.query(`SELECT (NOW() AT TIME ZONE '${TZ}')::date::text AS today`);
+        const series = [];
+        const t = new Date(today + 'T12:00:00Z');
+        for (let i = days - 1; i >= 0; i--) {
+            const d = new Date(t.getTime() - i * 86400000).toISOString().slice(0, 10);
+            const row = map[d] || {};
+            series.push({
+                day: d,
+                accesses: row.accesses || 0,
+                emails: row.emails || 0,
+                installs: row.installs || 0,
+                sales: row.sales || 0,
+                revenue: row.revenue || 0,
+            });
+        }
+        const totals = series.reduce((a, r) => ({
+            accesses: a.accesses + r.accesses, emails: a.emails + r.emails,
+            installs: a.installs + r.installs, sales: a.sales + r.sales,
+            revenue: a.revenue + r.revenue,
+        }), { accesses: 0, emails: 0, installs: 0, sales: 0, revenue: 0 });
+
+        return res.json({ success: true, days, series, totals, top_products: topProds.rows, today: series[series.length - 1] || null });
+    } catch (err) {
+        logger.error('Erro em /results:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+
 // ============================================================================
 // SETTINGS — Gateway config + webhook secrets
 // ============================================================================

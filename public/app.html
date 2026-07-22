@@ -17137,8 +17137,14 @@ const TRACK = {
 };
 window.TRACK = TRACK;
 
-// Marca session_start na primeira visualização
-setTimeout(() => TRACK.event('session_start', { ts: Date.now() }), 1500);
+// Marca session_start na primeira visualização. `standalone` = abriu pelo
+// ícone instalado (PWA) — alimenta o "instalou o app" do painel Resultados;
+// `vid` deduplica visitante anônimo (sem e-mail ainda).
+setTimeout(() => {
+    let standalone = false;
+    try { standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true; } catch (_) {}
+    TRACK.event('session_start', { ts: Date.now(), standalone, vid: window.VID || null });
+}, 1500);
 
 // ================================================================
 // PUSH SUBSCRIPTION — pede permissão depois de N segundos do 1º load
