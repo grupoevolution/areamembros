@@ -10,7 +10,6 @@
  *   GET    /api/user/catalog        Catálogo completo (funciona sem login)
  *   GET    /api/user/library        Produtos que o cliente tem acesso (exige login)
  *
- *   POST   /api/user/products       [LEGADO] Mantido pra não quebrar backend atual
  *
  * =============================================================================
  */
@@ -1509,113 +1508,6 @@ router.post('/calls/:product_id/start', requireUser, async (req, res) => {
     } catch (err) {
         logger.error('Erro em /calls/:product_id/start:', err);
         return res.status(500).json({ ok: false, error: 'internal_error' });
-    }
-});
-
-
-// ----------------------------------------------------------------------------
-// LEGADO — mantém compatível com versão anterior do backend
-// ----------------------------------------------------------------------------
-
-/**
- * POST /api/user/products [LEGADO]
- * Mantido pra não quebrar código que chamava essa rota.
- * Novo código deve usar /catalog e /library.
- */
-router.post('/products', async (req, res) => {
-    const { email } = req.body || {};
-    
-    if (!email) {
-        return res.status(400).json({ success: false, error: 'Email obrigatório' });
-    }
-    
-    const normalizedEmail = email.toLowerCase().trim();
-    
-    try {
-        await db.query(`
-            UPDATE customers SET last_login_at = NOW()
-            WHERE LOWER(email) = $1
-        `, [normalizedEmail]);
-        
-        const { rows: userProducts } = await db.query(`
-            SELECT p.*, 
-                   c.name as category_name,
-                   c.slug as category_slug,
-                   ua.granted_at as access_granted_at,
-                   ua.gateway as access_gateway,
-                   true as has_access,
-                   (
-                       SELECT json_agg(
-                           json_build_object(
-                               'type', pm.media_type,
-                               'url', pm.url,
-                               'thumbnail_url', pm.thumbnail_url
-                           ) ORDER BY pm.display_order
-                       )
-                       FROM product_media pm WHERE pm.product_id = p.id
-                   ) as gallery
-            FROM user_access ua
-            INNER JOIN products p ON p.id = ua.product_id
-            LEFT JOIN categories c ON c.id = p.category_id
-            WHERE LOWER(ua.email) = $1 
-              AND ua.status = 'active'
-              AND (ua.expires_at IS NULL OR ua.expires_at > NOW())
-              AND p.is_active = true
-            ORDER BY ua.granted_at DESC
-        `, [normalizedEmail]);
-        
-        const { rows: [gatewaySetting] } = await db.query(
-            `SELECT value FROM system_settings WHERE key = 'active_gateway'`
-        );
-        const activeGateway = gatewaySetting?.value?.replace(/"/g, '') || 'kirvano';
-        
-        const userProductIds = userProducts.map(p => p.id);
-        const userProductIdsArr = userProductIds.length > 0 ? userProductIds : [-1];
-        
-        const { rows: catalog } = await db.query(`
-            SELECT p.*,
-                   c.name as category_name,
-                   c.slug as category_slug,
-                   (
-                       SELECT json_build_object(
-                           'gateway', po.gateway,
-                           'offer_id', po.offer_id,
-                           'checkout_url', po.checkout_url,
-                           'price', po.price
-                       )
-                       FROM product_offers po 
-                       WHERE po.product_id = p.id AND po.gateway = $1 AND po.is_active = true
-                       LIMIT 1
-                   ) as checkout,
-                   (
-                       SELECT json_agg(
-                           json_build_object(
-                               'type', pm.media_type,
-                               'url', pm.url,
-                               'thumbnail_url', pm.thumbnail_url
-                           ) ORDER BY pm.display_order
-                       )
-                       FROM product_media pm WHERE pm.product_id = p.id
-                   ) as gallery,
-                   false as has_access
-            FROM products p
-            LEFT JOIN categories c ON c.id = p.category_id
-            WHERE p.is_active = true
-              AND p.is_published = true
-              AND p.id != ALL($2::int[])
-            ORDER BY p.is_featured DESC, p.display_order, p.created_at DESC
-        `, [activeGateway, userProductIdsArr]);
-        
-        return res.json({
-            success: true,
-            email: normalizedEmail,
-            userProducts,
-            catalog,
-            activeGateway,
-        });
-    } catch (err) {
-        logger.error('Erro em /products (legado):', err);
-        return res.status(500).json({ success: false, error: 'Erro interno' });
     }
 });
 
