@@ -8643,10 +8643,10 @@ body.is-slowconn .prod-cta-fixed {
 @keyframes tkSwipeFade{0%,82%{opacity:1}100%{opacity:0;visibility:hidden}}
 .tk-brand{position:absolute;top:calc(12px + env(safe-area-inset-top));left:0;right:0;text-align:center;z-index:7;color:#fff;font-weight:800;font-size:16px;letter-spacing:-.01em;text-shadow:0 1px 8px rgba(0,0,0,.7);pointer-events:none;}
 /* sub-abas Vídeos • Lives */
-.tk-subtabs{position:absolute;top:calc(10px + env(safe-area-inset-top));left:0;right:0;z-index:8;display:flex;justify-content:center;gap:26px;pointer-events:none;}
-.tk-subtab{pointer-events:auto;background:none;border:none;color:rgba(255,255,255,.6);font-size:15.5px;font-weight:800;padding:4px 2px 8px;position:relative;cursor:pointer;text-shadow:0 1px 8px rgba(0,0,0,.7);}
+.tk-subtabs{position:absolute;top:calc(9px + env(safe-area-inset-top));left:0;right:0;z-index:8;display:flex;justify-content:center;gap:30px;pointer-events:none;}
+.tk-subtab{pointer-events:auto;background:none;border:none;color:rgba(255,255,255,.55);font-size:18px;font-weight:900;letter-spacing:.2px;padding:4px 4px 11px;position:relative;cursor:pointer;text-shadow:0 1px 8px rgba(0,0,0,.7);transition:color .15s;}
 .tk-subtab.on{color:#fff;}
-.tk-subtab.on::after{content:'';position:absolute;left:20%;right:20%;bottom:2px;height:3px;border-radius:3px;background:#e50914;}
+.tk-subtab.on::after{content:'';position:absolute;left:8%;right:8%;bottom:2px;height:4px;border-radius:4px;background:linear-gradient(90deg,#e50914,#ff3b30);box-shadow:0 2px 10px rgba(229,9,20,.6);}
 .tk-livedot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#ff3b30;margin-right:6px;vertical-align:1px;animation:lvblink 1.2s ease-in-out infinite;}
 @keyframes lvblink{50%{opacity:.25;}}
 /* palco das lives */
@@ -8664,7 +8664,7 @@ body.is-slowconn .prod-cta-fixed {
 .lv-cap-live{display:flex;align-items:center;gap:5px;background:linear-gradient(135deg,#e50914,#ff3b30);border-radius:999px;padding:3.5px 9px;font-size:10px;font-weight:900;letter-spacing:1px;color:#fff;}
 .lv-cap-live .d{width:5px;height:5px;border-radius:50%;background:#fff;animation:lvblink 1.1s infinite;}
 .lv-cap-eyes{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums;}
-.lv-free-chip{position:absolute;top:calc(90px + env(safe-area-inset-top));left:0;right:0;display:flex;justify-content:center;z-index:5;}
+.lv-free-chip{position:absolute;top:calc(50px + env(safe-area-inset-top));left:0;right:0;display:flex;justify-content:center;z-index:5;}
 .lv-free-chip>div{display:flex;align-items:center;gap:6px;background:rgba(212,175,55,.14);border:1px solid rgba(212,175,55,.4);color:#f5d67b;border-radius:999px;padding:4.5px 11px;font-size:11px;font-weight:800;font-variant-numeric:tabular-nums;}
 .lv-hearts{position:absolute;right:12px;bottom:170px;width:70px;height:48%;pointer-events:none;z-index:4;}
 .lv-hearts svg{position:absolute;bottom:-30px;opacity:0;animation:lvrise 3.4s ease-out forwards;}
@@ -9238,7 +9238,10 @@ window.ChatApp = (function() {
     let LIST_CHATS = []; // últimos chats carregados (pra abrir o paywall VIP no clique)
     function storiesStripHtml() {
         // bolinhas AO VIVO na frente (lives no ar) — levam pra aba Lives
-        const lives = (window.__LIVES_NOW || []);
+        // Bolinhas de status: FIXO no máximo 3, independente de quantas lives
+        // estão no ar (o dono pode ter muitas lives na aba, mas o status mostra
+        // só 2-3 pra não virar uma fileira gigante).
+        const lives = (window.__LIVES_NOW || []).slice(0, 3);
         const liveItems = lives.map(l => {
             const bg = l.poster ? ' style="background-image:url(\'' + esc(l.poster) + '\')"' : '';
             return '<div class="ca-story-item" onclick="openExploreTab(\'lives\')">'
@@ -21223,6 +21226,25 @@ window.Lives = (function () {
     }
 
     return { open, pause, heart, goldToast, unlock, tryComment, goLive, gift };
+})();
+
+// Swipe LATERAL na aba Vídeos/Lives: arrasta pra esquerda → Lives, pra direita
+// → Vídeos. Só age quando o movimento horizontal DOMINA (não atrapalha o scroll
+// vertical do feed nem o swipe de troca de live).
+(function () {
+    const scr = document.getElementById('tiktok'); if (!scr) return;
+    let sx = null, sy = null;
+    scr.addEventListener('touchstart', (e) => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; }, { passive: true });
+    scr.addEventListener('touchend', (e) => {
+        if (sx == null) return;
+        const t = e.changedTouches[0]; const dx = t.clientX - sx, dy = t.clientY - sy; sx = null;
+        if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.6) return; // vertical domina
+        if (!window.Explore) return;
+        const onLives = document.getElementById('lvStage') && document.getElementById('lvStage').classList.contains('on');
+        const livesOn = (window.MV_LIVES || {}).enabled === true;
+        if (dx < 0 && !onLives && livesOn) Explore.showSub('lives');   // ← esquerda: Lives
+        else if (dx > 0 && onLives) Explore.showSub('videos');         // → direita: Vídeos
+    }, { passive: true });
 })();
 </script>
 </body>
