@@ -15,3 +15,9 @@ uploads/
 
 # Clone vazio criado pelo GitHub Desktop — ignorar
 areamembros/
+
+# lixo do Finder
+.DS_Store
+
+# servidor de teste local (header do arquivo manda nao commitar)
+scratch-fake-bunny.js
