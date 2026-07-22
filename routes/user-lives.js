@@ -237,12 +237,22 @@ router.get('/lives', optionalUser, async (req, res) => {
             freeLeft = Math.max(0, (cfg.free_seconds | 0) - used);
         }
 
+        // INTERCALA no rolo (pedido do dono): a cada 2–3 liberadas entra uma
+        // +18 no meio — o lead desliza: normal, normal, +18 travada, normal...
+        // (+18 toca embaçada de teaser; sobras de +18 vão pro fim da fila)
+        const freeArr = freeLives.map(l => ({ ...l, locked: false }));
+        const vipArr = vipLives.map(l => ({ ...l, locked: !hasAccess }));
         const lives = [];
-        for (const l of freeLives) lives.push({ ...l, locked: false });
-        for (const l of vipLives) {
-            // +18: o vídeo TOCA embaçado atrás do aviso (teaser, igual stories VIP)
-            // — o dono pediu explicitamente pra passar borrado, não tela preta.
-            lives.push({ ...l, locked: !hasAccess });
+        if (freeArr.length && vipArr.length) {
+            const chunk = Math.max(2, Math.min(3, Math.round(freeArr.length / vipArr.length)));
+            let vi = 0;
+            freeArr.forEach((l, i) => {
+                lives.push(l);
+                if ((i + 1) % chunk === 0 && vi < vipArr.length) lives.push(vipArr[vi++]);
+            });
+            while (vi < vipArr.length) lives.push(vipArr[vi++]);
+        } else {
+            lives.push(...freeArr, ...vipArr);
         }
 
         // Info do popup (o MESMO da aba Vídeos: oferta 19,90 + Premium) — mandada
