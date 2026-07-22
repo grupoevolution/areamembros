@@ -7356,11 +7356,14 @@ a { color: inherit; text-decoration: none; }
                     <div class="form-row-grid-2" style="margin-bottom:14px;">
                         <div>
                             <label class="form-label">Texto do botão principal</label>
-                            <input type="text" class="form-input" id="hsCtaText" placeholder="Descobrir" value="Descobrir" maxlength="50">
+                            <!-- ids hsHero* exclusivos: hsCtaText/hsActive também existem no
+                                 modal do Editor da Home e o getElementById pegava o de lá —
+                                 salvar CTA/Status do hero era silenciosamente ignorado -->
+                            <input type="text" class="form-input" id="hsHeroCtaText" placeholder="Descobrir" value="Descobrir" maxlength="50">
                         </div>
                         <div>
                             <label class="form-label">Status</label>
-                            <select class="form-select" id="hsActive">
+                            <select class="form-select" id="hsHeroActive">
                                 <option value="true">Ativo (visível no app)</option>
                                 <option value="false">Pausado (oculto)</option>
                             </select>
@@ -13218,8 +13221,8 @@ async function openHeroSlideModal(slide) {
     set('hsHeroSubtitle', slide?.subtitle || '');
     set('hsHeroBadge', slide?.badge_text || '');
     set('hsProduct', slide?.product_id || '');
-    set('hsCtaText', slide?.cta_text || 'Descobrir');
-    set('hsActive', slide?.is_active === false ? 'false' : 'true');
+    set('hsHeroCtaText', slide?.cta_text || 'Descobrir');
+    set('hsHeroActive', slide?.is_active === false ? 'false' : 'true');
     set('hsVariantGroup', slide?.variant_group || '');
     set('hsVariantWeight', slide?.variant_weight ?? 100);
     
@@ -13284,9 +13287,9 @@ async function saveHeroSlide() {
         title,
         subtitle: get('hsHeroSubtitle') || null,
         badge_text: get('hsHeroBadge') || null,
-        cta_text: get('hsCtaText') || 'Descobrir',
+        cta_text: get('hsHeroCtaText') || 'Descobrir',
         product_id: product_id ? parseInt(product_id, 10) : null,
-        is_active: get('hsActive') === 'true',
+        is_active: get('hsHeroActive') === 'true',
         variant_group: get('hsVariantGroup') || null,
         variant_weight: Math.max(1, Math.min(1000, parseInt(get('hsVariantWeight'), 10) || 100)),
     };
