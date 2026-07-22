@@ -31,6 +31,17 @@ fácil, mais recompra/cross-sell.** O que vende para este público é o **VISUAL
 (fotos, vídeos, mídia) e o **desejo/atração** — não argumento complexo. Mídia é
 a estrela; texto é tempero.
 
+## COMO CONVERSAR COM O DONO (obrigatório em toda sessão)
+
+O dono é **LEIGO em programação**. Toda explicação precisa ser:
+- **Simples e curta**, sem jargão técnico. Se usar um termo técnico, traduza na hora.
+- **Com exemplo prático** do tipo "o lead abre a aba X → acontece Y → se Z falhar, ele vê W".
+- Respostas resumidas; só alongue quando o assunto exigir, e mesmo assim de forma intuitiva.
+- As ideias/decisões de negócio são dele; o caminho técnico (explicado simples) é seu.
+- Não trate como falha o que é pedido dele: trava anti-desktop (anti-cópia de oferta —
+  espiões da biblioteca de anúncios usam PC; não queima conta), login automático por
+  link de funil sem senha, gamificação desligada por flag.
+
 ## COMO TRABALHAR (princípios que o dono pediu explicitamente)
 
 1. **Sempre o caminho mais leve/viável que entrega o resultado.** Preocupe-se
