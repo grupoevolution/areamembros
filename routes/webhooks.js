@@ -31,7 +31,7 @@ const db = require('../db');
 const { logger } = require('../lib/logger');
 const { getIp } = require('../lib/device-check');
 const { webhookLimiter } = require('../lib/rate-limit');
-const { processSale } = require('../lib/sales-processor');
+const { processSale, saleItemFailures } = require('../lib/sales-processor');
 
 const kirvanoAdapter = require('../lib/gateways/kirvano');
 const perfectpayAdapter = require('../lib/gateways/perfectpay');
@@ -105,6 +105,18 @@ function orphanSaleError(summary) {
     return `⚠️ ${first}${extra} — cadastre o código da oferta no produto e clique em Reprocessar.`;
 }
 
+// Item que FALHOU por erro transitório (banco piscou etc.): antes a venda era
+// marcada processed=true mesmo assim — o gateway não reenviava, o "Reprocessar
+// falhas" não via, e o cliente pagava sem receber, tudo verde no painel.
+// Agora: processed=false + resposta 500 (gateway reenvia; a reentrega é
+// idempotente — grantAccess deduplica por gateway+sale_id+produto).
+function itemFailureError(summary) {
+    const failures = saleItemFailures(summary);
+    if (!failures.length) return null;
+    const extra = failures.length > 1 ? ` (+${failures.length - 1} item(ns))` : '';
+    return `❌ Falha entregando a venda: ${failures[0]}${extra} — será retentada pelo gateway; se persistir, use Reprocessar.`;
+}
+
 
 // =============================================================================
 // WEBHOOK KIRVANO
@@ -148,6 +160,13 @@ router.post('/kirvano', webhookLimiter, async (req, res) => {
     // 5. Processa venda
     try {
         const summary = await processSale(normalized.data);
+
+        const failure = itemFailureError(summary);
+        if (failure) {
+            logger.error(`Webhook Kirvano com falha de entrega: ${failure}`);
+            await logWebhookProcessed(logId, { processed: false, error: failure, summary });
+            return res.status(500).json({ success: false, error: 'Falha entregando a venda — reenviar' });
+        }
 
         const orphan = orphanSaleError(summary);
         if (orphan) logger.warn(`Webhook Kirvano com venda órfã: ${orphan}`);
@@ -204,6 +223,13 @@ router.post('/perfectpay', webhookLimiter, async (req, res) => {
     
     try {
         const summary = await processSale(normalized.data);
+
+        const failure = itemFailureError(summary);
+        if (failure) {
+            logger.error(`Webhook PerfectPay com falha de entrega: ${failure}`);
+            await logWebhookProcessed(logId, { processed: false, error: failure, summary });
+            return res.status(500).json({ success: false, error: 'Falha entregando a venda — reenviar' });
+        }
 
         const orphan = orphanSaleError(summary);
         if (orphan) logger.warn(`Webhook PerfectPay com venda órfã: ${orphan}`);

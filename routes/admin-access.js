@@ -19,9 +19,25 @@ const router = express.Router();
 const db = require('../db');
 const { requireAdmin } = require('../lib/auth');
 const { logger } = require('../lib/logger');
-const { processSale } = require('../lib/sales-processor');
+const { processSale, saleItemFailures } = require('../lib/sales-processor');
 const kirvanoAdapter = require('../lib/gateways/kirvano');
 const perfectpayAdapter = require('../lib/gateways/perfectpay');
+
+// O reprocesso só pode marcar processed=true se a venda foi ENTREGUE de fato.
+// Antes marcava incondicionalmente: reprocessar antes de cadastrar a oferta
+// (ou com o banco piscando) fazia a falha SUMIR da lista sem entregar nada.
+function saleStillFailing(summary) {
+    const failures = saleItemFailures(summary);
+    if (failures.length) {
+        const extra = failures.length > 1 ? ` (+${failures.length - 1} item(ns))` : '';
+        return `❌ Falha entregando a venda: ${failures[0]}${extra} — tente de novo; se persistir, veja o log.`;
+    }
+    if (summary && summary.items_without_product) {
+        const missing = ((summary.errors) || []).filter(e => String(e).startsWith('Produto não configurado'));
+        return `⚠️ ${missing[0] || 'venda com oferta não cadastrada no painel'} — cadastre o código da oferta no produto e reprocesse.`;
+    }
+    return null;
+}
 
 
 // =============================================================================
@@ -333,16 +349,17 @@ router.post('/webhooks/:id/reprocess', requireAdmin, async (req, res) => {
         }
         
         const summary = await processSale(normalized.data);
-        
+
+        const failing = saleStillFailing(summary);
         await db.query(`
             UPDATE webhook_logs
-            SET processed = true, processing_error = NULL, processed_at = NOW(),
-                raw_payload = raw_payload || $1::jsonb
-            WHERE id = $2
-        `, [JSON.stringify({ _reprocessed: { at: new Date().toISOString(), by: req.admin.username, summary } }), webhook.id]);
-        
-        logger.info(`Webhook ${webhook.id} reprocessado por ${req.admin.username}`);
-        return res.json({ success: true, summary });
+            SET processed = $1, processing_error = $2, processed_at = NOW(),
+                raw_payload = raw_payload || $3::jsonb
+            WHERE id = $4
+        `, [!failing, failing, JSON.stringify({ _reprocessed: { at: new Date().toISOString(), by: req.admin.username, summary } }), webhook.id]);
+
+        logger.info(`Webhook ${webhook.id} reprocessado por ${req.admin.username}${failing ? ' (ainda com falha)' : ''}`);
+        return res.json({ success: true, summary, still_failing: failing });
     } catch (err) {
         logger.error('Erro reprocessando webhook:', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
@@ -369,12 +386,14 @@ router.post('/webhooks/reprocess-failed', requireAdmin, async (req, res) => {
                 if (!normalized.valid) { fail++; errors.push(`#${webhook.id}: ${normalized.reason}`); continue; }
                 const summary = await processSale(normalized.data);
                 granted += (summary.accesses_granted || 0);
+                const failing = saleStillFailing(summary);
                 await db.query(
-                    `UPDATE webhook_logs SET processed = true, processing_error = NULL, processed_at = NOW(),
-                            raw_payload = raw_payload || $1::jsonb WHERE id = $2`,
-                    [JSON.stringify({ _reprocessed_bulk: { at: new Date().toISOString(), by: req.admin.username, summary } }), webhook.id]
+                    `UPDATE webhook_logs SET processed = $1, processing_error = $2, processed_at = NOW(),
+                            raw_payload = raw_payload || $3::jsonb WHERE id = $4`,
+                    [!failing, failing, JSON.stringify({ _reprocessed_bulk: { at: new Date().toISOString(), by: req.admin.username, summary } }), webhook.id]
                 );
-                ok++;
+                if (failing) { fail++; errors.push(`#${webhook.id}: ${failing}`); }
+                else ok++;
             } catch (e) { fail++; errors.push(`#${webhook.id}: ${e.message}`); }
         }
         logger.info(`Reprocesso em massa por ${req.admin.username}: ${ok} ok, ${fail} falhas, ${granted} acessos liberados`);
