@@ -21,7 +21,26 @@
 <meta name="apple-mobile-web-app-title" content="Membros VIP">
 <!-- HLS.js (Bunny Stream playback) — servido do nosso domínio, cache imutável.
      Defer pra não bloquear render. Carrega ~120KB gzip uma vez e o SW cacheia. -->
-<script src="/vendor/hls.min.js" defer></script>
+<script>
+// hls.js SOB DEMANDA: são ~125KB (gzip) que antes TODO lead baixava no boot,
+// mesmo quem nunca abre vídeo/live/chamada. Agora só baixa na 1ª vez que algo
+// vai tocar HLS (iPhone nem baixa — usa o player nativo do Safari).
+window.loadHls = (function () {
+    let p = null;
+    return function () {
+        if (window.Hls) return Promise.resolve();
+        if (p) return p;
+        p = new Promise((res) => {
+            const s = document.createElement('script');
+            s.src = '/vendor/hls.min.js';
+            s.onload = () => res();
+            s.onerror = () => { p = null; res(); }; // falhou → próxima chamada tenta de novo
+            document.head.appendChild(s);
+        });
+        return p;
+    };
+})();
+</script>
 <script>
 // Service Worker: registro feito mais abaixo (bloco único, sem reload automático).
 window.addEventListener('beforeinstallprompt', function(e) {
@@ -9447,15 +9466,24 @@ window.ChatApp = (function() {
         if (!scroll) return;
         try {
             const livesEnabled = (window.MV_LIVES || {}).enabled === true;
+            // lives trocam devagar (uma nova a cada ~1h) — rebusca no máx a cada
+            // 3min; nos outros pings (40s) as bolinhas reusam a última resposta.
+            const livesStale = !window.__LIVES_AT || (Date.now() - window.__LIVES_AT > 180000);
             const [r, sr, lr] = await Promise.all([
                 fetch('/api/user/chats?visitor_id=' + VID + funnelParam(), { credentials: 'include' }),
                 fetch('/api/user/chats/status?visitor_id=' + VID, { credentials: 'include' }).catch(() => null),
-                livesEnabled ? fetch('/api/user/lives?visitor_id=' + VID, { credentials: 'include' }).catch(() => null) : Promise.resolve(null),
+                (livesEnabled && livesStale) ? fetch('/api/user/lives?visitor_id=' + VID, { credentials: 'include' }).catch(() => null) : Promise.resolve(null),
             ]);
             const data = await r.json();
             try { const sd = sr && await sr.json(); STORIES = (sd && sd.success && Array.isArray(sd.stories)) ? sd.stories : []; } catch (_) { STORIES = []; }
             // lives no ar → bolinhas AO VIVO na frente da fileira de status
-            try { const ld = lr && await lr.json(); window.__LIVES_NOW = (ld && ld.success && ld.enabled && Array.isArray(ld.lives)) ? ld.lives : []; } catch (_) { window.__LIVES_NOW = []; }
+            try {
+                const ld = lr && await lr.json();
+                if (ld) {
+                    window.__LIVES_NOW = (ld.success && ld.enabled && Array.isArray(ld.lives)) ? ld.lives : [];
+                    window.__LIVES_AT = Date.now();
+                }
+            } catch (_) {}
             const storiesHolder = document.getElementById('caStoriesFixed');
             if (storiesHolder) storiesHolder.innerHTML = storiesStripHtml();
             if (!data.success || !Array.isArray(data.chats) || data.chats.length === 0) {
@@ -12112,7 +12140,10 @@ if (navigator.serviceWorker) {
     }
     function tick() { if (document.hidden) return; pollChats(); pollCampaigns(); }
     setTimeout(tick, 5000);
-    setInterval(tick, 10000);
+    // 25s (era 10s): com o app parado eram ~14 consultas/min ao servidor
+    // brigando com a mídia pela banda do lead. Voltou pro app → checa na hora
+    // (visibilitychange), então a notificação continua chegando rápido.
+    setInterval(tick, 25000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(tick, 800); });
 })();
 
@@ -18329,6 +18360,18 @@ body.is-logged #pwaLandingBanner, body.pwa-installed #pwaLandingBanner { display
                 v.style.display = 'block';
                 if (ph) ph.style.display = 'none';
                 const hlsSrc = 'https://' + bunnyHlsHost + '/' + guid + '/playlist.m3u8';
+                // hls.js sob demanda: baixa e re-chama (o overlay da chamada já está na tela)
+                if (!v.canPlayType('application/vnd.apple.mpegurl') && !window.Hls && !v.dataset.hlsWait && window.loadHls) {
+                    v.dataset.hlsWait = '1';
+                    window.loadHls().then(() => {
+                        try {
+                            loadCallVideo(call);
+                            // a chamada já estava rolando esperando o player → play
+                            const vv = $('vcallVideo'); if (vv) vv.play().catch(() => {});
+                        } catch (_) {}
+                    });
+                    return;
+                }
                 try {
                     if (v.canPlayType('application/vnd.apple.mpegurl')) {
                         // iOS/Safari: HLS nativo
@@ -20510,6 +20553,7 @@ window.Explore = (function () {
     function fmt(n) { n = n || 0; return n >= 1000 ? (n / 1000).toFixed(1).replace('.0', '') + 'k' : String(n); }
 
     async function open() {
+        if (window.loadHls) window.loadHls(); // pré-aquece o player (baixa em paralelo)
         if (loaded) {
             // Reabriu a aba: grátis ESGOTADO reabre o paywall — vale tanto por
             // limite (viu free_limit) quanto por acabar os vídeos disponíveis
@@ -20567,7 +20611,10 @@ window.Explore = (function () {
     // Renderização em BLOCOS: montar centenas de <video> de uma vez travava
     // celular fraco (feedback do dono — freeze na aba Vídeos). Renderiza 24
     // por vez e anexa mais quando o lead se aproxima do fim do que já existe.
-    const RENDER_CHUNK = 24;
+    // 10 por leva (era 24): o navegador baixa as CAPAS de todos os slides
+    // renderizados de uma vez — 24 capas brigavam com o vídeo ativo pela
+    // banda no 3G. Rolou perto do fim da leva, a próxima entra sozinha.
+    const RENDER_CHUNK = 10;
     let renderedCount = 0;
 
     function slideHTML(v, i) {
@@ -20719,8 +20766,11 @@ window.Explore = (function () {
         // conta este vídeo como visto (não repete + alimenta o paywall)
         const cur = data.videos[i];
         if (cur) markSeen(cur.id);
-        // prepara vizinhos, libera distantes
-        prepare(slides[i + 1]);
+        // prepara o PRÓXIMO só quando o atual já está rodando — antes os dois
+        // baixavam juntos e, no 3G, um atrasava o outro (o lead via loading).
+        const curV = slides[i] && slides[i].querySelector('video');
+        if (!curV || curV.readyState >= 3) prepare(slides[i + 1]);
+        else curV.addEventListener('canplay', () => { if (activeIndex === i) prepare(slides[i + 1]); }, { once: true });
         slides.forEach((s, idx) => { if (Math.abs(idx - i) > 2) release(s); });
     }
 
@@ -20744,6 +20794,18 @@ window.Explore = (function () {
         const v = slide.querySelector('video'); if (!v) return null;
         if (v.dataset.ready === '1') return v;
         const hls = v.dataset.hls, src = v.dataset.src;
+        // hls.js ainda não baixou (carregamento sob demanda) → baixa e re-prepara.
+        // Se o download falhar, hlsWait impede loop e cai no MP4 abaixo.
+        if (hls && !v.canPlayType('application/vnd.apple.mpegurl') && !window.Hls && !v.dataset.hlsWait && window.loadHls) {
+            v.dataset.hlsWait = '1';
+            window.loadHls().then(() => {
+                v.dataset.ready = '';
+                const p = prepare(slide);
+                // era o slide ATIVO esperando o player baixar → dá o play agora
+                if (p && +slide.dataset.index === activeIndex) { p.muted = !audioUnlocked; p.play().catch(() => {}); }
+            });
+            return v;
+        }
         try {
             if (hls) {
                 if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = hls; }
@@ -21005,6 +21067,7 @@ window.Lives = (function () {
 
     let curIdx = 0;
     async function open(kind) {
+        if (window.loadHls) window.loadHls(); // pré-aquece o player (baixa em paralelo)
         try {
             const r = await fetch('/api/user/lives?visitor_id=' + encodeURIComponent(VID || ''), { credentials: 'include' });
             const d = await r.json();
@@ -21113,6 +21176,12 @@ window.Lives = (function () {
             const livePos0 = len0 > 0 ? ((cur.offset_sec || 0) + elapsed0) % len0 : 0;
             if (cur.poster) v.poster = cur.poster; // capa NA HORA (sem tela preta)
             v.preload = 'auto';
+            // hls.js sob demanda: baixa na 1ª live e re-chama (capa já na tela)
+            if (!v.canPlayType('application/vnd.apple.mpegurl') && !window.Hls && !v.dataset.hlsWait && window.loadHls) {
+                v.dataset.hlsWait = '1';
+                window.loadHls().then(() => startVideo());
+                return;
+            }
             if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = url; }
             // startLevel 0: começa na MENOR qualidade → play quase imediato em
             // internet ruim; o ABR sobe a qualidade sozinho em segundos.
