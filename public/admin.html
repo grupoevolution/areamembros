@@ -3117,10 +3117,6 @@ a { color: inherit; text-decoration: none; }
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                     Visão geral
                 </div>
-                <div class="nav-item" data-screen="results" onclick="switchAdminScreen(this, 'results', 'Resultados'); loadResults();">
-                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6" rx="1"/><rect x="12" y="8" width="3" height="10" rx="1"/><rect x="17" y="5" width="3" height="13" rx="1"/></svg>
-                    Resultados
-                </div>
             </div>
 
             <div class="nav-section">
@@ -3300,52 +3296,6 @@ a { color: inherit; text-decoration: none; }
             <!-- ==================================================
                  DASHBOARD (ativo por default)
             ================================================== -->
-            <!-- ═══════════════ RESULTADOS (funil diário) ═══════════════ -->
-            <div class="screen-content" id="screen-results">
-                <div class="page-header">
-                    <div>
-                        <h1 class="page-title">Resultados</h1>
-                        <p class="page-subtitle">Quantos acessaram → deixaram o e-mail → instalaram o app → compraram, dia a dia (horário de Brasília).</p>
-                    </div>
-                    <div class="page-actions">
-                        <button class="btn-secondary" onclick="loadResults()">Atualizar</button>
-                    </div>
-                </div>
-
-                <!-- período -->
-                <div style="display:flex; gap:8px; margin:4px 0 16px; flex-wrap:wrap;">
-                    <button class="btn-secondary rs-period on" data-days="7" onclick="rsSetPeriod(7, this)">7 dias</button>
-                    <button class="btn-secondary rs-period" data-days="14" onclick="rsSetPeriod(14, this)">14 dias</button>
-                    <button class="btn-secondary rs-period" data-days="30" onclick="rsSetPeriod(30, this)">30 dias</button>
-                </div>
-                <style>
-                .rs-period.on { background:rgba(229,9,20,.18); border-color:rgba(229,9,20,.55); color:#fff; }
-                .rs-kpi { cursor:pointer; transition:border-color .15s; }
-                .rs-kpi.on { border-color:rgba(229,9,20,.6); box-shadow:0 0 0 1px rgba(229,9,20,.35); }
-                .rs-bars { display:flex; align-items:flex-end; gap:6px; height:180px; padding:10px 4px 0; }
-                .rs-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0; }
-                .rs-bar { width:100%; max-width:34px; border-radius:6px 6px 2px 2px; background:linear-gradient(180deg,#ff3b30,#b00610); min-height:2px; position:relative; }
-                .rs-bar .v { position:absolute; top:-19px; left:50%; transform:translateX(-50%); font-size:10.5px; font-weight:700; color:rgba(255,255,255,.85); white-space:nowrap; }
-                .rs-bar-day { font-size:10px; color:rgba(255,255,255,.5); white-space:nowrap; }
-                </style>
-
-                <!-- resumo HOJE -->
-                <div style="font-size:12px; font-weight:700; letter-spacing:.6px; color:rgba(255,255,255,.55); margin-bottom:8px;">HOJE</div>
-                <div class="kpi-grid" id="rsToday" style="margin-bottom:18px;"></div>
-
-                <!-- gráfico diário (clica num card do período pra trocar a métrica) -->
-                <div style="font-size:12px; font-weight:700; letter-spacing:.6px; color:rgba(255,255,255,.55); margin-bottom:8px;">SOMA DO PERÍODO <span style="font-weight:400; text-transform:none; letter-spacing:0;">(toque num card pra ver o gráfico dele)</span></div>
-                <div class="kpi-grid" id="rsTotals" style="margin-bottom:18px;"></div>
-                <div style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:16px;">
-                    <div id="rsChartTitle" style="font-size:13px; font-weight:700; color:#fff; margin-bottom:6px;">Acessos por dia</div>
-                    <div class="rs-bars" id="rsChart"></div>
-                </div>
-
-                <!-- produtos mais vendidos -->
-                <div style="font-size:12px; font-weight:700; letter-spacing:.6px; color:rgba(255,255,255,.55); margin:20px 0 8px;">PRODUTOS MAIS VENDIDOS NO PERÍODO</div>
-                <div style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:6px 16px;" id="rsTopProducts"></div>
-            </div>
-
             <div class="screen-content active" id="screen-dashboard">
                 <div class="page-header">
                     <div>
@@ -3421,6 +3371,45 @@ a { color: inherit; text-decoration: none; }
                         <div class="kpi-value" id="kpiActiveAccess">—</div>
                         <div><span class="kpi-trend-sub">acessos liberados</span></div>
                     </div>
+                </div>
+
+                <div class="form-card" style="margin-top:18px; padding:20px;">
+                    <div class="form-card-head" style="margin-bottom:12px;">
+                        <div class="form-card-title">📊 Funil do dia (horário de Brasília)</div>
+                        <div class="form-card-sub">Acessos → e-mails novos → usando o app instalado → vendas → faturamento. Toque num card do período pra trocar o gráfico.</div>
+                    </div>
+<!-- período -->
+                <div style="display:flex; gap:8px; margin:4px 0 16px; flex-wrap:wrap;">
+                    <button class="btn-secondary rs-period on" data-days="7" onclick="rsSetPeriod(7, this)">7 dias</button>
+                    <button class="btn-secondary rs-period" data-days="14" onclick="rsSetPeriod(14, this)">14 dias</button>
+                    <button class="btn-secondary rs-period" data-days="30" onclick="rsSetPeriod(30, this)">30 dias</button>
+                </div>
+                <style>
+                .rs-period.on { background:rgba(229,9,20,.18); border-color:rgba(229,9,20,.55); color:#fff; }
+                .rs-kpi { cursor:pointer; transition:border-color .15s; }
+                .rs-kpi.on { border-color:rgba(229,9,20,.6); box-shadow:0 0 0 1px rgba(229,9,20,.35); }
+                .rs-bars { display:flex; align-items:flex-end; gap:6px; height:180px; padding:10px 4px 0; }
+                .rs-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0; }
+                .rs-bar { width:100%; max-width:34px; border-radius:6px 6px 2px 2px; background:linear-gradient(180deg,#ff3b30,#b00610); min-height:2px; position:relative; }
+                .rs-bar .v { position:absolute; top:-19px; left:50%; transform:translateX(-50%); font-size:10.5px; font-weight:700; color:rgba(255,255,255,.85); white-space:nowrap; }
+                .rs-bar-day { font-size:10px; color:rgba(255,255,255,.5); white-space:nowrap; }
+                </style>
+
+                <!-- resumo HOJE -->
+                <div style="font-size:12px; font-weight:700; letter-spacing:.6px; color:rgba(255,255,255,.55); margin-bottom:8px;">HOJE</div>
+                <div class="kpi-grid" id="rsToday" style="margin-bottom:18px;"></div>
+
+                <!-- gráfico diário (clica num card do período pra trocar a métrica) -->
+                <div style="font-size:12px; font-weight:700; letter-spacing:.6px; color:rgba(255,255,255,.55); margin-bottom:8px;">SOMA DO PERÍODO <span style="font-weight:400; text-transform:none; letter-spacing:0;">(toque num card pra ver o gráfico dele)</span></div>
+                <div class="kpi-grid" id="rsTotals" style="margin-bottom:18px;"></div>
+                <div style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:16px;">
+                    <div id="rsChartTitle" style="font-size:13px; font-weight:700; color:#fff; margin-bottom:6px;">Acessos por dia</div>
+                    <div class="rs-bars" id="rsChart"></div>
+                </div>
+
+                <!-- produtos mais vendidos -->
+                <div style="font-size:12px; font-weight:700; letter-spacing:.6px; color:rgba(255,255,255,.55); margin:20px 0 8px;">PRODUTOS MAIS VENDIDOS NO PERÍODO</div>
+                <div style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:6px 16px;" id="rsTopProducts"></div>
                 </div>
 
                 <!-- ═══════════════ ANÁLISE DE LUCRO (Fase L4) ═══════════════
@@ -3655,12 +3644,14 @@ a { color: inherit; text-decoration: none; }
                 <div class="form-card" style="margin-top:18px; padding:20px;">
                     <div class="form-card-head" style="margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
                         <div>
-                            <div class="form-card-title">📲 Funil de Instalação PWA</div>
-                            <div class="form-card-sub">Caminho do lead: viu o popup → clicou → aceitou no Chrome → instalou → abriu o app.</div>
+                            <div class="form-card-title">📲 Instalação do App (PWA)</div>
+                            <div class="form-card-sub">Funil do popup no período + quem REALMENTE está com o app (pessoas únicas usando em modo instalado, e aparelhos inscritos pra push — aparelho morto é removido no 1º envio que falha).</div>
                         </div>
                         <div id="pwaFunnelTabs" style="display:flex; gap:6px;">
-                            <button type="button" class="sap-tab active" data-pwa-window="7d">7 dias</button>
-                            <button type="button" class="sap-tab" data-pwa-window="30d">30 dias</button>
+                            <button type="button" class="sap-tab" data-pwa-period="today">Hoje</button>
+                            <button type="button" class="sap-tab" data-pwa-period="yesterday">Ontem</button>
+                            <button type="button" class="sap-tab active" data-pwa-period="7">7 dias</button>
+                            <button type="button" class="sap-tab" data-pwa-period="30">30 dias</button>
                         </div>
                     </div>
 
@@ -3670,7 +3661,7 @@ a { color: inherit; text-decoration: none; }
                     </div>
 
                     <!-- KPIs do funil -->
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:10px; margin-top:14px;">
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-top:14px;">
                         <div class="form-card" style="padding:10px 12px;">
                             <div style="font-size:10px; color:rgba(255,255,255,.55); text-transform:uppercase; letter-spacing:.05em;">Taxa de clique</div>
                             <div id="pwaClickRate" style="font-size:22px; font-weight:800; color:#fff; margin-top:2px;">—</div>
@@ -3682,14 +3673,14 @@ a { color: inherit; text-decoration: none; }
                             <div style="font-size:10px; color:rgba(255,255,255,.4);">clique → aceitou no Chrome</div>
                         </div>
                         <div class="form-card" style="padding:10px 12px; background:rgba(0,217,107,.06); border-color:rgba(0,217,107,.18);">
-                            <div style="font-size:10px; color:rgba(255,255,255,.55); text-transform:uppercase; letter-spacing:.05em;">Taxa de instalação</div>
-                            <div id="pwaInstallRate" style="font-size:22px; font-weight:800; color:#00dc8a; margin-top:2px;">—</div>
-                            <div style="font-size:10px; color:rgba(255,255,255,.4);">popup → instalou</div>
+                            <div style="font-size:10px; color:rgba(255,255,255,.55); text-transform:uppercase; letter-spacing:.05em;">Usaram o app instalado</div>
+                            <div id="pwaRealUsers" style="font-size:22px; font-weight:800; color:#00dc8a; margin-top:2px;">—</div>
+                            <div style="font-size:10px; color:rgba(255,255,255,.4);" id="pwaRealUsersSub">pessoas únicas no período</div>
                         </div>
-                        <div class="form-card" style="padding:10px 12px;">
-                            <div style="font-size:10px; color:rgba(255,255,255,.55); text-transform:uppercase; letter-spacing:.05em;">Sticky rate</div>
-                            <div id="pwaStickyRate" style="font-size:22px; font-weight:800; color:#fff; margin-top:2px;">—</div>
-                            <div style="font-size:10px; color:rgba(255,255,255,.4);">instalou → abriu o app</div>
+                        <div class="form-card" style="padding:10px 12px; background:rgba(74,158,255,.06); border-color:rgba(74,158,255,.2);">
+                            <div style="font-size:10px; color:rgba(255,255,255,.55); text-transform:uppercase; letter-spacing:.05em;">Podem receber push</div>
+                            <div id="pwaPushReach" style="font-size:22px; font-weight:800; color:#4a9eff; margin-top:2px;">—</div>
+                            <div style="font-size:10px; color:rgba(255,255,255,.4);" id="pwaPushReachSub">aparelhos inscritos agora</div>
                         </div>
                     </div>
                 </div>
@@ -9476,6 +9467,7 @@ async function deleteCategory(id, name) {
 // DASHBOARD V2
 // ============================================================================
 async function loadDashboard() {
+    try { loadResults(); } catch (_) {} // funil do dia (mesma tela)
     const { ok, data } = await API.call('/api/admin/dashboard');
     if (!ok || !data.success) {
         const sub = document.getElementById('dashboardSubtitle');
@@ -9857,65 +9849,18 @@ async function loadRepurchaseRate() {
 // anterior) + 4 KPIs de conversao. Tabs 7d / 30d. Independente do periodo do
 // bloco de Analise de Lucro — janela fixa.
 
-let _pwaFunnelWindow = '7d';
-let _pwaFunnelData = null;
+// ── Instalação do App (PWA) — reformulado jul/2026 ─────────────────────────
+// Tudo no MESMO período (Brasília). "Instalações registradas" = evento do
+// navegador (inclui menu nativo e reinstalação — por isso pode passar do nº
+// de popups). O número CONFIÁVEL de "quem tem o app" são os dois cards à
+// direita: pessoas únicas usando em modo instalado + inscritos de push.
+let _pwaPeriod = '7';
 
-function _renderPwaFunnel() {
-    if (!_pwaFunnelData) return;
-    const w = _pwaFunnelWindow === '30d' ? _pwaFunnelData.last_30d : _pwaFunnelData.last_7d;
-    if (!w) return;
-
-    const e = w.events;
-    const shown      = e.pwa_prompt_shown.count;
-    const clicked    = e.pwa_install_clicked.count;
-    const accepted   = e.pwa_install_accepted.count;
-    const dismissed  = e.pwa_install_dismissed.count;
-    const installed  = e.pwa_app_installed.count;
-    const standalone = e.pwa_opened_standalone.count;
-    const stdUsers   = e.pwa_opened_standalone.unique_emails;
-
-    const max = Math.max(shown, clicked, accepted, installed, standalone, 1);
-    const pct = (v) => Math.round((v / max) * 100);
-
-    const bar = (label, count, color, sub) => {
-        const w = Math.max(2, pct(count));
-        return `
-            <div>
-                <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:3px;">
-                    <span style="color:rgba(255,255,255,.85);">${label}</span>
-                    <span style="color:${color}; font-weight:700;">${count.toLocaleString('pt-BR')}${sub ? ` <span style="color:rgba(255,255,255,.45); font-weight:400;">${sub}</span>` : ''}</span>
-                </div>
-                <div style="height:10px; background:rgba(255,255,255,.05); border-radius:5px; overflow:hidden;">
-                    <div style="width:${w}%; height:100%; background:${color}; transition:width .3s;"></div>
-                </div>
-            </div>`;
-    };
-
-    const bars = document.getElementById('pwaFunnelBars');
-    if (bars) {
-        if (shown === 0 && clicked === 0 && installed === 0) {
-            bars.innerHTML = `
-                <div style="padding:20px 0; text-align:center; color:rgba(255,255,255,.5); font-size:13px;">
-                    <div style="margin-bottom:6px;">Ainda sem dados</div>
-                    <div style="font-size:11px; color:rgba(255,255,255,.4);">Os eventos começam a ser registrados após o próximo deploy. Em poucas horas você vê o funil aqui.</div>
-                </div>`;
-        } else {
-            bars.innerHTML = [
-                bar('👁 Popup mostrado', shown, '#4a9eff', ''),
-                bar('👆 Clicou em instalar', clicked, '#7c5cff', ''),
-                bar('✅ Aceitou no Chrome', accepted, '#22d3a7', dismissed > 0 ? `(${dismissed} recusou)` : ''),
-                bar('📲 Instalou de fato', installed, '#00dc8a', ''),
-                bar('🚀 Abriu o app instalado', standalone, '#ffaa00', stdUsers > 0 ? `(${stdUsers} pessoa${stdUsers === 1 ? '' : 's'} única${stdUsers === 1 ? '' : 's'})` : ''),
-            ].join('');
-        }
-    }
-
-    // KPIs
-    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    setTxt('pwaClickRate',   shown > 0   ? `${w.rates.click_rate}%`        : '—');
-    setTxt('pwaAcceptRate',  clicked > 0 ? `${w.rates.accept_rate}%`       : '—');
-    setTxt('pwaInstallRate', shown > 0   ? `${w.rates.install_from_shown}%`: '—');
-    setTxt('pwaStickyRate',  installed > 0 ? `${w.rates.sticky_rate}%`     : '—');
+function _pwaDates() {
+    const day = (off) => new Date(Date.now() - 3 * 3600 * 1000 - off * 86400000).toISOString().slice(0, 10);
+    if (_pwaPeriod === 'today') return { from: day(0), to: day(0) };
+    if (_pwaPeriod === 'yesterday') return { from: day(1), to: day(1) };
+    return { from: day(parseInt(_pwaPeriod, 10) - 1), to: day(0) };
 }
 
 let _pwaFunnelTabsInited = false;
@@ -9927,19 +9872,51 @@ function _initPwaFunnelTabs() {
         t.addEventListener('click', () => {
             tabs.forEach(x => x.classList.remove('active'));
             t.classList.add('active');
-            _pwaFunnelWindow = t.dataset.pwaWindow;
-            _renderPwaFunnel();
+            _pwaPeriod = t.dataset.pwaPeriod;
+            loadPwaFunnel();
         });
     });
 }
 
 async function loadPwaFunnel() {
     _initPwaFunnelTabs();
-    const { ok, data } = await API.call('/api/admin/sales-analytics/pwa-funnel').catch(() => ({ ok: false }));
-    if (ok && data?.success) {
-        _pwaFunnelData = data;
-        _renderPwaFunnel();
+    const { from, to } = _pwaDates();
+    const { ok, data } = await API.call('/api/admin/sales-analytics/pwa-funnel?from=' + from + '&to=' + to).catch(() => ({ ok: false }));
+    if (!ok || !data || !data.success) return;
+    const f = data.funnel, reach = data.reach;
+
+    const max = Math.max(f.shown, f.clicked, f.accepted, f.installed_events, 1);
+    const bar = (label, count, color, sub) => {
+        const w = Math.max(2, Math.round(count / max * 100));
+        return `
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:3px;">
+                    <span style="color:rgba(255,255,255,.85);">${label}</span>
+                    <span style="color:${color}; font-weight:700;">${count.toLocaleString('pt-BR')}${sub ? ` <span style="color:rgba(255,255,255,.45); font-weight:400;">${sub}</span>` : ''}</span>
+                </div>
+                <div style="height:10px; background:rgba(255,255,255,.05); border-radius:5px; overflow:hidden;">
+                    <div style="width:${w}%; height:100%; background:${color}; transition:width .3s;"></div>
+                </div>
+            </div>`;
+    };
+    const bars = document.getElementById('pwaFunnelBars');
+    if (bars) {
+        bars.innerHTML = (f.shown === 0 && f.installed_events === 0)
+            ? '<div style="padding:16px 0; text-align:center; color:rgba(255,255,255,.5); font-size:13px;">Sem eventos de instalação no período.</div>'
+            : [
+                bar('👁 Popup mostrado', f.shown, '#4a9eff', ''),
+                bar('👆 Clicou em instalar', f.clicked, '#7c5cff', ''),
+                bar('✅ Aceitou no Chrome', f.accepted, '#22d3a7', f.dismissed > 0 ? `(${f.dismissed} recusou)` : ''),
+                bar('📲 Instalações registradas', f.installed_events, '#00dc8a', '(inclui menu do navegador e reinstalação)'),
+            ].join('');
     }
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setTxt('pwaClickRate', f.shown > 0 ? data.rates.click_rate + '%' : '—');
+    setTxt('pwaAcceptRate', f.clicked > 0 ? data.rates.accept_rate + '%' : '—');
+    setTxt('pwaRealUsers', (reach.standalone_users || 0).toLocaleString('pt-BR'));
+    setTxt('pwaRealUsersSub', 'pessoas únicas · ' + (reach.standalone_opens || 0).toLocaleString('pt-BR') + ' aberturas no período');
+    setTxt('pwaPushReach', (reach.push_total || 0).toLocaleString('pt-BR'));
+    setTxt('pwaPushReachSub', 'aparelhos · ' + (reach.push_people || 0).toLocaleString('pt-BR') + ' pessoas identificadas');
 }
 
 function _sapDeltaLabel(curr, prev) {

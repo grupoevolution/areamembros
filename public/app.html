@@ -17352,11 +17352,14 @@ window.PWA = (function() {
     // pwa_opened_standalone.
     function _track(type, metadata) {
         try {
+            // vid junto: deduplica pessoa ANÔNIMA (sem e-mail ainda) no painel
+            let vid = null;
+            try { vid = localStorage.getItem('mv_chat_visitor') || null; } catch (_) {}
             fetch('/api/user/track/event', {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type, metadata: metadata || {} }),
+                body: JSON.stringify({ type, metadata: Object.assign({ vid }, metadata || {}) }),
                 keepalive: true,
             }).catch(() => {});
         } catch(_) {}
