@@ -3891,7 +3891,7 @@ a { color: inherit; text-decoration: none; }
                 <div style="background:rgba(229,9,20,.05); border:1px solid rgba(229,9,20,.28); border-radius:14px; padding:18px; margin-bottom:18px; display:flex; flex-direction:column; gap:14px; max-width:760px;">
                     <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#fff; cursor:pointer; font-weight:700;"><input type="checkbox" id="lvEnabled" style="width:18px; height:18px;"> 🔴 Ativar as "Lives" (aba dentro de Vídeos)</label>
                     <div class="form-help" style="margin-top:-6px;">Uma live é um vídeo do Bunny tocando como se fosse ao vivo. Todos veem a mesma no mesmo horário. O título do vídeo no Bunny vira o nome da modelo; a capa vira o avatar. O acesso e o popup são os MESMOS da aba Vídeos (19,90 ou Premium).</div>
-                    <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; color:#fff; cursor:pointer; font-weight:700; background:rgba(76,217,100,.08); border:1px solid rgba(76,217,100,.3); border-radius:10px; padding:10px 12px;"><input type="checkbox" id="lvAuto" checked style="width:18px; height:18px;"> 🪄 Ritmo automático (recomendado)</label>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; color:#fff; cursor:pointer; font-weight:700; background:rgba(76,217,100,.08); border:1px solid rgba(76,217,100,.3); border-radius:10px; padding:10px 12px;"><input type="checkbox" id="lvAuto" checked onchange="syncLvAuto()" style="width:18px; height:18px;"> 🪄 Ritmo automático (recomendado)</label>
                     <div class="form-help" style="margin-top:-8px;">Você só alimenta as pastas no Bunny — o sistema decide sozinho quantas lives ficam no ar (cresce com a pasta: 57 vídeos ≈ 5 no ar; 70 ≈ 7; 80+ ≈ 8, mais as +18) e o ritmo (cada live fica ~3h30 "ao vivo"; +18 ~5h). Quanto mais vídeos, mais tempo sem repetir. Com isso, "Ciclo" e "quantas no ar" abaixo são <b>ignorados</b>.</div>
 
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
@@ -14764,6 +14764,7 @@ async function loadExplore() {
             setLv('lvFreeOnAir', lv.free_on_air != null ? lv.free_on_air : 4);
             setLv('lvVipOnAir', lv.vip_on_air != null ? lv.vip_on_air : 1);
             setLv('lvFreeSec', lv.free_seconds != null ? lv.free_seconds : 180);
+            syncLvAuto();
         }
     } catch(_) {}
     loadExploreVideos();
@@ -14792,6 +14793,17 @@ function pickLvCol(name) {
     else f.value = name;
 }
 window.pickLvCol = pickLvCol;
+
+// Ritmo automático ligado → apaga (desabilita) os campos manuais: quem manda
+// é a esteira pela quantidade de vídeos na pasta; os números viram irrelevantes.
+function syncLvAuto() {
+    const on = !!(document.getElementById('lvAuto') || {}).checked;
+    ['lvCycle', 'lvFreeOnAir', 'lvVipOnAir'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.disabled = on; el.style.opacity = on ? .4 : 1; }
+    });
+}
+window.syncLvAuto = syncLvAuto;
 
 async function saveLivesSettings() {
     const payload = { lives: {
