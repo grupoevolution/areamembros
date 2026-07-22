@@ -63,12 +63,29 @@ const DEFAULT_LIVES = {
     lib_id: null,            // Library ID do Bunny (mesma das duas coleções)
     free_collection: null,   // coleção das lives LIBERADAS
     vip_collection: null,    // coleção das lives +18 TRAVADAS
-    cycle_days: 7,           // ciclo: as lives giram por N dias e recomeçam
-    free_on_air: 2,          // lives LIBERADAS no ar (2 liberadas + 1 +18 = 3 no total)
-    vip_on_air: 1,           // lives +18 no ar ao mesmo tempo
+    auto: true,              // RITMO AUTOMÁTICO: no ar + ciclo derivados do
+                             // tamanho da pasta (o dono só alimenta o Bunny)
+    cycle_days: 7,           // (modo manual) ciclo: giram por N dias e recomeçam
+    free_on_air: 2,          // (modo manual) lives LIBERADAS no ar
+    vip_on_air: 1,           // (modo manual) lives +18 no ar ao mesmo tempo
     free_seconds: 180,       // tempo grátis por dia na faixa liberada (3 min)
     creator_names: null,     // nomes opcionais por vídeo (fallback = título)
 };
+
+// ── RITMO AUTOMÁTICO ─────────────────────────────────────────────────────────
+// O dono só alimenta a pasta; o sistema decide sozinho:
+//   - QUANTAS no ar: cresce com a pasta (free: 1 a cada ~10 vídeos, 2–8;
+//     +18: 1 a cada ~6 vídeos, 1–3). Ex.: 57 free → 5 no ar; 70 → 7; 80+ → 8.
+//   - RITMO: cada live fica ~T horas "ao vivo" (free 3,5h; +18 5h) — o ciclo
+//     vira consequência (cycleMs = T×N/C) e ALONGA sozinho conforme a pasta
+//     cresce: 70 free ≈ repete só depois de ~35h; 170 ≈ 3 dias; 300 ≈ 5,5 dias.
+//     Cada ciclo re-embaralha (dia/horário mudam), então repetição não "cara".
+const AUTO_TARGET_H = { free: 3.5, vip: 5 };
+function autoOnAir(kind, n) {
+    if (kind === 'vip') return Math.max(1, Math.min(3, Math.floor(n / 6)));
+    return Math.max(2, Math.min(8, Math.floor(n / 10)));
+}
+function livesAuto(cfg) { return cfg.auto === true || cfg.free_on_air === 'auto'; }
 async function loadCfg() {
     try {
         const { rows } = await db.query(`SELECT value FROM gamification_config WHERE key = 'lives_config'`);
@@ -113,31 +130,44 @@ function shuffleSeeded(arr, seed) {
 // Cache das listas do Bunny "assadas" por CICLO (embaralhadas 1x por ciclo).
 const _bakeCache = new Map();
 
-// CICLO de N dias (padrão 7): a coleção é embaralhada UMA vez por ciclo e as
-// lives entram no ar em fila — uma NOVA a cada `slot` (= ciclo ÷ nº de lives),
-// e cada uma fica no ar por `count` slots. Assim as ~60 lives passam TODAS
-// durante os 7 dias sem repetir; no fim do ciclo, re-embaralha e recomeça.
-// Sempre há `count` no ar; a rotação é contínua (uma entra, a mais antiga sai).
-// Zero worker — tudo derivado do relógio.
-async function livesOnAir(cfg, collectionId, kind, count, nowMs) {
-    if (!cfg.lib_id || !collectionId || count <= 0) return [];
-    const cycleDays = Math.max(1, Math.min(60, cfg.cycle_days | 0 || 7));
-    const cycleMs = cycleDays * 86400 * 1000;
+// A coleção é embaralhada UMA vez por ciclo e as lives entram no ar em fila —
+// uma NOVA a cada `slot` (= ciclo ÷ nº de lives), e cada uma fica no ar por
+// `count` slots. Sempre há `count` no ar; a rotação é contínua (uma entra, a
+// mais antiga sai); no fim do ciclo, re-embaralha e recomeça.
+// No modo AUTOMÁTICO, `count` e o ciclo saem do TAMANHO da pasta (ver acima);
+// no manual, dos números do painel. Zero worker — tudo derivado do relógio.
+async function livesOnAir(cfg, collectionId, kind, nowMs) {
+    if (!cfg.lib_id || !collectionId) return [];
+    // lista 1x pra saber N (o lib/bunny cacheia ~10min — não pesa)
+    let vids = await listCollectionVideos(cfg.lib_id, collectionId);
+    vids = (vids || []).filter(v => (v.status == null || v.status >= 4) && v.lengthSec > 0);
+    const N = vids.length;
+    if (!N) return [];
+
+    let count, cycleMs;
+    if (livesAuto(cfg)) {
+        count = autoOnAir(kind, N);
+        // cada live fica ~T horas no ar → ciclo = T×N÷count (alonga com a pasta)
+        cycleMs = Math.max(3600e3, AUTO_TARGET_H[kind] * 3600e3 * N / count);
+    } else {
+        count = Math.max(0, Math.min(30, (kind === 'vip' ? cfg.vip_on_air : cfg.free_on_air) | 0));
+        const cycleDays = Math.max(1, Math.min(60, cfg.cycle_days | 0 || 7));
+        cycleMs = cycleDays * 86400 * 1000;
+    }
+    if (count <= 0) return [];
+
     const cycleIdx = Math.floor(nowMs / cycleMs);
     const posMs = nowMs - cycleIdx * cycleMs; // ms decorridos no ciclo atual
-    const key = collectionId + ':cyc:' + cycleIdx;
+    // N na seed: dono adicionou vídeos → re-embaralha limpo (muda a "grade")
+    const key = collectionId + ':cyc:' + cycleIdx + ':' + N;
 
     let baked = _bakeCache.get(key);
     if (!baked || Date.now() - baked.at > 30 * 60000) {
-        let vids = await listCollectionVideos(cfg.lib_id, collectionId);
-        vids = (vids || []).filter(v => (v.status == null || v.status >= 4) && v.lengthSec > 0);
-        if (!vids.length) return [];
         baked = { at: Date.now(), vids: shuffleSeeded(vids, hashStr(key)) };
         _bakeCache.set(key, baked);
         if (_bakeCache.size > 64) { const k = _bakeCache.keys().next().value; _bakeCache.delete(k); }
     }
 
-    const N = baked.vids.length;
     const slotMs = cycleMs / N;                 // intervalo entre entradas de live
     const head = Math.floor(posMs / slotMs);    // índice da live que ENTROU por último
     const nowSec = Math.floor(nowMs / 1000);
@@ -192,14 +222,12 @@ router.get('/lives', optionalUser, async (req, res) => {
         const email = req.user?.email || null;
         const hasAccess = await exploreAccess(email);
 
-        // VÁRIAS lives no ar: N liberadas + N do +18 (números configuráveis).
+        // VÁRIAS lives no ar (quantas = automático pela pasta, ou manual).
         // A coleção pode estar salva como NOME ou GUID → resolve pro guid aqui.
-        const freeCount = Math.max(0, Math.min(30, cfg.free_on_air | 0));
-        const vipCount = Math.max(0, Math.min(30, cfg.vip_on_air | 0));
         const freeCol = await resolveCollection(cfg.lib_id, cfg.free_collection);
         const vipCol = await resolveCollection(cfg.lib_id, cfg.vip_collection);
-        const freeLives = await livesOnAir(cfg, freeCol, 'free', freeCount, now);
-        const vipLives = await livesOnAir(cfg, vipCol, 'vip', vipCount, now);
+        const freeLives = await livesOnAir(cfg, freeCol, 'free', now);
+        const vipLives = await livesOnAir(cfg, vipCol, 'vip', now);
 
         // tempo grátis restante na faixa liberada (por dia)
         const { dayKey } = brasiliaParts(now);

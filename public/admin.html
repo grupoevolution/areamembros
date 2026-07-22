@@ -3891,6 +3891,8 @@ a { color: inherit; text-decoration: none; }
                 <div style="background:rgba(229,9,20,.05); border:1px solid rgba(229,9,20,.28); border-radius:14px; padding:18px; margin-bottom:18px; display:flex; flex-direction:column; gap:14px; max-width:760px;">
                     <label style="display:flex; align-items:center; gap:8px; font-size:14px; color:#fff; cursor:pointer; font-weight:700;"><input type="checkbox" id="lvEnabled" style="width:18px; height:18px;"> 🔴 Ativar as "Lives" (aba dentro de Vídeos)</label>
                     <div class="form-help" style="margin-top:-6px;">Uma live é um vídeo do Bunny tocando como se fosse ao vivo. Todos veem a mesma no mesmo horário. O título do vídeo no Bunny vira o nome da modelo; a capa vira o avatar. O acesso e o popup são os MESMOS da aba Vídeos (19,90 ou Premium).</div>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:13.5px; color:#fff; cursor:pointer; font-weight:700; background:rgba(76,217,100,.08); border:1px solid rgba(76,217,100,.3); border-radius:10px; padding:10px 12px;"><input type="checkbox" id="lvAuto" checked style="width:18px; height:18px;"> 🪄 Ritmo automático (recomendado)</label>
+                    <div class="form-help" style="margin-top:-8px;">Você só alimenta as pastas no Bunny — o sistema decide sozinho quantas lives ficam no ar (cresce com a pasta: 57 vídeos ≈ 5 no ar; 70 ≈ 7; 80+ ≈ 8, mais as +18) e o ritmo (cada live fica ~3h30 "ao vivo"; +18 ~5h). Quanto mais vídeos, mais tempo sem repetir. Com isso, "Ciclo" e "quantas no ar" abaixo são <b>ignorados</b>.</div>
 
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
                         <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Library ID (Bunny)</label><input class="form-control" id="lvLib" maxlength="20" placeholder="ex: 667167" style="width:100%;"/><div class="form-help" style="margin-top:3px;">É o número da sua Video Library (o mesmo dos vídeos).</div></div>
@@ -14753,6 +14755,8 @@ async function loadExplore() {
             const lv = s.lives || {};
             const setLv = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
             const lvEn = document.getElementById('lvEnabled'); if (lvEn) lvEn.checked = lv.enabled === true;
+            // auto é o PADRÃO: só desmarca se o dono salvou auto:false de propósito
+            const lvAu = document.getElementById('lvAuto'); if (lvAu) lvAu.checked = lv.auto !== false;
             setLv('lvLib', lv.lib_id || '');
             setLv('lvCycle', lv.cycle_days != null ? lv.cycle_days : 7);
             setLv('lvFreeCol', lv.free_collection || '');
@@ -14792,6 +14796,7 @@ window.pickLvCol = pickLvCol;
 async function saveLivesSettings() {
     const payload = { lives: {
         enabled: document.getElementById('lvEnabled').checked,
+        auto: document.getElementById('lvAuto').checked,
         lib_id: document.getElementById('lvLib').value.trim() || null,
         cycle_days: parseInt(document.getElementById('lvCycle').value, 10) || 7,
         free_collection: document.getElementById('lvFreeCol').value.trim() || null,
