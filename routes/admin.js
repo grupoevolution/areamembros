@@ -122,9 +122,12 @@ router.get('/dashboard', requireAdmin, async (req, res) => {
                     (SELECT COUNT(*)::int FROM customers) as customers,
                     (SELECT COUNT(*)::int FROM user_access WHERE status = 'active') as active_access,
                     (SELECT COUNT(*)::int FROM webhook_logs WHERE received_at > NOW() - INTERVAL '24 hours') as webhooks_24h,
-                    (SELECT COUNT(*)::int FROM webhook_logs WHERE received_at > NOW() - INTERVAL '24 hours' AND processed = true) as sales_24h,
-                    (SELECT COUNT(*)::int FROM webhook_logs WHERE received_at > NOW() - INTERVAL '7 days' AND processed = true) as sales_7d,
-                    (SELECT COUNT(*)::int FROM webhook_logs WHERE received_at > NOW() - INTERVAL '30 days' AND processed = true) as sales_30d
+                    -- "Vendas" = só evento de venda APROVADA (Kirvano manda 'SALE_APPROVED',
+                    -- PerfectPay manda 'approved'). Antes contava QUALQUER webhook processado:
+                    -- reembolso, chargeback e Pix pendente inflavam o número.
+                    (SELECT COUNT(*)::int FROM webhook_logs WHERE received_at > NOW() - INTERVAL '24 hours' AND processed = true AND UPPER(COALESCE(event_type,'')) LIKE '%APPROVED%') as sales_24h,
+                    (SELECT COUNT(*)::int FROM webhook_logs WHERE received_at > NOW() - INTERVAL '7 days' AND processed = true AND UPPER(COALESCE(event_type,'')) LIKE '%APPROVED%') as sales_7d,
+                    (SELECT COUNT(*)::int FROM webhook_logs WHERE received_at > NOW() - INTERVAL '30 days' AND processed = true AND UPPER(COALESCE(event_type,'')) LIKE '%APPROVED%') as sales_30d
             `),
             // Vendas por dia (últimos 30 dias) — pra gráfico
             db.query(`
@@ -133,6 +136,7 @@ router.get('/dashboard', requireAdmin, async (req, res) => {
                     COUNT(*)::int as count
                 FROM webhook_logs
                 WHERE received_at > NOW() - INTERVAL '30 days' AND processed = true
+                  AND UPPER(COALESCE(event_type,'')) LIKE '%APPROVED%'
                 GROUP BY day
                 ORDER BY day ASC
             `),
