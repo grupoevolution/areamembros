@@ -10733,6 +10733,17 @@ window.GroupApp = (function () {
             const data = await r.json();
             if (!data.success) { scroll.innerHTML = '<div class="ca-empty">Erro carregando grupos.</div>'; return; }
             const groups = data.groups || [];
+            // Ordem estilo WhatsApp (pedido do dono): FIXADOS primeiro (na ordem
+            // do painel), e o resto sobe pro topo por mensagem mais recente —
+            // a lista "mexe" a cada visita, como grupos de verdade.
+            groups.sort((a, b) => {
+                const pd = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+                if (pd) return pd;
+                if (a.pinned && b.pinned) return 0; // fixados mantêm a ordem do painel
+                const ta = a.last && a.last.at ? new Date(a.last.at).getTime() : 0;
+                const tb = b.last && b.last.at ? new Date(b.last.at).getTime() : 0;
+                return tb - ta;
+            });
             // aba só existe se houver grupos
             GROUPS_ON = groups.length > 0;
             const tabs = document.getElementById('caTabs');
