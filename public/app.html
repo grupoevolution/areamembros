@@ -20746,12 +20746,25 @@ window.Explore = (function () {
     // (e na volta do checkout, via visibilitychange). Assim que o webhook
     // liberar o acesso, o paywall fecha e o feed continua — sem F5.
     let accessTimer = null;
+    let accessHandler = null; // callback externo (Lives): destravou → avisa quem abriu
     async function recheckAccess() {
-        if (!data || data.has_access) return true;
+        if (!accessHandler && (!data || data.has_access)) return true;
         try {
             const r = await fetch('/api/user/explore/access', { credentials: 'include' });
             const d = await r.json();
             if (d && d.success && d.has_access) {
+                // Pagamento veio das LIVES: quem re-renderiza é o módulo Lives.
+                // O feed de vídeos fica marcado pra rebuscar na próxima aberta
+                // (a lista do grátis vem CORTADA do servidor — o VIP precisa
+                // da completa).
+                if (accessHandler) {
+                    const h = accessHandler;
+                    stopAccessWatch();
+                    closePaywall();
+                    data = null; loaded = false;
+                    try { h(); } catch (_) {}
+                    return true;
+                }
                 data.has_access = true;
                 data.unlock = null;
                 stopAccessWatch();
@@ -20791,11 +20804,13 @@ window.Explore = (function () {
         const ov = document.getElementById('tkPaywall');
         if (ov) { ov.classList.remove('open'); ov.innerHTML = ''; }
         stopAccessWatch();
+        accessHandler = null;
     }
     // opts.src = objeto com {paywall,unlock,premium_plan} (default: o feed de vídeos);
     // opts.onClose = o que fazer ao fechar (default: volta pra Home); opts.watch =
     // false desliga o auto-destravar (usado pelas Lives, que têm estado próprio).
     window.__openExplorePaywall = function (opts) { try { openPaywall(opts || {}); } catch (_) {} };
+    window.__closeExplorePaywall = function () { try { closePaywall(); } catch (_) {} };
     function openPaywall(opts) {
         opts = opts || {};
         const src = opts.src || data;
@@ -20851,9 +20866,12 @@ window.Explore = (function () {
             else if (card) card.appendChild(box);
         }
         ov.classList.add('open');
-        // fica de olho: pagou → destrava sozinho (só no feed de vídeos; as Lives
-        // passam watch:false porque têm estado próprio e não usam este `data`)
-        if (opts.watch !== false) { recheckAccess(); startAccessWatch(); }
+        // fica de olho: pagou → destrava sozinho. No feed, o próprio módulo
+        // refaz o feed; nas Lives (opts.onAccess), quem re-renderiza é o
+        // módulo Lives — antes as Lives passavam watch:false SEM handler e o
+        // lead que pagava ficava olhando o paywall até fechar e reabrir.
+        accessHandler = opts.onAccess || null;
+        if (opts.watch !== false || accessHandler) { recheckAccess(); startAccessWatch(); }
     }
 
     function doShare() {
@@ -21200,14 +21218,37 @@ window.Lives = (function () {
     // abre o MESMO popup da aba Vídeos (oferta 19,90 + Premium) — POR CIMA da
     // live, SEM navegar. (bug anterior: reaproveitava o feed e o onClose ia pra
     // Home; agora o popup usa os dados das Lives e o "agora não" fica na live.)
+    // Pagou dentro do popup → rebusca as lives (agora com acesso) e re-renderiza
+    // NA MESMA live em que o lead estava, destravada e com o vídeo em HD.
+    async function refreshAfterPurchase() {
+        const guid = cur && cur.guid;
+        try {
+            const r = await fetch('/api/user/lives?visitor_id=' + encodeURIComponent(VID || ''), { credentials: 'include' });
+            const d = await r.json();
+            if (!d || !d.success || !d.enabled || !Array.isArray(d.lives) || !d.lives.length) return;
+            data = d;
+            data._at = Date.now();
+            freeLeft = d.has_access ? 999999 : (d.free_left || 0);
+            const idx = guid ? d.lives.findIndex(l => l.guid === guid) : -1;
+            curIdx = idx >= 0 ? idx : 0;
+            cur = data.lives[curIdx];
+            build();
+        } catch (_) {}
+    }
     function unlock() {
         try { if (typeof TRACK !== 'undefined') TRACK.event('lives_paywall_click', { kind: cur && cur.kind }); } catch (_) {}
         pauseVideo();
         if (!window.__openExplorePaywall || !data) return;
         window.__openExplorePaywall({
             src: data,          // paywall/unlock/premium_plan vêm de /api/user/lives
-            watch: false,       // as Lives não usam o auto-destravar do feed
-            onClose: () => { const ov = document.getElementById('tkPaywall'); if (ov) { ov.classList.remove('open'); ov.innerHTML = ''; } },
+            watch: false,       // não usa o refresh do FEED (estado é das Lives)…
+            onAccess: refreshAfterPurchase, // …mas destrava sozinho ao pagar
+            onClose: () => {
+                if (window.__closeExplorePaywall) window.__closeExplorePaywall();
+                // "agora não" fica NA live — retoma o vídeo que o unlock pausou
+                const v = stage() && stage().querySelector('#lvBg video');
+                if (v) { try { v.play().catch(() => {}); } catch (_) {} }
+            },
         });
     }
     function tryComment() {
