@@ -8655,9 +8655,17 @@ body.is-slowconn .prod-cta-fixed {
 .lv-bg{position:absolute;inset:0;overflow:hidden;background:#16090f;}
 .lv-bg video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
 .lv-bg.blurred video{filter:blur(26px) saturate(1.15);transform:scale(1.18);}
+/* TEASER da live travada: capa PARADA borrada (blur renderiza 1x — barato) com
+   "respiração" lenta; o vídeo vira SÓ ÁUDIO (2px, qualidade mínima). Antes o
+   vídeo rodava inteiro atrás do blur(26px) — GPU+banda no talo em Android fraco
+   só pra mostrar um borrão. O áudio real continua (isca pedida pelo dono). */
+.lv-tease{position:absolute;inset:-8%;background:#16090f center/cover no-repeat;filter:blur(26px) saturate(1.15);animation:lvTease 16s ease-in-out infinite alternate;}
+@keyframes lvTease{from{transform:scale(1.06);}to{transform:scale(1.18) translate(1.5%,-1.5%);}}
+.lv-bg video.lv-audio{inset:auto;left:0;top:0;width:2px;height:2px;opacity:.01;filter:none !important;transform:none !important;}
+@media (prefers-reduced-motion:reduce){.lv-tease{animation:none !important;}}
 .lv-shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.5) 0%,transparent 22%,transparent 55%,rgba(0,0,0,.72) 100%);}
 .lv-top{position:absolute;top:calc(46px + env(safe-area-inset-top));left:0;right:0;display:flex;justify-content:center;z-index:5;}
-.lv-cap{display:flex;align-items:center;gap:9px;background:rgba(10,8,12,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:6px 12px 6px 7px;}
+.lv-cap{display:flex;align-items:center;gap:9px;background:rgba(10,8,12,.78);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:6px 12px 6px 7px;}
 .lv-cap-av{width:30px;height:30px;border-radius:50%;padding:2px;background:linear-gradient(45deg,#e50914,#ff3b30);flex-shrink:0;background-size:cover;}
 .lv-cap-av>div{width:100%;height:100%;border-radius:50%;background:#2a1118 center/cover no-repeat;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff;}
 .lv-cap-name{font-size:13.5px;font-weight:800;color:#fff;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -8680,16 +8688,16 @@ body.is-slowconn .prod-cta-fixed {
 .lv-cmt{display:flex;align-items:flex-start;gap:8px;animation:lvcmtin .35s ease-out;}
 @keyframes lvcmtin{from{opacity:0;transform:translateY(10px);}}
 .lv-cmt-av{width:26px;height:26px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#fff;background:#3a2230;}
-.lv-cmt-body{background:rgba(10,8,12,.55);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.08);border-radius:13px;padding:6px 11px;max-width:100%;}
+.lv-cmt-body{background:rgba(10,8,12,.78);border:1px solid rgba(255,255,255,.08);border-radius:13px;padding:6px 11px;max-width:100%;}
 .lv-cmt-name{font-size:11px;font-weight:800;color:rgba(255,255,255,.65);display:flex;align-items:center;gap:5px;}
 .lv-cmt-vip{font-size:8px;font-weight:900;letter-spacing:.6px;color:#241a05;background:linear-gradient(90deg,#d4af37,#f5d67b);border-radius:4px;padding:1.5px 4px;}
 .lv-cmt-txt{font-size:13px;line-height:1.35;margin-top:1px;color:#fff;}
 .lv-bar{position:absolute;left:12px;right:12px;bottom:calc(100px + env(safe-area-inset-bottom));z-index:5;display:flex;align-items:center;gap:9px;}
-.lv-input{flex:1;display:flex;align-items:center;gap:8px;background:rgba(10,8,12,.55);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:12px 16px;color:rgba(255,255,255,.55);font-size:13.5px;cursor:pointer;}
+.lv-input{flex:1;display:flex;align-items:center;gap:8px;background:rgba(10,8,12,.78);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:12px 16px;color:rgba(255,255,255,.55);font-size:13.5px;cursor:pointer;}
 .lv-input svg{flex-shrink:0;opacity:.6;}
 .lv-rnd{width:46px;height:46px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;}
 .lv-rnd.heart{background:linear-gradient(135deg,#e50914,#ff3b30);color:#fff;box-shadow:0 6px 16px rgba(229,9,20,.4);}
-.lv-rnd.gift{background:rgba(10,8,12,.55);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.18);color:#f5d67b;}
+.lv-rnd.gift{background:rgba(10,8,12,.78);border:1px solid rgba(255,255,255,.18);color:#f5d67b;}
 /* header enxuto da live: foto+nome à esquerda (ao lado das abas), views à direita */
 .lv-hdr-left{position:absolute;top:calc(8px + env(safe-area-inset-top));left:12px;z-index:9;display:flex;align-items:center;gap:7px;max-width:34%;}
 .lv-hdr-av{width:32px;height:32px;border-radius:50%;border:2px solid #ff3b30;background:#2a1118 center/cover no-repeat;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff;}
@@ -8700,16 +8708,16 @@ body.is-slowconn .prod-cta-fixed {
 /* gate "toque pra ativar o som" (1ª vez) */
 .lv-soundgate{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(0,0,0,.35);cursor:pointer;}
 .lv-soundgate.hidden{display:none;}
-.lv-soundgate .ring{width:76px;height:76px;border-radius:50%;background:rgba(255,255,255,.14);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;color:#fff;animation:lvSndPulse 1.8s ease-in-out infinite;}
+.lv-soundgate .ring{width:76px;height:76px;border-radius:50%;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;color:#fff;animation:lvSndPulse 1.8s ease-in-out infinite;}
 .lv-soundgate .ring svg{width:30px;height:30px;}
 .lv-soundgate p{color:#fff;font-size:14px;font-weight:700;text-shadow:0 1px 8px rgba(0,0,0,.7);}
 @keyframes lvSndPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,255,255,.25);}50%{transform:scale(1.06);box-shadow:0 0 0 14px rgba(255,255,255,0);}}
-.lv-x{position:absolute;top:calc(48px + env(safe-area-inset-top));right:14px;z-index:7;width:34px;height:34px;border-radius:50%;background:rgba(10,8,12,.55);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.lv-x{position:absolute;top:calc(48px + env(safe-area-inset-top));right:14px;z-index:7;width:34px;height:34px;border-radius:50%;background:rgba(10,8,12,.78);border:1px solid rgba(255,255,255,.14);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;}
 .lv-lockwrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:5;padding:0 28px;}
 .lv-lockcard{text-align:center;max-width:320px;}
 /* +18: card compacto e quente */
 .lv-lockcard.xxx{max-width:300px;background:linear-gradient(180deg,rgba(30,4,8,.72),rgba(10,2,4,.82));border:1px solid rgba(245,214,123,.35);border-radius:20px;padding:20px 18px;box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 40px rgba(229,9,20,.2);}
-.lv-lock18{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);border-radius:999px;font-size:10.5px;font-weight:900;letter-spacing:1.4px;padding:5px 12px;margin-bottom:12px;color:#fff;}
+.lv-lock18{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.18);border-radius:999px;font-size:10.5px;font-weight:900;letter-spacing:1.4px;padding:5px 12px;margin-bottom:12px;color:#fff;}
 .lv-lock18.hot{background:linear-gradient(135deg,#e50914,#ff3b30);border-color:transparent;font-size:12px;padding:7px 15px;box-shadow:0 6px 18px rgba(229,9,20,.5);animation:lvHotPulse 1.6s ease-in-out infinite;}
 @keyframes lvHotPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.05);}}
 .lv-lock18 .d{width:5px;height:5px;border-radius:50%;background:#ff3b30;animation:lvblink 1.1s infinite;}
@@ -8723,13 +8731,13 @@ body.is-slowconn .prod-cta-fixed {
 .xxx .lv-locksub{font-size:13.5px;color:rgba(255,255,255,.82);}
 .lv-lockfoot{margin-top:12px;font-size:11.5px;color:rgba(245,214,123,.85);font-weight:700;}
 .lv-lockcta{display:inline-flex;align-items:center;gap:8px;margin-top:16px;background:linear-gradient(90deg,#d4af37,#f5d67b);color:#241a05;border:none;font-size:14px;font-weight:900;letter-spacing:.5px;padding:15px 26px;border-radius:13px;cursor:pointer;box-shadow:0 10px 26px rgba(212,175,55,.35);}
-.lv-next{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(110px + env(safe-area-inset-bottom));z-index:5;display:flex;align-items:center;gap:8px;background:rgba(10,8,12,.55);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:7px 14px;font-size:12px;color:rgba(255,255,255,.8);white-space:nowrap;}
+.lv-next{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(110px + env(safe-area-inset-bottom));z-index:5;display:flex;align-items:center;gap:8px;background:rgba(10,8,12,.78);border:1px solid rgba(255,255,255,.14);border-radius:999px;padding:7px 14px;font-size:12px;color:rgba(255,255,255,.8);white-space:nowrap;}
 .lv-next b{color:#fff;}
 @media (prefers-reduced-motion:reduce){.lv-hearts svg,.tk-livedot,.lv-cap-live .d{animation:none !important;}}
 .tk-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#888;font-size:14px;padding:30px;text-align:center;}
 /* Paywall do feed: cobre só os vídeos (z-index 50 < 500 da barra) — a barra de
    baixo continua visível e clicável, o lead pode ir pra outras partes do app. */
-.tk-paywall{position:absolute;left:0;right:0;top:0;bottom:0;z-index:50;display:none;align-items:flex-start;justify-content:center;padding:16px 16px calc(104px + env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;background:rgba(8,6,7,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);}
+.tk-paywall{position:absolute;left:0;right:0;top:0;bottom:0;z-index:50;display:none;align-items:flex-start;justify-content:center;padding:16px 16px calc(104px + env(safe-area-inset-bottom,0px));overflow-y:auto;-webkit-overflow-scrolling:touch;background:rgba(8,6,7,.93);}
 .tk-paywall.open{display:flex;}
 /* margin:auto no card: centraliza quando cabe e rola quando é maior que a
    área útil — o conteúdo nunca fica escondido atrás da barra inferior */
@@ -21030,9 +21038,11 @@ window.Lives = (function () {
         const locked = cur.locked || (cur.kind === 'free' && !data.has_access && freeLeft <= 0);
         const initial = (cur.name || '?').charAt(0).toUpperCase();
         const avStyle = cur.poster ? 'style="background-image:url(' + esc(cur.poster) + ')"' : '';
-        // O vídeo TOCA sempre (inclusive travado) — embaçado quando locked.
-        let html = '<div class="lv-bg ' + (locked ? 'blurred' : '') + '" id="lvBg">'
-            + (cur.hls_url ? '<video playsinline loop muted></video>' : '')
+        // Travada: capa PARADA borrada (.lv-tease) + vídeo só-ÁUDIO (2px, isca
+        // sonora — o lead OUVE a live sem ver). Liberada: vídeo em tela cheia.
+        let html = '<div class="lv-bg' + (locked ? ' blurred' : '') + '" id="lvBg">'
+            + (locked ? '<div class="lv-tease"' + (cur.poster ? ' style="background-image:url(' + esc(cur.poster) + ')"' : '') + '></div>' : '')
+            + (cur.hls_url ? '<video playsinline loop muted' + (locked ? ' class="lv-audio"' : '') + '></video>' : '')
             + '</div><div class="lv-shade"></div>'
             // header enxuto: foto+nome no canto ESQUERDO (ao lado das abas),
             // visualizações no canto DIREITO. Sem X flutuante.
@@ -21070,9 +21080,12 @@ window.Lives = (function () {
         attachSwipe(st);
         const gate = st.querySelector('#lvSoundGate');
         if (gate) gate.addEventListener('click', (e) => { e.stopPropagation(); enableSound(); });
+        // toque na tela: coração + libera o som (na travada, só o som — é a
+        // isca de ÁUDIO). remove antes de re-adicionar: cada build empilhava
+        // um listener a mais e o toque disparava N vezes (leak).
+        st.removeEventListener('click', onStageTap);
+        st.addEventListener('click', onStageTap);
         if (!locked) {
-            // toque na tela manda coração (menos na barra e no X)
-            st.addEventListener('click', onStageTap);
             for (let i = 0; i < 4; i++) pushComment();
             cmtTimer = setInterval(pushComment, 2600);
             scheduleGold(6000); // 1ª notificação depois de ~6s, depois espaçadas
@@ -21087,7 +21100,10 @@ window.Lives = (function () {
         try {
             try { if (hls) { hls.destroy(); hls = null; } } catch (_) {}
             if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = url; }
-            else if (window.Hls && window.Hls.isSupported()) { hls = new Hls({ maxBufferLength: 6, maxMaxBufferLength: 18 }); hls.loadSource(url); hls.attachMedia(v); }
+            // capLevelToPlayerSize: qualidade acompanha o TAMANHO do player —
+            // na travada o vídeo tem 2px (só áudio) → baixa a MENOR qualidade
+            // (banda mínima pra isca sonora); na liberada, cabe na tela do cel.
+            else if (window.Hls && window.Hls.isSupported()) { hls = new Hls({ maxBufferLength: 6, maxMaxBufferLength: 18, capLevelToPlayerSize: true }); hls.loadSource(url); hls.attachMedia(v); }
             else { v.src = url; }
             v.muted = !lvSound; // respeita o som já ativado
             v.addEventListener('loadedmetadata', () => {
@@ -21211,6 +21227,11 @@ window.Lives = (function () {
     function startWatchClock() {
         stopWatch();
         watchTimer = setInterval(() => {
+            // JUSTO: só desconta com o vídeo DE FATO rodando — se a internet
+            // ruim travou o carregamento (ou o popup pausou), o relógio espera
+            // junto. Antes o lead perdia o tempo grátis olhando a rodinha.
+            const v = stage() && stage().querySelector('#lvBg video');
+            if (v && (v.paused || v.readyState < 3)) return;
             freeLeft = Math.max(0, freeLeft - 1);
             const el = stage() && stage().querySelector('#lvFree');
             if (el) el.textContent = fmtTime(freeLeft);
