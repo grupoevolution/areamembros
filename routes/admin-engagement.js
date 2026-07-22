@@ -48,14 +48,14 @@ router.get('/kpis', requireAdmin, async (req, res) => {
             periodSql = `
                 SELECT COUNT(*)::int AS active_period
                 FROM customers
-                WHERE last_seen_at >= $1::date
-                  AND last_seen_at <  ($2::date + INTERVAL '1 day')`;
+                WHERE last_seen_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo')
+                  AND last_seen_at <  ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')`;
             periodParams = [from, to];
         } else {
             periodSql = `
                 SELECT COUNT(*)::int AS active_period
                 FROM customers
-                WHERE last_seen_at >= CURRENT_DATE`;
+                WHERE last_seen_at >= (((NOW() AT TIME ZONE 'America/Sao_Paulo')::date)::timestamp AT TIME ZONE 'America/Sao_Paulo')`;
             periodParams = [];
         }
 
@@ -65,7 +65,7 @@ router.get('/kpis', requireAdmin, async (req, res) => {
                     (SELECT COUNT(*)::int FROM customers
                       WHERE last_seen_at > NOW() - INTERVAL '5 minutes') AS online_now,
                     (SELECT COUNT(*)::int FROM customers
-                      WHERE last_seen_at >= CURRENT_DATE)                  AS active_today,
+                      WHERE last_seen_at >= (((NOW() AT TIME ZONE 'America/Sao_Paulo')::date)::timestamp AT TIME ZONE 'America/Sao_Paulo'))                  AS active_today,
                     (SELECT COUNT(*)::int FROM customers
                       WHERE last_seen_at >= NOW() - INTERVAL '7 days')     AS active_7d,
                     (SELECT COUNT(*)::int FROM customers

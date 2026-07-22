@@ -75,8 +75,8 @@ router.get('/kpis', requireAdmin, async (req, res) => {
                 LEFT JOIN product_offers po ON po.id = ua.offer_id
                 WHERE ua.net_amount IS NOT NULL
                   AND ua.status = 'active'
-                  AND ua.granted_at >= $1::date
-                  AND ua.granted_at <  ($2::date + INTERVAL '1 day')
+                  AND ua.granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo')
+                  AND ua.granted_at <  ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
                   AND NOT COALESCE(po.is_acquisition, false)
             `, [from, to]),
             db.query(`
@@ -87,8 +87,8 @@ router.get('/kpis', requireAdmin, async (req, res) => {
                 LEFT JOIN product_offers po ON po.id = ua.offer_id
                 WHERE ua.net_amount IS NOT NULL
                   AND ua.status = 'active'
-                  AND ua.granted_at >= $1::date
-                  AND ua.granted_at <  ($2::date + INTERVAL '1 day')
+                  AND ua.granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo')
+                  AND ua.granted_at <  ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
                   AND NOT COALESCE(po.is_acquisition, false)
             `, [prevFrom, prevTo]),
         ]);
@@ -141,8 +141,8 @@ router.get('/ranking', requireAdmin, async (req, res) => {
             LEFT JOIN product_offers po ON po.id = ua.offer_id
             WHERE ua.net_amount IS NOT NULL
               AND ua.status = 'active'
-              AND ua.granted_at >= $1::date
-              AND ua.granted_at <  ($2::date + INTERVAL '1 day')
+              AND ua.granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo')
+              AND ua.granted_at <  ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
               AND NOT COALESCE(po.is_acquisition, false)
             GROUP BY ua.product_id, p.name, po.offer_name, po.gateway
             ORDER BY net_total DESC, sales_count DESC
@@ -416,8 +416,8 @@ router.get('/acquisition-performance', requireAdmin, async (req, res) => {
             FROM webhook_logs wl
             WHERE wl.signature_valid = true
               AND wl.processed = true
-              AND wl.received_at >= $1::date
-              AND wl.received_at <  ($2::date + INTERVAL '1 day')
+              AND wl.received_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo')
+              AND wl.received_at <  ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
               AND (wl.event_type ILIKE '%APPROVED%' OR wl.event_type ILIKE '%approved%')
         `, [from, to]);
 
@@ -711,90 +711,78 @@ router.get('/repurchase-rate', requireAdmin, async (req, res) => {
 });
 
 
-// ─── Funil de Instalacao PWA (Fase L13, mai/2026) ───────────────────────────
+// ─── Funil de Instalacao PWA (reformulado jul/2026) ─────────────────────────
 //
-// Conta eventos disparados pelo cliente em tracking_events. Janelas fixas:
-// 7d, 30d. Eventos:
-//   pwa_prompt_shown      — popup PWA exibido pro lead
-//   pwa_install_clicked   — clicou no botao "INSTALAR AGORA"
-//   pwa_install_accepted  — confirmou no prompt nativo do Chrome
-//   pwa_install_dismissed — recusou no prompt nativo do Chrome
-//   pwa_app_installed     — evento 'appinstalled' do navegador (instalou)
-//   pwa_opened_standalone — abriu o app ja instalado (uso real)
-//
-// Conversao chave:
-//   click_rate    = clicked / shown          (popup convenceu?)
-//   accept_rate   = accepted / clicked       (dialog do Chrome converteu?)
-//   install_rate  = installed / shown        (do popup ate instalar de fato)
-//
-// "installed" pode ser > "accepted" pq usuario tambem instala via menu nativo
-// (3 pontinhos) sem passar pelo nosso botao. Por isso medimos os 2 caminhos.
-
+// O funil antigo misturava métricas incomparáveis (instalações contadas por
+// evento do navegador vs popups do período vs aberturas históricas) e cuspia
+// taxas >100%. Agora, TUDO no MESMO período (fuso Brasília) e separado em:
+//   FUNIL DO POPUP (confiável): mostrado → clicou → aceitou no Chrome
+//   INSTALAÇÕES: eventos 'appinstalled' do navegador no período (inclui via
+//     menu nativo; reinstalação conta de novo — por isso é "instalações", não
+//     "pessoas")
+//   QUEM REALMENTE TEM O APP (o número pra confiar):
+//     - pessoas ÚNICAS que ABRIRAM em modo instalado no período (uso real)
+//     - inscritos de push AGORA (aparelho morto é deletado no 1º envio falho)
 router.get('/pwa-funnel', requireAdmin, async (req, res) => {
     try {
-        // 7d e 30d em paralelo. UNNEST(ARRAY[...]) garante 0 pra evento ausente
-        // — sem isso uma metrica nova so apareceria depois do 1o evento real.
-        const PWA_EVENTS = [
-            'pwa_prompt_shown',
-            'pwa_install_clicked',
-            'pwa_install_accepted',
-            'pwa_install_dismissed',
-            'pwa_app_installed',
-            'pwa_opened_standalone',
-        ];
+        const isDate = (x) => /^\d{4}-\d{2}-\d{2}$/.test(String(x || ''));
+        const TZ = 'America/Sao_Paulo';
+        const today = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10);
+        const to = isDate(req.query.to) ? req.query.to : today;
+        const from = isDate(req.query.from) ? req.query.from
+            : new Date(Date.parse(to + 'T12:00:00Z') - 6 * 86400000).toISOString().slice(0, 10);
+        const win = (a, b) => `created_at >= ($${a}::date::timestamp AT TIME ZONE '${TZ}')
+                   AND created_at < ((($${b}::date + INTERVAL '1 day')::timestamp) AT TIME ZONE '${TZ}')`;
+        const W = win(2, 3), W2 = win(1, 2);
 
-        const queryWindow = (interval) => db.query(`
-            WITH evts AS (
-                SELECT t AS event_type
-                FROM UNNEST($1::text[]) AS t
-            )
-            SELECT
-                evts.event_type,
-                COALESCE(COUNT(te.id), 0)::int AS count,
-                COALESCE(COUNT(DISTINCT LOWER(te.customer_email)) FILTER (WHERE te.customer_email IS NOT NULL), 0)::int AS unique_emails
-            FROM evts
-            LEFT JOIN tracking_events te
-                   ON te.event_type = evts.event_type
-                  AND te.created_at >= NOW() - ($2 || ' days')::interval
-            GROUP BY evts.event_type
-        `, [PWA_EVENTS, String(interval)]);
+        const [{ rows: [f] }, { rows: [reach] }] = await Promise.all([
+            db.query(`
+                SELECT
+                  COUNT(*) FILTER (WHERE event_type = 'pwa_prompt_shown')::int      AS shown,
+                  COUNT(*) FILTER (WHERE event_type = 'pwa_install_clicked')::int   AS clicked,
+                  COUNT(*) FILTER (WHERE event_type = 'pwa_install_accepted')::int  AS accepted,
+                  COUNT(*) FILTER (WHERE event_type = 'pwa_install_dismissed')::int AS dismissed,
+                  COUNT(*) FILTER (WHERE event_type = 'pwa_app_installed')::int     AS installed_events
+                FROM tracking_events
+                WHERE event_type = ANY($1) AND ${W}`,
+                [['pwa_prompt_shown', 'pwa_install_clicked', 'pwa_install_accepted', 'pwa_install_dismissed', 'pwa_app_installed'], from, to]),
+            db.query(`
+                SELECT
+                  (SELECT COUNT(DISTINCT COALESCE(LOWER(customer_email), metadata->>'vid'))::int
+                     FROM tracking_events
+                     WHERE (event_type = 'pwa_opened_standalone'
+                            OR (event_type = 'session_start' AND metadata->>'standalone' = 'true'))
+                       AND COALESCE(customer_email, metadata->>'vid') IS NOT NULL
+                       AND ${W2}) AS standalone_users,
+                  (SELECT COUNT(*)::int
+                     FROM tracking_events
+                     WHERE (event_type = 'pwa_opened_standalone'
+                            OR (event_type = 'session_start' AND metadata->>'standalone' = 'true'))
+                       AND ${W2}) AS standalone_opens_raw,
+                  (SELECT COUNT(*)::int FROM push_subscriptions) AS push_total,
+                  (SELECT COUNT(DISTINCT LOWER(customer_email))::int FROM push_subscriptions
+                     WHERE customer_email IS NOT NULL) AS push_people`,
+                [from, to]),
+        ]);
 
-        const [w7, w30] = await Promise.all([queryWindow(7), queryWindow(30)]);
-
-        const pivot = (rows) => {
-            const out = {};
-            for (const ev of PWA_EVENTS) out[ev] = { count: 0, unique_emails: 0 };
-            for (const r of rows) {
-                if (out[r.event_type]) out[r.event_type] = { count: r.count, unique_emails: r.unique_emails };
-            }
-            return out;
-        };
-
-        const pct = (num, den) => den > 0 ? +(100 * num / den).toFixed(1) : 0;
-
-        const build = (rows) => {
-            const p = pivot(rows);
-            return {
-                events: p,
-                rates: {
-                    // popup mostrado -> clicou
-                    click_rate: pct(p.pwa_install_clicked.count, p.pwa_prompt_shown.count),
-                    // clicou -> aceitou no prompt nativo
-                    accept_rate: pct(p.pwa_install_accepted.count, p.pwa_install_clicked.count),
-                    // clicou -> instalou (caminho controlado)
-                    install_from_click: pct(p.pwa_app_installed.count, p.pwa_install_clicked.count),
-                    // popup mostrado -> instalou (taxa geral)
-                    install_from_shown: pct(p.pwa_app_installed.count, p.pwa_prompt_shown.count),
-                    // instalou -> abriu standalone (sticky rate)
-                    sticky_rate: pct(p.pwa_opened_standalone.unique_emails, p.pwa_app_installed.count),
-                },
-            };
-        };
-
+        const pct = (n, d) => d > 0 ? +(100 * n / d).toFixed(1) : 0;
         return res.json({
             success: true,
-            last_7d: build(w7.rows),
-            last_30d: build(w30.rows),
+            from, to,
+            funnel: {
+                shown: f.shown, clicked: f.clicked, accepted: f.accepted,
+                dismissed: f.dismissed, installed_events: f.installed_events,
+            },
+            rates: {
+                click_rate: pct(f.clicked, f.shown),
+                accept_rate: pct(f.accepted, f.clicked),
+            },
+            reach: {
+                standalone_users: reach.standalone_users,
+                standalone_opens: reach.standalone_opens_raw,
+                push_total: reach.push_total,
+                push_people: reach.push_people,
+            },
         });
     } catch (err) {
         logger.error('[sales-analytics] /pwa-funnel erro:', err);

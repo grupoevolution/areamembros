@@ -71,26 +71,26 @@ const winEnd = (to) => to + ' 03:00:00'; // soma +1 dia no SQL
 async function periodStats(A, B) {
     const { rows: [r] } = await db.query(`
         SELECT
-          (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'pressel_view' AND created_at >= $1::timestamptz AND created_at < ($2::timestamptz + INTERVAL '1 day')) AS pressel_views,
-          (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'pressel_click' AND created_at >= $1::timestamptz AND created_at < ($2::timestamptz + INTERVAL '1 day')) AS pressel_clicks,
-          (SELECT COUNT(*)::int FROM funnel_visits WHERE visited_at >= $1::timestamptz AND visited_at < ($2::timestamptz + INTERVAL '1 day')) AS clicks,
-          (SELECT COUNT(*)::int FROM funnel_visits WHERE converted = true AND visited_at >= $1::timestamptz AND visited_at < ($2::timestamptz + INTERVAL '1 day')) AS emails,
-          (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'pwa_app_installed' AND created_at >= $1::timestamptz AND created_at < ($2::timestamptz + INTERVAL '1 day')) AS pwa_installs,
-          (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'pwa_opened_standalone' AND created_at >= $1::timestamptz AND created_at < ($2::timestamptz + INTERVAL '1 day')) AS pwa_opened,
+          (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'pressel_view' AND created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS pressel_views,
+          (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'pressel_click' AND created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS pressel_clicks,
+          (SELECT COUNT(*)::int FROM funnel_visits WHERE visited_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND visited_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS clicks,
+          (SELECT COUNT(*)::int FROM funnel_visits WHERE converted = true AND visited_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND visited_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS emails,
+          (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'pwa_app_installed' AND created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS pwa_installs,
+          (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'pwa_opened_standalone' AND created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS pwa_opened,
           (
             -- 1ª interação: sessões cuja PRIMEIRA mensagem do lead caiu no período
             SELECT COUNT(*)::int FROM (
                 SELECT m.session_id, MIN(m.created_at) AS first_at
                 FROM chat_messages m WHERE m.sender = 'user' GROUP BY m.session_id
             ) fi
-            WHERE fi.first_at >= $1::timestamptz AND fi.first_at < ($2::timestamptz + INTERVAL '1 day')
+            WHERE fi.first_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND fi.first_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
           ) AS first_interactions,
-          (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'chat_paywall_open' AND created_at >= $1::timestamptz AND created_at < ($2::timestamptz + INTERVAL '1 day')) AS paywall_opens,
-          (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'chat_paywall_click' AND created_at >= $1::timestamptz AND created_at < ($2::timestamptz + INTERVAL '1 day')) AS paywall_clicks,
+          (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'chat_paywall_open' AND created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS paywall_opens,
+          (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'chat_paywall_click' AND created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS paywall_clicks,
           -- clique no botão de OFERTA do roteiro (o link do checkout no chat)
-          (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'chat_cta_click' AND created_at >= $1::timestamptz AND created_at < ($2::timestamptz + INTERVAL '1 day')) AS cta_clicks,
-          (SELECT COUNT(*)::int FROM user_access WHERE status = 'active' AND granted_by = 'webhook' AND granted_at >= $1::timestamptz AND granted_at < ($2::timestamptz + INTERVAL '1 day')) AS purchases,
-          (SELECT COALESCE(SUM(sale_amount), 0)::float FROM user_access WHERE status = 'active' AND granted_by = 'webhook' AND granted_at >= $1::timestamptz AND granted_at < ($2::timestamptz + INTERVAL '1 day')) AS revenue
+          (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'chat_cta_click' AND created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS cta_clicks,
+          (SELECT COUNT(*)::int FROM user_access WHERE status = 'active' AND granted_by = 'webhook' AND granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND granted_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS purchases,
+          (SELECT COALESCE(SUM(sale_amount), 0)::float FROM user_access WHERE status = 'active' AND granted_by = 'webhook' AND granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND granted_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS revenue
     `, [A, B]);
     return r;
 }
@@ -118,7 +118,7 @@ router.get('/funnel-analytics', requireAdmin, async (req, res) => {
                        COUNT(*)::int AS clicks,
                        COUNT(*) FILTER (WHERE converted)::int AS emails
                 FROM funnel_visits
-                WHERE visited_at >= $1::timestamptz AND visited_at < ($2::timestamptz + INTERVAL '1 day')
+                WHERE visited_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND visited_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
                 GROUP BY 1 ORDER BY 1
             `, [winStart(req.query.cmp_from), winEnd(req.query.cmp_to)]) : Promise.resolve({ rows: [] }),
             db.query(`
@@ -127,13 +127,13 @@ router.get('/funnel-analytics', requireAdmin, async (req, res) => {
                        COUNT(*) FILTER (WHERE v.converted)::int AS emails,
                        (SELECT COUNT(*)::int FROM tracking_events te
                         WHERE te.event_type = 'pressel_view' AND te.metadata->>'funnel_slug' = v.funnel_slug
-                          AND te.created_at >= $1::timestamptz AND te.created_at < ($2::timestamptz + INTERVAL '1 day')) AS pressel_views,
+                          AND te.created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND te.created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS pressel_views,
                        (SELECT COUNT(*)::int FROM tracking_events te
                         WHERE te.event_type = 'pressel_click' AND te.metadata->>'funnel_slug' = v.funnel_slug
-                          AND te.created_at >= $1::timestamptz AND te.created_at < ($2::timestamptz + INTERVAL '1 day')) AS pressel_clicks
+                          AND te.created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND te.created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS pressel_clicks
                 FROM funnel_visits v
                 LEFT JOIN funnels f ON f.slug = v.funnel_slug
-                WHERE v.visited_at >= $1::timestamptz AND v.visited_at < ($2::timestamptz + INTERVAL '1 day')
+                WHERE v.visited_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND v.visited_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
                 GROUP BY v.funnel_slug, f.name
                 ORDER BY clicks DESC
                 LIMIT 50
@@ -143,7 +143,7 @@ router.get('/funnel-analytics', requireAdmin, async (req, res) => {
                        COUNT(*)::int AS clicks,
                        COUNT(*) FILTER (WHERE converted)::int AS emails
                 FROM funnel_visits
-                WHERE visited_at >= $1::timestamptz AND visited_at < ($2::timestamptz + INTERVAL '1 day')
+                WHERE visited_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND visited_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
                 GROUP BY 1 ORDER BY 1
             `, [A, B]),
             db.query(`
@@ -152,36 +152,36 @@ router.get('/funnel-analytics', requireAdmin, async (req, res) => {
                        COALESCE(SUM(sale_amount), 0)::float AS revenue
                 FROM user_access
                 WHERE status = 'active' AND granted_by = 'webhook'
-                  AND granted_at >= $1::timestamptz AND granted_at < ($2::timestamptz + INTERVAL '1 day')
+                  AND granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND granted_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
                 GROUP BY 1 ORDER BY 1
             `, [A, B]),
             db.query(`
                 SELECT EXTRACT(HOUR FROM (visited_at - INTERVAL '3 hours'))::int AS hour,
                        COUNT(*)::int AS clicks
                 FROM funnel_visits
-                WHERE visited_at >= $1::timestamptz AND visited_at < ($2::timestamptz + INTERVAL '1 day')
+                WHERE visited_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND visited_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
                 GROUP BY 1 ORDER BY 1
             `, [A, B]),
             db.query(`
                 SELECT c.id, c.name, c.access,
                        (SELECT COUNT(*)::int FROM chat_sessions s
-                        WHERE s.chat_id = c.id AND s.created_at >= $1::timestamptz AND s.created_at < ($2::timestamptz + INTERVAL '1 day')) AS sessions,
+                        WHERE s.chat_id = c.id AND s.created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND s.created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS sessions,
                        (SELECT COUNT(DISTINCT m.session_id)::int FROM chat_messages m
                         JOIN chat_sessions s ON s.id = m.session_id
                         WHERE s.chat_id = c.id AND m.sender = 'user'
-                          AND m.created_at >= $1::timestamptz AND m.created_at < ($2::timestamptz + INTERVAL '1 day')) AS engaged,
+                          AND m.created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND m.created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS engaged,
                        (SELECT COALESCE(ROUND(AVG(s.current_order)), 0)::int FROM chat_sessions s
-                        WHERE s.chat_id = c.id AND s.created_at >= $1::timestamptz AND s.created_at < ($2::timestamptz + INTERVAL '1 day')) AS avg_step,
+                        WHERE s.chat_id = c.id AND s.created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND s.created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS avg_step,
                        (SELECT COUNT(*)::int FROM chat_steps st WHERE st.chat_id = c.id AND st.active = true AND COALESCE(st.flow, 'open') = 'open') AS total_steps,
                        (SELECT COUNT(*)::int FROM tracking_events te
                         WHERE te.event_type = 'chat_paywall_open' AND (te.metadata->>'chat_id')::int = c.id
-                          AND te.created_at >= $1::timestamptz AND te.created_at < ($2::timestamptz + INTERVAL '1 day')) AS paywall_opens,
+                          AND te.created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND te.created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS paywall_opens,
                        (SELECT COUNT(*)::int FROM tracking_events te
                         WHERE te.event_type = 'chat_paywall_click' AND (te.metadata->>'chat_id')::int = c.id
-                          AND te.created_at >= $1::timestamptz AND te.created_at < ($2::timestamptz + INTERVAL '1 day')) AS paywall_clicks,
+                          AND te.created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND te.created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS paywall_clicks,
                        (SELECT COUNT(*)::int FROM tracking_events te
                         WHERE te.event_type = 'chat_cta_click' AND (te.metadata->>'chat_id')::int = c.id
-                          AND te.created_at >= $1::timestamptz AND te.created_at < ($2::timestamptz + INTERVAL '1 day')) AS cta_clicks
+                          AND te.created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND te.created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS cta_clicks
                 FROM chats c
                 WHERE c.active = true
                 ORDER BY sessions DESC, c.display_order
@@ -240,7 +240,7 @@ router.get('/chat-dropoff', requireAdmin, async (req, res) => {
             db.query(`
                 SELECT current_order, COUNT(*)::int AS n
                 FROM chat_sessions
-                WHERE chat_id = $1 AND created_at >= $2::timestamptz AND created_at < ($3::timestamptz + INTERVAL '1 day')
+                WHERE chat_id = $1 AND created_at >= ($2::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND created_at < ((($3::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
                 GROUP BY current_order
             `, [chatId, A, B]),
         ]);
