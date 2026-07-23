@@ -8283,6 +8283,12 @@ body.is-slowconn .prod-cta-fixed {
 .ca-choices { padding: 8px 12px calc(12px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 9px; background: #ECE5DD; }
 .ca-choices button { width: 100%; background: #25D366; border: none; color: #fff; font-size: 16px; font-weight: 700; padding: 16px; border-radius: 14px; cursor: pointer; box-shadow: 0 3px 12px rgba(37,211,102,.32); transition: transform .12s, filter .12s; }
 .ca-choices button:active { transform: scale(.98); filter: brightness(.95); }
+/* aviso FINO de paywall (acima da barra de digitar) — discreto, toque dourado */
+#caPayBanner { display: flex; align-items: center; gap: 7px; padding: 7px 13px; background: #140a0d; cursor: pointer; border-top: 1px solid rgba(245,208,103,.4); }
+#caPayBanner .lk { flex-shrink: 0; }
+#caPayBanner .t { flex: 1; font-size: 11.5px; font-weight: 600; color: rgba(255,255,255,.82); letter-spacing: .2px; }
+#caPayBanner .t b { color: #f5d067; font-weight: 800; }
+#caPayBanner .go { display: inline-flex; align-items: center; gap: 2px; font-size: 10.5px; font-weight: 900; letter-spacing: .6px; color: #241a05; background: linear-gradient(90deg,#d4af37,#f5d67b); padding: 4px 9px; border-radius: 7px; }
 .ca-input-bar { display: flex; align-items: center; gap: 7px; padding: 8px 10px calc(12px + env(safe-area-inset-bottom)); background: #f0ece8; }
 .ca-input-pill { flex: 1; display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 999px; padding: 9px 13px; }
 .ca-input-pill input { flex: 1; min-width: 0; border: none; outline: none; font-size: 14.5px; color: #111; background: transparent; }
@@ -8584,6 +8590,13 @@ body.is-slowconn .prod-cta-fixed {
     </div>
     <div id="caStatusBar" style="display:none; padding:15px 14px calc(15px + env(safe-area-inset-bottom)); text-align:center; font-size:13.5px; color:#8a949c; font-style:italic; background:#ECE5DD; border-top:1px solid #e0dad4;">—</div>
     <div class="ca-choices" id="caChoices" style="display:none;"></div>
+    <!-- aviso FINO de paywall: aparece acima da barra depois do 1º "não entregue".
+         a barra de digitar continua igual; tocar aqui reabre o popup de assinar. -->
+    <div id="caPayBanner" style="display:none;" onclick="ChatApp.openPayBanner()">
+        <svg class="lk" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f5d067" stroke-width="2.2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+        <span class="t">Continue com ela — <b>seja VIP</b></span>
+        <span class="go">VIP<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M9 6l6 6-6 6"/></svg></span>
+    </div>
     <div class="ca-input-bar" id="caInputBar">
         <div class="ca-input-pill">
             <input type="text" id="caInput" placeholder="Mensagem" autocomplete="off"/>
@@ -9859,6 +9872,9 @@ window.ChatApp = (function() {
     // modo 'sempre'. Quando o input/botões não estão liberados, fica a BARRA DE
     // STATUS fixa (nunca vazio). Sempre rola pro fim ao trocar.
     function updateInputBar() {
+        try { _updateInputBarCore(); } finally { try { updatePayBanner(); } catch (_) {} }
+    }
+    function _updateInputBarCore() {
         const bar = document.getElementById('caInputBar');
         const sb = document.getElementById('caStatusBar');
         const ch = document.getElementById('caChoices');
@@ -9916,6 +9932,18 @@ window.ChatApp = (function() {
         }
         scrollChatToBottom();
     }
+
+    // Aviso fino de paywall: aparece SÓ quando o lead já bateu no paywall (1º
+    // "não entregue"), a barra de digitar está visível e ele ainda não é VIP
+    // (antes do payLock dos 10 envios, que já tem o próprio aviso).
+    function updatePayBanner() {
+        const b = document.getElementById('caPayBanner');
+        if (!b) return;
+        const barVisible = (document.getElementById('caInputBar') || {}).style && document.getElementById('caInputBar').style.display !== 'none';
+        const show = !!(CUR && CUR.paywalled && !CUR.payLock && !(CUR.perm && CUR.perm.is_vip) && barVisible);
+        b.style.display = show ? 'flex' : 'none';
+    }
+    function openPayBanner() { try { openChatPaywall(); } catch (_) {} }
 
     async function drain() {
         RENDERING = true;
@@ -10204,6 +10232,7 @@ window.ChatApp = (function() {
             input.value = '';
             CUR.paywalled = true;
             renderFailedMsg(text, data && data.unlock);
+            try { updateInputBar(); } catch (_) {} // mostra o aviso fino acima da barra
             openChatPaywall(data && data.unlock);
             // Depois de 10 tentativas falhas, a barra dá lugar ao aviso fixo de
             // assinar (o lead já entendeu — chega de digitar no vazio).
@@ -10781,7 +10810,7 @@ window.ChatApp = (function() {
     if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
     return { loadList, open, back, send, photo, sendPhoto, unlock, closeVonce, onCall, refreshUnreadDot, openProfile, closeProfile,
-             openStory, closeStory, storyNav, storyReply, openVipLocked,
+             openStory, closeStory, storyNav, storyReply, openVipLocked, openPayBanner,
              gateInstall, isStandalone, stop: stopPoll,
              curId: () => (CUR ? CUR.id : null) };
 })();
