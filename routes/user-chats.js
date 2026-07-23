@@ -483,9 +483,18 @@ router.get('/chats', optionalUser, async (req, res) => {
              ORDER BY display_order, id`,
             [ident.email, ident.visitor, onlyIds]
         );
+        // "Sumir pra VIP/Premium": se algum chat pede isso, calcula 1x se este
+        // cliente é Premium (leva-tudo). O VIP-daquela-conversa já vem do `owns`.
+        let isPremium = false;
+        if (ident.email && chats.some(c => c.hide_when_member)) {
+            try { isPremium = await require('./user').isPremiumCustomer(ident.email); } catch (_) {}
+        }
         const out = [];
         for (const c of chats) {
             const owns = await ownsChatVip(ident.email, c);
+            // conversa marcada pra sumir depois que o cliente vira membro
+            // (VIP daquela conversa OU Premium) — some mesmo se já conversou.
+            if (c.hide_when_member && (owns || isPremium)) continue;
             const perm = permissions(c, owns, ident);
             // enriquece o desbloqueio com produto + planos (banner VIP rico)
             if (perm.locked) perm.unlock = await loadUnlock(await chatUnlockProductId(c), c.checkout_url);

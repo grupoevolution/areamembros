@@ -4495,6 +4495,13 @@ a { color: inherit; text-decoration: none; }
                                 <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Quem compra este produto libera TODOS os grupos, atuais e futuros (deixe a oferta SEM validade)</div>
                             </div>
                         </label>
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:12px;">
+                            <input type="checkbox" id="pCatalogHidden" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
+                            <div>
+                                <div style="font-weight:600;color:var(--text);">🕵️ Fora do catálogo (produto oculto)</div>
+                                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Produto funciona normal (compra, acesso), mas NÃO aparece na vitrine. Pra vincular a um chat, popup ou à isca de 9,90 sem poluir o catálogo. Precisa estar publicado.</div>
+                            </div>
+                        </label>
                     </div>
 
                     <div class="new-product-footer">
@@ -6366,6 +6373,8 @@ a { color: inherit; text-decoration: none; }
                             <div style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:12px;">
                                 <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="cpListed" checked style="width:16px; height:16px;"> 👁️ Aparecer na lista de Conversas</label>
                                 <div class="form-help" style="margin-top:6px;">Desligado: a conversa NÃO aparece na aba Conversas, mas continua acessível pelo botão "Enviar mensagem" de um produto (ou link direto).</div>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; margin-top:12px;"><input type="checkbox" id="cpHideWhenMember" style="width:16px; height:16px;"> 🙈 Sumir quando o cliente já for VIP/Premium</label>
+                                <div class="form-help" style="margin-top:6px;">Ligado: assim que o cliente vira VIP (compra o produto desta conversa) ou Premium, esta conversa SOME da lista dele — mesmo que já tenham falado. Ideal pra conversa que oferece o VIP/Premium (não faz sentido pra quem já comprou).</div>
                             </div>
 
                             <!-- Chat de Suporte / entrega de venda -->
@@ -8681,6 +8690,8 @@ async function editProduct(id) {
     if (publishCb) publishCb.checked = !!p.is_published;
     const gpCb = document.getElementById('pIsGroupPass');
     if (gpCb) gpCb.checked = p.is_group_pass === true;
+    const chCb = document.getElementById('pCatalogHidden');
+    if (chCb) chCb.checked = p.catalog_hidden === true;
     const warnEl = document.getElementById('pPublishWarning');
     if (warnEl) warnEl.style.display = 'none';
 
@@ -8951,6 +8962,7 @@ async function saveProduct() {
         offers,
         is_published,
         is_group_pass: document.getElementById('pIsGroupPass')?.checked === true,
+        catalog_hidden: document.getElementById('pCatalogHidden')?.checked === true,
         preview_enabled: document.getElementById('pPreviewEnabled')?.checked === true,
     };
 
@@ -16060,6 +16072,7 @@ function editChatPersona(c) {
     document.getElementById('cpPhoto').checked = c.allow_photo === true;
     document.getElementById('cpGate').checked = c.gate_media === true;
     document.getElementById('cpListed').checked = c.listed !== false;
+    document.getElementById('cpHideWhenMember').checked = c.hide_when_member === true;
     document.getElementById('cpSupport').checked = c.is_support === true;
     document.getElementById('cpCityFallback').value = c.city_fallback || '';
     document.getElementById('cpOrder').value = c.display_order || 0;
@@ -16095,6 +16108,7 @@ async function saveChatPersona(e) {
         display_order: parseInt(document.getElementById('cpOrder').value, 10) || 0,
         gate_media: document.getElementById('cpGate').checked,
         listed: document.getElementById('cpListed').checked,
+        hide_when_member: document.getElementById('cpHideWhenMember').checked,
         is_support: document.getElementById('cpSupport').checked,
         city_fallback: document.getElementById('cpCityFallback').value.trim() || 'sua região',
         call_video_call_id: document.getElementById('cpCall').value || null,

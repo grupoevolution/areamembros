@@ -522,6 +522,7 @@ router.get('/catalog', optionalUser, async (req, res) => {
             LEFT JOIN categories c ON c.id = p.category_id
             WHERE p.is_active = true
               AND p.is_published = true
+              AND COALESCE(p.catalog_hidden, false) = false
             ORDER BY p.is_featured DESC, p.display_order, p.created_at DESC
         `, [activeGateway]);
         
@@ -810,6 +811,7 @@ router.get('/library', requireUser, async (req, res) => {
                 LEFT JOIN categories c ON c.id = p.category_id
                 WHERE p.is_active = true
                   AND p.is_published = true
+                  AND COALESCE(p.catalog_hidden, false) = false
                 ORDER BY p.is_featured DESC, p.display_order, p.created_at DESC
             `, [activeGateway]);
 
@@ -2963,3 +2965,4 @@ module.exports = router;
 module.exports.exploreAccess = exploreAccess;
 module.exports.loadExploreUnlock = loadExploreUnlock;
 module.exports.loadPremiumPlan = loadPremiumPlan;
+module.exports.isPremiumCustomer = isPremiumCustomer;
