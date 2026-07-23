@@ -158,30 +158,73 @@ function permissions(chat, owns, ident) {
 }
 
 // ── Sessão ───────────────────────────────────────────────────────────────────
+// Escolhe a sessão CANÔNICA de uma lista (mesmo chat+email ou chat+visitor) e
+// FUNDE as duplicadas nela: move as mensagens pra canônica e apaga as vazias.
+// Canônica = a com MAIS mensagens (empate = mais antiga). Resolve o bug do
+// "histórico zerando": e-mail podia ter >1 sessão e o sistema pegava a vazia.
+async function consolidateSessions(sessions) {
+    if (!sessions || !sessions.length) return null;
+    if (sessions.length === 1) return sessions[0];
+    const ids = sessions.map(s => s.id);
+    const { rows: cnt } = await db.query(
+        `SELECT session_id, COUNT(*)::int AS n FROM chat_messages WHERE session_id = ANY($1) GROUP BY session_id`,
+        [ids]
+    );
+    const nOf = {}; cnt.forEach(r => { nOf[r.session_id] = r.n; });
+    let canon = sessions[0];
+    for (const s of sessions) {
+        const sn = nOf[s.id] || 0, cn = nOf[canon.id] || 0;
+        if (sn > cn || (sn === cn && s.id < canon.id)) canon = s;
+    }
+    for (const s of sessions) {
+        if (s.id === canon.id) continue;
+        try {
+            await db.query(`UPDATE chat_messages SET session_id = $1 WHERE session_id = $2`, [canon.id, s.id]);
+            await db.query(`DELETE FROM chat_sessions WHERE id = $1`, [s.id]);
+        } catch (_) {}
+    }
+    return canon;
+}
+
 async function findOrCreateSession(chatId, ident, createIfMissing) {
     let row = null;
     if (ident.email) {
-        const { rows } = await db.query(
-            `SELECT * FROM chat_sessions WHERE chat_id = $1 AND LOWER(customer_email) = $2 ORDER BY id DESC LIMIT 1`,
+        // TODAS as sessões desse e-mail+chat (pode haver duplicatas do bug antigo)
+        // → funde numa só e carrega SEMPRE a que tem o histórico.
+        const { rows: emailSessions } = await db.query(
+            `SELECT * FROM chat_sessions WHERE chat_id = $1 AND LOWER(customer_email) = $2 ORDER BY id ASC`,
             [chatId, ident.email]
         );
-        row = rows[0] || null;
-        // Mescla sessão anônima antiga do mesmo device pro e-mail logado
-        if (!row && ident.visitor) {
+        row = await consolidateSessions(emailSessions);
+        // Sessão anônima do mesmo device (antes do login): em vez de virar uma
+        // 2ª sessão do e-mail (o que zerava o histórico), MOVE as mensagens dela
+        // pra sessão do e-mail — ou adota ela se o e-mail ainda não tinha nenhuma.
+        if (ident.visitor) {
             const { rows: anon } = await db.query(
-                `UPDATE chat_sessions SET customer_email = $3, updated_at = NOW()
-                 WHERE chat_id = $1 AND visitor_id = $2 AND customer_email IS NULL
-                 RETURNING *`,
-                [chatId, ident.visitor, ident.email]
+                `SELECT * FROM chat_sessions WHERE chat_id = $1 AND visitor_id = $2 AND customer_email IS NULL ORDER BY id ASC`,
+                [chatId, ident.visitor]
             );
-            row = anon[0] || null;
+            if (anon.length) {
+                if (!row) {
+                    const canonAnon = await consolidateSessions(anon);
+                    await db.query(`UPDATE chat_sessions SET customer_email = $2, updated_at = NOW() WHERE id = $1`, [canonAnon.id, ident.email]);
+                    canonAnon.customer_email = ident.email; row = canonAnon;
+                } else {
+                    for (const a of anon) {
+                        try {
+                            await db.query(`UPDATE chat_messages SET session_id = $1 WHERE session_id = $2`, [row.id, a.id]);
+                            await db.query(`DELETE FROM chat_sessions WHERE id = $1`, [a.id]);
+                        } catch (_) {}
+                    }
+                }
+            }
         }
     } else if (ident.visitor) {
         const { rows } = await db.query(
-            `SELECT * FROM chat_sessions WHERE chat_id = $1 AND visitor_id = $2 AND customer_email IS NULL ORDER BY id DESC LIMIT 1`,
+            `SELECT * FROM chat_sessions WHERE chat_id = $1 AND visitor_id = $2 AND customer_email IS NULL ORDER BY id ASC`,
             [chatId, ident.visitor]
         );
-        row = rows[0] || null;
+        row = await consolidateSessions(rows);
     }
     if (!row && createIfMissing && (ident.email || ident.visitor)) {
         const { rows } = await db.query(
