@@ -1644,6 +1644,14 @@ router.get('/app-config', async (req, res) => {
             hero_title_style: 'shimmer-all',  // shimmer-all | shimmer-words | glow-red | plain
             hero_shimmer_enabled: true,
             hero_shimmer_color: '',
+            // Nudge ao SAIR de uma conversa: puxa o lead pra Vídeos/Lives
+            // (1x por sessão). Desligado por padrão.
+            chat_exit_nudge: {
+                enabled: false,
+                text: 'Tem live rolando agora — dá uma espiada 🔴',
+                target: 'lives',   // 'lives' | 'videos'
+                delay_sec: 2,
+            },
             version: '1.0.0',
             ...configs.app_config,
         };

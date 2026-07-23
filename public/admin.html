@@ -7702,7 +7702,32 @@ a { color: inherit; text-decoration: none; }
                     </div>
                 </div>
 
-                <div id="appConfigAlert" style="display:none;padding:12px;border-radius:8px;font-size:13px;margin-bottom:14px;"></div>
+                <!-- GATILHO: saiu da conversa → puxa pra Vídeos/Lives -->
+                <div class="form-card" style="margin-top:16px;padding:16px;background:rgba(229,9,20,.05);border:1px solid rgba(229,9,20,.25);border-radius:12px;">
+                    <label style="display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;">
+                        <input type="checkbox" id="appExitNudgeEnabled" style="width:16px;height:16px;"> 🔔 Puxão ao sair da conversa
+                    </label>
+                    <div class="form-help" style="margin:6px 0 12px;">Quando o lead sai de uma conversa, aparece um aviso clicável (1x por sessão) levando ele pra Vídeos ou Lives — pra ele conhecer o app e comprar mais. Só pra quem já é cliente/identificado.</div>
+                    <div style="display:grid;grid-template-columns:1fr 160px 120px;gap:10px;">
+                        <div>
+                            <label class="form-label">Texto do aviso</label>
+                            <input type="text" class="form-input" id="appExitNudgeText" maxlength="120" placeholder="Tem live rolando agora — dá uma espiada 🔴">
+                        </div>
+                        <div>
+                            <label class="form-label">Levar pra</label>
+                            <select class="form-select" id="appExitNudgeTarget">
+                                <option value="lives">🔴 Lives</option>
+                                <option value="videos">▶ Vídeos</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label">Atraso (seg)</label>
+                            <input type="number" class="form-input" id="appExitNudgeDelay" min="0" max="30" value="2">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="appConfigAlert" style="display:none;padding:12px;border-radius:8px;font-size:13px;margin-bottom:14px;margin-top:14px;"></div>
 
                 <div style="display:flex;justify-content:flex-end;">
                     <button class="btn-primary" id="appConfigSaveBtn" onclick="saveAppConfig()">Salvar configurações</button>
@@ -11372,6 +11397,12 @@ async function loadAppConfig() {
     // Hero shimmer
     set('appHeroTitleStyle', cfg.hero_title_style || 'shimmer-all');
     set('appHeroShimmerColor', cfg.hero_shimmer_color || '');
+    // Gatilho: puxão ao sair da conversa
+    const nudge = cfg.chat_exit_nudge || {};
+    const nudgeEn = document.getElementById('appExitNudgeEnabled'); if (nudgeEn) nudgeEn.checked = nudge.enabled === true;
+    set('appExitNudgeText', nudge.text || '');
+    set('appExitNudgeTarget', nudge.target === 'videos' ? 'videos' : 'lives');
+    set('appExitNudgeDelay', nudge.delay_sec != null ? nudge.delay_sec : 2);
 
     // Toggles de funcionalidades (default: false)
     const setCheck = (id, val) => { const el = document.getElementById(id); if (el) el.checked = val === true; };
@@ -11442,8 +11473,15 @@ async function saveAppConfig() {
         continue_watching_enabled: document.getElementById('featContinueWatching')?.checked === true,
         onboarding_enabled: document.getElementById('featOnboarding')?.checked === true,
         explore_tab_enabled: document.getElementById('featExploreTab')?.checked === true,
+        // Gatilho: puxão ao sair da conversa
+        chat_exit_nudge: {
+            enabled: document.getElementById('appExitNudgeEnabled')?.checked === true,
+            text: get('appExitNudgeText') || 'Tem live rolando agora — dá uma espiada 🔴',
+            target: get('appExitNudgeTarget') === 'videos' ? 'videos' : 'lives',
+            delay_sec: Math.max(0, Math.min(30, parseInt(get('appExitNudgeDelay'), 10) || 2)),
+        },
     };
-    
+
     const btn = document.getElementById('appConfigSaveBtn');
     btn.disabled = true; btn.textContent = 'Salvando...';
     const result = await _saveGamification('app_config', value);

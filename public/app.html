@@ -9056,6 +9056,12 @@ function switchScreen(name) {
         const leavingId = cur && cur.id;
         if (name !== 'chatconv' && leavingId === 'chatconv' && window.ChatApp && ChatApp.stop) ChatApp.stop();
         if (name !== 'groupconv' && leavingId === 'groupconv' && window.GroupApp && GroupApp.stop) GroupApp.stop();
+        // GATILHO DE COMPORTAMENTO: saiu de uma conversa → puxa o lead pra
+        // Vídeos/Lives (1x por sessão, só quem já é identificado, e não quando
+        // vai pra outra conversa/checkout). Config no painel (app_config).
+        if (leavingId === 'chatconv' && !['chatconv', 'groupconv', 'checkout', 'success'].includes(name)) {
+            maybeChatExitNudge();
+        }
     } catch (_) {}
 
     // ─── Fase I (Android perf): otimizações de switchScreen ─────────────
@@ -9187,6 +9193,37 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 // Aba "Surpresa" (em breve) — só um aviso por enquanto
+// Nudge "saiu da conversa": toast CLICÁVEL que leva pra Vídeos/Lives. 1x por
+// sessão pra não incomodar. Só pra lead identificado (não atrapalha o funil).
+let _exitNudgeShown = false;
+function maybeChatExitNudge() {
+    try {
+        const cfg = window.MV_EXIT_NUDGE || {};
+        if (!cfg.enabled || _exitNudgeShown) return;
+        // não puxa lead anônimo (está no meio do funil de venda)
+        if (window.MV_ANONYMOUS === true) return;
+        const target = cfg.target === 'videos' ? 'videos' : 'lives';
+        // se Lives é o alvo mas não está ligado, cai pra Vídeos
+        const livesOn = (window.MV_LIVES || {}).enabled === true;
+        const dest = (target === 'lives' && !livesOn) ? 'videos' : target;
+        _exitNudgeShown = true;
+        setTimeout(() => {
+            let t = document.getElementById('exitNudge');
+            if (!t) {
+                t = document.createElement('div');
+                t.id = 'exitNudge';
+                t.style.cssText = 'position:fixed;left:50%;bottom:104px;transform:translateX(-50%);max-width:88%;display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#e50914,#ff3b30);color:#fff;border-radius:14px;padding:12px 16px;font-size:13px;font-weight:700;z-index:600;box-shadow:0 12px 34px rgba(229,9,20,.45);cursor:pointer;transition:opacity .3s,transform .3s;';
+                document.body.appendChild(t);
+            }
+            t.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#fff;flex-shrink:0;box-shadow:0 0 0 0 rgba(255,255,255,.6);animation:lvblink 1.2s infinite;"></span><span>' + escapeHtmlData(cfg.text || 'Tem novidade te esperando 🔥') + '</span>';
+            t.onclick = () => { t.style.opacity = '0'; try { openExploreTab(dest); } catch (_) {} };
+            requestAnimationFrame(() => { t.style.opacity = '1'; });
+            clearTimeout(t._h);
+            t._h = setTimeout(() => { t.style.opacity = '0'; }, 6000);
+        }, Math.max(0, Math.min(30, cfg.delay_sec | 0)) * 1000);
+    } catch (_) {}
+}
+
 function showSoonToast(msg) {
     let t = document.getElementById('soonToast');
     if (!t) {
@@ -16084,6 +16121,7 @@ function applyAppMetadata() {
     // quando o feed está ligado no painel.
     try {
         window.MV_PWA_GATE = (APP_DATA.config && APP_DATA.config.pwa_gate) || {};
+        window.MV_EXIT_NUDGE = (APP_DATA.config && APP_DATA.config.app && APP_DATA.config.app.chat_exit_nudge) || {};
         window.MV_EXPLORE = (APP_DATA.config && APP_DATA.config.explore) || {};
         window.MV_LIVES = (APP_DATA.config && APP_DATA.config.lives) || {};
         // sub-aba Lives só aparece quando ativada no painel
