@@ -539,6 +539,11 @@ router.get('/chats', optionalUser, async (req, res) => {
             // (VIP daquela conversa OU Premium) — some mesmo se já conversou.
             if (c.hide_when_member && (owns || isPremium)) continue;
             const perm = permissions(c, owns, ident);
+            // ISCA "só prévia": pro não-VIP, trava a conversa (tocar → popup, não
+            // abre) MAS deixa a prévia da mensagem VISÍVEL na lista (o `teaser`
+            // avisa o app pra não borrar). Pro VIP, abre normal.
+            const isTeaser = c.teaser_locked === true && !perm.is_vip;
+            if (isTeaser) perm.locked = true;
             // enriquece o desbloqueio com produto + planos (banner VIP rico)
             if (perm.locked) perm.unlock = await loadUnlock(await chatUnlockProductId(c), c.checkout_url);
             // motor de conversas: agenda a 1ª mensagem sozinha (auto_start_minutes)
@@ -584,6 +589,7 @@ router.get('/chats', optionalUser, async (req, res) => {
                 status_label: c.status_label,
                 show_online: c.show_online,
                 locked: perm.locked,
+                teaser: isTeaser,   // isca: travada mas com prévia visível
                 unlock: perm.unlock,
                 last,
                 unread,
@@ -616,6 +622,8 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         const chat = cr[0];
         const owns = await ownsChatVip(ident.email, chat);
         const perm = permissions(chat, owns, ident);
+        // ISCA "só prévia": trava também no /open (defesa se chamarem a API direto)
+        if (chat.teaser_locked === true && !perm.is_vip) perm.locked = true;
         // enriquece o desbloqueio com produto + planos (banner VIP rico)
         if (perm.locked) perm.unlock = await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url);
 

@@ -9584,9 +9584,9 @@ window.ChatApp = (function() {
                     const av = '<div class="av"' + bg + '>' + (c.show_online ? '<span class="dot"></span>' : '') + '</div>';
                     // VIP COM mensagem: mostra que CHEGOU mensagem (badge/hora), mas o
                     // CONTEÚDO da prévia fica BORRADO. VIP SEM mensagem: fica normal.
-                    const pv = (c.locked && c.last)
+                    const pv = (c.locked && c.last && !c.teaser)
                         ? '<div class="pv ca-blur-msg">' + esc(c.last.preview || 'mensagem nova') + '</div>'
-                        : (c.last && !c.locked)
+                        : (c.last && (!c.locked || c.teaser))
                         ? '<div class="pv">' + esc(c.last.preview) + '</div>'
                         : '<div class="pv online">' + esc(c.status_label || 'online') + '</div>';
                     const badge = (c.unread > 0)
@@ -9718,6 +9718,9 @@ window.ChatApp = (function() {
     }
 
     async function open(id) {
+        // ISCA "só prévia": nunca abre a conversa (nem por notificação/deep-link)
+        // — sempre o popup de virar VIP.
+        try { const li = (LIST_CHATS || []).find(x => x.id === id); if (li && li.teaser) { openVipLocked(id); return; } } catch (_) {}
         stopPoll();
         try { if (window.GroupApp && GroupApp.stop) GroupApp.stop(); } catch (_) {} // mata timers órfãos do grupo
         switchScreen('chatconv');

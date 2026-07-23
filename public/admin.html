@@ -6375,6 +6375,8 @@ a { color: inherit; text-decoration: none; }
                                 <div class="form-help" style="margin-top:6px;">Desligado: a conversa NÃO aparece na aba Conversas, mas continua acessível pelo botão "Enviar mensagem" de um produto (ou link direto).</div>
                                 <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; margin-top:12px;"><input type="checkbox" id="cpHideWhenMember" style="width:16px; height:16px;"> 🙈 Sumir quando o cliente já for VIP/Premium</label>
                                 <div class="form-help" style="margin-top:6px;">Ligado: assim que o cliente vira VIP (compra o produto desta conversa) ou Premium, esta conversa SOME da lista dele — mesmo que já tenham falado. Ideal pra conversa que oferece o VIP/Premium (não faz sentido pra quem já comprou).</div>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; margin-top:12px;"><input type="checkbox" id="cpTeaserLocked" style="width:16px; height:16px;"> 🪝 Isca: só prévia (não deixa abrir)</label>
+                                <div class="form-help" style="margin-top:6px;">Ligado: a modelo manda a 1ª mensagem, o lead não-VIP vê a PRÉVIA legível na lista, mas ao tocar NÃO abre a conversa — abre o popup de virar VIP. Incentivo: "tem gente te chamando e você não consegue nem abrir". (Combine com "primeira mensagem automática" pra a isca chegar sozinha.)</div>
                             </div>
 
                             <!-- Chat de Suporte / entrega de venda -->
@@ -16073,6 +16075,7 @@ function editChatPersona(c) {
     document.getElementById('cpGate').checked = c.gate_media === true;
     document.getElementById('cpListed').checked = c.listed !== false;
     document.getElementById('cpHideWhenMember').checked = c.hide_when_member === true;
+    document.getElementById('cpTeaserLocked').checked = c.teaser_locked === true;
     document.getElementById('cpSupport').checked = c.is_support === true;
     document.getElementById('cpCityFallback').value = c.city_fallback || '';
     document.getElementById('cpOrder').value = c.display_order || 0;
@@ -16109,6 +16112,7 @@ async function saveChatPersona(e) {
         gate_media: document.getElementById('cpGate').checked,
         listed: document.getElementById('cpListed').checked,
         hide_when_member: document.getElementById('cpHideWhenMember').checked,
+        teaser_locked: document.getElementById('cpTeaserLocked').checked,
         is_support: document.getElementById('cpSupport').checked,
         city_fallback: document.getElementById('cpCityFallback').value.trim() || 'sua região',
         call_video_call_id: document.getElementById('cpCall').value || null,
