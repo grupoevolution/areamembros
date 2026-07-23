@@ -5130,6 +5130,13 @@ a { color: inherit; text-decoration: none; }
                             <label class="form-label">Ícone/foto (URL, opcional)</label>
                             <input type="text" class="form-input" id="routineIcon" placeholder="https://... (foto da modelo fica redonda no push)">
                         </div>
+                        <div class="form-row" style="margin-bottom:12px;">
+                            <label class="form-label">Dias da semana</label>
+                            <div id="routineWeekdays" style="display:flex;gap:6px;flex-wrap:wrap;">
+                                <!-- preenchido por renderRoutineWeekdays() -->
+                            </div>
+                            <div style="font-size:11px;color:var(--text-dim);margin-top:6px;">Nenhum marcado = <b>todos os dias</b>. Marque só alguns pra esse horário disparar só neles (ex.: madrugada de quinta a sábado).</div>
+                        </div>
                         <div id="routineAlert" style="display:none;padding:10px;border-radius:8px;font-size:13px;margin-bottom:10px;"></div>
                         <div style="display:flex;gap:10px;">
                             <button class="btn-primary" id="routineSaveBtn" onclick="saveRoutineSlot()">Adicionar horário</button>
@@ -11769,6 +11776,7 @@ async function loadPushRoutine() {
     if (!list) return;
     await loadDestLists(); // nomes prontos pros rótulos da lista
     applyDestUI('routine');
+    if (!_routineEditId) renderRoutineWeekdays([]); // chips do form (todos = todo dia)
     try {
         const r = await fetch('/api/admin/push/routine', { credentials: 'include' }).then(r => r.json());
         if (!r.success) { list.textContent = 'Erro ao carregar.'; return; }
@@ -11779,7 +11787,7 @@ async function loadPushRoutine() {
                 <span style="font-weight:800;font-size:14px;min-width:52px;">${time}</span>
                 <span style="flex:1;min-width:0;">
                     <span style="display:block;font-weight:600;color:var(--text);">${escapeHtml(s.title)}</span>
-                    <span style="display:block;font-size:11.5px;color:var(--text-dim);">${escapeHtml(s.body || '')} · ${ROUTINE_AUD[s.audience] || s.audience} · ${escapeHtml(destLabel(s.url))}${s.last_sent_date ? ' · último: ' + String(s.last_sent_date).slice(0, 10) : ''}</span>
+                    <span style="display:block;font-size:11.5px;color:var(--text-dim);">${escapeHtml(s.body || '')} · ${ROUTINE_AUD[s.audience] || s.audience} · ${escapeHtml(destLabel(s.url))} · ${(Array.isArray(s.weekdays) && s.weekdays.length) ? s.weekdays.map(n => ['dom','seg','ter','qua','qui','sex','sáb'][n]).join('/') : 'todo dia'}${s.last_sent_date ? ' · último: ' + String(s.last_sent_date).slice(0, 10) : ''}</span>
                 </span>
                 <button class="btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="toggleRoutineSlot(${s.id})">${s.active ? 'Pausar' : 'Ativar'}</button>
                 <button class="btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="editRoutineSlot(${s.id})">Editar</button>
@@ -11788,6 +11796,21 @@ async function loadPushRoutine() {
         }).join('');
         window.__routineSlots = r.slots;
     } catch (_) { list.textContent = 'Erro de rede.'; }
+}
+
+// Dias da semana (0=domingo … 6=sábado) — chips clicáveis. `sel` = array de dias.
+const ROUTINE_DOW = [['D',0],['S',1],['T',2],['Q',3],['Q',4],['S',5],['S',6]];
+function renderRoutineWeekdays(sel) {
+    const box = document.getElementById('routineWeekdays'); if (!box) return;
+    const set = new Set((sel || []).map(Number));
+    box.innerHTML = ROUTINE_DOW.map(([lbl, n]) =>
+        `<button type="button" data-dow="${n}" onclick="this.classList.toggle('on'); this.style.background=this.classList.contains('on')?'#e50914':'transparent'; this.style.color=this.classList.contains('on')?'#fff':'var(--text)';"
+          class="${set.has(n) ? 'on' : ''}"
+          style="width:38px;height:38px;border-radius:9px;border:1px solid var(--border);cursor:pointer;font-weight:700;font-size:13px;background:${set.has(n)?'#e50914':'transparent'};color:${set.has(n)?'#fff':'var(--text)'};">${lbl}</button>`
+    ).join('');
+}
+function getRoutineWeekdays() {
+    return Array.prototype.map.call(document.querySelectorAll('#routineWeekdays button.on'), b => parseInt(b.dataset.dow, 10));
 }
 
 async function saveRoutineSlot() {
@@ -11799,6 +11822,7 @@ async function saveRoutineSlot() {
         url: getDestUrl('routine'),
         icon_url: get('routineIcon'),
         audience: get('routineAudience') || 'all',
+        weekdays: getRoutineWeekdays(),
         active: true,
     };
     if (!payload.send_time || !payload.title) return _alertModal('routineAlert', 'Horário e título são obrigatórios', 'error');
@@ -11831,6 +11855,7 @@ function editRoutineSlot(id) {
     setDestUrl('routine', s.url);
     document.getElementById('routineIcon').value = s.icon_url || '';
     document.getElementById('routineAudience').value = s.audience || 'all';
+    renderRoutineWeekdays(Array.isArray(s.weekdays) ? s.weekdays : []);
     document.getElementById('routineSaveBtn').textContent = 'Salvar alterações';
     document.getElementById('routineCancelBtn').style.display = '';
 }
@@ -11841,6 +11866,7 @@ function cancelRoutineEdit() {
     document.getElementById('routineBody').value = '';
     document.getElementById('routineIcon').value = '';
     setDestUrl('routine', '/');
+    renderRoutineWeekdays([]);
     document.getElementById('routineSaveBtn').textContent = 'Adicionar horário';
     document.getElementById('routineCancelBtn').style.display = 'none';
 }

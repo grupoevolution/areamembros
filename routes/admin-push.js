@@ -148,6 +148,11 @@ function cleanSlot(body) {
     const title = String(b.title || '').trim().slice(0, 120);
     if (!title) return { error: 'Título obrigatório' };
     const audience = ['all', 'leads', 'buyers'].includes(b.audience) ? b.audience : 'all';
+    // dias da semana: array de 0..6 (0=domingo). Vazio = todos os dias.
+    let weekdays = Array.isArray(b.weekdays)
+        ? [...new Set(b.weekdays.map(n => parseInt(n, 10)).filter(n => n >= 0 && n <= 6))].sort()
+        : [];
+    if (weekdays.length === 7 || !weekdays.length) weekdays = null; // 7/7 ou vazio = todo dia
     return {
         send_time: time,
         title,
@@ -156,6 +161,7 @@ function cleanSlot(body) {
         icon_url: String(b.icon_url || '').trim().slice(0, 500) || null,
         audience,
         active: b.active !== false,
+        weekdays,
     };
 }
 
@@ -173,9 +179,9 @@ router.post('/routine', requireAdmin, async (req, res) => {
     if (s.error) return res.status(400).json({ success: false, error: s.error });
     try {
         const { rows } = await db.query(
-            `INSERT INTO engagement_push_slots (send_time, title, body, url, icon_url, audience, active)
-             VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-            [s.send_time, s.title, s.body, s.url, s.icon_url, s.audience, s.active]
+            `INSERT INTO engagement_push_slots (send_time, title, body, url, icon_url, audience, active, weekdays)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+            [s.send_time, s.title, s.body, s.url, s.icon_url, s.audience, s.active, s.weekdays]
         );
         return res.json({ success: true, slot: rows[0] });
     } catch (err) {
@@ -192,9 +198,9 @@ router.put('/routine/:id', requireAdmin, async (req, res) => {
     try {
         const { rows } = await db.query(
             `UPDATE engagement_push_slots
-             SET send_time=$1, title=$2, body=$3, url=$4, icon_url=$5, audience=$6, active=$7
-             WHERE id=$8 RETURNING *`,
-            [s.send_time, s.title, s.body, s.url, s.icon_url, s.audience, s.active, id]
+             SET send_time=$1, title=$2, body=$3, url=$4, icon_url=$5, audience=$6, active=$7, weekdays=$8
+             WHERE id=$9 RETURNING *`,
+            [s.send_time, s.title, s.body, s.url, s.icon_url, s.audience, s.active, s.weekdays, id]
         );
         if (!rows.length) return res.status(404).json({ success: false, error: 'Slot não encontrado' });
         return res.json({ success: true, slot: rows[0] });
