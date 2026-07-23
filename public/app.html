@@ -9261,11 +9261,26 @@ window.ChatApp = (function() {
         return { status: r.status, data: await r.json().catch(() => ({})) };
     }
 
+    // Comportamento do funil ativo (trava de chat, atraso do status, gate de
+    // e-mail). Vem de MV_FUNNEL_DATA.behavior; fora de funil = tudo desligado.
+    function fnlBehavior() {
+        return (window.MV_FUNNEL_MODE && window.MV_FUNNEL_DATA && window.MV_FUNNEL_DATA.behavior) || {};
+    }
     // ── STATUS (stories) ──
     let STORIES = [];
     let STORY = null; // { group, idx, timer, started }
     let LIST_CHATS = []; // últimos chats carregados (pra abrir o paywall VIP no clique)
     function storiesStripHtml() {
+        // Atraso do Status/Lives (config do funil): segura as bolinhas por N seg
+        // no COMEÇO da sessão pra não distrair o lead (mede desde que a página
+        // abriu — performance.now). Reagenda 1 re-render quando o tempo acaba.
+        const delay = fnlBehavior().status_delay_sec | 0;
+        const since = (typeof performance !== 'undefined' && performance.now) ? performance.now() : 999999;
+        if (delay > 0 && since < delay * 1000) {
+            clearTimeout(window.__statusDelayTimer);
+            window.__statusDelayTimer = setTimeout(() => { try { renderStripInline(); } catch (_) {} }, (delay * 1000 - since) + 60);
+            return '';
+        }
         // bolinhas AO VIVO na frente (lives no ar) — levam pra aba Lives
         // Bolinhas de status: FIXO no máximo 3, independente de quantas lives
         // estão no ar (o dono pode ter muitas lives na aba, mas o status mostra
@@ -9658,6 +9673,13 @@ window.ChatApp = (function() {
         switchScreen('chatconv');
         // dentro da conversa a barra inferior some (igual WhatsApp)
         const nav = document.getElementById('bottomNav'); if (nav) nav.style.display = 'none';
+        // TRAVA DE CHAT (funil isca): esconde o botão de voltar — o lead fica
+        // preso na conversa, direcionado feito funil. Some quando ele identifica
+        // (paga/entra), pra não travar cliente real.
+        try {
+            const backBtn = document.querySelector('#chatconv .back');
+            if (backBtn) backBtn.style.display = (fnlBehavior().lock_chat && !identified()) ? 'none' : '';
+        } catch (_) {}
         const body = document.getElementById('caBody');
         body.innerHTML = '<div class="ca-day">HOJE</div><div class="ca-crypt">' + ICO.lock(11, '#b08a4a') + ' Suas mensagens são protegidas</div>';
         SEEN = new Set(); QUEUE = []; RENDERING = false; lastButtons = null; LAST_ID = 0;
@@ -11634,7 +11656,7 @@ window.GroupApp = (function () {
         // Lead ANÔNIMO (funil): a LISTA de grupos é livre pra ele explorar, mas
         // ENTRAR num grupo pede o e-mail — capta o lead no pico do desejo
         // (mesmo padrão da mídia do chat). Guarda o grupo e abre após o login.
-        if (window.MV_ANONYMOUS === true) {
+        if (window.MV_ANONYMOUS === true && !(window.MV_emailFree && window.MV_emailFree())) {
             window.MV_pendingGroup = id;
             if (typeof window.MV_openLoginModal === 'function') { window.MV_openLoginModal(); return; }
         }
@@ -19080,6 +19102,18 @@ function showFunnelNotification(title, message, action) {
     } catch(_) {}
 })();
 
+// Funil "e-mail só na compra": o lead navega/conversa livre, sem nenhuma
+// barreira de e-mail — ele só informa depois de pagar (menos fricção). Lê o
+// behavior do funil; helper GLOBAL porque o interceptor de clique mora fora
+// do ChatApp.
+window.MV_emailFree = function () {
+    try {
+        return window.MV_ANONYMOUS === true
+            && window.MV_FUNNEL_DATA && window.MV_FUNNEL_DATA.behavior
+            && window.MV_FUNNEL_DATA.behavior.email_gate === 'purchase';
+    } catch (_) { return false; }
+};
+
 // ═══════════════ DESTINO DE ENTRADA DO FUNIL ═══════════════
 // O admin define pra onde o cliente cai ao abrir /f/slug:
 //   'product'  → direto na página do produto
@@ -19520,6 +19554,7 @@ document.addEventListener('keydown', function(e) {
 
     function openModal() {
         if (!window.MV_ANONYMOUS) return; // já logado, não precisa
+        if (window.MV_emailFree && window.MV_emailFree()) return; // funil pede e-mail só na compra
         modal.classList.add('is-open');
         setTimeout(() => emailInput && emailInput.focus(), 200);
     }
@@ -19537,6 +19572,7 @@ document.addEventListener('keydown', function(e) {
     // Exceções: o próprio modal, scroll/zoom, vídeos/áudio playing.
     document.addEventListener('click', function(e) {
         if (!window.MV_ANONYMOUS) return;
+        if (window.MV_emailFree && window.MV_emailFree()) return; // funil pede e-mail só na compra: nada intercepta
         const t = e.target;
         // Não intercepta dentro do modal
         if (t.closest('#mvLoginModal')) return;
@@ -20738,7 +20774,9 @@ window.Explore = (function () {
         const slides = feedEl().querySelectorAll('.tk-slide');
         // Lead ANÔNIMO (modo funil): só o 1º vídeo roda no fundo. Tentar rolar pro
         // próximo trava e abre o popup de e-mail (capta o lead antes de liberar).
-        if (window.MV_ANONYMOUS === true) {
+        // Exceção: funil "e-mail só na compra" → deixa rolar livre (cai no gate
+        // normal de grátis/paywall abaixo, sem pedir e-mail).
+        if (window.MV_ANONYMOUS === true && !(window.MV_emailFree && window.MV_emailFree())) {
             if (i >= 1) {
                 pauseAll();
                 const target = feedEl().querySelector('.tk-slide[data-index="0"]');

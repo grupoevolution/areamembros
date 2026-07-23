@@ -6629,6 +6629,28 @@ a { color: inherit; text-decoration: none; }
                                 <div id="funnelVisibleChats" style="display:flex; flex-wrap:wrap; gap:8px;"><span style="font-size:11px; color:rgba(255,255,255,.4);">Carregando conversas…</span></div>
                             </div>
 
+                            <!-- COMPORTAMENTO DO FUNIL (isca 9,90 e afins) -->
+                            <div style="background:rgba(245,158,11,.06); border:1px solid rgba(245,158,11,.3); border-radius:10px; padding:12px;">
+                                <label style="display:block; font-size:13px; color:#fff; font-weight:700; margin-bottom:8px;">⚙️ Comportamento deste funil</label>
+                                <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; cursor:pointer;">
+                                    <input type="checkbox" id="funnelLockChat" style="width:16px; height:16px; margin-top:1px;">
+                                    <span style="font-size:12px; color:rgba(255,255,255,.8); line-height:1.5;"><b style="color:#fff;">🔒 Prender na conversa</b> — o lead não sai do chat (some o botão de voltar). Direciona ele feito funil, sem se perder no app. Ideal pra oferta única.</span>
+                                </label>
+                                <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:6px; cursor:pointer;">
+                                    <input type="checkbox" id="funnelStatusDelayOn" style="width:16px; height:16px; margin-top:1px;" onchange="document.getElementById('funnelStatusDelayWrap').style.display=this.checked?'flex':'none'">
+                                    <span style="font-size:12px; color:rgba(255,255,255,.8); line-height:1.5;"><b style="color:#fff;">⏱ Atrasar o Status/Lives</b> — as bolinhas piscando distraem no começo. Desligado = aparecem na hora (padrão).</span>
+                                </label>
+                                <div id="funnelStatusDelayWrap" style="display:none; align-items:center; gap:8px; margin:0 0 10px 24px;">
+                                    <span style="font-size:12px; color:rgba(255,255,255,.7);">Só aparecer depois de</span>
+                                    <input class="form-control" type="number" id="funnelStatusDelaySec" min="1" max="600" value="30" style="width:80px;">
+                                    <span style="font-size:12px; color:rgba(255,255,255,.7);">segundos</span>
+                                </div>
+                                <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
+                                    <input type="checkbox" id="funnelEmailPurchase" style="width:16px; height:16px; margin-top:1px;">
+                                    <span style="font-size:12px; color:rgba(255,255,255,.8); line-height:1.5;"><b style="color:#fff;">✉️ Não pedir e-mail até a compra</b> — o lead conversa e navega livre, sem barreira de e-mail. Ele só informa depois de pagar (menos fricção = mais venda). Desligado = pede e-mail nos pontos de sempre (padrão).</span>
+                                </label>
+                            </div>
+
                             <!-- DESTINO DE ENTRADA: pra onde o cliente cai ao abrir o link -->
                             <div style="background:rgba(229,9,20,.06); border:1px solid rgba(229,9,20,.25); border-radius:10px; padding:12px;">
                                 <label style="display:block; font-size:12px; color:#fff; font-weight:700; margin-bottom:4px;">🎯 Pra onde o cliente cai ao abrir o link?</label>
@@ -14444,6 +14466,7 @@ function openFunnelModal() {
     document.getElementById('funnelId').value = '';
     document.getElementById('funnelForm').reset();
     document.getElementById('funnelUrlPreview').textContent = '/f/...';
+    document.getElementById('funnelStatusDelayWrap').style.display = 'none';
     document.getElementById('funnelPresselFields').style.display = 'none';
     document.getElementById('funnelPresselSlug').textContent = 'slug';
     document.getElementById('funnelEntryType').value = 'home';
@@ -14489,6 +14512,13 @@ function editFunnel(f) {
     document.getElementById('funnelPresselSlug').textContent = f.slug || 'slug';
     document.getElementById('funnelPresselHeadline').value = pcfg.headline || '';
     document.getElementById('funnelPresselPreviews').value = Array.isArray(pcfg.previews) ? pcfg.previews.join('\n') : '';
+    // comportamento do funil
+    document.getElementById('funnelLockChat').checked = pcfg.lock_chat === true;
+    const sd = Math.max(0, parseInt(pcfg.status_delay_sec, 10) || 0);
+    document.getElementById('funnelStatusDelayOn').checked = sd > 0;
+    document.getElementById('funnelStatusDelayWrap').style.display = sd > 0 ? 'flex' : 'none';
+    document.getElementById('funnelStatusDelaySec').value = sd > 0 ? sd : 30;
+    document.getElementById('funnelEmailPurchase').checked = pcfg.email_gate === 'purchase';
     const pmSel = document.getElementById('funnelPresselMode');
     if (pmSel) pmSel.value = pcfg.mode === 'groups' ? 'groups' : 'chats';
     document.getElementById('funnelEntryType').value = f.entry_type || 'home';
@@ -14566,6 +14596,11 @@ async function saveFunnel(e) {
             mode: (document.getElementById('funnelPresselMode') || {}).value === 'groups' ? 'groups' : 'chats',
             headline: document.getElementById('funnelPresselHeadline').value.trim() || null,
             previews: document.getElementById('funnelPresselPreviews').value.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 12),
+            // comportamento do funil (isca 9,90 e afins)
+            lock_chat: document.getElementById('funnelLockChat').checked,
+            status_delay_sec: document.getElementById('funnelStatusDelayOn').checked
+                ? Math.max(1, Math.min(600, parseInt(document.getElementById('funnelStatusDelaySec').value, 10) || 30)) : 0,
+            email_gate: document.getElementById('funnelEmailPurchase').checked ? 'purchase' : 'default',
         },
         // conversas visíveis ANTES do e-mail (vazio = sem restrição)
         visible_chat_ids: Array.prototype.map.call(

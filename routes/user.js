@@ -2643,7 +2643,7 @@ router.get('/funnel/:slug', async (req, res) => {
     try {
         const { rows } = await db.query(`
             SELECT f.id, f.slug, f.name, f.description,
-                   f.featured_product_id, f.video_call_id,
+                   f.featured_product_id, f.video_call_id, f.pressel_config,
                    f.entry_type, f.entry_product_id, f.entry_category_id, f.entry_chat_id, f.entry_group_id,
                    c.slug AS entry_category_slug, c.name AS entry_category_name,
                    p.id AS product_id, p.name AS product_name,
@@ -2663,8 +2663,18 @@ router.get('/funnel/:slug', async (req, res) => {
         `, [slug]);
         if (!rows.length) return res.json({ success: true, funnel: null });
         const r = rows[0];
+        // Comportamento do funil (guardado em pressel_config): trava de chat,
+        // atraso do Status/Lives e quando pedir e-mail. Defaults = tudo desligado
+        // (funis antigos seguem idênticos).
+        const pc = r.pressel_config || {};
+        const behavior = {
+            lock_chat: pc.lock_chat === true,
+            status_delay_sec: Math.max(0, Math.min(600, parseInt(pc.status_delay_sec, 10) || 0)),
+            email_gate: pc.email_gate === 'purchase' ? 'purchase' : 'default',
+        };
         const funnel = {
             id: r.id, slug: r.slug, name: r.name, description: r.description,
+            behavior,
             // Destino de entrada: o app navega pra cá assim que o catálogo carrega
             entry: {
                 type: r.entry_type || 'home',
