@@ -21479,9 +21479,48 @@ window.Lives = (function () {
         });
     }
     function tryComment() {
-        // membro digita (simulado: some no rolo); não-membro → popup
-        if (data && data.has_access) { pushComment(); return; }
+        // membro → abre um campo REAL pra ele digitar o próprio comentário;
+        // não-membro → popup de virar VIP.
+        if (data && data.has_access) { openCommentInput(); return; }
         unlock();
+    }
+    // Transforma a barra "Comente na live…" num campo de texto real. Ao enviar,
+    // o comentário DO MEMBRO aparece no rolo com o nome dele.
+    function openCommentInput() {
+        const bar = stage() && stage().querySelector('.lv-input');
+        if (!bar || bar.querySelector('input')) return;
+        bar.classList.add('typing');
+        bar.removeAttribute('onclick'); // no modo digitar, tocar não reabre
+        bar.innerHTML = '<input type="text" maxlength="120" placeholder="Escreva seu comentário…" '
+            + 'style="flex:1;background:none;border:none;outline:none;color:#fff;font-size:13.5px;" />'
+            + '<button type="button" class="lv-cmt-send" style="background:none;border:none;color:#ff5a6a;font-weight:800;font-size:13px;cursor:pointer;padding:0 2px;">Enviar</button>';
+        const inp = bar.querySelector('input'), btn = bar.querySelector('.lv-cmt-send');
+        const restore = () => {
+            bar.classList.remove('typing');
+            bar.setAttribute('onclick', 'Lives.tryComment()');
+            bar.innerHTML = ICO.chat + ' Comente na live…';
+        };
+        const submit = () => {
+            const t = (inp.value || '').trim();
+            if (t) pushOwnComment(t);
+            restore();
+        };
+        // mousedown (não click) pra disparar ANTES do blur do input tirar o botão
+        btn.addEventListener('mousedown', (e) => { e.preventDefault(); submit(); });
+        btn.addEventListener('click', submit);
+        inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+        try { inp.focus(); } catch (_) {}
+    }
+    // Comentário DO MEMBRO (não fake): aparece com "Você" + tag VIP.
+    function pushOwnComment(text) {
+        const box = stage() && stage().querySelector('#lvCmts'); if (!box) return;
+        const el = document.createElement('div');
+        el.className = 'lv-cmt';
+        el.innerHTML = '<div class="lv-cmt-av" style="background:#e50914;">V</div>'
+            + '<div class="lv-cmt-body"><div class="lv-cmt-name">Você <span class="lv-cmt-vip">VIP</span></div>'
+            + '<div class="lv-cmt-txt">' + esc(text) + '</div></div>';
+        box.appendChild(el);
+        while (box.childElementCount > 6) box.firstElementChild.remove();
     }
 
     function pauseVideo() { const v = stage() && stage().querySelector('#lvBg video'); if (v) { try { v.pause(); } catch (_) {} } }
