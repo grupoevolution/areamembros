@@ -9555,12 +9555,18 @@ window.ChatApp = (function() {
                 scroll.innerHTML = (storiesHolder ? '' : storiesStripHtml()) || '<div class="ca-empty">Nenhuma conversa disponível ainda.<br>Volte em breve.</div>';
                 return;
             }
-            // Ordena por última mensagem (mais recente no topo, estilo WhatsApp).
-            // Conversas sem mensagem ainda vão pro fim, mantendo a ordem relativa.
+            // Ordena estilo WhatsApp: ONLINE no topo (rodízio), depois por última
+            // mensagem. Conversa JÁ INICIADA (tem mensagem) respeita a recência
+            // mesmo offline — só as sem conversa é que descem por estarem offline.
             const chats = data.chats.slice().sort((a, b) => {
                 const ta = (a.last && a.last.at) ? new Date(a.last.at).getTime() : 0;
                 const tb = (b.last && b.last.at) ? new Date(b.last.at).getTime() : 0;
-                return tb - ta;
+                // conversa iniciada (com mensagem) ordena por recência, ignora online
+                if (ta && tb) return tb - ta;
+                if (ta || tb) return tb - ta; // uma tem conversa, ela sobe
+                // nenhuma tem conversa → online primeiro
+                const oa = a.online === false ? 0 : 1, ob = b.online === false ? 0 : 1;
+                return ob - oa;
             });
             LIST_CHATS = chats;
             updatePlanUI(data);

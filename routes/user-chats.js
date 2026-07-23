@@ -532,6 +532,18 @@ router.get('/chats', optionalUser, async (req, res) => {
         if (ident.email && chats.some(c => c.hide_when_member)) {
             try { isPremium = await require('./user').isPremiumCustomer(ident.email); } catch (_) {}
         }
+        // RODÍZIO de online (esteira): calcula quem está online agora entre as
+        // conversas marcadas "in_rotation". As demais ficam sempre online.
+        let onlineMap = null, rotCfg = null;
+        try {
+            const rotation = require('../lib/chat-rotation');
+            rotCfg = await rotation.loadRotationConfig();
+            if (rotCfg.enabled) {
+                const rotIds = chats.filter(c => c.in_rotation).map(c => c.id);
+                if (rotIds.length) onlineMap = rotation.computeOnline(rotIds, rotCfg, Date.now());
+            }
+        } catch (_) {}
+        const { lastSeenLabel } = require('../lib/chat-rotation');
         const out = [];
         for (const c of chats) {
             const owns = await ownsChatVip(ident.email, c);
@@ -546,8 +558,12 @@ router.get('/chats', optionalUser, async (req, res) => {
             if (isTeaser) perm.locked = true;
             // enriquece o desbloqueio com produto + planos (banner VIP rico)
             if (perm.locked) perm.unlock = await loadUnlock(await chatUnlockProductId(c), c.checkout_url);
+            // RODÍZIO: estado online desta conversa (null = sempre online)
+            const rotState = (onlineMap && c.in_rotation) ? onlineMap.get(c.id) : null;
+            const isOffline = !!(rotState && !rotState.online);
             // motor de conversas: agenda a 1ª mensagem sozinha (auto_start_minutes)
-            await ensureAutoStart(c, ident);
+            // — NÃO agenda enquanto a conversa está offline no rodízio.
+            if (!isOffline) await ensureAutoStart(c, ident);
             // preview da última mensagem + não-lidas (bot, após last_seen_at)
             let last = null;
             let unread = 0;
@@ -586,8 +602,10 @@ router.get('/chats', optionalUser, async (req, res) => {
                 name: c.name,
                 avatar_url: c.avatar_url,
                 section: c.section,
-                status_label: c.status_label,
-                show_online: c.show_online,
+                // offline no rodízio: mostra "visto há X" no lugar de "online"
+                status_label: isOffline ? lastSeenLabel(rotState.mins_offline) : c.status_label,
+                show_online: isOffline ? false : c.show_online,
+                online: !isOffline,          // pro app ordenar online no topo
                 locked: perm.locked,
                 teaser: isTeaser,   // isca: travada mas com prévia visível
                 unlock: perm.unlock,
@@ -857,6 +875,24 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
         const choice = req.body?.choice;
         const text = (req.body?.text || '').toString().trim().slice(0, 1000);
         const newMsgs = [];
+
+        // RODÍZIO: se a conversa está OFFLINE agora, guarda a mensagem do lead
+        // mas a modelo NÃO responde (mesmo com o funil mandando responder). O
+        // roteiro retoma quando ela voltar online e o lead interagir de novo.
+        if (chat.in_rotation) {
+            try {
+                const rotation = require('../lib/chat-rotation');
+                const rc = await rotation.loadRotationConfig();
+                if (rc.enabled) {
+                    const { rows: rr } = await db.query(`SELECT id FROM chats WHERE active = true AND in_rotation = true`);
+                    const st = rotation.computeOnline(rr.map(r => r.id), rc, Date.now()).get(chatId);
+                    if (st && !st.online) {
+                        if (text) await insertMsg(session.id, 'user', 'text', text, null, null, null);
+                        return res.json({ success: true, messages: [], awaiting: session.awaiting, offline: true });
+                    }
+                }
+            } catch (_) {}
+        }
 
         // GATE do paywall: depois do bloco 🔒 (paywalled_at), um lead SEM VIP
         // não avança o roteiro por NENHUM caminho. Antes o gate existia só no
@@ -1225,9 +1261,30 @@ async function resumeDelayed(limit) {
         ) RETURNING *
     `, [limit || 30]);
 
+    // RODÍZIO: chats offline não entregam mensagem agora — a conversa PAUSA e
+    // retoma quando a modelo voltar online. Calcula o mapa 1x.
+    let offlineSet = null;
+    try {
+        const rotation = require('../lib/chat-rotation');
+        const rc = await rotation.loadRotationConfig();
+        if (rc.enabled) {
+            const { rows: rr } = await db.query(`SELECT id FROM chats WHERE active = true AND in_rotation = true`);
+            const ids = rr.map(r => r.id);
+            if (ids.length) {
+                const m = rotation.computeOnline(ids, rc, Date.now());
+                offlineSet = new Set([...m.entries()].filter(([, s]) => !s.online).map(([id]) => id));
+            }
+        }
+    } catch (_) {}
+
     const results = [];
     for (const session of due) {
         try {
+            // conversa offline no rodízio: devolve pra 'delay' (retoma ao voltar)
+            if (offlineSet && offlineSet.has(session.chat_id)) {
+                await db.query(`UPDATE chat_sessions SET awaiting = 'delay' WHERE id = $1`, [session.id]);
+                continue;
+            }
             const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [session.chat_id]);
             if (!cr.length) {
                 await db.query(`UPDATE chat_sessions SET awaiting = NULL WHERE id = $1`, [session.id]);

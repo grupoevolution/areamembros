@@ -5851,8 +5851,21 @@ a { color: inherit; text-decoration: none; }
                         <button class="btn-primary" onclick="openChatModal()">+ Novo Chat</button>
                     </div>
                 </div>
+                <!-- RODÍZIO DE ONLINE (esteira) -->
+                <div style="margin-top:20px; background:linear-gradient(135deg, rgba(37,211,102,.08), rgba(0,0,0,.25)); border:1px solid rgba(37,211,102,.3); border-radius:14px; padding:16px 18px;">
+                    <label style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:#fff; cursor:pointer;">
+                        <input type="checkbox" id="rotEnabled" style="width:18px; height:18px;" onchange="saveRotationConfig()"> 🔄 Rodízio de online (esteira)
+                    </label>
+                    <div class="form-help" style="margin:6px 0 12px;">Mantém ~N conversas online por vez e vai rodando o rodízio sozinho pela lista (as modelos ficam online em janelas do dia, mais real). Vale só pras conversas marcadas "Entra no rodízio" — as de funil/tráfego ficam sempre online. <b>Desligado = nada muda (todas sempre online).</b></div>
+                    <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:end;">
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Quantas online por vez</label><input class="form-control" type="number" id="rotOnlineCount" min="1" max="200" value="18" style="width:150px;" onchange="saveRotationConfig()"></div>
+                        <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Duração do turno (horas)</label><input class="form-control" type="number" id="rotShiftHours" min="1" max="12" value="3" style="width:150px;" onchange="saveRotationConfig()"></div>
+                        <div id="rotStatus" style="font-size:12px; color:rgba(255,255,255,.55);"></div>
+                    </div>
+                </div>
+
                 <!-- PRODUTO ÚNICO DO CHAT: o popup VIP/PREMIUM de TODAS as conversas -->
-                <div id="chatPaywallCard" style="margin-top:20px; background:linear-gradient(135deg, rgba(229,9,20,.10), rgba(0,0,0,.25)); border:1px solid rgba(229,9,20,.35); border-radius:14px; padding:16px 18px;">
+                <div id="chatPaywallCard" style="margin-top:16px; background:linear-gradient(135deg, rgba(229,9,20,.10), rgba(0,0,0,.25)); border:1px solid rgba(229,9,20,.35); border-radius:14px; padding:16px 18px;">
                     <div style="color:rgba(255,255,255,.5); font-size:12px;">Carregando produto do chat…</div>
                 </div>
 
@@ -6377,6 +6390,8 @@ a { color: inherit; text-decoration: none; }
                                 <div class="form-help" style="margin-top:6px;">Ligado: assim que o cliente vira VIP (compra o produto desta conversa) ou Premium, esta conversa SOME da lista dele — mesmo que já tenham falado. Ideal pra conversa que oferece o VIP/Premium (não faz sentido pra quem já comprou).</div>
                                 <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; margin-top:12px;"><input type="checkbox" id="cpTeaserLocked" style="width:16px; height:16px;"> 🪝 Isca: só prévia (não deixa abrir)</label>
                                 <div class="form-help" style="margin-top:6px;">Ligado: a modelo manda a 1ª mensagem, o lead não-VIP vê a PRÉVIA legível na lista, mas ao tocar NÃO abre a conversa — abre o popup de virar VIP. Incentivo: "tem gente te chamando e você não consegue nem abrir". (Combine com "primeira mensagem automática" pra a isca chegar sozinha.)</div>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; margin-top:12px;"><input type="checkbox" id="cpInRotation" style="width:16px; height:16px;"> 🔄 Entra no rodízio de online</label>
+                                <div class="form-help" style="margin-top:6px;">Desligado (padrão) = <b>SEMPRE online</b> (deixe assim as conversas de funil/tráfego, pra nunca falhar). Ligado = entra na esteira: fica online só em janelas do dia, mostra "visto há X" fora delas e não responde enquanto offline (mais real). Configure quantas ficam online por vez lá em cima, no card do rodízio.</div>
                             </div>
 
                             <!-- Chat de Suporte / entrega de venda -->
@@ -15882,9 +15897,37 @@ async function sendSupportBroadcast() {
 }
 window.sendSupportBroadcast = sendSupportBroadcast;
 
+// ─── Rodízio de online (esteira) ───────────────────────────────────────────
+let _rotSaveTimer = null;
+async function loadRotationConfig() {
+    try {
+        const r = await fetch('/api/admin/gamification/chat_rotation', { credentials: 'include' }).then(r => r.json());
+        const c = (r && r.value) || {};
+        const en = document.getElementById('rotEnabled'); if (en) en.checked = c.enabled === true;
+        const oc = document.getElementById('rotOnlineCount'); if (oc) oc.value = c.online_count != null ? c.online_count : 18;
+        const sh = document.getElementById('rotShiftHours'); if (sh) sh.value = c.shift_hours != null ? c.shift_hours : 3;
+    } catch (_) {}
+}
+async function saveRotationConfig() {
+    clearTimeout(_rotSaveTimer);
+    _rotSaveTimer = setTimeout(async () => {
+        const value = {
+            enabled: document.getElementById('rotEnabled').checked,
+            online_count: Math.max(1, Math.min(200, parseInt(document.getElementById('rotOnlineCount').value, 10) || 18)),
+            shift_hours: Math.max(1, Math.min(12, parseInt(document.getElementById('rotShiftHours').value, 10) || 3)),
+        };
+        try {
+            await fetch('/api/admin/gamification/chat_rotation', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ value }) });
+            const st = document.getElementById('rotStatus'); if (st) { st.textContent = '✓ salvo'; setTimeout(() => { st.textContent = ''; }, 2000); }
+        } catch (_) {}
+    }, 400);
+}
+window.saveRotationConfig = saveRotationConfig;
+
 async function loadAdminChats() {
     loadChatPaywallCard();
     loadSupportConfig();
+    loadRotationConfig();
     const list = document.getElementById('adminChatsList');
     if (!list) return;
     try {
@@ -16076,6 +16119,7 @@ function editChatPersona(c) {
     document.getElementById('cpListed').checked = c.listed !== false;
     document.getElementById('cpHideWhenMember').checked = c.hide_when_member === true;
     document.getElementById('cpTeaserLocked').checked = c.teaser_locked === true;
+    document.getElementById('cpInRotation').checked = c.in_rotation === true;
     document.getElementById('cpSupport').checked = c.is_support === true;
     document.getElementById('cpCityFallback').value = c.city_fallback || '';
     document.getElementById('cpOrder').value = c.display_order || 0;
@@ -16113,6 +16157,7 @@ async function saveChatPersona(e) {
         listed: document.getElementById('cpListed').checked,
         hide_when_member: document.getElementById('cpHideWhenMember').checked,
         teaser_locked: document.getElementById('cpTeaserLocked').checked,
+        in_rotation: document.getElementById('cpInRotation').checked,
         is_support: document.getElementById('cpSupport').checked,
         city_fallback: document.getElementById('cpCityFallback').value.trim() || 'sua região',
         call_video_call_id: document.getElementById('cpCall').value || null,

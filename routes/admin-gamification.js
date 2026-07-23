@@ -31,6 +31,7 @@ const VALID_KEYS = [
     'home_layout',
     'live_notifications',
     'chat_config',
+    'chat_rotation',
 ];
 
 // =============================================================================
