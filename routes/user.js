@@ -2671,6 +2671,7 @@ router.get('/funnel/:slug', async (req, res) => {
             lock_chat: pc.lock_chat === true,
             status_delay_sec: Math.max(0, Math.min(600, parseInt(pc.status_delay_sec, 10) || 0)),
             email_gate: pc.email_gate === 'purchase' ? 'purchase' : 'default',
+            force_install: pc.force_install === true,
         };
         const funnel = {
             id: r.id, slug: r.slug, name: r.name, description: r.description,

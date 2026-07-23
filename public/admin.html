@@ -6645,9 +6645,13 @@ a { color: inherit; text-decoration: none; }
                                     <input class="form-control" type="number" id="funnelStatusDelaySec" min="1" max="600" value="30" style="width:80px;">
                                     <span style="font-size:12px; color:rgba(255,255,255,.7);">segundos</span>
                                 </div>
-                                <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
+                                <label style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; cursor:pointer;">
                                     <input type="checkbox" id="funnelEmailPurchase" style="width:16px; height:16px; margin-top:1px;">
                                     <span style="font-size:12px; color:rgba(255,255,255,.8); line-height:1.5;"><b style="color:#fff;">✉️ Não pedir e-mail até a compra</b> — o lead conversa e navega livre, sem barreira de e-mail. Ele só informa depois de pagar (menos fricção = mais venda). Desligado = pede e-mail nos pontos de sempre (padrão).</span>
+                                </label>
+                                <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
+                                    <input type="checkbox" id="funnelForceInstall" style="width:16px; height:16px; margin-top:1px;">
+                                    <span style="font-size:12px; color:rgba(255,255,255,.8); line-height:1.5;"><b style="color:#fff;">📲 Obrigar a instalar o app após a compra</b> — assim que o pagamento confirma, aparece uma tela travada pra instalar o app antes de liberar o acesso. Vira inscrito de notificação (remarketing grátis pra sempre). Recomendado pra isca de 9,90.</span>
                                 </label>
                             </div>
 
@@ -14519,6 +14523,7 @@ function editFunnel(f) {
     document.getElementById('funnelStatusDelayWrap').style.display = sd > 0 ? 'flex' : 'none';
     document.getElementById('funnelStatusDelaySec').value = sd > 0 ? sd : 30;
     document.getElementById('funnelEmailPurchase').checked = pcfg.email_gate === 'purchase';
+    document.getElementById('funnelForceInstall').checked = pcfg.force_install === true;
     const pmSel = document.getElementById('funnelPresselMode');
     if (pmSel) pmSel.value = pcfg.mode === 'groups' ? 'groups' : 'chats';
     document.getElementById('funnelEntryType').value = f.entry_type || 'home';
@@ -14601,6 +14606,7 @@ async function saveFunnel(e) {
             status_delay_sec: document.getElementById('funnelStatusDelayOn').checked
                 ? Math.max(1, Math.min(600, parseInt(document.getElementById('funnelStatusDelaySec').value, 10) || 30)) : 0,
             email_gate: document.getElementById('funnelEmailPurchase').checked ? 'purchase' : 'default',
+            force_install: document.getElementById('funnelForceInstall').checked,
         },
         // conversas visíveis ANTES do e-mail (vazio = sem restrição)
         visible_chat_ids: Array.prototype.map.call(

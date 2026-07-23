@@ -10366,7 +10366,9 @@ window.ChatApp = (function() {
         const sk2 = document.getElementById('caBreakSkip'); if (sk2) sk2.addEventListener('click', fallback);
     }
 
-    function gateInstall(action) {
+    function gateInstall(action, opts) {
+        opts = opts || {};
+        const forced = opts.force === true; // pós-compra: sem "pular", obriga instalar
         if (isStandalone() || _gateInstalled) { closeGate(); action(); return; }
         const nome = (CUR && CUR.chat && CUR.chat.name) ? esc(CUR.chat.name) : 'ela';
         const LOGO = '<div style="width:56px;height:56px;border-radius:16px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;font-weight:800;color:#fff;">M</div>';
@@ -10411,12 +10413,15 @@ window.ChatApp = (function() {
             return;
         }
         // Navegador normal → 1 toque (se o prompt existir) com fallback manual.
+        // Forçado (pós-compra): copy de "liberar acesso" e SEM botão de pular.
         gateOverlay(
             LOGO
-            + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">Falta um passo</div>'
-            + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:16px;">Adicione o app à tela inicial pra abrir o conteúdo e receber as mensagens de ' + nome + ' aqui no celular. É só um toque.</div>'
-            + '<button id="caGateInstall" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;">Adicionar e ver</button>'
-            + '<button id="caGateSkip" style="width:100%;background:none;border:none;color:#999;font-size:13px;padding:11px;margin-top:4px;cursor:pointer;">Continuar mesmo assim</button>'
+            + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:7px;">' + (forced ? 'Falta só instalar pra liberar' : 'Falta um passo') + '</div>'
+            + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:16px;">' + (forced
+                ? 'Seu pagamento foi confirmado! Instale o app na tela inicial pra <b>liberar seu acesso</b> e receber as mensagens dela — é só um toque.'
+                : 'Adicione o app à tela inicial pra abrir o conteúdo e receber as mensagens de ' + nome + ' aqui no celular. É só um toque.') + '</div>'
+            + '<button id="caGateInstall" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;">' + (forced ? 'Instalar e liberar acesso' : 'Adicionar e ver') + '</button>'
+            + (forced ? '' : '<button id="caGateSkip" style="width:100%;background:none;border:none;color:#999;font-size:13px;padding:11px;margin-top:4px;cursor:pointer;">Continuar mesmo assim</button>')
         );
         document.getElementById('caGateInstall').addEventListener('click', () => {
             const dp2 = window.deferredPrompt; // relê na hora do clique (pode ter chegado depois)
@@ -10433,7 +10438,8 @@ window.ChatApp = (function() {
                 showManualInstall(); // sem prompt automático → instrução manual
             }
         });
-        document.getElementById('caGateSkip').addEventListener('click', proceed);
+        const skip = document.getElementById('caGateSkip');
+        if (skip) skip.addEventListener('click', proceed);
     }
 
     // Gate de PWA GLOBAL (vale pra logado normal também, não só funil): se a ação
@@ -17055,6 +17061,19 @@ function watchPurchaseConfirm(productId) {
                 const ed = (window.currentProduct && window.currentProduct.extra_data) || {};
                 if (sub) sub.textContent = (ed.success_message || '').trim() || 'Tudo certo ✅ Seu acesso já está liberado no seu acervo.';
                 try { if (typeof loadHomeData === 'function') loadHomeData({ force: true }); } catch (_) {}
+                // FUNIL isca: obriga instalar o app pra liberar (vira inscrito de
+                // push = remarketing grátis). Só se o funil pediu e ainda não
+                // instalou. O gate forçado não tem "pular".
+                try {
+                    const beh = (window.MV_FUNNEL_DATA && window.MV_FUNNEL_DATA.behavior) || {};
+                    const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+                    if (beh.force_install && !standalone && window.ChatApp && ChatApp.gateInstall) {
+                        ChatApp.gateInstall(function () {
+                            if (typeof loadHomeData === 'function') loadHomeData({ force: true });
+                            if (typeof switchScreen === 'function') switchScreen('library');
+                        }, { force: true });
+                    }
+                } catch (_) {}
                 return;
             }
         } catch (_) {}
