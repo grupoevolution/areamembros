@@ -18881,9 +18881,9 @@ window.tryTriggerCallAfterLogin = async function() {
             const data = await r.json();
             console.log('[funnel-trigger] sequence:', data);
             if (data.success && Array.isArray(data.steps) && data.steps.length) {
-                // Marca conversão (só na entrada original pelo funil E com e-mail —
-                // lead anônimo ainda não converteu de verdade)
-                if (ref && email) {
+                // Marca conversão (só na entrada original pelo funil E quando o
+                // lead já está identificado — anônimo ainda não converteu)
+                if (ref && !window.MV_ANONYMOUS) {
                     try {
                         fetch('/api/user/funnel/' + encodeURIComponent(ref) + '/convert', {
                             method: 'POST',
@@ -18948,12 +18948,20 @@ window.tryTriggerCallAfterLogin = async function() {
                     }, wait);
                 }
                 if (pending === 0) clearProgress();
-                // Limpa cookie do funíl pra não disparar de novo (o progresso
-                // pendente fica no localStorage e retoma sozinho)
-                document.cookie = 'mv_funnel=; path=/; max-age=0; SameSite=Lax';
-                window.MV_FUNNEL_SLUG = null;
-                try { sessionStorage.removeItem('mv_funnel_ref'); } catch(_) {}
-                window.MV_FUNNEL_REF = null;
+                // Limpa o cookie do funíl pra não disparar de novo — SÓ quando o
+                // lead JÁ está identificado (deu o e-mail; MV_ANONYMOUS=false). Pro
+                // lead ANÔNIMO o cookie é a TRAVA que limita quais conversas
+                // aparecem (visible_chat_ids do funil) até ele dar o e-mail; se
+                // limpar aqui, a lista mostra TODOS os chats (quebra o funil). O
+                // progresso no localStorage já evita a sequência re-disparar.
+                // (Obs.: lead anônimo tem um e-mail placeholder, então NÃO dá pra
+                // testar por `email` — a fonte da verdade é MV_ANONYMOUS.)
+                if (!window.MV_ANONYMOUS) {
+                    document.cookie = 'mv_funnel=; path=/; max-age=0; SameSite=Lax';
+                    window.MV_FUNNEL_SLUG = null;
+                    try { sessionStorage.removeItem('mv_funnel_ref'); } catch(_) {}
+                    window.MV_FUNNEL_REF = null;
+                }
                 return;
             } else {
                 console.warn('[funnel-trigger] funil sem etapas configuradas');
