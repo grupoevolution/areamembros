@@ -12521,7 +12521,12 @@ async function checkExistingSession() {
                 switchScreen('home');
                 hideBootSplash();
                 if (typeof loadHomeData === 'function') loadHomeData();
-                if (!window.MV_ANONYMOUS && typeof window.tryTriggerCallAfterLogin === 'function') window.tryTriggerCallAfterLogin();
+                // Sequência do funil (etapas: chamada, "Conversa: X" após Ns, etc.):
+                // roda pro lead LOGADO E TAMBÉM pro ANÔNIMO quando ele veio por um
+                // funil (usa visitor_id, não precisa de e-mail). Sem isso, a etapa
+                // "Conversa após 15s" nunca disparava pra quem entra sem e-mail.
+                const _inFunnel = window.MV_FUNNEL_MODE === true || /(?:^|; )mv_funnel=/.test(document.cookie);
+                if ((!window.MV_ANONYMOUS || _inFunnel) && typeof window.tryTriggerCallAfterLogin === 'function') window.tryTriggerCallAfterLogin();
 
                 // Inicializa PWA install prompts APÓS auto-login (não na tela de login)
                 if (window.PWA && typeof window.PWA.init === 'function') {
@@ -18876,8 +18881,9 @@ window.tryTriggerCallAfterLogin = async function() {
             const data = await r.json();
             console.log('[funnel-trigger] sequence:', data);
             if (data.success && Array.isArray(data.steps) && data.steps.length) {
-                // Marca conversão (só na entrada original pelo funil)
-                if (ref) {
+                // Marca conversão (só na entrada original pelo funil E com e-mail —
+                // lead anônimo ainda não converteu de verdade)
+                if (ref && email) {
                     try {
                         fetch('/api/user/funnel/' + encodeURIComponent(ref) + '/convert', {
                             method: 'POST',
