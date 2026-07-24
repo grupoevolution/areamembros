@@ -4640,6 +4640,23 @@ a { color: inherit; text-decoration: none; }
                     </div>
                 </div>
 
+                <!-- VENDAS POR CHAT (atribuição por UTM da Kirvano) -->
+                <div style="margin-bottom:18px; background:linear-gradient(135deg, rgba(245,208,103,.08), rgba(0,0,0,.25)); border:1px solid rgba(245,208,103,.3); border-radius:14px; padding:16px 18px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                        <div style="font-size:14px; font-weight:700; color:#fff;">🏆 Vendas por chat</div>
+                        <div id="salesBySrcTabs" style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <button type="button" class="sbs-tab" data-p="today" onclick="setSalesBySrc('today',this)">Hoje</button>
+                            <button type="button" class="sbs-tab" data-p="yesterday" onclick="setSalesBySrc('yesterday',this)">Ontem</button>
+                            <button type="button" class="sbs-tab on" data-p="7" onclick="setSalesBySrc('7',this)">7 dias</button>
+                            <button type="button" class="sbs-tab" data-p="30" onclick="setSalesBySrc('30',this)">30 dias</button>
+                            <button type="button" class="sbs-tab" data-p="total" onclick="setSalesBySrc('total',this)">Total</button>
+                        </div>
+                    </div>
+                    <div class="form-help" style="margin:-2px 0 10px;">Qual chat de funil está vendendo mais (o link do checkout é carimbado com o chat de origem, e a Kirvano devolve isso na venda). Use pra escolher/rotacionar os melhores.</div>
+                    <div id="salesBySrcList" style="font-size:13px; color:rgba(255,255,255,.6);">Carregando…</div>
+                </div>
+                <style>.sbs-tab{background:transparent;border:1px solid var(--border,rgba(255,255,255,.15));color:var(--text,#ccc);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;}.sbs-tab.on{background:rgba(245,208,103,.18);border-color:rgba(245,208,103,.55);color:#f5d067;font-weight:700;}</style>
+
                 <!-- Toolbar de filtros -->
                 <div class="products-toolbar">
                     <div class="products-search-wrap">
@@ -5862,20 +5879,6 @@ a { color: inherit; text-decoration: none; }
                         <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Duração do turno (horas)</label><input class="form-control" type="number" id="rotShiftHours" min="1" max="12" value="3" style="width:150px;" onchange="saveRotationConfig()"></div>
                         <div id="rotStatus" style="font-size:12px; color:rgba(255,255,255,.55);"></div>
                     </div>
-                </div>
-
-                <!-- VENDAS POR CHAT (atribuição por UTM da Kirvano) -->
-                <div style="margin-top:16px; background:linear-gradient(135deg, rgba(245,208,103,.08), rgba(0,0,0,.25)); border:1px solid rgba(245,208,103,.3); border-radius:14px; padding:16px 18px;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
-                        <div style="font-size:14px; font-weight:700; color:#fff;">🏆 Vendas por chat</div>
-                        <select class="form-control" id="salesBySrcDays" style="width:auto; font-size:12px;" onchange="loadSalesBySource()">
-                            <option value="7">7 dias</option>
-                            <option value="30" selected>30 dias</option>
-                            <option value="90">90 dias</option>
-                        </select>
-                    </div>
-                    <div class="form-help" style="margin:-2px 0 10px;">Qual chat de funil está vendendo mais (o link do checkout é carimbado com o chat de origem, e a Kirvano devolve isso na venda). Use pra escolher/rotacionar os melhores.</div>
-                    <div id="salesBySrcList" style="font-size:13px; color:rgba(255,255,255,.6);">Carregando…</div>
                 </div>
 
                 <!-- PRODUTO ÚNICO DO CHAT: o popup VIP/PREMIUM de TODAS as conversas -->
@@ -9131,9 +9134,10 @@ function switchGlobalGateway() { alert('Configuração global — em breve'); }
 // SALES / WEBHOOKS
 // ============================================================================
 async function loadSales() {
+    try { loadSalesBySource(); } catch (_) {} // ranking "vendas por chat" no topo
     const tbody = document.getElementById('salesTableBody');
     if (!tbody) return;
-    
+
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px; color:var(--text-muted);">Carregando...</td></tr>';
     
     const params = new URLSearchParams();
@@ -15939,13 +15943,19 @@ async function saveRotationConfig() {
 window.saveRotationConfig = saveRotationConfig;
 
 // ─── Vendas por chat (atribuição UTM) ───────────────────────────────────────
+let _salesBySrcPeriod = '7';
+function setSalesBySrc(p, btn) {
+    _salesBySrcPeriod = p;
+    document.querySelectorAll('#salesBySrcTabs .sbs-tab').forEach(b => b.classList.toggle('on', b === btn));
+    loadSalesBySource();
+}
+window.setSalesBySrc = setSalesBySrc;
 async function loadSalesBySource() {
     const box = document.getElementById('salesBySrcList');
     if (!box) return;
-    const days = document.getElementById('salesBySrcDays')?.value || 30;
     box.textContent = 'Carregando…';
     try {
-        const r = await fetch('/api/admin/chats/sales-by-source?days=' + days, { credentials: 'include' }).then(r => r.json());
+        const r = await fetch('/api/admin/chats/sales-by-source?period=' + _salesBySrcPeriod, { credentials: 'include' }).then(r => r.json());
         if (!r.success) { box.textContent = 'Erro ao carregar.'; return; }
         if (!r.sources.length) { box.innerHTML = '<span style="color:rgba(255,255,255,.4);">Nenhuma venda marcada por chat ainda. Assim que sair a 1ª venda vinda de um chat, ela aparece aqui.</span>'; return; }
         const money = (v) => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',');
@@ -15965,7 +15975,6 @@ async function loadAdminChats() {
     loadChatPaywallCard();
     loadSupportConfig();
     loadRotationConfig();
-    loadSalesBySource();
     const list = document.getElementById('adminChatsList');
     if (!list) return;
     try {

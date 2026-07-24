@@ -978,7 +978,21 @@ router.delete('/status-schedule/:sid', requireAdmin, async (req, res) => {
 // VENDAS POR CHAT (origem UTM 'chat_<id>' devolvida pela Kirvano). Mostra qual
 // dos chats de funil está vendendo mais, pra rotacionar/escolher o melhor.
 router.get('/sales-by-source', requireAdmin, async (req, res) => {
-    const days = Math.max(1, Math.min(365, parseInt(req.query.days, 10) || 30));
+    // período: hoje / ontem / 7 / 30 / total (fuso Brasília, igual ao resto do painel)
+    const TZ = 'America/Sao_Paulo';
+    const period = String(req.query.period || (req.query.days ? req.query.days : '7'));
+    let where;
+    if (period === 'today') {
+        where = `ua.granted_at >= (((NOW() AT TIME ZONE '${TZ}')::date)::timestamp AT TIME ZONE '${TZ}')`;
+    } else if (period === 'yesterday') {
+        where = `ua.granted_at >= ((((NOW() AT TIME ZONE '${TZ}')::date - 1))::timestamp AT TIME ZONE '${TZ}')
+                 AND ua.granted_at < (((NOW() AT TIME ZONE '${TZ}')::date)::timestamp AT TIME ZONE '${TZ}')`;
+    } else if (period === 'total') {
+        where = `TRUE`;
+    } else {
+        const days = Math.max(1, Math.min(365, parseInt(period, 10) || 7));
+        where = `ua.granted_at > NOW() - INTERVAL '${days} days'`;
+    }
     try {
         const { rows } = await db.query(`
             SELECT ua.utm_content,
@@ -989,9 +1003,9 @@ router.get('/sales-by-source', requireAdmin, async (req, res) => {
             WHERE ua.granted_by = 'webhook'
               AND ua.status = 'active'
               AND ua.utm_content ~ '^chat_[0-9]+$'
-              AND ua.granted_at > NOW() - ($1 || ' days')::interval
+              AND ${where}
             GROUP BY ua.utm_content
-            ORDER BY sales DESC, revenue DESC`, [String(days)]);
+            ORDER BY sales DESC, revenue DESC`);
         const ids = rows.map(r => parseInt(String(r.utm_content).replace('chat_', ''), 10)).filter(Boolean);
         const names = {};
         if (ids.length) {
@@ -1002,7 +1016,7 @@ router.get('/sales-by-source', requireAdmin, async (req, res) => {
             const cid = parseInt(String(r.utm_content).replace('chat_', ''), 10);
             return { chat_id: cid, name: names[cid] || ('Chat ' + cid), sales: r.sales, revenue: r.revenue, net: r.net };
         });
-        return res.json({ success: true, days, sources });
+        return res.json({ success: true, period, sources });
     } catch (err) {
         logger.error('[admin-chats] sales-by-source:', err);
         return res.status(500).json({ success: false, error: 'Erro interno' });
