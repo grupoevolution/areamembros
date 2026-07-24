@@ -975,4 +975,38 @@ router.delete('/status-schedule/:sid', requireAdmin, async (req, res) => {
     }
 });
 
+// VENDAS POR CHAT (origem UTM 'chat_<id>' devolvida pela Kirvano). Mostra qual
+// dos chats de funil está vendendo mais, pra rotacionar/escolher o melhor.
+router.get('/sales-by-source', requireAdmin, async (req, res) => {
+    const days = Math.max(1, Math.min(365, parseInt(req.query.days, 10) || 30));
+    try {
+        const { rows } = await db.query(`
+            SELECT ua.utm_content,
+                   COUNT(*)::int AS sales,
+                   COALESCE(SUM(ua.sale_amount), 0)::float AS revenue,
+                   COALESCE(SUM(ua.net_amount), 0)::float AS net
+            FROM user_access ua
+            WHERE ua.granted_by = 'webhook'
+              AND ua.status = 'active'
+              AND ua.utm_content ~ '^chat_[0-9]+$'
+              AND ua.granted_at > NOW() - ($1 || ' days')::interval
+            GROUP BY ua.utm_content
+            ORDER BY sales DESC, revenue DESC`, [String(days)]);
+        const ids = rows.map(r => parseInt(String(r.utm_content).replace('chat_', ''), 10)).filter(Boolean);
+        const names = {};
+        if (ids.length) {
+            const { rows: cr } = await db.query(`SELECT id, name FROM chats WHERE id = ANY($1)`, [ids]);
+            cr.forEach(c => { names[c.id] = c.name; });
+        }
+        const sources = rows.map(r => {
+            const cid = parseInt(String(r.utm_content).replace('chat_', ''), 10);
+            return { chat_id: cid, name: names[cid] || ('Chat ' + cid), sales: r.sales, revenue: r.revenue, net: r.net };
+        });
+        return res.json({ success: true, days, sources });
+    } catch (err) {
+        logger.error('[admin-chats] sales-by-source:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
 module.exports = router;

@@ -9632,6 +9632,7 @@ window.ChatApp = (function() {
                 title: 'Conversa VIP 🔥',
                 subtitle: 'A ' + c.name + ' tá esperando sua mensagem 🔥',
                 ctaText: 'QUERO SER VIP',
+                src: 'chat_' + id,   // carimba a venda com o chat de origem
                 track: { type: 'chat_paywall_click', meta: { chat_id: id } },
             });
         } else {
@@ -10210,6 +10211,7 @@ window.ChatApp = (function() {
             title: 'Conversa VIP 🔥',
             subtitle: sub,
             ctaText: 'QUERO SER VIP',
+            src: cid ? ('chat_' + cid) : null,   // carimba a venda com o chat de origem
             track: { type: 'chat_paywall_click', meta: { chat_id: cid } },
         });
     }
@@ -20484,7 +20486,19 @@ window.MVPaywall = (function () {
             + '<button class="mvpw-ghost" data-mv-close>agora não</button>';
     }
 
+    // origem da venda (ex.: 'chat_7') — carimbada no link do checkout como UTM
+    // pra Kirvano devolver no webhook e o sistema saber QUAL chat vendeu.
+    let _src = null;
+    function withSrc(url) {
+        if (!url || !_src) return url;
+        try {
+            const sep = url.indexOf('?') === -1 ? '?' : '&';
+            const s = encodeURIComponent(_src);
+            return url + sep + 'utm_source=chat&utm_medium=app&utm_content=' + s;
+        } catch (_) { return url; }
+    }
     function checkout(unlock, url) {
+        url = withSrc(url);
         if (url) { try { window.open(url, '_blank', 'noopener'); } catch (_) { window.location.href = url; } return; }
         if (unlock && unlock.product_id && typeof openProductPage === 'function') {
             close();
@@ -20640,6 +20654,7 @@ window.MVPaywall = (function () {
     // Modal de tela cheia (tiktok / uso genérico)
     function openModal(unlock, opts) {
         opts = opts || {};
+        _src = opts.src || null; // origem (ex.: 'chat_7') pro carimbo UTM do checkout
         if (!isActionable(unlock, opts)) {
             try { console.warn('[paywall] sem planos/checkout configurados — popup não aberto. Configure o card 💎 na tela de Chats.'); } catch (_) {}
             return;
@@ -20658,7 +20673,7 @@ window.MVPaywall = (function () {
         m.onclick = (e) => { if (e.target === m) doClose(); };
         m.classList.add('open');
     }
-    function close() { const m = document.getElementById('mvPaywall'); if (m) { m.classList.remove('open'); m.innerHTML = ''; } }
+    function close() { _src = null; const m = document.getElementById('mvPaywall'); if (m) { m.classList.remove('open'); m.innerHTML = ''; } }
 
     return { bannerHTML, renderInline, openModal, close, checkout };
 })();
