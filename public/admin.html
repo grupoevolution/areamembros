@@ -5923,8 +5923,9 @@ a { color: inherit; text-decoration: none; }
                             <div style="font-size:13px; font-weight:800; color:#fff; margin-bottom:8px;">🛒 Carrinho abandonado (abriu o checkout e não pagou)</div>
                             <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; margin-bottom:10px;"><input type="checkbox" id="supAbandonOn" style="width:15px;height:15px;"> Ligar cobrança automática pelo Suporte</label>
                             <div class="form-row" style="margin-bottom:10px;">
-                                <label class="form-label">Cobrar após quantos MINUTOS sem pagamento</label>
-                                <input type="number" class="form-input" id="supAbandonDelay" min="3" max="1440" style="max-width:140px;">
+                                <label class="form-label">Cobrar após quantos SEGUNDOS sem pagamento</label>
+                                <input type="number" class="form-input" id="supAbandonDelay" min="10" max="86400" style="max-width:140px;">
+                                <div class="form-help" style="margin-top:4px;">Recomendado: 60 (o lead ainda está com o checkout aberto nos primeiros segundos — mensagem muito cedo pode tirar ele do pagamento; quem paga não recebe nada). 60 = 1min · 300 = 5min.</div>
                             </div>
                             <div class="form-row" style="margin-bottom:10px;">
                                 <label class="form-label">Mensagem quando veio de uma CONVERSA — variáveis: {nome} {modelo} {saudacao}</label>
@@ -15894,10 +15895,10 @@ async function loadSupportConfig() {
         // carrinho abandonado
         const ab = document.getElementById('supAbandonOn');
         if (ab) ab.checked = cfg.abandon_enabled !== false; // default ligado
-        set('supAbandonDelay', cfg.abandon_delay_minutes || 15);
+        set('supAbandonDelay', cfg.abandon_delay_seconds || (cfg.abandon_delay_minutes ? cfg.abandon_delay_minutes * 60 : 60));
         set('supAbandon', cfg.abandon_template || 'Ei {nome}! Vi que você quase liberou a conversa com a {modelo} 👀 Ela continua aqui te esperando — pra responder você, mandar foto, atender sua chamada… Finaliza o pagamento e continua exatamente de onde parou 🔥');
         set('supAbandonGen', cfg.abandon_generic_template || 'Ei {nome}! Vi que você chegou pertinho de finalizar 👀 Tá tudo separado te esperando. Qualquer dúvida no pagamento me chama AQUI que eu resolvo com você na hora!');
-        set('supUpsellDelay', cfg.upsell_delay_minutes || 60);
+        set('supUpsellDelay', cfg.upsell_delay_minutes || 5);
         set('supUpsell', cfg.upsell_template || 'Ahh e um segredo, {nome}: tem plano que libera a conversa com TODAS as mulheres do app de uma vez — sem limite, todas te respondendo 😈 Olha aqui:');
         if (r.support_chat) {
             const info = document.getElementById('supportChatInfo');
@@ -15941,10 +15942,10 @@ async function saveSupportConfig() {
                 welcome_template: get('supWelcome'),
                 default_offer_ids: offerIds,
                 abandon_enabled: document.getElementById('supAbandonOn')?.checked === true,
-                abandon_delay_minutes: parseInt(get('supAbandonDelay'), 10) || 15,
+                abandon_delay_seconds: parseInt(get('supAbandonDelay'), 10) || 60,
                 abandon_template: get('supAbandon'),
                 abandon_generic_template: get('supAbandonGen'),
-                upsell_delay_minutes: parseInt(get('supUpsellDelay'), 10) || 60,
+                upsell_delay_minutes: parseInt(get('supUpsellDelay'), 10) || 5,
                 upsell_template: get('supUpsell'),
                 upsell_product_id: parseInt(document.getElementById('supUpsellProduct')?.value, 10) || null,
             }),

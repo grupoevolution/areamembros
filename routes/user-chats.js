@@ -1517,11 +1517,11 @@ const SUPPORT_DEFAULTS = {
     // CARRINHO ABANDONADO: abriu o checkout identificado e não pagou →
     // o suporte cobra citando a modelo ({modelo}) e depois oferece o plano.
     abandon_enabled: true,
-    abandon_delay_minutes: 15,
+    abandon_delay_seconds: 60,
     abandon_template: 'Ei {nome}! Vi que você quase liberou a conversa com a {modelo} 👀 Ela continua aqui te esperando — pra responder você, mandar foto, atender sua chamada… Finaliza o pagamento e continua exatamente de onde parou 🔥',
     abandon_generic_template: 'Ei {nome}! Vi que você chegou pertinho de finalizar 👀 Tá tudo separado te esperando. Qualquer dúvida no pagamento me chama AQUI que eu resolvo com você na hora!',
     abandon_cta_label: 'CONTINUAR DE ONDE PAREI 🔥',
-    upsell_delay_minutes: 60,
+    upsell_delay_minutes: 5,
     upsell_template: 'Ahh e um segredo, {nome}: tem plano que libera a conversa com TODAS as mulheres do app de uma vez — sem limite, todas te respondendo 😈 Olha aqui:',
     upsell_product_id: null,
 };
@@ -1674,8 +1674,11 @@ async function processAbandonedCheckouts() {
     const cfg = await getSupportConfig();
     if (cfg.abandon_enabled !== true) return [];
     const out = [];
-    const delay = Math.max(3, parseInt(cfg.abandon_delay_minutes, 10) || 15);
-    const upDelay = Math.max(5, parseInt(cfg.upsell_delay_minutes, 10) || 60);
+    // delay da 1ª cobrança em SEGUNDOS (dono quer quase-imediato; config
+    // antiga em minutos é convertida). Piso 10s — o worker checa a cada ~15s.
+    const delaySec = Math.max(10, parseInt(cfg.abandon_delay_seconds, 10)
+        || (parseInt(cfg.abandon_delay_minutes, 10) || 1) * 60);
+    const upDelay = Math.max(1, parseInt(cfg.upsell_delay_minutes, 10) || 5);
 
     // Etapa 1 — cobrança do abandono (claim atômico; intents velhas >48h não
     // cobram mais — mensagem requentada de dias atrás só queima a isca)
@@ -1684,10 +1687,10 @@ async function processAbandonedCheckouts() {
         WHERE id IN (
             SELECT id FROM checkout_intents
              WHERE completed = false AND abandon_sent_at IS NULL
-               AND created_at <= NOW() - make_interval(mins => $1)
+               AND created_at <= NOW() - make_interval(secs => $1)
                AND created_at > NOW() - INTERVAL '48 hours'
              ORDER BY created_at LIMIT 20 FOR UPDATE SKIP LOCKED
-        ) RETURNING *`, [delay]);
+        ) RETURNING *`, [delaySec]);
     for (const it of due) {
         try {
             const email = String(it.customer_email).toLowerCase();

@@ -247,10 +247,10 @@ router.put('/support-config', requireAdmin, async (req, res) => {
                 .map(x => parseInt(x, 10)).filter(Boolean).slice(0, 3),
             // carrinho abandonado (abriu o checkout e não pagou)
             abandon_enabled: b.abandon_enabled === true,
-            abandon_delay_minutes: Math.max(3, Math.min(1440, parseInt(b.abandon_delay_minutes, 10) || 15)),
+            abandon_delay_seconds: Math.max(10, Math.min(86400, parseInt(b.abandon_delay_seconds, 10) || 60)),
             abandon_template: String(b.abandon_template || '').trim().slice(0, 1000),
             abandon_generic_template: String(b.abandon_generic_template || '').trim().slice(0, 1000),
-            upsell_delay_minutes: Math.max(5, Math.min(2880, parseInt(b.upsell_delay_minutes, 10) || 60)),
+            upsell_delay_minutes: Math.max(1, Math.min(2880, parseInt(b.upsell_delay_minutes, 10) || 5)),
             upsell_template: String(b.upsell_template || '').trim().slice(0, 1000),
             upsell_product_id: parseInt(b.upsell_product_id, 10) || null,
         };
