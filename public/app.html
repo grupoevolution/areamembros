@@ -19053,6 +19053,16 @@ function executeFunnelStep(step, funnelSlug, email) {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 credentials: 'include', body: JSON.stringify({ visitor_id: vid }),
             }).then(r => r.json()).then(d => {
+                // Chat VIP travado: o roteiro N\u00c3O inicia (lead sem acesso n\u00e3o
+                // pode ler) \u2014 ent\u00e3o REVELA a conversa na lista, assim ela pelo
+                // menos aparece e o toque abre a oferta de VIP (antes: chegava
+                // a notifica\u00e7\u00e3o e a conversa n\u00e3o existia em lugar nenhum).
+                if (d && d.locked && !d.started) {
+                    fetch('/api/user/chats/' + cid + '/reveal', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include', body: JSON.stringify({ visitor_id: vid }),
+                    }).catch(() => {});
+                }
                 const nm = (d && d.chat && d.chat.name) || step.chat_name || 'Mensagem';
                 const av = (d && d.chat && d.chat.avatar_url) || step.chat_avatar || null;
                 if (window.MVNotify) MVNotify.push({
@@ -19762,6 +19772,15 @@ document.addEventListener('keydown', function(e) {
             ? 'Pagamento seguro · o acesso chega nesse e-mail'
             : '100% gratuito · sem cartão · acesso imediato';
     }
+    // Identificador anônimo do aparelho (o MESMO do ChatApp): vai junto no
+    // promote pra AMARRAR a conversa anônima ao e-mail NA HORA — sem isso, se
+    // o lead trocar de navegador (webview do WhatsApp → Safari) ou de aba, o
+    // histórico da conversa "some" (o servidor não acha mais a sessão dele).
+    function mvVisitorId() {
+        try { return localStorage.getItem('mv_chat_visitor') || window.VID || ''; }
+        catch (_) { return window.VID || ''; }
+    }
+
     window.MV_askEmailForCheckout = function (url) {
         if (!window.MV_ANONYMOUS) {
             try { window.open(url, '_blank', 'noopener'); } catch (_) { window.location.href = url; }
@@ -19825,14 +19844,32 @@ document.addEventListener('keydown', function(e) {
             }
         } catch(_) {}
         if (pc) {
+            let opened = false;
             if (preTab && !preTab.closed) {
-                try { preTab.location.href = pc; } catch (_) { window.location.href = pc; }
-            } else {
-                // sem aba pré-aberta (bloqueada): tenta abrir agora; último
-                // recurso = redirect direto (sai do app, mas a compra anda)
-                let w = null;
-                try { w = window.open(pc, '_blank'); } catch(_) {}
-                if (!w) window.location.href = pc;
+                try { preTab.location.href = pc; opened = true; } catch (_) {}
+            }
+            if (!opened) {
+                try { const w = window.open(pc, '_blank'); if (w) opened = true; } catch(_) {}
+            }
+            if (!opened) {
+                // Popup bloqueado (iOS Safari costuma bloquear). NÃO navega o
+                // app pro checkout (era isso que fazia o "voltar" recarregar
+                // tudo e parecer que a conta sumiu) — o modal vira um BOTÃO-
+                // LINK, e toque em link o navegador nunca bloqueia.
+                const card = modal.querySelector('.mv-login-card');
+                if (card) {
+                    card.innerHTML = '<h2 class="mv-login-title" style="margin-bottom:10px;">Tudo certo ✅</h2>'
+                        + '<p class="mv-login-sub" style="margin-bottom:18px;">Seu acesso vai ser liberado no e-mail que você digitou. Agora é só pagar:</p>';
+                    const a = document.createElement('a');
+                    a.href = pc; a.target = '_blank'; a.rel = 'noopener';
+                    a.textContent = 'IR PRO PAGAMENTO 🔒';
+                    a.style.cssText = 'display:block;text-align:center;background:linear-gradient(90deg,#e50914,#ff3b30);color:#fff;font-size:16px;font-weight:800;letter-spacing:.5px;padding:16px;border-radius:12px;text-decoration:none;';
+                    a.addEventListener('click', () => setTimeout(() => { try { modal.classList.remove('is-open'); } catch(_) {} }, 400));
+                    card.appendChild(a);
+                    modal.classList.add('is-open'); // fica aberto com o botão-link
+                } else {
+                    window.location.href = pc; // último recurso
+                }
             }
         }
         // Dispara sequência do funíl (cascata pós-e-mail)
@@ -19871,7 +19908,7 @@ document.addEventListener('keydown', function(e) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ email, funnel_slug: window.MV_FUNNEL_SLUG, campanha: pendingCampaign }),
+                body: JSON.stringify({ email, funnel_slug: window.MV_FUNNEL_SLUG, campanha: pendingCampaign, visitor_id: mvVisitorId() }),
             });
             const data = await r.json();
             if (data.success) {
@@ -19905,7 +19942,7 @@ document.addEventListener('keydown', function(e) {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
-                        body: JSON.stringify({ email, skipSuggestion: true, funnel_slug: window.MV_FUNNEL_SLUG, campanha: pendingCampaign }),
+                        body: JSON.stringify({ email, skipSuggestion: true, funnel_slug: window.MV_FUNNEL_SLUG, campanha: pendingCampaign, visitor_id: mvVisitorId() }),
                     });
                     const d2 = await r2.json();
                     if (d2.success) {
