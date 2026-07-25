@@ -129,10 +129,12 @@ router.get('/dashboard', requireAdmin, async (req, res) => {
                     (SELECT COUNT(*)::int FROM webhook_logs WHERE received_at > NOW() - INTERVAL '7 days' AND processed = true AND UPPER(COALESCE(event_type,'')) LIKE '%APPROVED%') as sales_7d,
                     (SELECT COUNT(*)::int FROM webhook_logs WHERE received_at > NOW() - INTERVAL '30 days' AND processed = true AND UPPER(COALESCE(event_type,'')) LIKE '%APPROVED%') as sales_30d
             `),
-            // Vendas por dia (últimos 30 dias) — pra gráfico
+            // Vendas por dia (últimos 30 dias) — pra gráfico. Dia em fuso
+            // BRASÍLIA (DATE puro cortava em UTC: venda de 22h caía no dia
+            // seguinte só neste gráfico, divergindo do resto do painel)
             db.query(`
                 SELECT
-                    DATE(received_at) as day,
+                    (received_at AT TIME ZONE 'America/Sao_Paulo')::date as day,
                     COUNT(*)::int as count
                 FROM webhook_logs
                 WHERE received_at > NOW() - INTERVAL '30 days' AND processed = true
@@ -199,7 +201,7 @@ router.get('/results', requireAdmin, async (req, res) => {
         const TZ = 'America/Sao_Paulo';
         const since = `NOW() - INTERVAL '${days + 1} days'`; // 1 dia de folga pro fuso
 
-        const [acc, emails, installs, sales, topProds] = await Promise.all([
+        const [acc, emails, installs, sales, topProds, installsTotal] = await Promise.all([
             // acessos = aberturas do app (1 session_start por abertura)
             db.query(`
                 SELECT (created_at AT TIME ZONE '${TZ}')::date AS day, COUNT(*)::int AS n
@@ -231,13 +233,22 @@ router.get('/results', requireAdmin, async (req, res) => {
                     ORDER BY gateway, sale_id, granted_at
                 ) t
                 GROUP BY 1`),
-            // produtos mais vendidos do período (por item vendido)
+            // produtos mais vendidos do período — MESMOS dias-calendário
+            // (Brasília) da série, não janela rolante de NOW()
             db.query(`
                 SELECT p.name, COUNT(*)::int AS n, COALESCE(SUM(ua.net_amount), 0)::float AS net
                 FROM user_access ua
                 JOIN products p ON p.id = ua.product_id
-                WHERE ua.granted_by = 'webhook' AND ua.granted_at > NOW() - INTERVAL '${days} days'
+                WHERE ua.granted_by = 'webhook'
+                  AND (ua.granted_at AT TIME ZONE '${TZ}')::date > ((NOW() AT TIME ZONE '${TZ}')::date - ${days})
                 GROUP BY p.name ORDER BY n DESC, net DESC LIMIT 8`),
+            // total de pessoas DISTINTAS no período inteiro — somar os dias
+            // contava a mesma pessoa 1x POR DIA que ela abriu o app
+            db.query(`
+                SELECT COUNT(DISTINCT COALESCE(LOWER(customer_email), metadata->>'vid'))::int AS n
+                FROM tracking_events
+                WHERE event_type = 'session_start' AND metadata->>'standalone' = 'true'
+                  AND (created_at AT TIME ZONE '${TZ}')::date > ((NOW() AT TIME ZONE '${TZ}')::date - ${days})`),
         ]);
 
         // monta a série contínua de dias (Brasília), do mais antigo pro hoje
@@ -269,6 +280,9 @@ router.get('/results', requireAdmin, async (req, res) => {
             installs: a.installs + r.installs, sales: a.sales + r.sales,
             revenue: a.revenue + r.revenue,
         }), { accesses: 0, emails: 0, installs: 0, sales: 0, revenue: 0 });
+        // "instalou o app" no card = pessoas únicas no PERÍODO (a série por
+        // dia continua distinta POR DIA, mas o total não soma repetidos)
+        totals.installs = installsTotal.rows[0] ? installsTotal.rows[0].n : totals.installs;
 
         return res.json({ success: true, days, series, totals, top_products: topProds.rows, today: series[series.length - 1] || null });
     } catch (err) {

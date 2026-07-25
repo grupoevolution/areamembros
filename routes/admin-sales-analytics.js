@@ -754,10 +754,12 @@ router.get('/pwa-funnel', requireAdmin, async (req, res) => {
                             OR (event_type = 'session_start' AND metadata->>'standalone' = 'true'))
                        AND COALESCE(customer_email, metadata->>'vid') IS NOT NULL
                        AND ${W2}) AS standalone_users,
+                  -- só UM evento por abertura: cada sessão instalada dispara
+                  -- pwa_opened_standalone E session_start(standalone) — somar
+                  -- os dois contava cada abertura em DOBRO
                   (SELECT COUNT(*)::int
                      FROM tracking_events
-                     WHERE (event_type = 'pwa_opened_standalone'
-                            OR (event_type = 'session_start' AND metadata->>'standalone' = 'true'))
+                     WHERE event_type = 'pwa_opened_standalone'
                        AND ${W2}) AS standalone_opens_raw,
                   (SELECT COUNT(*)::int FROM push_subscriptions) AS push_total,
                   (SELECT COUNT(DISTINCT LOWER(customer_email))::int FROM push_subscriptions
