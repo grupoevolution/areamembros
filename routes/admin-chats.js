@@ -981,17 +981,20 @@ router.get('/sales-by-source', requireAdmin, async (req, res) => {
     // período: hoje / ontem / 7 / 30 / total (fuso Brasília, igual ao resto do painel)
     const TZ = 'America/Sao_Paulo';
     const period = String(req.query.period || (req.query.days ? req.query.days : '7'));
+    // Janela por created_at (data da 1ª venda), NÃO granted_at: a renovação
+    // de assinatura atualiza granted_at = NOW() e fazia a venda ANTIGA
+    // reaparecer como "venda de hoje" do chat a cada ciclo.
     let where;
     if (period === 'today') {
-        where = `ua.granted_at >= (((NOW() AT TIME ZONE '${TZ}')::date)::timestamp AT TIME ZONE '${TZ}')`;
+        where = `ua.created_at >= (((NOW() AT TIME ZONE '${TZ}')::date)::timestamp AT TIME ZONE '${TZ}')`;
     } else if (period === 'yesterday') {
-        where = `ua.granted_at >= ((((NOW() AT TIME ZONE '${TZ}')::date - 1))::timestamp AT TIME ZONE '${TZ}')
-                 AND ua.granted_at < (((NOW() AT TIME ZONE '${TZ}')::date)::timestamp AT TIME ZONE '${TZ}')`;
+        where = `ua.created_at >= ((((NOW() AT TIME ZONE '${TZ}')::date - 1))::timestamp AT TIME ZONE '${TZ}')
+                 AND ua.created_at < (((NOW() AT TIME ZONE '${TZ}')::date)::timestamp AT TIME ZONE '${TZ}')`;
     } else if (period === 'total') {
         where = `TRUE`;
     } else {
         const days = Math.max(1, Math.min(365, parseInt(period, 10) || 7));
-        where = `ua.granted_at > NOW() - INTERVAL '${days} days'`;
+        where = `ua.created_at > NOW() - INTERVAL '${days} days'`;
     }
     try {
         const { rows } = await db.query(`

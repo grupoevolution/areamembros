@@ -29,6 +29,14 @@ window.loadHls = (function () {
     let p = null;
     return function () {
         if (window.Hls) return Promise.resolve();
+        // iPhone/Safari tocam HLS NATIVO — não baixa os 125KB à toa (os
+        // players já checam canPlayType antes, mas o "pré-aquecimento" das
+        // abas chamava loadHls incondicional e anulava o ganho no iOS)
+        try {
+            if (document.createElement('video').canPlayType('application/vnd.apple.mpegurl')) {
+                return Promise.resolve();
+            }
+        } catch (_) {}
         if (p) return p;
         p = new Promise((res) => {
             const s = document.createElement('script');
@@ -9430,7 +9438,7 @@ window.ChatApp = (function() {
                 const cta = document.getElementById('caStoryVipCta');
                 if (cta) cta.addEventListener('click', () => {
                     try { window.TRACK && TRACK.event('chat_paywall_click', { chat_id: g.chat_id, ctx: 'story' }); } catch (_) {}
-                    if (url) { try { window.open(url, '_blank', 'noopener'); } catch (_) { window.location.href = url; } }
+                    if (url) { window.MV_buy(url, g.chat_id ? 'chat_' + g.chat_id : null); }
                     else if (u.product_id && typeof openProductPage === 'function') { closeStory(); openProductPage(u.product_id); }
                 });
                 const later = document.getElementById('caStoryVipLater');
@@ -9794,6 +9802,7 @@ window.ChatApp = (function() {
                 // Personalizado com o nome — mas o plano libera TODAS as conversas VIP.
                 try { window.TRACK && TRACK.event('chat_paywall_open', { chat_id: id, ctx: 'open' }); } catch (_) {}
                 MVPaywall.renderInline(lk, data.permissions.unlock || {}, {
+                    src: 'chat_' + id,
                     icon: 'lock',
                     eyebrow: 'ACESSO EXCLUSIVO',
                     title: 'Conversa VIP 🔥',
@@ -10107,9 +10116,10 @@ window.ChatApp = (function() {
                 try { window.TRACK && TRACK.event('chat_cta_click', { chat_id: CUR && CUR.id, link: link || null, product_id: pid || null, label: (m.content || '').slice(0, 80) }); } catch (_) {}
                 if (pid && typeof openProductPage === 'function') { try { openProductPage(parseInt(pid, 10)); } catch(_) {} return; }
                 if (!link) return;
-                // caminho interno (/?p=, /?chat=, /) navega no app; URL externa abre nova aba
+                // caminho interno (/?p=, /?chat=, /) navega no app; URL externa
+                // = checkout → MV_buy (carimbo utm do chat + e-mail se anônimo)
                 if (String(link).charAt(0) === '/') { if (typeof mvNavigate === 'function') mvNavigate(link); else window.location.href = link; }
-                else window.open(link, '_blank', 'noopener');
+                else window.MV_buy(link, CUR && CUR.id ? 'chat_' + CUR.id : null);
             });
         } else if (m.type === 'call') {
             // "Ela liga": pílula no chat + dispara a chamada recebida (VideoCall).
@@ -10297,7 +10307,7 @@ window.ChatApp = (function() {
             const nav = document.getElementById('bottomNav'); if (nav) nav.style.display = 'flex';
             switchScreen('home'); openProductPage(pid); return;
         }
-        if (url) window.open(url, '_blank', 'noopener');
+        if (url) window.MV_buy(url, CUR && CUR.id ? 'chat_' + CUR.id : null);
     }
 
     // ── GATE de mídia (funil principal): e-mail → instalar PWA → libera ──
@@ -10319,6 +10329,10 @@ window.ChatApp = (function() {
         // gate de PWA aparece do mesmo jeito (antes ele era pulado por completo
         // pra lead identificado — o popup de instalar nunca aparecia).
         if (identified()) { gateInstall(action); return; }
+        // Funil "e-mail só na compra": NENHUMA barreira de e-mail antes do
+        // checkout (o e-mail é pedido no clique de comprar) — a mídia abre
+        // com o mesmo tratamento de quem já se identificou.
+        if (window.MV_emailFree && window.MV_emailFree()) { gateInstall(action); return; }
         gateEmail(action); // pede e-mail → instalar → libera
     }
     function gateOverlay(inner) {
@@ -11501,7 +11515,7 @@ window.GroupApp = (function () {
                 const chosen = selPass ? pass : plans[sel];
                 if (!chosen || !chosen.checkout_url) return;
                 try { window.TRACK && TRACK.event('group_paywall_click', { group_id: CUR && CUR.id, plan: chosen.name, pass: selPass }); } catch (_) {}
-                try { window.open(chosen.checkout_url, '_blank', 'noopener'); } catch (_) { window.location.href = chosen.checkout_url; }
+                window.MV_buy(chosen.checkout_url, CUR && CUR.id ? 'group_' + CUR.id : null);
             });
             ov.querySelector('#gaPlansNo').addEventListener('click', () => { ov.style.display = 'none'; });
             ov.onclick = (e) => { if (e.target === ov) ov.style.display = 'none'; };
@@ -11545,7 +11559,7 @@ window.GroupApp = (function () {
             + '</div>';
         ov.querySelector('#gaPassGo').addEventListener('click', () => {
             try { window.TRACK && TRACK.event('group_paywall_click', { ctx: 'pass_banner', pass: true }); } catch (_) {}
-            try { window.open(p.checkout_url, '_blank', 'noopener'); } catch (_) { window.location.href = p.checkout_url; }
+            window.MV_buy(p.checkout_url, 'group_pass');
         });
         ov.querySelector('#gaPassNo').addEventListener('click', () => { ov.style.display = 'none'; });
         ov.onclick = (e) => { if (e.target === ov) ov.style.display = 'none'; };
@@ -14189,7 +14203,7 @@ function renderPlanCard(plan) {
         const upgradeBox = (up && up.checkout_url)
             ? '<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.1);padding-top:10px;">'
               + '<div style="font-size:12px;font-weight:800;color:#f5d67b;">💎 Vire PREMIUM por ' + preco(up.price) + ' — status + vídeos + grupo VIP inclusos</div>'
-              + '<button onclick="window.open(\'' + escapeAttrData(up.checkout_url) + '\',\'_blank\',\'noopener\')" style="margin-top:8px;width:100%;background:linear-gradient(90deg,#d4af37,#f5d67b);border:none;color:#241a05;font-size:12.5px;font-weight:900;letter-spacing:.4px;padding:11px;border-radius:10px;cursor:pointer;">FAZER UPGRADE 💎</button>'
+              + '<button onclick="window.MV_buy(\'' + escapeAttrData(up.checkout_url) + '\')" style="margin-top:8px;width:100%;background:linear-gradient(90deg,#d4af37,#f5d67b);border:none;color:#241a05;font-size:12.5px;font-weight:900;letter-spacing:.4px;padding:11px;border-radius:10px;cursor:pointer;">FAZER UPGRADE 💎</button>'
               + '</div>'
             : '';
         return '<div class="acervo-card" style="border:1px solid rgba(200,205,215,.4);background:linear-gradient(135deg,rgba(58,62,70,.5),rgba(22,24,28,.75));border-radius:14px;padding:14px 16px;">'
@@ -14411,7 +14425,7 @@ function renderLibraryItem(product) {
         const recallMsg = product.recall_message || ('A ' + (product.model_name || 'modelo') + ' tá te chamando de novo...');
         // Fase H: window.location.href dropava a SPA (tela branca + relogin). Abre em nova aba.
         const onclick = checkoutUrl
-            ? ('window.open(' + JSON.stringify(checkoutUrl) + ',"_blank","noopener,noreferrer")')
+            ? ('window.MV_buy(' + JSON.stringify(checkoutUrl) + ')')
             : ("showToast('library','⚠️','Checkout indisponível agora');");
         return ''
             + '<div class="acervo-card acervo-card--recall" onclick="' + onclick + '">'
@@ -15345,7 +15359,7 @@ function openLibraryItem(productId) {
     // Fase H: nova aba em vez de window.location.href (que dropava a SPA = tela branca).
     if (product.product_type === 'video_call' && product.consumed) {
         if (product.checkout_url) {
-            window.open(product.checkout_url, '_blank', 'noopener,noreferrer');
+            window.MV_buy(product.checkout_url);
         } else {
             showToast('library', '⚠️', 'Checkout indisponível agora');
         }
@@ -15389,8 +15403,8 @@ function buyProduct(productId) {
         showToast('product', '⚠️', 'Checkout indisponível no momento');
         return;
     }
-    // Abre checkout do gateway em nova aba
-    window.open(product.checkout.checkout_url, '_blank', 'noopener,noreferrer');
+    // Abre checkout do gateway (MV_buy: carimbo utm + e-mail se anônimo)
+    window.MV_buy(product.checkout.checkout_url);
     showToast('product', '💳', 'Abrindo checkout...');
 }
 
@@ -18771,7 +18785,7 @@ body.is-logged #pwaLandingBanner, body.pwa-installed #pwaLandingBanner { display
                 return switchScreen('calls');
             }
             if (type === 'external' && call.redirect_link) {
-                window.open(call.redirect_link, '_blank', 'noopener');
+                window.MV_buy(call.redirect_link);
                 return;
             }
         } catch (e) {
@@ -18893,9 +18907,18 @@ window.tryTriggerCallAfterLogin = async function() {
                         });
                     } catch(_) {}
                 }
-                // Inicia/retoma o progresso
-                if (!saved || saved.slug !== effectiveRef || (saved.email && email && saved.email !== email)) {
+                // Inicia/retoma o progresso. E-mail ANÔNIMO (placeholder
+                // @preview.local, muda a cada visita) NÃO conta como troca de
+                // usuário — senão o progresso resetava toda visita e a
+                // sequência inteira replayava (chamada tocando de novo etc.),
+                // inclusive logo após o lead dar o e-mail real.
+                const _anonMail = (m) => !m || /@preview\.local$/i.test(String(m));
+                if (!saved || saved.slug !== effectiveRef
+                    || (!_anonMail(saved.email) && !_anonMail(email) && saved.email !== email)) {
                     saved = { slug: effectiveRef, email: email || '', startedAt: Date.now(), done: [] };
+                    saveProgress(saved);
+                } else if (saved.email !== (email || '')) {
+                    saved.email = email || saved.email;
                     saveProgress(saved);
                 }
                 const doneSet = new Set(saved.done || []);
@@ -18920,7 +18943,7 @@ window.tryTriggerCallAfterLogin = async function() {
                             // interação já aconteceu: marca a espera como cumprida
                             const cur = loadProgress() || saved;
                             cur.done = Array.from(new Set([...(cur.done || []), step.id]));
-                            if (cur.done.length >= totalSteps) clearProgress(); else saveProgress(cur);
+                            if (cur.done.length >= totalSteps && window.MV_ANONYMOUS !== true) clearProgress(); else saveProgress(cur); // anônimo NUNCA limpa: o progresso é a única trava contra replay (o cookie do funil fica)
                             doneSet.add(step.id);
                             continue;
                         }
@@ -18943,11 +18966,12 @@ window.tryTriggerCallAfterLogin = async function() {
                         executeFunnelStep(step, effectiveRef, email);
                         const cur = loadProgress() || saved;
                         cur.done = Array.from(new Set([...(cur.done || []), step.id]));
-                        if (cur.done.length >= totalSteps) clearProgress();
+                        // anônimo NUNCA limpa o progresso (é a trava anti-replay)
+                        if (cur.done.length >= totalSteps && window.MV_ANONYMOUS !== true) clearProgress();
                         else saveProgress(cur);
                     }, wait);
                 }
-                if (pending === 0) clearProgress();
+                if (pending === 0 && window.MV_ANONYMOUS !== true) clearProgress();
                 // Limpa o cookie do funíl pra não disparar de novo — SÓ quando o
                 // lead JÁ está identificado (deu o e-mail; MV_ANONYMOUS=false). Pro
                 // lead ANÔNIMO o cookie é a TRAVA que limita quais conversas
@@ -19223,6 +19247,37 @@ window.MV_emailFree = function () {
             && window.MV_FUNNEL_DATA && window.MV_FUNNEL_DATA.behavior
             && window.MV_FUNNEL_DATA.behavior.email_gate === 'purchase';
     } catch (_) { return false; }
+};
+
+// ═══════════════ HELPERS GLOBAIS DE COMPRA ═══════════════
+// MV_stampUtm: carimba a ORIGEM da venda (utm_content=chat_7 etc.) no link do
+// checkout — a Kirvano devolve no webhook e o painel sabe qual chat vendeu.
+// Regras: não atropela utm_content que o dono já configurou no link, e insere
+// os parâmetros ANTES de #fragmento (senão o gateway ignora tudo).
+window.MV_stampUtm = function (url, src) {
+    if (!url || !src) return url;
+    try {
+        if (/[?&]utm_content=/.test(url)) return url;
+        let hash = '';
+        const hi = url.indexOf('#');
+        if (hi >= 0) { hash = url.slice(hi); url = url.slice(0, hi); }
+        const sep = url.indexOf('?') === -1 ? '?' : '&';
+        return url + sep + 'utm_source=chat&utm_medium=app&utm_content=' + encodeURIComponent(src) + hash;
+    } catch (_) { return url; }
+};
+// MV_buy: TODO clique de checkout passa aqui. Se o lead ainda é ANÔNIMO
+// (funil sem e-mail), pede o e-mail NESTE clique — 1 campo, ele já decidiu
+// comprar — e só então abre o checkout. Sem isso o cliente pagava e o app
+// não tinha e-mail pra entregar a compra (o acesso é liberado por e-mail).
+window.MV_buy = function (url, src) {
+    if (!url) return;
+    url = window.MV_stampUtm(url, src);
+    if (window.MV_ANONYMOUS === true && /^https?:\/\//i.test(url)
+        && typeof window.MV_askEmailForCheckout === 'function') {
+        window.MV_askEmailForCheckout(url);
+        return;
+    }
+    try { window.open(url, '_blank', 'noopener'); } catch (_) { window.location.href = url; }
 };
 
 // ═══════════════ DESTINO DE ENTRADA DO FUNIL ═══════════════
@@ -19673,8 +19728,40 @@ document.addEventListener('keydown', function(e) {
         modal.classList.remove('is-open');
         errEl.classList.remove('show');
         sugEl.classList.remove('show');
+        pendingCheckout = null;
+        setCheckoutCopy(false);
     }
     window.MV_openLoginModal = openModal;
+
+    // ── MODO CHECKOUT: e-mail no CLIQUE de comprar (funil sem e-mail) ──
+    // O lead anônimo tocou num botão de compra: este mesmo modal abre com a
+    // copy de pagamento, promove a sessão pro e-mail digitado e SÓ ENTÃO abre
+    // o checkout (com o e-mail pré-preenchido). Assim a venda já nasce
+    // amarrada ao e-mail e o acesso libera sozinho no app após o webhook.
+    let pendingCheckout = null;
+    const titleEl = modal.querySelector('.mv-login-title');
+    const subEl = modal.querySelector('.mv-login-sub');
+    const hintEl = modal.querySelector('.mv-login-hint');
+    function setCheckoutCopy(on) {
+        if (titleEl) titleEl.textContent = on ? 'Falta só o seu e-mail' : 'Acesso exclusivo';
+        if (subEl) subEl.textContent = on
+            ? 'Seu acesso vai ser liberado NESSE e-mail assim que o pagamento confirmar'
+            : 'Digite seu e-mail pra desbloquear todo o conteúdo dela';
+        if (submitBtn && !submitBtn.disabled) submitBtn.textContent = on ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
+        if (hintEl) hintEl.textContent = on
+            ? 'Pagamento seguro · o acesso chega nesse e-mail'
+            : '100% gratuito · sem cartão · acesso imediato';
+    }
+    window.MV_askEmailForCheckout = function (url) {
+        if (!window.MV_ANONYMOUS) {
+            try { window.open(url, '_blank', 'noopener'); } catch (_) { window.location.href = url; }
+            return;
+        }
+        pendingCheckout = url;
+        setCheckoutCopy(true);
+        modal.classList.add('is-open');
+        setTimeout(() => emailInput && emailInput.focus(), 200);
+    };
 
     closeBtn.addEventListener('click', closeModal);
     modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
@@ -19706,6 +19793,61 @@ document.addEventListener('keydown', function(e) {
         openModal();
     }, true);
 
+    // Pós-promoção (e-mail aceito): comum ao submit normal e ao "usar o que
+    // digitei". Se havia um CHECKOUT pendente (modo compra), NÃO dispara a
+    // sequência do funil agora — chamada tocando no meio do pagamento mata a
+    // venda — só marca a conversão e abre o checkout com o e-mail preenchido.
+    function promoteSuccess(data) {
+        const pc = pendingCheckout; // captura ANTES do closeModal (que zera)
+        window.MV_ANONYMOUS = false;
+        window.currentUserEmail = data.email;
+        document.body.classList.remove('funnel-mode');
+        closeModal();
+        try { localStorage.removeItem('mv_pending_campaign'); } catch(_) {}
+        // Push: pede permissão com o gesto ainda fresco e re-subscreve pra
+        // vincular a subscription ao e-mail real.
+        try {
+            if (window.PUSH && 'Notification' in window) {
+                if (Notification.permission === 'granted') PUSH.subscribe();
+                else if (Notification.permission !== 'denied') PUSH.askPermission().then(ok => { if (ok) PUSH.subscribe(); });
+            }
+        } catch(_) {}
+        if (pc) {
+            const cref = window.MV_FUNNEL_REF || window.MV_FUNNEL_SLUG;
+            if (cref) {
+                try {
+                    fetch('/api/user/funnel/' + encodeURIComponent(cref) + '/convert', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include', body: JSON.stringify({ email: data.email }),
+                    });
+                } catch(_) {}
+            }
+            let px = pc;
+            try {
+                let h = ''; const i = px.indexOf('#');
+                if (i >= 0) { h = px.slice(i); px = px.slice(0, i); }
+                px += (px.indexOf('?') === -1 ? '?' : '&') + 'email=' + encodeURIComponent(data.email) + h;
+            } catch(_) {}
+            // window.open pós-fetch pode ser bloqueado (sem gesto) → cai no
+            // redirect direto; sem 'noopener' aqui porque ele faria open()
+            // retornar null SEMPRE e o fallback abriria o checkout 2x.
+            let w = null;
+            try { w = window.open(px, '_blank'); } catch(_) {}
+            if (!w) window.location.href = px;
+        } else if (typeof window.tryTriggerCallAfterLogin === 'function') {
+            // Dispara sequência do funíl
+            window.tryTriggerCallAfterLogin();
+        }
+        // Grupo pendente: o lead clicou pra ENTRAR num grupo, deu o e-mail →
+        // agora abre o grupo que ele queria.
+        if (window.MV_pendingGroup && window.GroupApp) {
+            const gid = window.MV_pendingGroup; window.MV_pendingGroup = null;
+            setTimeout(() => { try { GroupApp.open(gid); } catch (_) {} }, 250);
+        }
+        // Limpa cookie de funíl pra próximas sessões serem normais
+        document.cookie = 'mv_funnel=; path=/; max-age=0; SameSite=Lax';
+    }
+
     // Submit do login no modal: promove sessão anônima → email real
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -19727,33 +19869,7 @@ document.addEventListener('keydown', function(e) {
             });
             const data = await r.json();
             if (data.success) {
-                window.MV_ANONYMOUS = false;
-                window.currentUserEmail = data.email;
-                document.body.classList.remove('funnel-mode');
-                closeModal();
-                // Fase K2 — limpa campanha pendente (já resgatada no backend)
-                try { localStorage.removeItem('mv_pending_campaign'); } catch(_) {}
-                // Re-engajamento: pede permissão de push AGORA (gesto do usuário
-                // ainda fresco) e re-subscreve pra VINCULAR a subscription ao
-                // e-mail real — sem isso o push server-side do funil não acha o lead.
-                try {
-                    if (window.PUSH && 'Notification' in window) {
-                        if (Notification.permission === 'granted') PUSH.subscribe();
-                        else if (Notification.permission !== 'denied') PUSH.askPermission().then(ok => { if (ok) PUSH.subscribe(); });
-                    }
-                } catch(_) {}
-                // Dispara sequência do funíl
-                if (typeof window.tryTriggerCallAfterLogin === 'function') {
-                    window.tryTriggerCallAfterLogin();
-                }
-                // Grupo pendente: o lead clicou pra ENTRAR num grupo, deu o
-                // e-mail → agora abre o grupo que ele queria.
-                if (window.MV_pendingGroup && window.GroupApp) {
-                    const gid = window.MV_pendingGroup; window.MV_pendingGroup = null;
-                    setTimeout(() => { try { GroupApp.open(gid); } catch (_) {} }, 250);
-                }
-                // Limpa cookie de funíl pra próximas sessões serem normais
-                document.cookie = 'mv_funnel=; path=/; max-age=0; SameSite=Lax';
+                promoteSuccess(data);
                 return;
             }
             if (data.needsConfirmation && data.suggestion) {
@@ -19764,7 +19880,7 @@ document.addEventListener('keydown', function(e) {
                     + '</div>';
                 sugEl.classList.add('show');
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'DESBLOQUEAR ACESSO';
+                submitBtn.textContent = pendingCheckout ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
                 document.getElementById('mvLoginSugYes').addEventListener('click', () => {
                     emailInput.value = data.suggestion;
                     sugEl.classList.remove('show');
@@ -19782,25 +19898,12 @@ document.addEventListener('keydown', function(e) {
                     });
                     const d2 = await r2.json();
                     if (d2.success) {
-                        window.MV_ANONYMOUS = false;
-                        window.currentUserEmail = d2.email;
-                        document.body.classList.remove('funnel-mode');
-                        closeModal();
-                        // Fase K2 — limpa campanha pendente após sucesso
-                        try { localStorage.removeItem('mv_pending_campaign'); } catch(_) {}
-                        try {
-                            if (window.PUSH && 'Notification' in window) {
-                                if (Notification.permission === 'granted') PUSH.subscribe();
-                                else if (Notification.permission !== 'denied') PUSH.askPermission().then(ok => { if (ok) PUSH.subscribe(); });
-                            }
-                        } catch(_) {}
-                        if (typeof window.tryTriggerCallAfterLogin === 'function') window.tryTriggerCallAfterLogin();
-                        document.cookie = 'mv_funnel=; path=/; max-age=0; SameSite=Lax';
+                        promoteSuccess(d2);
                     } else {
                         errEl.textContent = d2.error || 'Erro';
                         errEl.classList.add('show');
                         submitBtn.disabled = false;
-                        submitBtn.textContent = 'DESBLOQUEAR ACESSO';
+                        submitBtn.textContent = pendingCheckout ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
                     }
                 });
                 return;
@@ -19808,12 +19911,12 @@ document.addEventListener('keydown', function(e) {
             errEl.textContent = data.error || 'Erro no login';
             errEl.classList.add('show');
             submitBtn.disabled = false;
-            submitBtn.textContent = 'DESBLOQUEAR ACESSO';
+            submitBtn.textContent = pendingCheckout ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
         } catch (err) {
             errEl.textContent = 'Erro de conexão. Tenta de novo.';
             errEl.classList.add('show');
             submitBtn.disabled = false;
-            submitBtn.textContent = 'DESBLOQUEAR ACESSO';
+            submitBtn.textContent = pendingCheckout ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
         }
     });
 })();
@@ -20502,18 +20605,10 @@ window.MVPaywall = (function () {
 
     // origem da venda (ex.: 'chat_7') — carimbada no link do checkout como UTM
     // pra Kirvano devolver no webhook e o sistema saber QUAL chat vendeu.
+    // (o carimbo em si mora no helper global MV_stampUtm, via MV_buy)
     let _src = null;
-    function withSrc(url) {
-        if (!url || !_src) return url;
-        try {
-            const sep = url.indexOf('?') === -1 ? '?' : '&';
-            const s = encodeURIComponent(_src);
-            return url + sep + 'utm_source=chat&utm_medium=app&utm_content=' + s;
-        } catch (_) { return url; }
-    }
     function checkout(unlock, url) {
-        url = withSrc(url);
-        if (url) { try { window.open(url, '_blank', 'noopener'); } catch (_) { window.location.href = url; } return; }
+        if (url) { window.MV_buy(url, _src); return; }
         if (unlock && unlock.product_id && typeof openProductPage === 'function') {
             close();
             try { switchScreen('home'); } catch (_) {}
@@ -20654,6 +20749,9 @@ window.MVPaywall = (function () {
     // Injeta o banner num container já existente (ex.: #caLocked do chat, overlay do story)
     function renderInline(el, unlock, opts) {
         if (!el) return;
+        opts = opts || {};
+        _src = opts.src || null; // origem (ex.: 'chat_7') pro carimbo UTM — o
+        // banner inline vendia sem atribuição (não passava pelo openModal)
         if (!isActionable(unlock, opts)) {
             try { console.warn('[paywall] sem planos/checkout configurados — banner não renderizado. Configure o card 💎 na tela de Chats.'); } catch (_) {}
             return;
@@ -21114,7 +21212,7 @@ window.Explore = (function () {
                 + '<button style="margin-top:10px;width:100%;background:linear-gradient(90deg,#d4af37,#f5d67b);border:none;color:#241a05;font-size:13px;font-weight:900;letter-spacing:.5px;padding:12px;border-radius:11px;cursor:pointer;">QUERO O PREMIUM 💎</button>';
             box.querySelector('button').addEventListener('click', () => {
                 try { if (typeof TRACK !== 'undefined') TRACK.event('explore_premium_click', {}); } catch (_) {}
-                window.open(prem.checkout_url, '_blank', 'noopener,noreferrer');
+                window.MV_buy(prem.checkout_url, 'explore_premium');
             });
             // Ordem pedida pelo dono: oferta dos vídeos → card PREMIUM → e só
             // depois "pagamento seguro", prova social e o "agora não".
