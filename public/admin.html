@@ -6857,7 +6857,15 @@ a { color: inherit; text-decoration: none; }
                                 <select class="form-control" id="stepLinkProductSelect" style="width:100%; margin-bottom:8px;"><option value="">— nenhum produto —</option></select>
                                 <input class="form-control" id="stepLinkUrl" maxlength="1000" placeholder="Ou cole um link: https://... ou caminho tipo /" style="width:100%;"/>
                                 <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">Escolha um produto OU um link. Produto tem prioridade. Vazio = clique só abre o app.</div>
-                                <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#fff; cursor:pointer; margin-top:10px;"><input type="checkbox" id="stepNotifVideos" style="width:15px; height:15px;"> 📹 Levar pra aba de Vídeos (feed)</label>
+                                <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin:10px 0 4px;">Ou uma ÁREA do app (atalho)</label>
+                                <select class="form-control" id="stepNotifDest" style="width:100%;">
+                                    <option value="">— nenhuma (usa produto/link acima) —</option>
+                                    <option value="/?go=videos">Aba Vídeos (feed)</option>
+                                    <option value="/?go=lives">Aba Lives</option>
+                                    <option value="/?go=chats">Conversas</option>
+                                    <option value="/?go=groups">Grupos</option>
+                                </select>
+                                <div style="font-size:11px; color:rgba(255,255,255,.4); margin-top:4px;">Área escolhida ganha do link. Ex.: "🔴 Tem live rolando AGORA" → Aba Lives.</div>
                             </div>
                         </div>
                         <div style="padding:16px 24px; border-top:1px solid var(--border,rgba(255,255,255,.1)); display:flex; gap:10px; justify-content:flex-end;">
@@ -14844,9 +14852,12 @@ function editStep(s) {
     document.getElementById('stepDelay').value = s.delay_seconds || 0;
     document.getElementById('stepNotifTitle').value = s.title || '';
     document.getElementById('stepNotifMsg').value = s.message || '';
-    const isVideosLink = /[?&]videos=/.test(s.link_url || '');
-    document.getElementById('stepNotifVideos').checked = (s.type === 'notification' || s.type === 'push') && isVideosLink;
-    document.getElementById('stepLinkUrl').value = isVideosLink ? '' : (s.link_url || '');
+    // destino-atalho: reconhece os caminhos de área (e o legado /?videos=1)
+    const lk = s.link_url || '';
+    const destMap = { '/?go=videos': 1, '/?go=lives': 1, '/?go=chats': 1, '/?go=groups': 1 };
+    const destVal = destMap[lk] ? lk : (/[?&]videos=/.test(lk) ? '/?go=videos' : '');
+    const dsel = document.getElementById('stepNotifDest'); if (dsel) dsel.value = (s.type === 'notification' || s.type === 'push') ? destVal : '';
+    document.getElementById('stepLinkUrl').value = destVal ? '' : lk;
     document.getElementById('stepChatMsg').value = (s.type === 'chat' ? (s.message || '') : '');
     document.getElementById('stepNavLink').value = (s.type === 'navigate' ? (s.link_url || '') : '');
     updateStepFields();
@@ -14889,7 +14900,7 @@ async function saveStep(e) {
         message: isMsg ? document.getElementById('stepNotifMsg').value.trim()
                : isChat ? (document.getElementById('stepChatMsg').value.trim() || null)
                : null,
-        link_url: isMsg ? (document.getElementById('stepNotifVideos').checked ? '/?videos=1' : (document.getElementById('stepLinkUrl').value.trim() || null))
+        link_url: isMsg ? ((document.getElementById('stepNotifDest') && document.getElementById('stepNotifDest').value) || document.getElementById('stepLinkUrl').value.trim() || null)
                 : isNav ? (document.getElementById('stepNavLink').value.trim() || null)
                 : null,
     };
