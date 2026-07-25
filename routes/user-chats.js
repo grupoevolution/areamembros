@@ -1514,6 +1514,16 @@ const SUPPORT_DEFAULTS = {
     welcome_enabled: true,
     welcome_template: '{saudacao}, {nome}! 👋 Eu sou o suporte oficial do app. Qualquer dúvida, pagamento ou problema, me chama AQUI nessa conversa que eu resolvo rapidinho. Bom proveito 🔥',
     default_offer_ids: [],
+    // CARRINHO ABANDONADO: abriu o checkout identificado e não pagou →
+    // o suporte cobra citando a modelo ({modelo}) e depois oferece o plano.
+    abandon_enabled: true,
+    abandon_delay_minutes: 15,
+    abandon_template: 'Ei {nome}! Vi que você quase liberou a conversa com a {modelo} 👀 Ela continua aqui te esperando — pra responder você, mandar foto, atender sua chamada… Finaliza o pagamento e continua exatamente de onde parou 🔥',
+    abandon_generic_template: 'Ei {nome}! Vi que você chegou pertinho de finalizar 👀 Tá tudo separado te esperando. Qualquer dúvida no pagamento me chama AQUI que eu resolvo com você na hora!',
+    abandon_cta_label: 'CONTINUAR DE ONDE PAREI 🔥',
+    upsell_delay_minutes: 60,
+    upsell_template: 'Ahh e um segredo, {nome}: tem plano que libera a conversa com TODAS as mulheres do app de uma vez — sem limite, todas te respondendo 😈 Olha aqui:',
+    upsell_product_id: null,
 };
 let _supportCfgCache = { at: 0, cfg: null };
 async function getSupportConfig() {
@@ -1606,6 +1616,161 @@ async function deliverPixPendingToSupport(email, info) {
 
     await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [session.id]);
     return [{ chat, messages: [first], email: e }];
+}
+
+// ── CARRINHO ABANDONADO ──────────────────────────────────────────────────────
+// O app avisa quando um lead IDENTIFICADO abre o checkout (POST /checkout-intent).
+// O chat-worker chama processAbandonedCheckouts() de tempos em tempos: quem não
+// pagou depois de X min recebe a cobrança do SUPORTE personalizada com a modelo
+// ("a {modelo} tá te esperando") + botão pro MESMO link do checkout; depois de
+// mais Y min sem pagar, o upsell do plano completo (todas as modelos).
+router.post('/checkout-intent', optionalUser, async (req, res) => {
+    try {
+        const ident = getIdentity(req);
+        if (!ident.email) return res.json({ success: true, skipped: 'anon' });
+        const url = String(req.body?.url || '').slice(0, 1000);
+        const src = String(req.body?.src || '');
+        const m = src.match(/^chat_(\d+)$/);
+        const chatId = m ? parseInt(m[1], 10) : null;
+        // Já tem intent ABERTA recente sem cobrança enviada? Só atualiza (o
+        // lead clicando 3x no botão não vira 3 cobranças).
+        const { rows: open } = await db.query(
+            `SELECT id FROM checkout_intents
+              WHERE LOWER(customer_email) = $1 AND completed = false
+                AND created_at > NOW() - INTERVAL '24 hours'
+              ORDER BY id DESC LIMIT 1`,
+            [ident.email]
+        );
+        if (open.length) {
+            await db.query(
+                `UPDATE checkout_intents
+                    SET chat_id = COALESCE($2, chat_id), checkout_url = COALESCE(NULLIF($3,''), checkout_url),
+                        created_at = CASE WHEN abandon_sent_at IS NULL THEN NOW() ELSE created_at END
+                  WHERE id = $1`,
+                [open[0].id, chatId, url]
+            );
+        } else {
+            await db.query(
+                `INSERT INTO checkout_intents (customer_email, chat_id, checkout_url) VALUES ($1, $2, $3)`,
+                [ident.email, chatId, url || null]
+            );
+        }
+        return res.json({ success: true });
+    } catch (err) {
+        logger.warn('checkout-intent falhou: ' + err.message);
+        return res.json({ success: false });
+    }
+});
+
+async function _supportSessionFor(email) {
+    const { rows: sc } = await db.query(`SELECT * FROM chats WHERE active = true AND is_support = true ORDER BY id LIMIT 1`);
+    if (!sc.length) return null;
+    const chat = sc[0];
+    const session = await findOrCreateSession(chat.id, { email, visitor: null }, true);
+    return { chat, session };
+}
+
+async function processAbandonedCheckouts() {
+    const cfg = await getSupportConfig();
+    if (cfg.abandon_enabled !== true) return [];
+    const out = [];
+    const delay = Math.max(3, parseInt(cfg.abandon_delay_minutes, 10) || 15);
+    const upDelay = Math.max(5, parseInt(cfg.upsell_delay_minutes, 10) || 60);
+
+    // Etapa 1 — cobrança do abandono (claim atômico; intents velhas >48h não
+    // cobram mais — mensagem requentada de dias atrás só queima a isca)
+    const { rows: due } = await db.query(`
+        UPDATE checkout_intents SET abandon_sent_at = NOW()
+        WHERE id IN (
+            SELECT id FROM checkout_intents
+             WHERE completed = false AND abandon_sent_at IS NULL
+               AND created_at <= NOW() - make_interval(mins => $1)
+               AND created_at > NOW() - INTERVAL '48 hours'
+             ORDER BY created_at LIMIT 20 FOR UPDATE SKIP LOCKED
+        ) RETURNING *`, [delay]);
+    for (const it of due) {
+        try {
+            const email = String(it.customer_email).toLowerCase();
+            // pagou depois do clique? fecha em silêncio
+            const { rows: bought } = await db.query(
+                `SELECT 1 FROM user_access WHERE LOWER(email) = $1 AND created_at >= $2 LIMIT 1`,
+                [email, it.created_at]);
+            if (bought.length) {
+                await db.query(`UPDATE checkout_intents SET completed = true WHERE id = $1`, [it.id]);
+                continue;
+            }
+            // gerou Pix e o suporte JÁ cobrou por isso? não cobra em dobro
+            try {
+                const { rows: pix } = await db.query(
+                    `SELECT 1 FROM pix_pending_notices WHERE LOWER(customer_email) = $1 AND created_at >= $2 LIMIT 1`,
+                    [email, it.created_at]);
+                if (pix.length) continue; // abandon_sent_at já marcado = não repete
+            } catch (_) {}
+            const sup = await _supportSessionFor(email);
+            if (!sup) continue;
+            let modelo = null;
+            if (it.chat_id) {
+                try {
+                    const { rows: cr } = await db.query(`SELECT name FROM chats WHERE id = $1`, [it.chat_id]);
+                    modelo = cr[0] ? cr[0].name : null;
+                } catch (_) {}
+            }
+            const ctx = { email, city: sup.session.city || null, cityFallback: sup.chat.city_fallback };
+            const tpl = modelo ? cfg.abandon_template : cfg.abandon_generic_template;
+            const txt = capFirst(await fillVars(String(tpl).replace(/\{modelo\}/gi, modelo || ''), ctx));
+            const first = await insertMsg(sup.session.id, 'bot', 'text', txt, null, { typing_ms: 0 }, null);
+            if (it.checkout_url) {
+                await insertMsg(sup.session.id, 'bot', 'cta', String(cfg.abandon_cta_label || 'CONTINUAR DE ONDE PAREI 🔥').slice(0, 60), null,
+                    { link_url: String(it.checkout_url), cta_color: '#e50914' }, null);
+            }
+            await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [sup.session.id]);
+            out.push({ chat: sup.chat, messages: [first], email });
+        } catch (err) { logger.warn('[abandono] falhou intent ' + it.id + ': ' + err.message); }
+    }
+
+    // Etapa 2 — upsell do plano completo (só se configurado um produto)
+    const upsellPid = parseInt(cfg.upsell_product_id, 10) || null;
+    if (upsellPid) {
+        const { rows: due2 } = await db.query(`
+            UPDATE checkout_intents SET upsell_sent_at = NOW()
+            WHERE id IN (
+                SELECT id FROM checkout_intents
+                 WHERE completed = false AND abandon_sent_at IS NOT NULL AND upsell_sent_at IS NULL
+                   AND abandon_sent_at <= NOW() - make_interval(mins => $1)
+                   AND created_at > NOW() - INTERVAL '72 hours'
+                 ORDER BY abandon_sent_at LIMIT 20 FOR UPDATE SKIP LOCKED
+            ) RETURNING *`, [upDelay]);
+        for (const it of due2) {
+            try {
+                const email = String(it.customer_email).toLowerCase();
+                const { rows: bought } = await db.query(
+                    `SELECT 1 FROM user_access WHERE LOWER(email) = $1 AND created_at >= $2 LIMIT 1`,
+                    [email, it.created_at]);
+                if (bought.length) {
+                    await db.query(`UPDATE checkout_intents SET completed = true WHERE id = $1`, [it.id]);
+                    continue;
+                }
+                const { rows: pr } = await db.query(`SELECT id, name FROM products WHERE id = $1 AND is_active = true`, [upsellPid]);
+                if (!pr.length) continue;
+                const sup = await _supportSessionFor(email);
+                if (!sup) continue;
+                let modelo = null;
+                if (it.chat_id) {
+                    try {
+                        const { rows: cr } = await db.query(`SELECT name FROM chats WHERE id = $1`, [it.chat_id]);
+                        modelo = cr[0] ? cr[0].name : null;
+                    } catch (_) {}
+                }
+                const ctx = { email, city: sup.session.city || null, cityFallback: sup.chat.city_fallback };
+                const txt = capFirst(await fillVars(String(cfg.upsell_template).replace(/\{modelo\}/gi, modelo || 'sua preferida'), ctx));
+                const first = await insertMsg(sup.session.id, 'bot', 'text', txt, null, { typing_ms: 0 }, null);
+                await insertMsg(sup.session.id, 'bot', 'cta', pr[0].name, null, { product_id: pr[0].id, cta_color: '#e50914' }, null);
+                await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [sup.session.id]);
+                out.push({ chat: sup.chat, messages: [first], email });
+            } catch (err) { logger.warn('[abandono/upsell] falhou intent ' + it.id + ': ' + err.message); }
+        }
+    }
+    return out;
 }
 
 // ── STATUS (stories) ─────────────────────────────────────────────────────────
@@ -1836,3 +2001,4 @@ module.exports.deliverInstallWelcome = deliverInstallWelcome;
 module.exports.invalidateSupportConfig = invalidateSupportConfig;
 module.exports.postDueStatusSchedules = postDueStatusSchedules;
 module.exports.startChatForIdentity = startChatForIdentity;
+module.exports.processAbandonedCheckouts = processAbandonedCheckouts;
