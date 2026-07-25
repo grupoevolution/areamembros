@@ -747,7 +747,10 @@ async function materializeScene(session, group, scene, baseTime, gapScale) {
 
 // ROTEIRO DE ENTRADA: cenas 'entrada' rodam NA ORDEM no primeiro acesso, com
 // timestamps pra FRENTE — pingam AO VIVO via poll. 1x por lead.
-async function runEntryScript(session, group) {
+// `access`: pro MEMBRO PAGO as cenas de boas-vindas NÃO rodam (saudação
+// enlatada denuncia o esquema pra quem já comprou) — fica só a pill de
+// sistema "Você entrou no grupo", que é o que um grupo real mostra.
+async function runEntryScript(session, group, access) {
     const st = sessionState(session);
     if (st.entry_done) return [];
     // CLAIM ATÔMICO: sem isto, 2 requests concorrentes de /open (toque
@@ -774,6 +777,7 @@ async function runEntryScript(session, group) {
             [session.id, new Date(Date.now() + 1500)]
         );
     } catch (_) {}
+    if (access === 'member') { await saveSessionState(session); return []; }
     const { rows: scenes } = await db.query(
         `SELECT * FROM group_scenes WHERE group_id = $1 AND active = true AND category = 'entrada' ORDER BY id`,
         [group.id]
@@ -1077,7 +1081,7 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
         const trial = trialState(session, group);
 
         // roteiro de entrada (1x por lead) pinga ao vivo enquanto ele olha
-        await runEntryScript(session, group);
+        await runEntryScript(session, group, access);
 
         const now = Date.now();
         const winFrom = now - windowHours(group) * 3600000;
@@ -1304,12 +1308,18 @@ router.post('/groups/:id/send', optionalUser, async (req, res) => {
         );
         // bots REAGEM chegando nos próximos segundos via poll. 1ª mensagem do
         // lead → cena 'novato' (boas-vindas ao carne nova), senão 'reacao'.
-        try {
-            let scene = null;
-            if (sent === 0) scene = await pickScene(groupId, 'novato');
-            if (!scene) scene = await pickScene(groupId, 'reacao');
-            if (scene) await materializeScene(session, group, scene, new Date(Date.now() + 2000), 1);
-        } catch (_) {}
+        // SÓ pra quem NÃO é membro pago: cliente que comprou manda mensagem
+        // toda hora e a resposta enlatada repetida denuncia o esquema (2
+        // clientes reclamaram). Pro membro, a mensagem dele entra no fluxo
+        // do grupo e passa batido no meio das outras — natural.
+        if (access !== 'member') {
+            try {
+                let scene = null;
+                if (sent === 0) scene = await pickScene(groupId, 'novato');
+                if (!scene) scene = await pickScene(groupId, 'reacao');
+                if (scene) await materializeScene(session, group, scene, new Date(Date.now() + 2000), 1);
+            } catch (_) {}
+        }
         await db.query(`UPDATE group_sessions SET last_seen_at = NOW(), updated_at = NOW() WHERE id = $1`, [session.id]);
         return res.json({ success: true, message: publicPersonal(mine, false) });
     } catch (err) {
