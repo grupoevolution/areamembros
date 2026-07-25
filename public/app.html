@@ -19309,6 +19309,22 @@ window.MV_stampUtm = function (url, src) {
 // (funil sem e-mail), pede o e-mail NESTE clique — 1 campo, ele já decidiu
 // comprar — e só então abre o checkout. Sem isso o cliente pagava e o app
 // não tinha e-mail pra entregar a compra (o acesso é liberado por e-mail).
+// Registra a intenção de compra (carrinho abandonado). sendBeacon sobrevive
+// à navegação da página (o checkout abre na MESMA guia logo em seguida).
+window.MV_intent = function (url, src) {
+    if (!/^https?:\/\//i.test(url || '')) return;
+    const payload = JSON.stringify({ url, src: src || null });
+    try {
+        if (navigator.sendBeacon
+            && navigator.sendBeacon('/api/user/checkout-intent', new Blob([payload], { type: 'application/json' }))) return;
+    } catch (_) {}
+    try {
+        fetch('/api/user/checkout-intent', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            credentials: 'include', keepalive: true, body: payload,
+        });
+    } catch (_) {}
+};
 window.MV_buy = function (url, src) {
     if (!url) return;
     url = window.MV_stampUtm(url, src);
@@ -19317,17 +19333,11 @@ window.MV_buy = function (url, src) {
         window.MV_askEmailForCheckout(url, src);
         return;
     }
-    try { window.open(url, '_blank', 'noopener'); } catch (_) { window.location.href = url; }
-    // Lead IDENTIFICADO indo pro checkout: registra a intenção — se não pagar,
-    // o Suporte cobra depois (carrinho abandonado personalizado com a modelo).
-    if (/^https?:\/\//i.test(url)) {
-        try {
-            fetch('/api/user/checkout-intent', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                credentials: 'include', body: JSON.stringify({ url, src: src || null }),
-            });
-        } catch (_) {}
-    }
+    window.MV_intent(url, src);
+    // MESMA guia (decisão do dono): lead leigo se perde em aba nova ("não
+    // consigo voltar"); na mesma guia o botão VOLTAR devolve pro app — e o
+    // histórico/login sobrevivem porque a sessão já está amarrada ao e-mail.
+    window.location.href = url;
 };
 
 // ═══════════════ DESTINO DE ENTRADA DO FUNIL ═══════════════
@@ -19859,12 +19869,11 @@ document.addEventListener('keydown', function(e) {
     }, true);
 
     // Pós-promoção (e-mail aceito): comum ao submit normal e ao "usar o que
-    // digitei". Se havia um CHECKOUT pendente (modo compra), navega a ABA
-    // PRÉ-ABERTA no gesto do submit (preTab) pro checkout — instantâneo, sem
-    // popup bloqueado e SEM sair do app (os timers da sequência continuam
-    // vivos). A sequência do funil dispara em qualquer caso: é a cascata de
-    // apresentação (modelos mandando mensagem, notificações) pós-e-mail.
-    function promoteSuccess(data, preTab) {
+    // digitei". Se havia um CHECKOUT pendente (modo compra), navega pro
+    // checkout na MESMA guia — o "voltar" devolve pro app logado, com
+    // histórico (a sessão foi amarrada ao e-mail agora). Sem checkout
+    // pendente, dispara a cascata do funil normalmente.
+    function promoteSuccess(data) {
         const pc = pendingCheckout; // captura ANTES do closeModal (que zera)
         const pcSrc = pendingCheckoutSrc;
         window.MV_ANONYMOUS = false;
@@ -19881,40 +19890,20 @@ document.addEventListener('keydown', function(e) {
             }
         } catch(_) {}
         if (pc) {
-            // registra a intenção de compra (carrinho abandonado do Suporte)
-            try {
-                fetch('/api/user/checkout-intent', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include', body: JSON.stringify({ url: pc, src: pcSrc }),
-                });
-            } catch (_) {}
-            let opened = false;
-            if (preTab && !preTab.closed) {
-                try { preTab.location.href = pc; opened = true; } catch (_) {}
-            }
-            if (!opened) {
-                try { const w = window.open(pc, '_blank'); if (w) opened = true; } catch(_) {}
-            }
-            if (!opened) {
-                // Popup bloqueado (iOS Safari costuma bloquear). NÃO navega o
-                // app pro checkout (era isso que fazia o "voltar" recarregar
-                // tudo e parecer que a conta sumiu) — o modal vira um BOTÃO-
-                // LINK, e toque em link o navegador nunca bloqueia.
-                const card = modal.querySelector('.mv-login-card');
-                if (card) {
-                    card.innerHTML = '<h2 class="mv-login-title" style="margin-bottom:10px;">Tudo certo ✅</h2>'
-                        + '<p class="mv-login-sub" style="margin-bottom:18px;">Seu acesso vai ser liberado no e-mail que você digitou. Agora é só pagar:</p>';
-                    const a = document.createElement('a');
-                    a.href = pc; a.target = '_blank'; a.rel = 'noopener';
-                    a.textContent = 'IR PRO PAGAMENTO 🔒';
-                    a.style.cssText = 'display:block;text-align:center;background:linear-gradient(90deg,#e50914,#ff3b30);color:#fff;font-size:16px;font-weight:800;letter-spacing:.5px;padding:16px;border-radius:12px;text-decoration:none;';
-                    a.addEventListener('click', () => setTimeout(() => { try { modal.classList.remove('is-open'); } catch(_) {} }, 400));
-                    card.appendChild(a);
-                    modal.classList.add('is-open'); // fica aberto com o botão-link
-                } else {
-                    window.location.href = pc; // último recurso
-                }
-            }
+            // registra a intenção de compra (carrinho abandonado do Suporte) —
+            // sendBeacon sobrevive à navegação que vem logo abaixo
+            try { window.MV_intent && MV_intent(pc, pcSrc); } catch (_) {}
+            // limpa o cookie do funil ANTES de sair da página: no "voltar" o
+            // app recarrega e, com o cookie vivo, o boot re-anonimizava o lead
+            // recém-identificado. A sequência do funil retoma no retorno pelo
+            // ref do sessionStorage (que sobrevive à navegação na mesma guia).
+            document.cookie = 'mv_funnel=; path=/; max-age=0; SameSite=Lax';
+            // MESMA guia (decisão do dono): o "voltar" do navegador devolve
+            // pro app, e o histórico/login sobrevivem porque a sessão acabou
+            // de ser amarrada ao e-mail no promote. Aba nova confundia o lead
+            // leigo ("fiquei preso no checkout, não consigo voltar").
+            window.location.href = pc;
+            return;
         }
         // Dispara sequência do funíl (cascata pós-e-mail)
         if (typeof window.tryTriggerCallAfterLogin === 'function') {
@@ -19935,11 +19924,6 @@ document.addEventListener('keydown', function(e) {
         e.preventDefault();
         const email = emailInput.value.trim();
         if (!email) return;
-        // MODO CHECKOUT: abre a aba AGORA, dentro do gesto do toque (depois do
-        // fetch o navegador bloquearia o popup e cairia no redirect que mata o
-        // app). A aba fica em branco ~1s e recebe o checkout no sucesso.
-        let preTab = null;
-        if (pendingCheckout) { try { preTab = window.open('', '_blank'); } catch(_) {} }
         errEl.classList.remove('show');
         sugEl.classList.remove('show');
         submitBtn.disabled = true;
@@ -19956,11 +19940,9 @@ document.addEventListener('keydown', function(e) {
             });
             const data = await r.json();
             if (data.success) {
-                promoteSuccess(data, preTab);
+                promoteSuccess(data);
                 return;
             }
-            // não deu certo: fecha a aba pré-aberta (senão fica em branco)
-            if (preTab && !preTab.closed) { try { preTab.close(); } catch(_) {} }
             if (data.needsConfirmation && data.suggestion) {
                 sugEl.innerHTML = 'Você quis dizer <b>' + data.suggestion.replace(/</g,'&lt;') + '</b>?'
                     + '<div class="mv-login-suggestion-actions">'
@@ -19979,9 +19961,6 @@ document.addEventListener('keydown', function(e) {
                     sugEl.classList.remove('show');
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'AGUARDE...';
-                    // gesto novo (clique): abre a aba do checkout aqui também
-                    let preTab2 = null;
-                    if (pendingCheckout) { try { preTab2 = window.open('', '_blank'); } catch(_) {} }
                     const r2 = await fetch('/api/user/login/promote', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -19990,9 +19969,8 @@ document.addEventListener('keydown', function(e) {
                     });
                     const d2 = await r2.json();
                     if (d2.success) {
-                        promoteSuccess(d2, preTab2);
+                        promoteSuccess(d2);
                     } else {
-                        if (preTab2 && !preTab2.closed) { try { preTab2.close(); } catch(_) {} }
                         errEl.textContent = d2.error || 'Erro';
                         errEl.classList.add('show');
                         submitBtn.disabled = false;
@@ -20006,7 +19984,6 @@ document.addEventListener('keydown', function(e) {
             submitBtn.disabled = false;
             submitBtn.textContent = pendingCheckout ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
         } catch (err) {
-            if (preTab && !preTab.closed) { try { preTab.close(); } catch(_) {} }
             errEl.textContent = 'Erro de conexão. Tenta de novo.';
             errEl.classList.add('show');
             submitBtn.disabled = false;
