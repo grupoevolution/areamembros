@@ -9971,21 +9971,28 @@ window.ChatApp = (function() {
             const m = QUEUE.shift();
             const typing = (m.sender === 'bot' && m.meta && m.meta.typing_ms) ? m.meta.typing_ms : 0;
             if (typing > 0) {
-                // áudio → "gravando áudio..."; resto → "respondendo..." (igual WhatsApp).
-                // O que tá acontecendo aparece na BARRA DE BAIXO (não no topo).
+                // Indicador SÓ quando faz sentido: texto/botões → "digitando";
+                // áudio → "gravando áudio". Foto/vídeo/CTA/etc NÃO mostram nada
+                // (ninguém "digita" uma foto) — só uma pausa curta pra não
+                // metralhar as mensagens.
                 const isAudio = m.type === 'audio';
-                const t = document.createElement('div');
-                t.className = 'ca-typing';
-                t.innerHTML = isAudio
-                    ? '<span class="ca-rec"><span class="dot"></span></span> <span class="ca-rec-txt">gravando áudio</span>'
-                    : '<i></i><i></i><i></i>';
-                body.appendChild(t);
-                const nm = (CUR && CUR.chat && CUR.chat.name) || 'Ela';
-                showBottomStatus(nm + (isAudio ? ' está gravando áudio…' : ' está respondendo…'));
-                body.scrollTop = body.scrollHeight;
-                await new Promise(r => setTimeout(r, Math.min(typing, 10000)));
-                t.remove();
-                hideBottomStatus();
+                const isTexty = m.type === 'text' || m.type === 'buttons';
+                if (isAudio || isTexty) {
+                    const t = document.createElement('div');
+                    t.className = 'ca-typing';
+                    t.innerHTML = isAudio
+                        ? '<span class="ca-rec"><span class="dot"></span></span> <span class="ca-rec-txt">gravando áudio</span>'
+                        : '<i></i><i></i><i></i>';
+                    body.appendChild(t);
+                    const nm = (CUR && CUR.chat && CUR.chat.name) || 'Ela';
+                    showBottomStatus(nm + (isAudio ? ' está gravando áudio…' : ' está digitando…'));
+                    body.scrollTop = body.scrollHeight;
+                    await new Promise(r => setTimeout(r, Math.min(typing, 10000)));
+                    t.remove();
+                    hideBottomStatus();
+                } else {
+                    await new Promise(r => setTimeout(r, Math.min(typing, 1200)));
+                }
             }
             renderMsg(m);
             body.scrollTop = body.scrollHeight;
@@ -19560,7 +19567,10 @@ document.addEventListener('keydown', function(e) {
 <!-- ═══════════════ MODAL LOGIN (pra modo funíl) ═══════════════ -->
 <style>
 #mvLoginModal {
-    position: fixed; inset: 0; z-index: 10000;
+    /* ACIMA de tudo (paywall=99999, popups de grupo=99998): no modo checkout
+       ele abre POR CIMA do popup de compra — com z-index menor ele abria
+       ATRÁS e parecia que a tela tinha congelado */
+    position: fixed; inset: 0; z-index: 100002;
     background: rgba(0,0,0,0.85);
     display: none;
     align-items: center; justify-content: center;
@@ -19794,10 +19804,12 @@ document.addEventListener('keydown', function(e) {
     }, true);
 
     // Pós-promoção (e-mail aceito): comum ao submit normal e ao "usar o que
-    // digitei". Se havia um CHECKOUT pendente (modo compra), NÃO dispara a
-    // sequência do funil agora — chamada tocando no meio do pagamento mata a
-    // venda — só marca a conversão e abre o checkout com o e-mail preenchido.
-    function promoteSuccess(data) {
+    // digitei". Se havia um CHECKOUT pendente (modo compra), navega a ABA
+    // PRÉ-ABERTA no gesto do submit (preTab) pro checkout — instantâneo, sem
+    // popup bloqueado e SEM sair do app (os timers da sequência continuam
+    // vivos). A sequência do funil dispara em qualquer caso: é a cascata de
+    // apresentação (modelos mandando mensagem, notificações) pós-e-mail.
+    function promoteSuccess(data, preTab) {
         const pc = pendingCheckout; // captura ANTES do closeModal (que zera)
         window.MV_ANONYMOUS = false;
         window.currentUserEmail = data.email;
@@ -19813,29 +19825,18 @@ document.addEventListener('keydown', function(e) {
             }
         } catch(_) {}
         if (pc) {
-            const cref = window.MV_FUNNEL_REF || window.MV_FUNNEL_SLUG;
-            if (cref) {
-                try {
-                    fetch('/api/user/funnel/' + encodeURIComponent(cref) + '/convert', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include', body: JSON.stringify({ email: data.email }),
-                    });
-                } catch(_) {}
+            if (preTab && !preTab.closed) {
+                try { preTab.location.href = pc; } catch (_) { window.location.href = pc; }
+            } else {
+                // sem aba pré-aberta (bloqueada): tenta abrir agora; último
+                // recurso = redirect direto (sai do app, mas a compra anda)
+                let w = null;
+                try { w = window.open(pc, '_blank'); } catch(_) {}
+                if (!w) window.location.href = pc;
             }
-            let px = pc;
-            try {
-                let h = ''; const i = px.indexOf('#');
-                if (i >= 0) { h = px.slice(i); px = px.slice(0, i); }
-                px += (px.indexOf('?') === -1 ? '?' : '&') + 'email=' + encodeURIComponent(data.email) + h;
-            } catch(_) {}
-            // window.open pós-fetch pode ser bloqueado (sem gesto) → cai no
-            // redirect direto; sem 'noopener' aqui porque ele faria open()
-            // retornar null SEMPRE e o fallback abriria o checkout 2x.
-            let w = null;
-            try { w = window.open(px, '_blank'); } catch(_) {}
-            if (!w) window.location.href = px;
-        } else if (typeof window.tryTriggerCallAfterLogin === 'function') {
-            // Dispara sequência do funíl
+        }
+        // Dispara sequência do funíl (cascata pós-e-mail)
+        if (typeof window.tryTriggerCallAfterLogin === 'function') {
             window.tryTriggerCallAfterLogin();
         }
         // Grupo pendente: o lead clicou pra ENTRAR num grupo, deu o e-mail →
@@ -19853,6 +19854,11 @@ document.addEventListener('keydown', function(e) {
         e.preventDefault();
         const email = emailInput.value.trim();
         if (!email) return;
+        // MODO CHECKOUT: abre a aba AGORA, dentro do gesto do toque (depois do
+        // fetch o navegador bloquearia o popup e cairia no redirect que mata o
+        // app). A aba fica em branco ~1s e recebe o checkout no sucesso.
+        let preTab = null;
+        if (pendingCheckout) { try { preTab = window.open('', '_blank'); } catch(_) {} }
         errEl.classList.remove('show');
         sugEl.classList.remove('show');
         submitBtn.disabled = true;
@@ -19869,9 +19875,11 @@ document.addEventListener('keydown', function(e) {
             });
             const data = await r.json();
             if (data.success) {
-                promoteSuccess(data);
+                promoteSuccess(data, preTab);
                 return;
             }
+            // não deu certo: fecha a aba pré-aberta (senão fica em branco)
+            if (preTab && !preTab.closed) { try { preTab.close(); } catch(_) {} }
             if (data.needsConfirmation && data.suggestion) {
                 sugEl.innerHTML = 'Você quis dizer <b>' + data.suggestion.replace(/</g,'&lt;') + '</b>?'
                     + '<div class="mv-login-suggestion-actions">'
@@ -19890,6 +19898,9 @@ document.addEventListener('keydown', function(e) {
                     sugEl.classList.remove('show');
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'AGUARDE...';
+                    // gesto novo (clique): abre a aba do checkout aqui também
+                    let preTab2 = null;
+                    if (pendingCheckout) { try { preTab2 = window.open('', '_blank'); } catch(_) {} }
                     const r2 = await fetch('/api/user/login/promote', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -19898,8 +19909,9 @@ document.addEventListener('keydown', function(e) {
                     });
                     const d2 = await r2.json();
                     if (d2.success) {
-                        promoteSuccess(d2);
+                        promoteSuccess(d2, preTab2);
                     } else {
+                        if (preTab2 && !preTab2.closed) { try { preTab2.close(); } catch(_) {} }
                         errEl.textContent = d2.error || 'Erro';
                         errEl.classList.add('show');
                         submitBtn.disabled = false;
@@ -19913,6 +19925,7 @@ document.addEventListener('keydown', function(e) {
             submitBtn.disabled = false;
             submitBtn.textContent = pendingCheckout ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
         } catch (err) {
+            if (preTab && !preTab.closed) { try { preTab.close(); } catch(_) {} }
             errEl.textContent = 'Erro de conexão. Tenta de novo.';
             errEl.classList.add('show');
             submitBtn.disabled = false;
