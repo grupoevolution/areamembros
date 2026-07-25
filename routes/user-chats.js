@@ -141,7 +141,12 @@ async function loadUnlock(productId, checkoutUrl) {
 
 function permissions(chat, owns, ident) {
     const isVip = owns;
-    const locked = chat.access === 'vip' && !isVip;
+    // teaser_locked (isca "só prévia") tranca IGUAL a VIP pra quem não tem
+    // acesso — centralizado AQUI pra valer em TODAS as rotas (/start, /advance,
+    // /photo…), não só na lista e no /open como antes (a API direta conversava
+    // normal com chat teaser). A 1ª mensagem automática (a isca) não passa por
+    // aqui (ensureAutoStart/worker), então continua sendo gerada.
+    const locked = (chat.access === 'vip' || chat.teaser_locked === true) && !isVip;
     let canReply = false;
     if (chat.reply_mode === 'all') canReply = !!(ident.email || ident.visitor);
     else if (chat.reply_mode === 'vip') canReply = isVip;
@@ -166,24 +171,60 @@ async function consolidateSessions(sessions) {
     if (!sessions || !sessions.length) return null;
     if (sessions.length === 1) return sessions[0];
     const ids = sessions.map(s => s.id);
-    const { rows: cnt } = await db.query(
-        `SELECT session_id, COUNT(*)::int AS n FROM chat_messages WHERE session_id = ANY($1) GROUP BY session_id`,
-        [ids]
-    );
-    const nOf = {}; cnt.forEach(r => { nOf[r.session_id] = r.n; });
-    let canon = sessions[0];
-    for (const s of sessions) {
-        const sn = nOf[s.id] || 0, cn = nOf[canon.id] || 0;
-        if (sn > cn || (sn === cn && s.id < canon.id)) canon = s;
-    }
-    for (const s of sessions) {
-        if (s.id === canon.id) continue;
+    try {
+        // TRANSAÇÃO + FOR UPDATE: duas requests consolidando as mesmas sessões
+        // ao mesmo tempo — a 2ª espera a 1ª terminar e já enxerga o resultado.
+        // Sem isto, o DELETE podia rodar entre o UPDATE de outra consolidação e
+        // o CASCADE apagava mensagem recém-movida (janela rara, perda real).
+        return await db.transaction(async (client) => {
+            const { rows: locked } = await client.query(
+                `SELECT * FROM chat_sessions WHERE id = ANY($1) ORDER BY id ASC FOR UPDATE`, [ids]
+            );
+            if (!locked.length) return null;
+            if (locked.length === 1) return locked[0];
+            const { rows: cnt } = await client.query(
+                `SELECT session_id, COUNT(*)::int AS n FROM chat_messages WHERE session_id = ANY($1) GROUP BY session_id`,
+                [locked.map(s => s.id)]
+            );
+            const nOf = {}; cnt.forEach(r => { nOf[r.session_id] = r.n; });
+            let canon = locked[0];
+            for (const s of locked) {
+                const sn = nOf[s.id] || 0, cn = nOf[canon.id] || 0;
+                if (sn > cn || (sn === cn && s.id < canon.id)) canon = s;
+            }
+            for (const s of locked) {
+                if (s.id === canon.id) continue;
+                await client.query(`UPDATE chat_messages SET session_id = $1 WHERE session_id = $2`, [canon.id, s.id]);
+                await client.query(`DELETE FROM chat_sessions WHERE id = $1`, [s.id]);
+            }
+            return canon;
+        });
+    } catch (_) {
+        // blip de banco: NÃO funde agora (próxima chamada tenta de novo), mas
+        // ainda devolve a sessão COM histórico — a garantia que corrigiu o bug
         try {
-            await db.query(`UPDATE chat_messages SET session_id = $1 WHERE session_id = $2`, [canon.id, s.id]);
-            await db.query(`DELETE FROM chat_sessions WHERE id = $1`, [s.id]);
-        } catch (_) {}
+            const { rows: cnt } = await db.query(
+                `SELECT session_id, COUNT(*)::int AS n FROM chat_messages WHERE session_id = ANY($1) GROUP BY session_id`,
+                [ids]
+            );
+            const nOf = {}; cnt.forEach(r => { nOf[r.session_id] = r.n; });
+            let canon = sessions[0];
+            for (const s of sessions) {
+                const sn = nOf[s.id] || 0, cn = nOf[canon.id] || 0;
+                if (sn > cn || (sn === cn && s.id < canon.id)) canon = s;
+            }
+            return canon;
+        } catch (_) { return sessions[0]; }
     }
-    return canon;
+}
+
+// Move as mensagens de uma sessão pra outra e apaga a origem — atômico.
+async function mergeSessionInto(fromId, toId) {
+    await db.transaction(async (client) => {
+        await client.query(`SELECT id FROM chat_sessions WHERE id = ANY($1) FOR UPDATE`, [[fromId, toId]]);
+        await client.query(`UPDATE chat_messages SET session_id = $1 WHERE session_id = $2`, [toId, fromId]);
+        await client.query(`DELETE FROM chat_sessions WHERE id = $1`, [fromId]);
+    });
 }
 
 async function findOrCreateSession(chatId, ident, createIfMissing) {
@@ -211,10 +252,7 @@ async function findOrCreateSession(chatId, ident, createIfMissing) {
                     canonAnon.customer_email = ident.email; row = canonAnon;
                 } else {
                     for (const a of anon) {
-                        try {
-                            await db.query(`UPDATE chat_messages SET session_id = $1 WHERE session_id = $2`, [row.id, a.id]);
-                            await db.query(`DELETE FROM chat_sessions WHERE id = $1`, [a.id]);
-                        } catch (_) {}
+                        try { await mergeSessionInto(a.id, row.id); } catch (_) {}
                     }
                 }
             }
@@ -539,7 +577,13 @@ router.get('/chats', optionalUser, async (req, res) => {
             const rotation = require('../lib/chat-rotation');
             rotCfg = await rotation.loadRotationConfig();
             if (rotCfg.enabled) {
-                const rotIds = chats.filter(c => c.in_rotation).map(c => c.id);
+                // SEMPRE sobre TODOS os chats ativos em rodízio — o mesmo
+                // conjunto que /advance e o worker usam. Computar só sobre os
+                // chats VISÍVEIS deste usuário mudava M e a ordem da esteira:
+                // a lista dizia "online" e o /advance calculava offline (a
+                // modelo "online" engolia a mensagem em silêncio).
+                const { rows: rr } = await db.query(`SELECT id FROM chats WHERE active = true AND in_rotation = true`);
+                const rotIds = rr.map(r => r.id);
                 if (rotIds.length) onlineMap = rotation.computeOnline(rotIds, rotCfg, Date.now());
             }
         } catch (_) {}
@@ -876,24 +920,6 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
         const text = (req.body?.text || '').toString().trim().slice(0, 1000);
         const newMsgs = [];
 
-        // RODÍZIO: se a conversa está OFFLINE agora, guarda a mensagem do lead
-        // mas a modelo NÃO responde (mesmo com o funil mandando responder). O
-        // roteiro retoma quando ela voltar online e o lead interagir de novo.
-        if (chat.in_rotation) {
-            try {
-                const rotation = require('../lib/chat-rotation');
-                const rc = await rotation.loadRotationConfig();
-                if (rc.enabled) {
-                    const { rows: rr } = await db.query(`SELECT id FROM chats WHERE active = true AND in_rotation = true`);
-                    const st = rotation.computeOnline(rr.map(r => r.id), rc, Date.now()).get(chatId);
-                    if (st && !st.online) {
-                        if (text) await insertMsg(session.id, 'user', 'text', text, null, null, null);
-                        return res.json({ success: true, messages: [], awaiting: session.awaiting, offline: true });
-                    }
-                }
-            } catch (_) {}
-        }
-
         // GATE do paywall: depois do bloco 🔒 (paywalled_at), um lead SEM VIP
         // não avança o roteiro por NENHUM caminho. Antes o gate existia só no
         // texto livre — se o roteiro tinha botões/input DEPOIS do 🔒, o lead
@@ -905,6 +931,35 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
                 success: false, error: 'vip_required',
                 unlock: await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url),
             });
+        }
+
+        // RODÍZIO: se a conversa está OFFLINE agora, guarda a mensagem do lead
+        // mas a modelo NÃO responde (mesmo com o funil mandando responder). O
+        // roteiro retoma quando ela voltar online e o lead interagir de novo.
+        // Roda DEPOIS do gate de paywall (senão o desvio offline deixava o
+        // lead travado "mandar" mensagem sem ver o popup de assinar) e aplica
+        // o mesmo can_reply da mensagem livre.
+        if (chat.in_rotation) {
+            try {
+                const rotation = require('../lib/chat-rotation');
+                const rc = await rotation.loadRotationConfig();
+                if (rc.enabled) {
+                    const { rows: rr } = await db.query(`SELECT id FROM chats WHERE active = true AND in_rotation = true`);
+                    const st = rotation.computeOnline(rr.map(r => r.id), rc, Date.now()).get(chatId);
+                    if (st && !st.online) {
+                        const isScript = session.awaiting === 'input' || session.awaiting === 'buttons';
+                        if (text && !isScript && !perm.can_reply) {
+                            return res.status(403).json({
+                                success: false, error: 'vip_required',
+                                unlock: await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url),
+                            });
+                        }
+                        const out = [];
+                        if (text) out.push(await insertMsg(session.id, 'user', 'text', text, null, null, null));
+                        return res.json({ success: true, messages: out.map(publicMsg), awaiting: session.awaiting, offline: true });
+                    }
+                }
+            } catch (_) {}
         }
 
         if (choice !== undefined && choice !== null && session.awaiting === 'buttons') {
@@ -1014,6 +1069,17 @@ router.get('/chats/:id/poll', optionalUser, async (req, res) => {
         const ident = getIdentity(req);
         const session = await findOrCreateSession(chatId, ident, false);
         if (!session) return res.json({ success: true, messages: [], awaiting: null });
+
+        // ISCA "só prévia" (teaser_locked): não-VIP não recebe o conteúdo nem
+        // por aqui — sem esta trava o /poll?after=0 devolvia o texto e as
+        // mídias da 1ª mensagem automática pra quem nunca pagou. Query extra
+        // só existe pra chats marcados como teaser.
+        try {
+            const { rows: tk } = await db.query(`SELECT * FROM chats WHERE id = $1 AND teaser_locked = true`, [chatId]);
+            if (tk.length && !(await ownsChatVip(ident.email, tk[0]))) {
+                return res.json({ success: true, messages: [], awaiting: null, locked: true });
+            }
+        } catch (_) {}
 
         // Se o delay venceu, retoma o roteiro AGORA (cliente está com a tela aberta)
         // — com reivindicação ATÔMICA ('delay'→'resuming'), igual ao /open, pra não
@@ -1252,18 +1318,14 @@ router.post('/chats/:id/photo', optionalUser, (req, res) => {
 // Pega sessões cujo delay venceu, continua o roteiro do ponto pausado e
 // devolve as mensagens novas + dados pro push. Reusa o MESMO motor (runScript).
 async function resumeDelayed(limit) {
-    const { rows: due } = await db.query(`
-        UPDATE chat_sessions SET awaiting = 'resuming'
-        WHERE id IN (
-            SELECT id FROM chat_sessions
-            WHERE awaiting = 'delay' AND resume_at IS NOT NULL AND resume_at <= NOW()
-            ORDER BY resume_at LIMIT $1 FOR UPDATE SKIP LOCKED
-        ) RETURNING *
-    `, [limit || 30]);
-
     // RODÍZIO: chats offline não entregam mensagem agora — a conversa PAUSA e
-    // retoma quando a modelo voltar online. Calcula o mapa 1x.
-    let offlineSet = null;
+    // retoma quando a modelo voltar online. Calcula o mapa ANTES do claim e
+    // EXCLUI os offline já no SQL: antes o claim pegava as 30 sessões com
+    // resume_at mais antigo, devolvia as offline pra 'delay' sem mexer no
+    // resume_at, e elas voltavam SEMPRE no topo do ORDER BY — com 30+ sessões
+    // offline acumuladas, o lote inteiro era consumido por elas a cada tick e
+    // NENHUM chat entregava mensagem (nem os de funil, sempre online).
+    let offlineIds = [];
     try {
         const rotation = require('../lib/chat-rotation');
         const rc = await rotation.loadRotationConfig();
@@ -1272,19 +1334,24 @@ async function resumeDelayed(limit) {
             const ids = rr.map(r => r.id);
             if (ids.length) {
                 const m = rotation.computeOnline(ids, rc, Date.now());
-                offlineSet = new Set([...m.entries()].filter(([, s]) => !s.online).map(([id]) => id));
+                offlineIds = [...m.entries()].filter(([, s]) => !s.online).map(([id]) => id);
             }
         }
     } catch (_) {}
 
+    const { rows: due } = await db.query(`
+        UPDATE chat_sessions SET awaiting = 'resuming'
+        WHERE id IN (
+            SELECT id FROM chat_sessions
+            WHERE awaiting = 'delay' AND resume_at IS NOT NULL AND resume_at <= NOW()
+              AND NOT (chat_id = ANY($2::int[]))
+            ORDER BY resume_at LIMIT $1 FOR UPDATE SKIP LOCKED
+        ) RETURNING *
+    `, [limit || 30, offlineIds]);
+
     const results = [];
     for (const session of due) {
         try {
-            // conversa offline no rodízio: devolve pra 'delay' (retoma ao voltar)
-            if (offlineSet && offlineSet.has(session.chat_id)) {
-                await db.query(`UPDATE chat_sessions SET awaiting = 'delay' WHERE id = $1`, [session.id]);
-                continue;
-            }
             const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [session.chat_id]);
             if (!cr.length) {
                 await db.query(`UPDATE chat_sessions SET awaiting = NULL WHERE id = $1`, [session.id]);
