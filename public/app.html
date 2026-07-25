@@ -8785,6 +8785,29 @@ body.is-slowconn .prod-cta-fixed {
    área útil — o conteúdo nunca fica escondido atrás da barra inferior */
 .tk-paywall #tkPaywallCard{margin:auto;width:100%;max-width:340px;}
 .tk-paywall .mvpw-inline{background:#141013;border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:26px 22px 18px;box-shadow:0 30px 80px rgba(0,0,0,.6);}
+/* Tela BAIXA (Android comum, ~640-740px úteis): popup dos vídeos COMPACTO —
+   sem isto o card estourava a tela e o lead tinha que rolar pra achar o botão
+   de comprar e o "agora não" (feedback do dono no Android fraco). */
+@media (max-height: 760px){
+    .tk-paywall{padding-top:calc(30px + env(safe-area-inset-top,0px));padding-bottom:calc(92px + env(safe-area-inset-bottom,0px));}
+    .tk-paywall .mvpw-inline{padding:15px 15px 11px;border-radius:18px;}
+    .tk-paywall .mvpw-icon{width:34px;height:34px;border-radius:10px;margin-bottom:6px;}
+    .tk-paywall .mvpw-icon svg{width:17px;height:17px;}
+    .tk-paywall .mvpw-eyebrow{font-size:9px;margin-bottom:3px;}
+    .tk-paywall .mvpw-title{font-size:15.5px;margin-bottom:4px;}
+    .tk-paywall .mvpw-sub{font-size:11.5px;line-height:1.4;margin-bottom:7px;}
+    .tk-paywall .mvpw-offer{margin-bottom:7px;}
+    .tk-paywall .mvpw-offer-de{font-size:11px;}
+    .tk-paywall .mvpw-offer-price,.tk-paywall .mvpw-price{font-size:21px;margin-bottom:3px;}
+    .tk-paywall .mvpw-offer-note{font-size:10.5px;}
+    .tk-paywall .mvpw-cta,.tk-paywall .mvpw-buy,.tk-paywall .mvpw-bigcta{padding:11px;font-size:13.5px;}
+    .tk-paywall .mvpw-foot{font-size:9.5px;margin-top:7px;}
+    .tk-paywall .mvpw-social{font-size:9.5px;margin-top:2px;}
+    .tk-paywall .mvpw-ghost{margin-top:4px;padding:5px;font-size:12px;}
+    .tk-paywall .tk-prem{margin-top:8px !important;padding:9px 10px !important;border-radius:11px !important;}
+    .tk-paywall .tk-prem > div{font-size:11px !important;line-height:1.35 !important;margin-top:2px !important;}
+    .tk-paywall .tk-prem button{padding:8px !important;font-size:12px !important;margin-top:6px !important;border-radius:9px !important;}
+}
 </style>
 <div class="screen" id="tiktok">
     <!-- sub-abas Vídeos • Lives (Lives só aparece quando ativado no painel) -->
@@ -19291,10 +19314,20 @@ window.MV_buy = function (url, src) {
     url = window.MV_stampUtm(url, src);
     if (window.MV_ANONYMOUS === true && /^https?:\/\//i.test(url)
         && typeof window.MV_askEmailForCheckout === 'function') {
-        window.MV_askEmailForCheckout(url);
+        window.MV_askEmailForCheckout(url, src);
         return;
     }
     try { window.open(url, '_blank', 'noopener'); } catch (_) { window.location.href = url; }
+    // Lead IDENTIFICADO indo pro checkout: registra a intenção — se não pagar,
+    // o Suporte cobra depois (carrinho abandonado personalizado com a modelo).
+    if (/^https?:\/\//i.test(url)) {
+        try {
+            fetch('/api/user/checkout-intent', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', body: JSON.stringify({ url, src: src || null }),
+            });
+        } catch (_) {}
+    }
 };
 
 // ═══════════════ DESTINO DE ENTRADA DO FUNIL ═══════════════
@@ -19749,6 +19782,7 @@ document.addEventListener('keydown', function(e) {
         errEl.classList.remove('show');
         sugEl.classList.remove('show');
         pendingCheckout = null;
+        pendingCheckoutSrc = null;
         setCheckoutCopy(false);
     }
     window.MV_openLoginModal = openModal;
@@ -19759,6 +19793,7 @@ document.addEventListener('keydown', function(e) {
     // o checkout (com o e-mail pré-preenchido). Assim a venda já nasce
     // amarrada ao e-mail e o acesso libera sozinho no app após o webhook.
     let pendingCheckout = null;
+    let pendingCheckoutSrc = null;
     const titleEl = modal.querySelector('.mv-login-title');
     const subEl = modal.querySelector('.mv-login-sub');
     const hintEl = modal.querySelector('.mv-login-hint');
@@ -19781,12 +19816,13 @@ document.addEventListener('keydown', function(e) {
         catch (_) { return window.VID || ''; }
     }
 
-    window.MV_askEmailForCheckout = function (url) {
+    window.MV_askEmailForCheckout = function (url, src) {
         if (!window.MV_ANONYMOUS) {
             try { window.open(url, '_blank', 'noopener'); } catch (_) { window.location.href = url; }
             return;
         }
         pendingCheckout = url;
+        pendingCheckoutSrc = src || null;
         setCheckoutCopy(true);
         modal.classList.add('is-open');
         setTimeout(() => emailInput && emailInput.focus(), 200);
@@ -19830,6 +19866,7 @@ document.addEventListener('keydown', function(e) {
     // apresentação (modelos mandando mensagem, notificações) pós-e-mail.
     function promoteSuccess(data, preTab) {
         const pc = pendingCheckout; // captura ANTES do closeModal (que zera)
+        const pcSrc = pendingCheckoutSrc;
         window.MV_ANONYMOUS = false;
         window.currentUserEmail = data.email;
         document.body.classList.remove('funnel-mode');
@@ -19844,6 +19881,13 @@ document.addEventListener('keydown', function(e) {
             }
         } catch(_) {}
         if (pc) {
+            // registra a intenção de compra (carrinho abandonado do Suporte)
+            try {
+                fetch('/api/user/checkout-intent', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include', body: JSON.stringify({ url: pc, src: pcSrc }),
+                });
+            } catch (_) {}
             let opened = false;
             if (preTab && !preTab.closed) {
                 try { preTab.location.href = pc; opened = true; } catch (_) {}
@@ -21251,6 +21295,7 @@ window.Explore = (function () {
             const card = document.getElementById('tkPaywallCard');
             const preco = (v) => { const n = parseFloat(v); return isNaN(n) ? '' : 'R$ ' + n.toFixed(2).replace('.', ','); };
             const box = document.createElement('div');
+            box.className = 'tk-prem'; // permite compactar em tela baixa (Android)
             box.style.cssText = 'margin-top:12px;border:1px solid rgba(212,175,55,.55);background:linear-gradient(135deg,rgba(64,48,10,.6),rgba(26,19,4,.8));border-radius:14px;padding:13px 14px;box-shadow:0 0 18px rgba(212,175,55,.15);';
             box.innerHTML = '<div style="font-size:11px;font-weight:800;letter-spacing:.8px;color:#f5d67b;margin-bottom:5px;">💎 OU LEVE TUDO</div>'
                 + '<div style="font-size:13.5px;font-weight:800;color:#fff;">' + esc(prem.name || 'Premium') + ' — '
