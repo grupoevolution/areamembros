@@ -3285,7 +3285,7 @@ a { color: inherit; text-decoration: none; }
                     <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0a3 3 0 11-6 0m6 0H9"/></svg>
                     <span class="topbar-btn-badge"></span>
                 </button>
-                <button class="topbar-btn" title="Abrir app (nova aba)" onclick="window.open('/mockup-v3-final.html', '_blank')">
+                <button class="topbar-btn" title="Abrir app (nova aba)" onclick="window.open('/', '_blank')">
                     <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                 </button>
             </div>
@@ -5871,7 +5871,7 @@ a { color: inherit; text-decoration: none; }
                 <!-- RODÍZIO DE ONLINE (esteira) -->
                 <div style="margin-top:20px; background:linear-gradient(135deg, rgba(37,211,102,.08), rgba(0,0,0,.25)); border:1px solid rgba(37,211,102,.3); border-radius:14px; padding:16px 18px;">
                     <label style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:#fff; cursor:pointer;">
-                        <input type="checkbox" id="rotEnabled" style="width:18px; height:18px;" onchange="saveRotationConfig()"> 🔄 Rodízio de online (esteira)
+                        <input type="checkbox" id="rotEnabled" style="width:18px; height:18px;" onchange="saveRotationConfig()"> Rodízio de online (esteira)
                     </label>
                     <div class="form-help" style="margin:6px 0 12px;">Mantém ~N conversas online por vez e vai rodando o rodízio sozinho pela lista (as modelos ficam online em janelas do dia, mais real). Vale só pras conversas marcadas "Entra no rodízio" — as de funil/tráfego ficam sempre online. <b>Desligado = nada muda (todas sempre online).</b></div>
                     <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:end;">
@@ -6403,11 +6403,11 @@ a { color: inherit; text-decoration: none; }
                             <div style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12); border-radius:10px; padding:12px;">
                                 <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="cpListed" checked style="width:16px; height:16px;"> 👁️ Aparecer na lista de Conversas</label>
                                 <div class="form-help" style="margin-top:6px;">Desligado: a conversa NÃO aparece na aba Conversas, mas continua acessível pelo botão "Enviar mensagem" de um produto (ou link direto).</div>
-                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; margin-top:12px;"><input type="checkbox" id="cpHideWhenMember" style="width:16px; height:16px;"> 🙈 Sumir quando o cliente já for VIP/Premium</label>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; margin-top:12px;"><input type="checkbox" id="cpHideWhenMember" style="width:16px; height:16px;"> Sumir quando o cliente já for VIP/Premium</label>
                                 <div class="form-help" style="margin-top:6px;">Ligado: assim que o cliente vira VIP (compra o produto desta conversa) ou Premium, esta conversa SOME da lista dele — mesmo que já tenham falado. Ideal pra conversa que oferece o VIP/Premium (não faz sentido pra quem já comprou).</div>
-                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; margin-top:12px;"><input type="checkbox" id="cpTeaserLocked" style="width:16px; height:16px;"> 🪝 Isca: só prévia (não deixa abrir)</label>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; margin-top:12px;"><input type="checkbox" id="cpTeaserLocked" style="width:16px; height:16px;"> Isca: só prévia (não deixa abrir)</label>
                                 <div class="form-help" style="margin-top:6px;">Ligado: a modelo manda a 1ª mensagem, o lead não-VIP vê a PRÉVIA legível na lista, mas ao tocar NÃO abre a conversa — abre o popup de virar VIP. Incentivo: "tem gente te chamando e você não consegue nem abrir". (Combine com "primeira mensagem automática" pra a isca chegar sozinha.)</div>
-                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; margin-top:12px;"><input type="checkbox" id="cpInRotation" style="width:16px; height:16px;"> 🔄 Entra no rodízio de online</label>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; margin-top:12px;"><input type="checkbox" id="cpInRotation" style="width:16px; height:16px;"> Entra no rodízio de online</label>
                                 <div class="form-help" style="margin-top:6px;">Desligado (padrão) = <b>SEMPRE online</b> (deixe assim as conversas de funil/tráfego, pra nunca falhar). Ligado = entra na esteira: fica online só em janelas do dia, mostra "visto há X" fora delas e não responde enquanto offline (mais real). Configure quantas ficam online por vez lá em cima, no card do rodízio.</div>
                             </div>
 
@@ -9329,12 +9329,21 @@ async function revokeAccess(id, email) {
 }
 
 // Modal: Liberar acesso manual
-function openGrantAccessModal() {
-    // Popula select de produtos
+async function openGrantAccessModal() {
+    // Popula select com TODOS os produtos (include_plans=1 traz também os
+    // planos de chat/stories — ACESSO VIP/PREMIUM — que a lista normal
+    // esconde; sem isso o admin não conseguia liberar justamente os que
+    // mais vendem). Fallback: lista já carregada.
     const select = document.getElementById('grantProductId');
     if (select) {
+        let list = products;
+        try {
+            const { ok, data } = await API.call('/api/admin/products?include_plans=1');
+            if (ok && data.products && data.products.length) list = data.products;
+        } catch (_) {}
+        list = (list || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', 'pt-BR'));
         select.innerHTML = '<option value="">— Escolha um produto —</option>' +
-            products.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+            list.map(p => `<option value="${p.id}">${escapeHtml(p.name)}${p.is_active === false ? ' (inativo)' : ''}</option>`).join('');
     }
     
     // Limpa form
@@ -9653,32 +9662,26 @@ function initSalesAnalytics() {
     });
 }
 
+// Dia-calendário de BRASÍLIA (UTC-3 fixo). O backend interpreta from/to como
+// dia de Brasília — se o front mandar a data UTC do navegador, das 21h à
+// meia-noite o "Hoje" vira o dia de AMANHÃ e o painel mostra zero no pico.
+function _brDay(off) {
+    return new Date(Date.now() - 3 * 3600 * 1000 - (off || 0) * 86400000).toISOString().slice(0, 10);
+}
+
 // Resolve {from, to} baseado no periodo selecionado (ou custom)
 function _sapResolvePeriod() {
-    const today = new Date();
-    const fmt = (d) => d.toISOString().slice(0, 10);
     if (_sapCurrentPeriod === 'custom') {
         return {
-            from: document.getElementById('sapFrom').value || fmt(today),
-            to:   document.getElementById('sapTo').value   || fmt(today),
+            from: document.getElementById('sapFrom').value || _brDay(0),
+            to:   document.getElementById('sapTo').value   || _brDay(0),
         };
     }
-    if (_sapCurrentPeriod === 'today') {
-        return { from: fmt(today), to: fmt(today) };
-    }
-    if (_sapCurrentPeriod === 'yesterday') {
-        const y = new Date(); y.setDate(today.getDate() - 1);
-        return { from: fmt(y), to: fmt(y) };
-    }
-    if (_sapCurrentPeriod === '7d') {
-        const f = new Date(); f.setDate(today.getDate() - 6);
-        return { from: fmt(f), to: fmt(today) };
-    }
-    if (_sapCurrentPeriod === '30d') {
-        const f = new Date(); f.setDate(today.getDate() - 29);
-        return { from: fmt(f), to: fmt(today) };
-    }
-    return { from: fmt(today), to: fmt(today) };
+    if (_sapCurrentPeriod === 'today') return { from: _brDay(0), to: _brDay(0) };
+    if (_sapCurrentPeriod === 'yesterday') return { from: _brDay(1), to: _brDay(1) };
+    if (_sapCurrentPeriod === '7d') return { from: _brDay(6), to: _brDay(0) };
+    if (_sapCurrentPeriod === '30d') return { from: _brDay(29), to: _brDay(0) };
+    return { from: _brDay(0), to: _brDay(0) };
 }
 
 function _sapMoney(v) {
@@ -9782,16 +9785,12 @@ let _acqCurrentPeriod = 'today';
 let _acqTabsInited = false;
 
 function _acqResolvePeriod() {
-    const today = new Date();
-    const fmt = (d) => d.toISOString().slice(0, 10);
-    if (_acqCurrentPeriod === 'today')     return { from: fmt(today), to: fmt(today) };
-    if (_acqCurrentPeriod === 'yesterday') {
-        const y = new Date(); y.setDate(today.getDate() - 1);
-        return { from: fmt(y), to: fmt(y) };
-    }
-    if (_acqCurrentPeriod === '7d')  { const f = new Date(); f.setDate(today.getDate() - 6);  return { from: fmt(f), to: fmt(today) }; }
-    if (_acqCurrentPeriod === '30d') { const f = new Date(); f.setDate(today.getDate() - 29); return { from: fmt(f), to: fmt(today) }; }
-    return { from: fmt(today), to: fmt(today) };
+    // dia-calendário de Brasília (ver _brDay) — data UTC zerava o pico 21h-0h
+    if (_acqCurrentPeriod === 'today')     return { from: _brDay(0), to: _brDay(0) };
+    if (_acqCurrentPeriod === 'yesterday') return { from: _brDay(1), to: _brDay(1) };
+    if (_acqCurrentPeriod === '7d')  return { from: _brDay(6), to: _brDay(0) };
+    if (_acqCurrentPeriod === '30d') return { from: _brDay(29), to: _brDay(0) };
+    return { from: _brDay(0), to: _brDay(0) };
 }
 
 function _initAcqTabs() {
@@ -10177,31 +10176,27 @@ let _engCurrentPeriod = 'today';
 let _engTabsInited = false;
 
 function _engResolvePeriod() {
-    const today = new Date();
-    const fmt = (d) => d.toISOString().slice(0, 10);
+    // dia-calendário de Brasília (ver _brDay) — data UTC zerava o pico 21h-0h
     if (_engCurrentPeriod === 'custom') {
         return {
-            from: document.getElementById('engFrom')?.value || fmt(today),
-            to:   document.getElementById('engTo')?.value   || fmt(today),
+            from: document.getElementById('engFrom')?.value || _brDay(0),
+            to:   document.getElementById('engTo')?.value   || _brDay(0),
             label: 'Acessos no período',
         };
     }
     if (_engCurrentPeriod === 'today') {
-        return { from: fmt(today), to: fmt(today), label: 'Acessos hoje' };
+        return { from: _brDay(0), to: _brDay(0), label: 'Acessos hoje' };
     }
     if (_engCurrentPeriod === 'yesterday') {
-        const y = new Date(); y.setDate(today.getDate() - 1);
-        return { from: fmt(y), to: fmt(y), label: 'Acessos ontem' };
+        return { from: _brDay(1), to: _brDay(1), label: 'Acessos ontem' };
     }
     if (_engCurrentPeriod === '7d') {
-        const f = new Date(); f.setDate(today.getDate() - 6);
-        return { from: fmt(f), to: fmt(today), label: 'Acessos 7d (filtro)' };
+        return { from: _brDay(6), to: _brDay(0), label: 'Acessos 7d (filtro)' };
     }
     if (_engCurrentPeriod === '30d') {
-        const f = new Date(); f.setDate(today.getDate() - 29);
-        return { from: fmt(f), to: fmt(today), label: 'Acessos 30d (filtro)' };
+        return { from: _brDay(29), to: _brDay(0), label: 'Acessos 30d (filtro)' };
     }
-    return { from: fmt(today), to: fmt(today), label: 'Acessos hoje' };
+    return { from: _brDay(0), to: _brDay(0), label: 'Acessos hoje' };
 }
 
 function _initEngagementTabs() {
