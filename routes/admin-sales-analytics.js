@@ -883,4 +883,110 @@ router.get('/orphans', requireAdmin, async (req, res) => {
 });
 
 
+// ─── Ranking de CLIENTES: quem mais compra (bloco da tela "Todas as vendas") ─
+// GET /customer-ranking?period=today|yesterday|7|30|total&search=email
+// Agrupa user_access por e-mail (só vendas de webhook). Uma VENDA = par
+// (gateway, sale_id) DISTINTO — a mesma venda pode gravar VÁRIAS linhas (uma
+// por produto/item) repetindo o sale_amount, então deduplicamos antes de somar.
+// Janela por created_at (fuso Brasília), igual ao "vendas por chat": renovação
+// de assinatura atualiza granted_at e faria venda antiga contar de novo.
+router.get('/customer-ranking', requireAdmin, async (req, res) => {
+    const TZ = 'America/Sao_Paulo';
+    const period = String(req.query.period || '7');
+    const search = String(req.query.search || '').trim().toLowerCase().slice(0, 120);
+    let where;
+    if (period === 'today') {
+        where = `ua.created_at >= (((NOW() AT TIME ZONE '${TZ}')::date)::timestamp AT TIME ZONE '${TZ}')`;
+    } else if (period === 'yesterday') {
+        where = `ua.created_at >= ((((NOW() AT TIME ZONE '${TZ}')::date - 1))::timestamp AT TIME ZONE '${TZ}')
+                 AND ua.created_at < (((NOW() AT TIME ZONE '${TZ}')::date)::timestamp AT TIME ZONE '${TZ}')`;
+    } else if (period === 'total') {
+        where = `TRUE`;
+    } else {
+        const days = Math.max(1, Math.min(365, parseInt(period, 10) || 7));
+        where = `ua.created_at > NOW() - INTERVAL '${days} days'`;
+    }
+    try {
+        const params = [];
+        let searchSql = '';
+        if (search) {
+            params.push('%' + search + '%');
+            searchSql = ` AND ua.email ILIKE $${params.length}`;
+        }
+        // Reembolso/chargeback fica de fora (não é "compra" pra ranking); os
+        // demais status contam — 'replaced'/'expired' foram compras reais.
+        const baseWhere = `ua.granted_by = 'webhook'
+              AND ua.status NOT IN ('refunded', 'chargeback')
+              AND ${where}${searchSql}`;
+        // 1 linha por venda distinta (sale_id NULL vira venda própria via id)
+        const grouped = `
+            WITH vendas AS (
+                SELECT DISTINCT ON (LOWER(ua.email), ua.gateway, COALESCE(ua.sale_id, 'ua_' || ua.id))
+                       LOWER(ua.email) AS email,
+                       ua.sale_amount, ua.net_amount, ua.created_at
+                FROM user_access ua
+                WHERE ${baseWhere}
+                ORDER BY LOWER(ua.email), ua.gateway, COALESCE(ua.sale_id, 'ua_' || ua.id), ua.created_at ASC
+            )
+            SELECT v.email,
+                   COUNT(*)::int AS purchases,
+                   COALESCE(SUM(v.sale_amount), 0)::float AS total_gross,
+                   COALESCE(SUM(v.net_amount), 0)::float AS total_net,
+                   MIN(v.created_at) AS first_at,
+                   MAX(v.created_at) AS last_at
+            FROM vendas v
+            GROUP BY v.email`;
+        const [rank, summary] = await Promise.all([
+            db.query(`${grouped} ORDER BY purchases DESC, total_gross DESC LIMIT 100`, params),
+            db.query(`SELECT COUNT(*)::int AS buyers,
+                             COUNT(*) FILTER (WHERE t.purchases >= 2)::int AS repeat_buyers
+                      FROM (${grouped}) t`, params),
+        ]);
+        const emails = rank.rows.map(r => r.email);
+        const firstProduct = {};
+        const productCount = {};
+        if (emails.length) {
+            const p2 = params.concat([emails]);
+            const arrIdx = p2.length;
+            // 1ª compra: nome do produto da linha mais antiga do e-mail no período
+            const { rows: fp } = await db.query(`
+                SELECT DISTINCT ON (LOWER(ua.email)) LOWER(ua.email) AS email, p.name AS product_name
+                FROM user_access ua
+                LEFT JOIN products p ON p.id = ua.product_id
+                WHERE ${baseWhere} AND LOWER(ua.email) = ANY($${arrIdx})
+                ORDER BY LOWER(ua.email), ua.created_at ASC, ua.id ASC`, p2);
+            fp.forEach(r => { firstProduct[r.email] = r.product_name; });
+            const { rows: pc } = await db.query(`
+                SELECT LOWER(ua.email) AS email, COUNT(DISTINCT ua.product_id)::int AS n
+                FROM user_access ua
+                WHERE ${baseWhere} AND LOWER(ua.email) = ANY($${arrIdx})
+                GROUP BY LOWER(ua.email)`, p2);
+            pc.forEach(r => { productCount[r.email] = r.n; });
+        }
+        const customers = rank.rows.map(r => ({
+            email: r.email,
+            purchases: r.purchases,
+            total_gross: r.total_gross,
+            total_net: r.total_net,
+            products: productCount[r.email] || 0,
+            first_at: r.first_at,
+            first_product: firstProduct[r.email] || null,
+            last_at: r.last_at,
+        }));
+        return res.json({
+            success: true,
+            period,
+            customers,
+            summary: {
+                buyers: summary.rows[0].buyers,
+                repeat_buyers: summary.rows[0].repeat_buyers,
+            },
+        });
+    } catch (err) {
+        logger.error('[sales-analytics] /customer-ranking erro:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+
 module.exports = router;
