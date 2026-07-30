@@ -32,6 +32,7 @@ const VALID_KEYS = [
     'live_notifications',
     'chat_config',
     'chat_rotation',
+    'chat_greetings',
 ];
 
 // =============================================================================
@@ -246,6 +247,24 @@ function validateValue(key, value) {
         }
     }
     
+    if (key === 'chat_greetings') {
+        if (!Array.isArray(value.phrases)) {
+            return { ok: false, error: 'value.phrases deve ser array' };
+        }
+        if (value.phrases.length > 200) {
+            return { ok: false, error: 'Máximo 200 frases' };
+        }
+        const validPeriods = ['any', 'manha', 'tarde', 'noite', 'madrugada'];
+        for (const p of value.phrases) {
+            if (!p || typeof p.text !== 'string' || !p.text.trim()) {
+                return { ok: false, error: 'Cada frase precisa de text' };
+            }
+            if (p.period !== undefined && !validPeriods.includes(p.period)) {
+                return { ok: false, error: 'period deve ser any/manha/tarde/noite/madrugada' };
+            }
+        }
+    }
+
     if (key === 'home_layout') {
         if (!Array.isArray(value.sections)) {
             return { ok: false, error: 'sections deve ser array' };
@@ -367,6 +386,9 @@ function defaultFor(key) {
             { id: 's8', type: 'reviews_carousel', active: true, title: 'O que dizem' },
         ]
     };
+    // Saudação automática: a lista real é semeada pela migração (lib/migrations.js);
+    // este default só cobre banco recém-criado antes do INSERT rodar.
+    if (key === 'chat_greetings') return { enabled_default: false, phrases: [] };
     if (key === 'wishes_config') return {
         max_discount_percent: 30,
         xp_to_wishes_ratio: 10,

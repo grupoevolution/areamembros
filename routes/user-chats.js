@@ -282,6 +282,33 @@ function saudacaoBrasilia() {
     if (h >= 12 && h < 18) return 'boa tarde';
     return 'boa noite';
 }
+// Período do dia em Brasília — casa com o campo "period" das frases da
+// saudação automática (gamification_config.chat_greetings).
+function periodoBrasilia() {
+    const h = new Date(Date.now() - 3 * 3600 * 1000).getUTCHours();
+    if (h >= 5 && h < 12) return 'manha';
+    if (h >= 12 && h < 18) return 'tarde';
+    if (h >= 18) return 'noite';
+    return 'madrugada';
+}
+
+// SAUDAÇÃO AUTOMÁTICA: sorteia UMA frase da lista global respeitando o período
+// (Brasília). Frases com {cidade} só entram no sorteio se a sessão TEM cidade
+// (senão o cliente veria "vi que vc é de sua região" — quebra a ilusão).
+async function pickGreetingPhrase(session) {
+    try {
+        const { rows } = await db.query(`SELECT value FROM gamification_config WHERE key = 'chat_greetings'`);
+        const cfg = rows[0]?.value || {};
+        const all = Array.isArray(cfg.phrases) ? cfg.phrases : [];
+        const per = periodoBrasilia();
+        let pool = all.filter(p => p && typeof p.text === 'string' && p.text.trim()
+            && (!p.period || p.period === 'any' || p.period === per));
+        if (!session || !session.city) pool = pool.filter(p => p.text.indexOf('{cidade}') === -1);
+        if (!pool.length) return null;
+        return pool[Math.floor(Math.random() * pool.length)].text;
+    } catch (_) { return null; }
+}
+
 async function fillVars(text, ctx) {
     if (!text || text.indexOf('{') === -1) return text;
     let nome = 'amor';
@@ -1038,6 +1065,29 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
                     const fresh = await runScript(session, chat, vipSteps, 0, ident);
                     newMsgs.push(...fresh);
                 }
+            }
+
+            // SAUDAÇÃO AUTOMÁTICA: conversa VAZIA (a modelo nunca falou — zero
+            // mensagens de bot, nem o fluxo VIP acima rodou) + chat com a
+            // saudação ligada + sem roteiro pendente → responde a 1ª mensagem
+            // do cliente com uma frase aleatória da lista global, como se a
+            // modelo respondesse. Depois disso a conversa fica parada (a IA
+            // assume no futuro). O COUNT roda DEPOIS do bloco VIP: se ele
+            // gerou mensagens, o count já vem > 0 e a saudação não dispara.
+            if (chat.greeting_enabled === true && !session.awaiting) {
+                try {
+                    const { rows: [bc] } = await db.query(
+                        `SELECT COUNT(*)::int AS n FROM chat_messages WHERE session_id = $1 AND sender = 'bot'`,
+                        [session.id]
+                    );
+                    if ((bc ? bc.n : 0) === 0) {
+                        const phrase = await pickGreetingPhrase(session);
+                        if (phrase) {
+                            const content = await fillVars(phrase, ident);
+                            newMsgs.push(await insertMsg(session.id, 'bot', 'text', content, null, { typing_ms: 2500 }, null));
+                        }
+                    }
+                } catch (_) {}
             }
         } else {
             return res.status(400).json({ success: false, error: 'Nada pra processar' });

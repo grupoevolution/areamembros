@@ -373,14 +373,14 @@ router.post('/', requireAdmin, async (req, res) => {
         const { name, avatar_url, section, status_label, show_online, access,
                 product_id, checkout_url, reply_mode, allow_photo, display_order, active,
                 city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key, tag, auto_start_minutes, listed, is_support,
-                story_vip_product_id, story_vip_checkout_url, hide_when_member, teaser_locked, in_rotation } = req.body || {};
+                story_vip_product_id, story_vip_checkout_url, hide_when_member, teaser_locked, in_rotation, greeting_enabled } = req.body || {};
         if (!name || !String(name).trim()) return res.status(400).json({ success: false, error: 'Nome obrigatório' });
         const { rows } = await db.query(`
             INSERT INTO chats (name, avatar_url, section, status_label, show_online, access,
                                product_id, checkout_url, reply_mode, allow_photo, display_order, active,
                                city_fallback, gate_media, call_video_call_id, trigger_product_ids, input_mode, call_goto_key, tag, auto_start_minutes, listed, is_support,
-                               story_vip_product_id, story_vip_checkout_url, hide_when_member, teaser_locked, in_rotation)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27) RETURNING *
+                               story_vip_product_id, story_vip_checkout_url, hide_when_member, teaser_locked, in_rotation, greeting_enabled)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28) RETURNING *
         `, [
             String(name).trim().slice(0, 80),
             (avatar_url || '').trim().slice(0, 1000) || null,
@@ -409,6 +409,7 @@ router.post('/', requireAdmin, async (req, res) => {
             hide_when_member === true,
             teaser_locked === true,
             in_rotation === true,
+            greeting_enabled === true,
         ]);
         // Só um chat de Suporte por vez.
         if (is_support === true) {
@@ -455,6 +456,7 @@ router.put('/:id', requireAdmin, async (req, res) => {
         if (b.hide_when_member !== undefined) set('hide_when_member', !!b.hide_when_member);
         if (b.teaser_locked !== undefined) set('teaser_locked', !!b.teaser_locked);
         if (b.in_rotation !== undefined) set('in_rotation', !!b.in_rotation);
+        if (b.greeting_enabled !== undefined) set('greeting_enabled', !!b.greeting_enabled);
         if (b.graph !== undefined) set('graph', b.graph ? JSON.stringify(b.graph) : null);
         if (!updates.length) return res.status(400).json({ success: false, error: 'Nada pra atualizar' });
         values.push(id);
