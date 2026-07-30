@@ -2065,6 +2065,49 @@ router.get('/plan-status', requireUser, async (req, res) => {
     } catch (_) { return res.json(empty); }
 });
 
+// ── UPGRADE ENTRE PLANOS (pague só a diferença) ──────────────────────────────
+// Regras no painel (gamification_config.upgrade_rules): [{ has_product_id,
+// not_if_product_id, offer_label, offer_text, checkout_url, target_name }].
+// Avalia NA ORDEM e devolve a PRIMEIRA regra em que o cliente TEM o produto
+// has_product_id ativo E NÃO tem o not_if_product_id (o plano-alvo). O card
+// aparece no topo de "Minhas Compras"; o checkout é o da DIFERENÇA, cadastrado
+// como oferta extra do produto-alvo — o webhook entrega o plano novo sozinho.
+router.get('/upgrade-offer', requireUser, async (req, res) => {
+    try {
+        const email = String(req.user.email || '').toLowerCase().trim();
+        if (!email) return res.json({ success: true, offer: null });
+        const { rows } = await db.query(`SELECT value FROM gamification_config WHERE key = 'upgrade_rules'`);
+        const rules = Array.isArray(rows[0]?.value?.rules) ? rows[0].value.rules : [];
+        if (!rules.length) return res.json({ success: true, offer: null });
+        const { rows: acc } = await db.query(
+            `SELECT DISTINCT product_id FROM user_access
+             WHERE LOWER(email) = $1 AND status = 'active'
+               AND (expires_at IS NULL OR expires_at > NOW())`,
+            [email]
+        );
+        const owned = new Set(acc.map(r => r.product_id));
+        for (const r of rules) {
+            if (!r) continue;
+            const has = parseInt(r.has_product_id, 10) || null;
+            const notIf = parseInt(r.not_if_product_id, 10) || null;
+            const checkout = String(r.checkout_url || '').trim();
+            if (!has || !checkout) continue;
+            if (!owned.has(has)) continue;
+            if (notIf && owned.has(notIf)) continue;
+            return res.json({
+                success: true,
+                offer: {
+                    offer_label: String(r.offer_label || 'Suba de plano pagando só a diferença').slice(0, 120),
+                    offer_text: String(r.offer_text || '').slice(0, 400),
+                    checkout_url: checkout.slice(0, 1000),
+                    target_name: r.target_name ? String(r.target_name).slice(0, 80) : null,
+                },
+            });
+        }
+        return res.json({ success: true, offer: null });
+    } catch (_) { return res.json({ success: true, offer: null }); }
+});
+
 // PIX PENDENTE do cliente pra um produto: alimenta o popup "termina de pagar
 // seu Pix" (em vez de oferecer checkout novo pra quem JÁ gerou o código).
 // Validade de exibição: 30 minutos a partir do webhook de pendente.

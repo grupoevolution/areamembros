@@ -33,6 +33,7 @@ const VALID_KEYS = [
     'chat_config',
     'chat_rotation',
     'chat_greetings',
+    'upgrade_rules',
 ];
 
 // =============================================================================
@@ -265,6 +266,23 @@ function validateValue(key, value) {
         }
     }
 
+    if (key === 'upgrade_rules') {
+        if (!Array.isArray(value.rules)) {
+            return { ok: false, error: 'value.rules deve ser array' };
+        }
+        if (value.rules.length > 30) {
+            return { ok: false, error: 'Máximo 30 regras' };
+        }
+        for (const r of value.rules) {
+            if (!r || !parseInt(r.has_product_id, 10)) {
+                return { ok: false, error: 'Cada regra precisa do produto que o cliente TEM (has_product_id)' };
+            }
+            if (typeof r.checkout_url !== 'string' || !r.checkout_url.trim()) {
+                return { ok: false, error: 'Cada regra precisa do link do checkout da diferença' };
+            }
+        }
+    }
+
     if (key === 'home_layout') {
         if (!Array.isArray(value.sections)) {
             return { ok: false, error: 'sections deve ser array' };
@@ -389,6 +407,8 @@ function defaultFor(key) {
     // Saudação automática: a lista real é semeada pela migração (lib/migrations.js);
     // este default só cobre banco recém-criado antes do INSERT rodar.
     if (key === 'chat_greetings') return { enabled_default: false, phrases: [] };
+    // Upgrades entre planos (pague a diferença): regras avaliadas em ordem.
+    if (key === 'upgrade_rules') return { rules: [] };
     if (key === 'wishes_config') return {
         max_discount_percent: 30,
         xp_to_wishes_ratio: 10,
