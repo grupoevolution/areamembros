@@ -4657,6 +4657,43 @@ a { color: inherit; text-decoration: none; }
                 </div>
                 <style>.sbs-tab{background:transparent;border:1px solid var(--border,rgba(255,255,255,.15));color:var(--text,#ccc);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;}.sbs-tab.on{background:rgba(245,208,103,.18);border-color:rgba(245,208,103,.55);color:#f5d067;font-weight:700;}</style>
 
+                <!-- RANKING DE CLIENTES: quem mais compra -->
+                <div style="margin-bottom:18px; background:linear-gradient(135deg, rgba(125,219,154,.07), rgba(0,0,0,.25)); border:1px solid rgba(125,219,154,.28); border-radius:14px; padding:16px 18px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                        <div style="font-size:14px; font-weight:700; color:#fff;">Ranking de clientes (quem mais compra)</div>
+                        <div id="custRankTabs" style="display:flex; gap:6px; flex-wrap:wrap;">
+                            <button type="button" class="sbs-tab" data-p="today" onclick="setCustRank('today',this)">Hoje</button>
+                            <button type="button" class="sbs-tab" data-p="yesterday" onclick="setCustRank('yesterday',this)">Ontem</button>
+                            <button type="button" class="sbs-tab on" data-p="7" onclick="setCustRank('7',this)">7 dias</button>
+                            <button type="button" class="sbs-tab" data-p="30" onclick="setCustRank('30',this)">30 dias</button>
+                            <button type="button" class="sbs-tab" data-p="total" onclick="setCustRank('total',this)">Total</button>
+                        </div>
+                    </div>
+                    <div class="form-help" style="margin:-2px 0 10px;">Seus melhores clientes no período: quantas compras cada e-mail fez, quanto gastou e por onde entrou (1ª compra). Quem tem <b>2+ compras</b> aparece destacado — é o público quente pra ofertas novas.</div>
+                    <div class="products-search-wrap" style="max-width:340px; margin-bottom:10px;">
+                        <svg class="products-search-icon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                        <input type="text" class="products-search-input" id="custRankSearch" placeholder="Buscar por e-mail..." oninput="custRankSearchChanged()">
+                    </div>
+                    <div id="custRankSummary" style="font-size:12.5px; color:#7ddb9a; font-weight:600; margin-bottom:8px;"></div>
+                    <div class="data-table-wrap" style="max-height:420px; overflow:auto;">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Compras</th>
+                                    <th>Total gasto</th>
+                                    <th>Líquido</th>
+                                    <th>1ª compra</th>
+                                    <th>Última compra</th>
+                                </tr>
+                            </thead>
+                            <tbody id="custRankBody">
+                                <tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">Carregando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- Toolbar de filtros -->
                 <div class="products-toolbar">
                     <div class="products-search-wrap">
@@ -5881,6 +5918,25 @@ a { color: inherit; text-decoration: none; }
                     </div>
                 </div>
 
+                <!-- SAUDAÇÃO AUTOMÁTICA: 1ª resposta em conversa vazia (lista global de frases) -->
+                <div style="margin-top:16px; background:linear-gradient(135deg, rgba(96,165,250,.08), rgba(0,0,0,.25)); border:1px solid rgba(96,165,250,.3); border-radius:14px; padding:16px 18px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                        <div>
+                            <div style="font-size:14px; font-weight:700; color:#fff;">Saudação automática</div>
+                            <div class="form-help" style="margin-top:4px;">Quando o cliente manda a 1ª mensagem numa conversa <b>vazia</b> (a modelo nunca falou), o sistema responde com UMA frase aleatória desta lista — pra conversa não começar no vácuo. Liga/desliga <b>por conversa</b>, no card da conversa (checkbox "Saudação automática"). Se o roteiro já rodou, nada muda.</div>
+                        </div>
+                        <button class="btn-secondary" onclick="toggleGreetingsPanel()" id="greetPanelBtn">Editar frases</button>
+                    </div>
+                    <div id="greetPanel" style="display:none; margin-top:14px; border-top:1px solid rgba(255,255,255,.08); padding-top:14px;">
+                        <div class="form-help" style="margin-bottom:8px;">Uma frase por linha. Pra frase valer só num período do dia, termine a linha com <b>| manha</b>, <b>| tarde</b>, <b>| noite</b> ou <b>| madrugada</b> (sem sufixo = vale sempre). Variáveis: <b>{nome}</b> (nome do cliente; sem nome vira "amor") e <b>{cidade}</b> (frases com {cidade} só são sorteadas quando o sistema sabe a cidade do cliente).</div>
+                        <textarea class="form-textarea" id="greetPhrases" style="min-height:220px; font-size:13px; line-height:1.6;" placeholder="oi&#10;oii, tudo bem?&#10;bom dia | manha"></textarea>
+                        <div style="display:flex; align-items:center; gap:12px; margin-top:10px;">
+                            <button class="btn-primary" onclick="saveGreetingsConfig()">Salvar frases</button>
+                            <span id="greetStatus" style="font-size:12px; color:rgba(255,255,255,.55);"></span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- PRODUTO ÚNICO DO CHAT: o popup VIP/PREMIUM de TODAS as conversas -->
                 <div id="chatPaywallCard" style="margin-top:16px; background:linear-gradient(135deg, rgba(229,9,20,.10), rgba(0,0,0,.25)); border:1px solid rgba(229,9,20,.35); border-radius:14px; padding:16px 18px;">
                     <div style="color:rgba(255,255,255,.5); font-size:12px;">Carregando produto do chat…</div>
@@ -6439,6 +6495,8 @@ a { color: inherit; text-decoration: none; }
                                 <div class="form-help" style="margin-top:6px;">Ligado: a modelo manda a 1ª mensagem, o lead não-VIP vê a PRÉVIA legível na lista, mas ao tocar NÃO abre a conversa — abre o popup de virar VIP. Incentivo: "tem gente te chamando e você não consegue nem abrir". (Combine com "primeira mensagem automática" pra a isca chegar sozinha.)</div>
                                 <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; margin-top:12px;"><input type="checkbox" id="cpInRotation" style="width:16px; height:16px;"> Entra no rodízio de online</label>
                                 <div class="form-help" style="margin-top:6px;">Desligado (padrão) = <b>SEMPRE online</b> (deixe assim as conversas de funil/tráfego, pra nunca falhar). Ligado = entra na esteira: fica online só em janelas do dia, mostra "visto há X" fora delas e não responde enquanto offline (mais real). Configure quantas ficam online por vez lá em cima, no card do rodízio.</div>
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; margin-top:12px;"><input type="checkbox" id="cpGreeting" style="width:16px; height:16px;"> Saudação automática</label>
+                                <div class="form-help" style="margin-top:6px;">Responde a 1ª mensagem do cliente com uma frase aleatória da lista (pra conversa não começar no vácuo). Só dispara em conversa VAZIA — se o roteiro já rodou (a modelo já falou), nada muda. As frases você edita no card "Saudação automática" da tela de Chats.</div>
                             </div>
 
                             <!-- Chat de Suporte / entrega de venda -->
@@ -7647,6 +7705,23 @@ a { color: inherit; text-decoration: none; }
                         </label>
                     </div>
                     <div style="margin-top:14px;font-size:11px;color:rgba(255,255,255,.4);">💡 Mudanças aparecem no app cliente imediatamente após salvar.</div>
+                </div>
+
+                <!-- ═══════════════ UPGRADES (pague a diferença) ═══════════════ -->
+                <div class="form-card" style="padding:20px;margin-bottom:18px;border-color:rgba(212,175,55,.35);">
+                    <div class="form-card-head" style="margin-bottom:12px;">
+                        <div class="form-card-title" style="color:#f5d67b;">Upgrades (pague a diferença)</div>
+                        <div class="form-card-sub">Cliente que já comprou um plano barato vê um card dourado em "Minhas Compras" oferecendo subir de plano pagando só a diferença. As regras valem na ordem: a primeira que casar com o que ele tem é a que aparece.</div>
+                    </div>
+                    <div style="background:rgba(212,175,55,.07);border:1px solid rgba(212,175,55,.25);border-radius:10px;padding:12px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.55;margin-bottom:14px;">
+                        <b style="color:#f5d67b;">Como liberar o plano novo sozinho:</b> crie no gateway um checkout com o valor da DIFERENÇA (ex.: VIP 29,90 → Premium 49,90 = checkout de 20,00) e cadastre esse checkout como OFERTA EXTRA do produto-alvo (Produtos → produto → ofertas). Assim, quando o cliente pagar a diferença, o webhook entrega o plano novo automaticamente. Aqui você só configura QUEM vê o botão e pra onde ele leva.
+                    </div>
+                    <div id="upgradeRulesList"></div>
+                    <div style="display:flex; align-items:center; gap:12px; margin-top:12px;">
+                        <button class="btn-secondary" onclick="addUpgradeRule()">Adicionar regra</button>
+                        <button class="btn-primary" onclick="saveUpgradeRules()">Salvar upgrades</button>
+                        <span id="upgradeRulesStatus" style="font-size:12px;color:rgba(255,255,255,.55);"></span>
+                    </div>
                 </div>
 
                 <div class="form-card" style="padding:20px;margin-bottom:18px;">
@@ -9171,8 +9246,63 @@ function switchGlobalGateway() { alert('Configuração global — em breve'); }
 // ============================================================================
 // SALES / WEBHOOKS
 // ============================================================================
+// ─── Ranking de clientes (quem mais compra) ─────────────────────────────────
+let _custRankPeriod = '7';
+let _custRankSearchTimer = null;
+function setCustRank(p, btn) {
+    _custRankPeriod = p;
+    document.querySelectorAll('#custRankTabs .sbs-tab').forEach(b => b.classList.toggle('on', b === btn));
+    loadCustomerRanking();
+}
+window.setCustRank = setCustRank;
+function custRankSearchChanged() {
+    clearTimeout(_custRankSearchTimer);
+    _custRankSearchTimer = setTimeout(loadCustomerRanking, 350);
+}
+window.custRankSearchChanged = custRankSearchChanged;
+async function loadCustomerRanking() {
+    const tbody = document.getElementById('custRankBody');
+    const sumEl = document.getElementById('custRankSummary');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">Carregando...</td></tr>';
+    try {
+        const search = document.getElementById('custRankSearch')?.value.trim() || '';
+        const qs = new URLSearchParams({ period: _custRankPeriod });
+        if (search) qs.set('search', search);
+        const r = await fetch('/api/admin/sales-analytics/customer-ranking?' + qs, { credentials: 'include' }).then(r => r.json());
+        if (!r.success) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:#f55;">Erro ao carregar.</td></tr>'; return; }
+        const money = (v) => 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',');
+        const fmtD = (v) => { try { return new Date(v).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }); } catch (_) { return '—'; } };
+        if (sumEl) {
+            const b = r.summary?.buyers || 0, rep = r.summary?.repeat_buyers || 0;
+            const pct = b > 0 ? Math.round(rep * 100 / b) : 0;
+            sumEl.textContent = rep + ' cliente' + (rep === 1 ? '' : 's') + ' comprou mais de uma vez no período (' + pct + '% dos ' + b + ' compradores)';
+        }
+        if (!r.customers.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:var(--text-muted);">Nenhuma venda no período.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = r.customers.map(c => {
+            const hot = c.purchases >= 2;
+            const emailStyle = hot ? 'font-weight:800;color:#f5d067;' : 'color:#fff;';
+            return '<tr>'
+                + '<td style="' + emailStyle + 'font-size:12.5px;">' + escHtmlAdmin(c.email) + '</td>'
+                + '<td style="font-weight:' + (hot ? '800' : '500') + ';color:' + (hot ? '#f5d067' : 'var(--text,#ccc)') + ';">' + c.purchases + (c.products > 1 ? ' <span style="font-size:10.5px;color:rgba(255,255,255,.45);">(' + c.products + ' produtos)</span>' : '') + '</td>'
+                + '<td>' + money(c.total_gross) + '</td>'
+                + '<td style="color:#7ddb9a;">' + money(c.total_net) + '</td>'
+                + '<td style="font-size:12px;color:rgba(255,255,255,.7);">' + fmtD(c.first_at) + (c.first_product ? ' · ' + escHtmlAdmin(c.first_product) : '') + '</td>'
+                + '<td style="font-size:12px;color:rgba(255,255,255,.7);">' + fmtD(c.last_at) + '</td>'
+                + '</tr>';
+        }).join('');
+    } catch (_) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:24px; color:#f55;">Erro de rede.</td></tr>';
+    }
+}
+window.loadCustomerRanking = loadCustomerRanking;
+
 async function loadSales() {
     try { loadSalesBySource(); } catch (_) {} // ranking "vendas por chat" no topo
+    try { loadCustomerRanking(); } catch (_) {} // ranking de clientes (quem mais compra)
     const tbody = document.getElementById('salesTableBody');
     if (!tbody) return;
 
@@ -11493,7 +11623,87 @@ async function loadAppConfig() {
     setCheck('featContinueWatching', cfg.continue_watching_enabled);
     setCheck('featOnboarding', cfg.onboarding_enabled);
     setCheck('featExploreTab', cfg.explore_tab_enabled);
+
+    // Upgrades (pague a diferença)
+    try { loadUpgradeRules(configs.upgrade_rules?.value); } catch (_) {}
 }
+
+// ─── Upgrades entre planos (pague a diferença) ──────────────────────────────
+let _upgradeProducts = [];
+async function loadUpgradeRules(cfgValue) {
+    const box = document.getElementById('upgradeRulesList');
+    if (!box) return;
+    try {
+        if (!_upgradeProducts.length) {
+            const pr = await fetch('/api/admin/products?include_plans=1', { credentials: 'include' }).then(r => r.json());
+            _upgradeProducts = pr.products || [];
+        }
+        let rules = Array.isArray(cfgValue?.rules) ? cfgValue.rules : null;
+        if (!rules) {
+            const r = await fetch('/api/admin/gamification/upgrade_rules', { credentials: 'include' }).then(r => r.json());
+            rules = Array.isArray(r?.value?.rules) ? r.value.rules : [];
+        }
+        box.innerHTML = rules.length
+            ? rules.map(renderUpgradeRuleRow).join('')
+            : '<div style="font-size:12.5px;color:rgba(255,255,255,.45);padding:6px 0;">Nenhuma regra ainda. Clique em "Adicionar regra".</div>';
+    } catch (_) {}
+}
+function _upgProductOptions(selected) {
+    return '<option value="">— escolha o produto —</option>' + _upgradeProducts.map(p =>
+        '<option value="' + p.id + '"' + (String(p.id) === String(selected || '') ? ' selected' : '') + '>' + escHtmlAdmin(p.name) + '</option>'
+    ).join('');
+}
+function renderUpgradeRuleRow(rule) {
+    const r = rule || {};
+    return '<div class="upg-rule" style="background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-bottom:10px;">'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+        + '<div><label class="form-label" style="font-size:11.5px;">Se o cliente TEM este produto</label><select class="form-select upg-has">' + _upgProductOptions(r.has_product_id) + '</select></div>'
+        + '<div><label class="form-label" style="font-size:11.5px;">NÃO mostrar se ele JÁ tem este (o plano-alvo)</label><select class="form-select upg-notif"><option value="">— nenhum —</option>' + _upgProductOptions(r.not_if_product_id).replace('<option value="">— escolha o produto —</option>', '') + '</select></div>'
+        + '</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">'
+        + '<div><label class="form-label" style="font-size:11.5px;">Título do card (o que o cliente lê)</label><input class="form-input upg-label" maxlength="120" placeholder="Vire PREMIUM pagando só a diferença" value="' + escHtmlAdmin(r.offer_label || '') + '"></div>'
+        + '<div><label class="form-label" style="font-size:11.5px;">Nome do plano-alvo (vira o botão)</label><input class="form-input upg-target" maxlength="80" placeholder="Premium" value="' + escHtmlAdmin(r.target_name || '') + '"></div>'
+        + '</div>'
+        + '<div style="margin-bottom:10px;"><label class="form-label" style="font-size:11.5px;">Texto de apoio (opcional)</label><input class="form-input upg-text" maxlength="400" placeholder="Você já pagou o VIP — completa a diferença e leva tudo." value="' + escHtmlAdmin(r.offer_text || '') + '"></div>'
+        + '<div style="display:flex;gap:10px;align-items:end;">'
+        + '<div style="flex:1;"><label class="form-label" style="font-size:11.5px;">Link do checkout da DIFERENÇA</label><input class="form-input upg-checkout" maxlength="1000" placeholder="https://pay..." value="' + escHtmlAdmin(r.checkout_url || '') + '"></div>'
+        + '<button type="button" class="btn-danger" onclick="this.closest(\'.upg-rule\').remove()">Remover</button>'
+        + '</div></div>';
+}
+function addUpgradeRule() {
+    const box = document.getElementById('upgradeRulesList');
+    if (!box) return;
+    if (!box.querySelector('.upg-rule')) box.innerHTML = '';
+    box.insertAdjacentHTML('beforeend', renderUpgradeRuleRow({}));
+}
+window.addUpgradeRule = addUpgradeRule;
+async function saveUpgradeRules() {
+    const st = document.getElementById('upgradeRulesStatus');
+    const rules = [];
+    for (const row of document.querySelectorAll('#upgradeRulesList .upg-rule')) {
+        const has = parseInt(row.querySelector('.upg-has').value, 10) || null;
+        const checkout = row.querySelector('.upg-checkout').value.trim();
+        if (!has && !checkout) continue; // linha vazia: ignora
+        if (!has) { if (st) st.textContent = 'Escolha o produto que o cliente TEM em todas as regras.'; return; }
+        if (!checkout) { if (st) st.textContent = 'Preencha o link do checkout da diferença em todas as regras.'; return; }
+        rules.push({
+            has_product_id: has,
+            not_if_product_id: parseInt(row.querySelector('.upg-notif').value, 10) || null,
+            offer_label: row.querySelector('.upg-label').value.trim(),
+            offer_text: row.querySelector('.upg-text').value.trim(),
+            checkout_url: checkout,
+            target_name: row.querySelector('.upg-target').value.trim(),
+        });
+    }
+    try {
+        const r = await fetch('/api/admin/gamification/upgrade_rules', {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+            body: JSON.stringify({ value: { rules } }),
+        }).then(r => r.json());
+        if (st) { st.textContent = r.success ? 'Salvo (' + rules.length + ' regra' + (rules.length === 1 ? '' : 's') + ')' : ('Erro: ' + (r.error || '')); setTimeout(() => { st.textContent = ''; }, 3500); }
+    } catch (_) { if (st) st.textContent = 'Erro de rede'; }
+}
+window.saveUpgradeRules = saveUpgradeRules;
 
 // Salva 1 toggle individual sem mexer no resto do app_config
 async function saveAppFeatureToggle(key, value) {
@@ -16004,6 +16214,48 @@ async function saveRotationConfig() {
 }
 window.saveRotationConfig = saveRotationConfig;
 
+// ─── Saudação automática (frases globais) ───────────────────────────────────
+let _greetLoaded = false;
+function toggleGreetingsPanel() {
+    const p = document.getElementById('greetPanel');
+    const open = p.style.display === 'none';
+    p.style.display = open ? 'block' : 'none';
+    document.getElementById('greetPanelBtn').textContent = open ? 'Fechar' : 'Editar frases';
+}
+window.toggleGreetingsPanel = toggleGreetingsPanel;
+async function loadGreetingsConfig() {
+    if (_greetLoaded) return;
+    try {
+        const r = await fetch('/api/admin/gamification/chat_greetings', { credentials: 'include' }).then(r => r.json());
+        const c = (r && r.value) || {};
+        const phrases = Array.isArray(c.phrases) ? c.phrases : [];
+        const ta = document.getElementById('greetPhrases');
+        if (ta) ta.value = phrases.map(p => p.text + (p.period && p.period !== 'any' ? ' | ' + p.period : '')).join('\n');
+        _greetLoaded = true;
+    } catch (_) {}
+}
+async function saveGreetingsConfig() {
+    const ta = document.getElementById('greetPhrases');
+    const valid = ['manha', 'tarde', 'noite', 'madrugada'];
+    const phrases = ta.value.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+        const i = l.lastIndexOf('|');
+        if (i > 0) {
+            const per = l.slice(i + 1).trim().toLowerCase();
+            if (valid.includes(per)) return { text: l.slice(0, i).trim(), period: per };
+        }
+        return { text: l, period: 'any' };
+    }).filter(p => p.text);
+    const st = document.getElementById('greetStatus');
+    try {
+        const r = await fetch('/api/admin/gamification/chat_greetings', {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+            body: JSON.stringify({ value: { enabled_default: false, phrases } }),
+        }).then(r => r.json());
+        if (st) { st.textContent = r.success ? 'Salvo (' + phrases.length + ' frases)' : ('Erro: ' + (r.error || '')); setTimeout(() => { st.textContent = ''; }, 3000); }
+    } catch (e) { if (st) st.textContent = 'Erro de rede'; }
+}
+window.saveGreetingsConfig = saveGreetingsConfig;
+
 // ─── Vendas por chat (atribuição UTM) ───────────────────────────────────────
 let _salesBySrcPeriod = '7';
 function setSalesBySrc(p, btn) {
@@ -16037,6 +16289,7 @@ async function loadAdminChats() {
     loadChatPaywallCard();
     loadSupportConfig();
     loadRotationConfig();
+    loadGreetingsConfig();
     const list = document.getElementById('adminChatsList');
     if (!list) return;
     try {
@@ -16229,6 +16482,7 @@ function editChatPersona(c) {
     document.getElementById('cpHideWhenMember').checked = c.hide_when_member === true;
     document.getElementById('cpTeaserLocked').checked = c.teaser_locked === true;
     document.getElementById('cpInRotation').checked = c.in_rotation === true;
+    document.getElementById('cpGreeting').checked = c.greeting_enabled === true;
     document.getElementById('cpSupport').checked = c.is_support === true;
     document.getElementById('cpCityFallback').value = c.city_fallback || '';
     document.getElementById('cpOrder').value = c.display_order || 0;
@@ -16267,6 +16521,7 @@ async function saveChatPersona(e) {
         hide_when_member: document.getElementById('cpHideWhenMember').checked,
         teaser_locked: document.getElementById('cpTeaserLocked').checked,
         in_rotation: document.getElementById('cpInRotation').checked,
+        greeting_enabled: document.getElementById('cpGreeting').checked,
         is_support: document.getElementById('cpSupport').checked,
         city_fallback: document.getElementById('cpCityFallback').value.trim() || 'sua região',
         call_video_call_id: document.getElementById('cpCall').value || null,

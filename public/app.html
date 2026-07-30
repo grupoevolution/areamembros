@@ -14386,13 +14386,45 @@ function renderLibrary() {
 
     const planHtml = plans.map(renderPlanCard).join('');
     containers.forEach(container => {
-        container.innerHTML = planHtml + AppState.library.map(renderLibraryItem).join('');
+        container.innerHTML = '<div data-upgrade-offer-slot></div>' + planHtml + AppState.library.map(renderLibraryItem).join('');
     });
+    // Card de UPGRADE (pague a diferença) no topo — busca 1x por sessão de tela
+    try { loadUpgradeOfferCard(); } catch (_) {}
     // Fase J2: garante countdowns atualizados logo após render (1ª passada com
     // o valor exato; depois disso o setInterval de 60s vai mantendo). Sem isso,
     // ao re-renderizar depois de uma compra/login a string fica "fresca" do
     // template até o próximo tick.
     try { if (typeof updateGiftCountdowns === 'function') updateGiftCountdowns(); } catch(_) {}
+}
+
+// ── Upgrade entre planos (pague só a diferença) ──────────────────────────────
+// GET /api/user/upgrade-offer devolve a 1ª regra que casa com o que o cliente
+// TEM (config do painel). Cache por sessão de tela: busca 1x e reaproveita nas
+// re-renderizações do acervo (não bate na API a cada troca de aba).
+let _upgradeOfferFetched = false;
+let _upgradeOfferData = null;
+async function loadUpgradeOfferCard() {
+    const slot = document.querySelector('[data-upgrade-offer-slot]');
+    if (!slot) return;
+    if (!window.userIsLogged) { slot.innerHTML = ''; return; }
+    if (!_upgradeOfferFetched) {
+        try {
+            const r = await fetch('/api/user/upgrade-offer', { credentials: 'include' });
+            const d = await r.json();
+            if (d && d.success) { _upgradeOfferData = d.offer || null; _upgradeOfferFetched = true; }
+        } catch (_) { /* rede falhou: tenta de novo na próxima render */ }
+    }
+    const up = _upgradeOfferData;
+    // re-busca o slot: a lista pode ter re-renderizado durante o fetch
+    const el = document.querySelector('[data-upgrade-offer-slot]');
+    if (!el) return;
+    if (!up || !up.checkout_url) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div class="acervo-card" style="border:1px solid rgba(212,175,55,.5);background:linear-gradient(135deg,rgba(58,44,10,.5),rgba(24,18,4,.75));border-radius:14px;padding:13px 15px;margin-bottom:10px;">'
+        + '<div style="font-size:13.5px;font-weight:900;letter-spacing:.3px;color:#f5d67b;">' + escapeHtml(up.offer_label || 'Suba de plano pagando só a diferença') + '</div>'
+        + (up.offer_text ? '<div style="font-size:12px;color:rgba(255,255,255,.75);margin-top:4px;line-height:1.45;">' + escapeHtml(up.offer_text) + '</div>' : '')
+        + '<button onclick="window.MV_buy(\'' + escapeAttrData(up.checkout_url) + '\', \'upgrade_offer\')" style="margin-top:10px;width:100%;background:linear-gradient(90deg,#d4af37,#f5d67b);border:none;color:#241a05;font-size:12.5px;font-weight:900;letter-spacing:.4px;padding:11px;border-radius:10px;cursor:pointer;">'
+        + escapeHtml(up.target_name ? 'SUBIR PRO ' + up.target_name.toUpperCase() : 'FAZER UPGRADE AGORA')
+        + '</button></div>';
 }
 
 function renderLibraryItem(product) {
