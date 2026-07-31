@@ -7756,9 +7756,23 @@ a { color: inherit; text-decoration: none; }
                         <select class="form-select" id="rlContent"></select>
                         <div class="form-help">Sem produto escolhido aqui, esse prêmio não sai (a roda continua girando normal).</div>
                     </div>
+                    <div class="form-row" style="margin-bottom:14px;max-width:280px;">
+                        <label class="form-label">Lembrete sem giros (dias)</label>
+                        <input type="number" class="form-input" id="rlRemind" min="0" max="60" placeholder="3">
+                        <div class="form-help">Quando o cliente está SEM giro, de quantos em quantos dias aparece o aviso "seus giros acabaram" convidando ele a chamar um amigo pelo link (cada amigo novo = 1 giro). Coloque 0 pra nunca aparecer. 3 é o recomendado.</div>
+                    </div>
                     <div style="display:flex; align-items:center; gap:12px;">
                         <button class="btn-primary" onclick="saveRouletteConfig()">Salvar roleta</button>
                         <span id="rlStatus" style="font-size:12px;color:rgba(255,255,255,.55);"></span>
+                    </div>
+
+                    <!-- Números reais da roleta -->
+                    <div style="margin-top:18px;border-top:1px solid rgba(255,255,255,.08);padding-top:14px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
+                            <div style="font-size:13px;font-weight:700;color:#f5d67b;">Números da roleta</div>
+                            <button class="btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="loadRouletteStats()">Atualizar</button>
+                        </div>
+                        <div id="rlStats" style="font-size:12.5px;color:rgba(255,255,255,.75);line-height:1.9;">carregando...</div>
                     </div>
                 </div>
 
@@ -11701,12 +11715,46 @@ async function loadRouletteConfig(cfgValue) {
             .replace('— nenhuma —', '— nenhum —');
         en.checked = cfg.enabled === true;
         document.getElementById('rlDelay').value = (cfg.popup_delay_sec != null ? cfg.popup_delay_sec : 5);
+        document.getElementById('rlRemind').value = (cfg.no_spins_reminder_days != null ? cfg.no_spins_reminder_days : 3);
         if (!calls.length) {
             const st = document.getElementById('rlStatus');
             if (st) st.textContent = 'Cadastre um produto do tipo CHAMADA antes de ligar a roleta.';
         }
     } catch (_) {}
+    try { loadRouletteStats(); } catch (_) {}
 }
+
+// Números reais da roleta (só leitura) — linhas "rótulo: número".
+async function loadRouletteStats() {
+    const box = document.getElementById('rlStats');
+    if (!box) return;
+    box.textContent = 'carregando...';
+    try {
+        const r = await fetch('/api/admin/roulette/stats', { credentials: 'include' }).then(r => r.json());
+        const s = r && r.stats;
+        if (!s) { box.textContent = 'Ainda não tem número nenhum (a roleta não girou até agora).'; return; }
+        const linha = (rotulo, valor, cor) =>
+            '<div style="display:flex;justify-content:space-between;gap:14px;">'
+            + '<span>' + rotulo + '</span>'
+            + '<b style="color:' + (cor || '#fff') + ';">' + valor + '</b></div>';
+        box.innerHTML = ''
+            + linha('Giros no total', s.spins_total, '#f5d67b')
+            + linha('Giros hoje', s.spins_today)
+            + linha('Giros nos últimos 7 dias', s.spins_7d)
+            + linha('Pessoas diferentes que já giraram', s.people)
+            + '<div style="height:8px;"></div>'
+            + linha('Prêmio: chamada de vídeo', s.prize_call)
+            + linha('Chamadas resgatadas (o cliente escolheu a modelo)', s.prize_call_claimed, '#7ee0a1')
+            + linha('Prêmio: conteúdo secreto', s.prize_content)
+            + linha('Prêmio: mais 1 giro', s.prize_spin)
+            + '<div style="height:8px;"></div>'
+            + linha('Giros ganhos por convite (total)', s.ref_total, '#f5d67b')
+            + linha('Giros ganhos por convite hoje', s.ref_today);
+    } catch (_) {
+        box.textContent = 'Não consegui buscar os números agora.';
+    }
+}
+window.loadRouletteStats = loadRouletteStats;
 async function saveRouletteConfig() {
     const st = document.getElementById('rlStatus');
     const ids = [];
@@ -11722,11 +11770,15 @@ async function saveRouletteConfig() {
     let delay = parseInt(document.getElementById('rlDelay').value, 10);
     if (isNaN(delay) || delay < 0) delay = 5;
     if (delay > 120) delay = 120;
+    let remind = parseInt(document.getElementById('rlRemind').value, 10);
+    if (isNaN(remind) || remind < 0) remind = 3;
+    if (remind > 60) remind = 60;
     const value = {
         enabled: enabled,
         popup_delay_sec: delay,
         call_product_ids: ids,
         content_product_id: parseInt(document.getElementById('rlContent').value, 10) || null,
+        no_spins_reminder_days: remind,
     };
     const result = await _saveGamification('roulette', value);
     if (st) {
