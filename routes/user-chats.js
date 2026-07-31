@@ -309,6 +309,22 @@ async function pickGreetingPhrase(session) {
     } catch (_) { return null; }
 }
 
+// Entrega a saudação AGENDADA (chat_sessions.pending_greeting) se houver:
+// insere como mensagem da modelo, limpa o agendamento e devolve a mensagem.
+// Chamado nos 3 pontos que "acordam" um delay vencido (worker, /poll e /open).
+async function deliverPendingGreeting(session) {
+    if (!session || !session.pending_greeting) return null;
+    const msg = await insertMsg(session.id, 'bot', 'text', session.pending_greeting, null, { typing_ms: 2500 }, null);
+    await db.query(
+        `UPDATE chat_sessions SET pending_greeting = NULL, awaiting = NULL, resume_at = NULL,
+                last_seen_at = NULL, updated_at = NOW() WHERE id = $1`,
+        [session.id]
+    );
+    session.pending_greeting = null;
+    session.awaiting = null;
+    return msg;
+}
+
 async function fillVars(text, ctx) {
     if (!text || text.indexOf('{') === -1) return text;
     let nome = 'amor';
@@ -716,10 +732,29 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         // enriquece o desbloqueio com produto + planos (banner VIP rico)
         if (perm.locked) perm.unlock = await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url);
 
+        // RODÍZIO: o cabeçalho da conversa precisa contar a MESMA história da
+        // lista — modelo offline abria mostrando "online" (bug relatado pelo
+        // dono). Calcula o estado da esteira sobre TODOS os chats em rodízio.
+        let headerLabel = chat.status_label, headerOnline = chat.show_online;
+        if (chat.in_rotation) {
+            try {
+                const rotation = require('../lib/chat-rotation');
+                const rc = await rotation.loadRotationConfig();
+                if (rc.enabled) {
+                    const { rows: rr } = await db.query(`SELECT id FROM chats WHERE active = true AND in_rotation = true`);
+                    const st = rotation.computeOnline(rr.map(r => r.id), rc, Date.now()).get(chat.id);
+                    if (st && !st.online) {
+                        headerLabel = rotation.lastSeenLabel(st.mins_offline);
+                        headerOnline = false;
+                    }
+                }
+            } catch (_) {}
+        }
+
         const callPayload = await loadChatCall(chat.call_video_call_id);
         const persona = {
             id: chat.id, name: chat.name, avatar_url: chat.avatar_url,
-            status_label: chat.status_label, show_online: chat.show_online,
+            status_label: headerLabel, show_online: headerOnline,
             tag: chat.tag || null,
             gate_media: chat.gate_media === true,
             input_mode: chat.input_mode === 'gated' ? 'gated' : 'always',
@@ -773,8 +808,13 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
                 [session.id]
             );
             if (claim.rows.length) {
-                const steps = await loadSteps(chatId, session.current_flow || 'open');
-                fresh = await runScript(session, chat, steps, session.current_order, ident);
+                // saudação agendada vence primeiro que qualquer roteiro
+                const g = await deliverPendingGreeting(session);
+                if (g) fresh = [g];
+                else {
+                    const steps = await loadSteps(chatId, session.current_flow || 'open');
+                    fresh = await runScript(session, chat, steps, session.current_order, ident);
+                }
             }
         } else if (session.awaiting === 'paywall') {
             // MIGRAÇÃO: sessões paradas no paywall antigo (que travava o roteiro)
@@ -1083,8 +1123,20 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
                     if ((bc ? bc.n : 0) === 0) {
                         const phrase = await pickGreetingPhrase(session);
                         if (phrase) {
+                            // AGENDA a resposta pra 30-90s (pedido do dono:
+                            // resposta imediata denuncia — pessoa real demora).
+                            // O app fica em silêncio e mostra "digitando…" só
+                            // nos ~30s finais (comportamento nativo do delay).
                             const content = await fillVars(phrase, ident);
-                            newMsgs.push(await insertMsg(session.id, 'bot', 'text', content, null, { typing_ms: 2500 }, null));
+                            const waitS = 30 + Math.floor(Math.random() * 61); // 30-90s
+                            await db.query(
+                                `UPDATE chat_sessions SET pending_greeting = $2, awaiting = 'delay',
+                                        resume_at = NOW() + make_interval(secs => $3), updated_at = NOW()
+                                 WHERE id = $1`,
+                                [session.id, content, waitS]
+                            );
+                            session.awaiting = 'delay';
+                            session.resume_at = new Date(Date.now() + waitS * 1000);
                         }
                     }
                 } catch (_) {}
@@ -1140,12 +1192,15 @@ router.get('/chats/:id/poll', optionalUser, async (req, res) => {
                 [session.id]
             );
             if (claim.rows.length) {
-                const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
-                if (cr.length) {
-                    ident.city = session.city;
-                    ident.cityFallback = cr[0].city_fallback;
-                    const steps = await loadSteps(chatId, session.current_flow || 'open');
-                    await runScript(session, cr[0], steps, session.current_order, ident);
+                // saudação agendada vence primeiro que qualquer roteiro
+                if (!(await deliverPendingGreeting(session))) {
+                    const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
+                    if (cr.length) {
+                        ident.city = session.city;
+                        ident.cityFallback = cr[0].city_fallback;
+                        const steps = await loadSteps(chatId, session.current_flow || 'open');
+                        await runScript(session, cr[0], steps, session.current_order, ident);
+                    }
                 }
             }
         }
@@ -1414,6 +1469,12 @@ async function resumeDelayed(limit) {
                 city: session.city || null,
                 cityFallback: chat.city_fallback,
             };
+            // saudação agendada (30-90s): entrega e segue — sem roteiro envolvido
+            if (session.pending_greeting) {
+                const g = await deliverPendingGreeting(session);
+                if (g) results.push({ session, chat, messages: [g], email: ident.email });
+                continue;
+            }
             const steps = await loadSteps(session.chat_id, session.current_flow || 'open');
             session.awaiting = 'delay'; // runScript lê/sobrescreve normalmente
             const fresh = await runScript(session, chat, steps, session.current_order, ident);
