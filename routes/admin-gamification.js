@@ -34,6 +34,7 @@ const VALID_KEYS = [
     'chat_rotation',
     'chat_greetings',
     'upgrade_rules',
+    'roulette',
 ];
 
 // =============================================================================
@@ -283,6 +284,34 @@ function validateValue(key, value) {
         }
     }
 
+    if (key === 'roulette') {
+        if (value.enabled !== undefined && typeof value.enabled !== 'boolean') {
+            return { ok: false, error: 'enabled deve ser true/false' };
+        }
+        const delay = value.popup_delay_sec;
+        if (delay !== undefined && (typeof delay !== 'number' || delay < 0 || delay > 120)) {
+            return { ok: false, error: 'O atraso do popup deve ser de 0 a 120 segundos' };
+        }
+        if (value.call_product_ids !== undefined) {
+            if (!Array.isArray(value.call_product_ids)) {
+                return { ok: false, error: 'call_product_ids deve ser array' };
+            }
+            if (value.call_product_ids.length > 3) {
+                return { ok: false, error: 'No máximo 3 modelos de chamada na roleta' };
+            }
+            for (const id of value.call_product_ids) {
+                if (!parseInt(id, 10)) return { ok: false, error: 'Produto de chamada inválido' };
+            }
+        }
+        if (value.content_product_id !== undefined && value.content_product_id !== null
+            && !parseInt(value.content_product_id, 10)) {
+            return { ok: false, error: 'Produto de conteúdo inválido' };
+        }
+        if (value.enabled === true && (!Array.isArray(value.call_product_ids) || value.call_product_ids.length === 0)) {
+            return { ok: false, error: 'Escolha pelo menos 1 produto de CHAMADA antes de ligar a roleta' };
+        }
+    }
+
     if (key === 'home_layout') {
         if (!Array.isArray(value.sections)) {
             return { ok: false, error: 'sections deve ser array' };
@@ -377,6 +406,12 @@ function defaultFor(key) {
         label_cofre_eyebrow: '',
         label_roleta_eyebrow: '',
         version: '1.0.0',
+    };
+    if (key === 'roulette') return {
+        enabled: false,
+        popup_delay_sec: 5,
+        call_product_ids: [],
+        content_product_id: null,
     };
     if (key === 'live_notifications') return {
         enabled: false,

@@ -243,6 +243,7 @@ app.use('/api/user', require('./routes/user-chats'));
 app.use('/api/user', require('./routes/user-groups'));
 app.use('/api/user', require('./routes/user'));
 app.use('/api/user', require('./routes/user-lives'));
+app.use('/api/user', require('./routes/user-roulette'));
 
 
 // ----------------------------------------------------------------------------
