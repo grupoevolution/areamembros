@@ -4,8 +4,12 @@
  * =============================================================================
  *
  * O QUE É (em português de gente):
- *   O cliente abre o catálogo, aparece um popup "VOCÊ GANHOU 1 GIRO ESPECIAL",
- *   ele gira uma roleta e leva um prêmio de verdade na hora.
+ *   O cliente toca no banner dourado "ROLETA VIP" em Minhas Compras, gira uma
+ *   roleta e leva um prêmio de verdade na hora.
+ *
+ * QUANTOS GIROS: 1 giro grátis POR E-MAIL NA VIDA (não é 1 por dia). Depois
+ *   desse, só ganha giro convidando gente nova pelo link (+1 por visitante
+ *   novo, teto de 3 por dia) ou tirando "+1 GIRO" na própria roda.
  *
  * O QUE SAI DE VERDADE (só isso):
  *   - CHAMADA DE VÍDEO  → ele escolhe 1 entre até 3 modelos e o acesso cai
@@ -49,7 +53,7 @@ const TODAY_BR = `(NOW() AT TIME ZONE 'America/Sao_Paulo')::date`;
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadConfig() {
     const fallback = {
-        enabled: false, popup_delay_sec: 5, call_product_ids: [],
+        enabled: false, popup_enabled: false, popup_delay_sec: 5, call_product_ids: [],
         content_product_id: null, no_spins_reminder_days: 3,
     };
     try {
@@ -61,6 +65,10 @@ async function loadConfig() {
             ? 3 : parseInt(v.no_spins_reminder_days, 10);
         return {
             enabled: v.enabled === true,
+            // A roleta NÃO abre mais sozinha no catálogo (decisão do dono).
+            // O caminho normal é o cliente tocar no banner de Minhas Compras.
+            // Só abre sozinha se o dono ligar essa chave no painel.
+            popup_enabled: v.popup_enabled === true,
             popup_delay_sec: Math.max(0, Math.min(120, parseInt(v.popup_delay_sec, 10) || 5)),
             call_product_ids: (Array.isArray(v.call_product_ids) ? v.call_product_ids : [])
                 .map(n => parseInt(n, 10)).filter(Boolean).slice(0, 3),
@@ -133,19 +141,29 @@ async function getOrCreateState(email) {
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/user/roulette/state
 // Diz se a roleta está ligada, quantos giros ele tem e se pode abrir o popup.
-// O popup abre no máximo 1x por dia (o próprio GET marca a data).
+//
+// REGRA DO GIRO (combinada com o dono): é 1 giro grátis POR E-MAIL NA VIDA —
+// não é 1 por dia. Quem cria o giro é o getOrCreateState (INSERT ... ON CONFLICT
+// DO NOTHING, ou seja, só na primeira vez). A ÚNICA outra forma de ganhar giro é
+// o convite (/roulette/track-ref: alguém novo entra pelo link dele, +1 giro,
+// teto de 3 por dia) e o prêmio "+1 GIRO" da própria roda.
+//
+// O popup automático só existe se o dono ligar `popup_enabled` no painel
+// (padrão DESLIGADO). Ligado, abre no máximo 1x por dia (o próprio GET marca a
+// data). O caminho normal hoje é o cliente ABRIR a roleta pelo banner de
+// Minhas Compras — aí o app chama este endpoint com ?peek=1.
 // ?peek=1 → só lê, NÃO gasta o popup do dia (usado depois de girar).
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/roulette/state', requireUser, async (req, res) => {
     try {
         const cfg = await loadConfig();
         if (!configUsable(cfg)) {
-            return res.json({ success: true, enabled: false, spins: 0, show_popup: false, mode: null, first_done: false });
+            return res.json({ success: true, enabled: false, spins: 0, show_popup: false, mode: null, first_done: false, popup_enabled: false });
         }
         // Lead anônimo de funil não entra na roleta (prêmio vale dinheiro e
         // o e-mail é a identidade). Só cliente identificado.
         if (req.user.anonymous) {
-            return res.json({ success: true, enabled: false, spins: 0, show_popup: false, mode: null, first_done: false });
+            return res.json({ success: true, enabled: false, spins: 0, show_popup: false, mode: null, first_done: false, popup_enabled: false });
         }
 
         const email = req.user.email;
@@ -156,9 +174,14 @@ router.get('/roulette/state', requireUser, async (req, res) => {
         //   'spin'  → tem giro na conta: convite pra girar. No máximo 1x por dia.
         //   'share' → sem giro: "seus giros acabaram, chame um amigo". Aparece
         //             1x a cada N dias (config do painel; 0 = nunca).
+        // Com o popup desligado no painel, nem marca data nem devolve modo —
+        // o app só usa o state pra pintar o banner e abrir a roleta no toque.
+        const popupOn = cfg.popup_enabled === true;
         let showPopup = false;
         let mode = null;
-        if (!peek && st.spins > 0) {
+        if (!popupOn) {
+            showPopup = false;
+        } else if (!peek && st.spins > 0) {
             // Marca o popup do dia de forma atômica: quem chegar primeiro leva.
             const { rows } = await db.query(
                 `UPDATE roulette_state
@@ -191,6 +214,7 @@ router.get('/roulette/state', requireUser, async (req, res) => {
             show_popup: showPopup,
             mode,
             first_done: st.first_spin_done === true,
+            popup_enabled: popupOn,
             popup_delay_sec: cfg.popup_delay_sec,
             ref_code: st.ref_code,
         });
