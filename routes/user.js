@@ -933,6 +933,17 @@ router.get('/library', requireUser, async (req, res) => {
                     LIMIT 1
                 ) as consumed_at,
                 (
+                    -- Mesma ideia, mas pra CHAMADINHA DIRETA (link colado no
+                    -- produto): o histórico é por produto + este user_access.
+                    -- Prêmio novo da roleta = user_access novo = volta a valer.
+                    SELECT pch.seen_at
+                    FROM product_call_history pch
+                    WHERE LOWER(pch.customer_email) = $1
+                      AND pch.product_id = p.id
+                      AND pch.user_access_id = ua.id
+                    LIMIT 1
+                ) as direct_consumed_at,
+                (
                     SELECT po.checkout_url
                     FROM product_offers po
                     WHERE po.product_id = p.id
@@ -1039,7 +1050,17 @@ router.get('/library', requireUser, async (req, res) => {
                           AND cch.video_call_id = p.video_call_id
                           AND cch.gift_id = g.id
                         LIMIT 1
-                    ) as consumed_at
+                    ) as consumed_at,
+                    (
+                        -- Chamadinha DIRETA ganha de brinde: histórico por
+                        -- produto + este brinde.
+                        SELECT pch.seen_at
+                        FROM product_call_history pch
+                        WHERE LOWER(pch.customer_email) = $1
+                          AND pch.product_id = p.id
+                          AND pch.gift_id = g.id
+                        LIMIT 1
+                    ) as direct_consumed_at
                 FROM gifts g
                 INNER JOIN products p ON p.id = g.product_id
                 LEFT JOIN categories c ON c.id = p.category_id
@@ -1082,17 +1103,15 @@ router.get('/library', requireUser, async (req, res) => {
             const isVideoCall = productType === 'video_call';
 
             // Fase E: link Bunny direto tem prioridade sobre o video_call_id legado.
-            // Quando direct, NÃO há tracking de consumo (customer_call_history exige
-            // video_call_id, e o virtual usa string `direct-N` que não casa com a
-            // PK INT da tabela video_calls). Comportamento desejado: chamadinha
-            // colada direto reabre N vezes, sem recall. Quem quer recall usa
-            // a entrada do Remarketing (video_call_id).
+            // Jul/2026: a chamadinha DIRETA também tem consumo — vem de
+            // product_call_history (direct_consumed_at), amarrado a ESTE
+            // user_access. Antes ela ficava disponível pra sempre.
             const virtualCall = buildVirtualCallFromProduct(p);
             const usingVirtual = !!virtualCall;
             const resolvedCall = virtualCall || p.video_call;
             const modelName = usingVirtual ? p.name : p.model_name;
-            const consumedAt = usingVirtual ? null : (p.consumed_at || null);
-            const consumed = isVideoCall && !usingVirtual && !!consumedAt;
+            const consumedAt = usingVirtual ? (p.direct_consumed_at || null) : (p.consumed_at || null);
+            const consumed = isVideoCall && !!consumedAt;
 
             // Bunny: galeria do produto recebe os vídeos da Collection (se houver),
             // e o sub-objeto video_call ganha bunny_hls_url/is_bunny.
@@ -1137,8 +1156,8 @@ router.get('/library', requireUser, async (req, res) => {
             const usingVirtual = !!virtualCall;
             const resolvedCall = virtualCall || p.video_call;
             const modelName = usingVirtual ? p.name : p.model_name;
-            const consumedAt = usingVirtual ? null : (p.consumed_at || null);
-            const consumed = isVideoCall && !usingVirtual && !!consumedAt;
+            const consumedAt = usingVirtual ? (p.direct_consumed_at || null) : (p.consumed_at || null);
+            const consumed = isVideoCall && !!consumedAt;
 
             const withBunnyGallery = await appendBunnyCollectionToGallery(p);
 
@@ -1420,21 +1439,78 @@ router.post('/calls/:product_id/start', requireUser, async (req, res) => {
             return res.status(403).json({ ok: false, error: 'no_access' });
         }
 
-        // Fase E: produto-direct (sem video_call_id legado) NÃO grava em
-        // customer_call_history — a tabela exige FK pra video_calls.id e
-        // o virtual usa ID string. Cliente pode reabrir N vezes; sem
-        // marcação de consumo, sem recall. Trade-off conhecido: quem quer
-        // tracking de consumo continua usando o vínculo via video_call_id
-        // (entrada no Remarketing). É o que diferencia "chamadinha simples"
-        // de "chamada cadastrada reusada". Vale tanto pra compra quanto pra brinde.
+        // CHAMADINHA DIRETA (jul/2026) — agora COM marcação de consumo.
+        //
+        // Antes: produto-direct não gravava nada (customer_call_history exige FK
+        // pra video_calls.id e o virtual usa id em texto 'direct-N') → o cliente
+        // reabria a mesma chamada infinitas vezes. Como os produtos reais são
+        // desse tipo (inclusive o prêmio da Roleta VIP), virou furo de verdade.
+        //
+        // Agora: grava em product_call_history ANTES de devolver o vídeo, no
+        // mesmo conceito de "slot" do histórico legado — e-mail + produto + o
+        // acesso que deu direito (compra/prêmio) OU o brinde. Um acesso NOVO
+        // (recompra ou prêmio novo da roleta) nasce sem histórico → a chamada
+        // volta a ficar disponível sozinha.
         if (hasDirect) {
             const via = gift ? 'gift' : 'purchase';
-            logger.info(`call start (direct/${via}): ${email} -> product ${productId}`);
-            return res.json({
-                ok: true,
+            const directAccessId = access ? access.id : null;
+            const directGiftId = gift ? gift.id : null;
+
+            const { rows: insDirect } = await db.query(`
+                INSERT INTO product_call_history (customer_email, product_id, user_access_id, gift_id, seen_at)
+                VALUES ($1, $2, $3, $4, NOW())
+                ON CONFLICT DO NOTHING
+                RETURNING id, seen_at
+            `, [email, productId, directAccessId, directGiftId]);
+
+            if (insDirect.length > 0) {
+                logger.info(`call start (direct/${via}): ${email} -> product ${productId}`);
+                return res.json({
+                    ok: true,
+                    via,
+                    video_call: enrichCallPayload(buildPayload()),
+                    started_at: insDirect[0].seen_at,
+                });
+            }
+
+            // Já usou ESTE slot → não abre de novo. O card vira "chamada já
+            // realizada" (e, quando é compra, com CTA de comprar de novo).
+            const { rows: [prev] } = await db.query(`
+                SELECT seen_at FROM product_call_history
+                WHERE LOWER(customer_email) = $1
+                  AND product_id = $2
+                  AND COALESCE(user_access_id, 0) = COALESCE($3::int, 0)
+                  AND COALESCE(gift_id, 0) = COALESCE($4::int, 0)
+                LIMIT 1
+            `, [email, productId, directAccessId, directGiftId]);
+
+            let directCheckoutUrl = null;
+            if (!gift) {
+                const { rows: [gwRow] } = await db.query(
+                    `SELECT value FROM system_settings WHERE key = 'active_gateway'`
+                );
+                const gw = gwRow?.value?.replace(/"/g, '') || 'kirvano';
+                const { rows: [offer] } = await db.query(`
+                    SELECT po.checkout_url
+                    FROM product_offers po
+                    WHERE po.product_id = $1
+                      AND po.gateway = $2
+                      AND po.is_active = true
+                    ORDER BY po.priority DESC, po.id ASC
+                    LIMIT 1
+                `, [productId, gw]);
+                directCheckoutUrl = offer?.checkout_url || null;
+            }
+
+            const recallDirect = applyModelName(await pickGlobalRecallMessage(), product.name);
+            logger.info(`call start BLOQUEADO (direct/${via} já usado): ${email} -> product ${productId}`);
+            return res.status(409).json({
+                ok: false,
+                error: 'already_used',
                 via,
-                video_call: enrichCallPayload(buildPayload()),
-                started_at: new Date().toISOString(),
+                consumed_at: prev?.seen_at || null,
+                recall_message: recallDirect,
+                checkout_url: directCheckoutUrl,
             });
         }
 

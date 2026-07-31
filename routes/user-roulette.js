@@ -48,16 +48,24 @@ const TODAY_BR = `(NOW() AT TIME ZONE 'America/Sao_Paulo')::date`;
 // CONFIG (gamification_config → key 'roulette')
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadConfig() {
-    const fallback = { enabled: false, popup_delay_sec: 5, call_product_ids: [], content_product_id: null };
+    const fallback = {
+        enabled: false, popup_delay_sec: 5, call_product_ids: [],
+        content_product_id: null, no_spins_reminder_days: 3,
+    };
     try {
         const { rows } = await db.query(`SELECT value FROM gamification_config WHERE key = 'roulette'`);
         const v = rows[0]?.value || {};
+        // Lembrete pra quem está SEM giro (tela de compartilhar). 0 = nunca.
+        // Ausente no config antigo → 3 dias (padrão combinado com o dono).
+        const rem = (v.no_spins_reminder_days === null || v.no_spins_reminder_days === undefined)
+            ? 3 : parseInt(v.no_spins_reminder_days, 10);
         return {
             enabled: v.enabled === true,
             popup_delay_sec: Math.max(0, Math.min(120, parseInt(v.popup_delay_sec, 10) || 5)),
             call_product_ids: (Array.isArray(v.call_product_ids) ? v.call_product_ids : [])
                 .map(n => parseInt(n, 10)).filter(Boolean).slice(0, 3),
             content_product_id: parseInt(v.content_product_id, 10) || null,
+            no_spins_reminder_days: Math.max(0, Math.min(60, isNaN(rem) ? 3 : rem)),
         };
     } catch (err) {
         logger.warn('[roleta] falha lendo config:', err.message);
@@ -132,19 +140,24 @@ router.get('/roulette/state', requireUser, async (req, res) => {
     try {
         const cfg = await loadConfig();
         if (!configUsable(cfg)) {
-            return res.json({ success: true, enabled: false, spins: 0, show_popup: false, first_done: false });
+            return res.json({ success: true, enabled: false, spins: 0, show_popup: false, mode: null, first_done: false });
         }
         // Lead anônimo de funil não entra na roleta (prêmio vale dinheiro e
         // o e-mail é a identidade). Só cliente identificado.
         if (req.user.anonymous) {
-            return res.json({ success: true, enabled: false, spins: 0, show_popup: false, first_done: false });
+            return res.json({ success: true, enabled: false, spins: 0, show_popup: false, mode: null, first_done: false });
         }
 
         const email = req.user.email;
         const st = await getOrCreateState(email);
         const peek = req.query.peek === '1';
 
+        // DOIS popups, duas janelas (o app usa o `mode` pra escolher a tela):
+        //   'spin'  → tem giro na conta: convite pra girar. No máximo 1x por dia.
+        //   'share' → sem giro: "seus giros acabaram, chame um amigo". Aparece
+        //             1x a cada N dias (config do painel; 0 = nunca).
         let showPopup = false;
+        let mode = null;
         if (!peek && st.spins > 0) {
             // Marca o popup do dia de forma atômica: quem chegar primeiro leva.
             const { rows } = await db.query(
@@ -156,6 +169,19 @@ router.get('/roulette/state', requireUser, async (req, res) => {
                 [email]
             );
             showPopup = rows.length > 0;
+            if (showPopup) mode = 'spin';
+        } else if (!peek && st.spins <= 0 && cfg.no_spins_reminder_days > 0) {
+            const { rows } = await db.query(
+                `UPDATE roulette_state
+                    SET last_share_popup_date = ${TODAY_BR}
+                  WHERE email = $1
+                    AND (last_share_popup_date IS NULL
+                         OR last_share_popup_date <= ${TODAY_BR} - ($2::int))
+                  RETURNING email`,
+                [email, cfg.no_spins_reminder_days]
+            );
+            showPopup = rows.length > 0;
+            if (showPopup) mode = 'share';
         }
 
         return res.json({
@@ -163,6 +189,7 @@ router.get('/roulette/state', requireUser, async (req, res) => {
             enabled: true,
             spins: st.spins,
             show_popup: showPopup,
+            mode,
             first_done: st.first_spin_done === true,
             popup_delay_sec: cfg.popup_delay_sec,
             ref_code: st.ref_code,
@@ -335,9 +362,17 @@ async function grantAccess(email, productId, prizeId) {
 
         if (existing) {
             // A chamada só é "gasta" quando existe registro no histórico.
+            // São DOIS históricos: o legado (chamada cadastrada no Remarketing)
+            // e o de produto (chamadinha com link direto — o caso do dono).
+            // Se ignorar o segundo, o prêmio novo cairia num acesso JÁ usado e
+            // o cliente ficaria sem poder ligar.
             const { rows: used } = await client.query(
                 `SELECT 1 FROM customer_call_history
-                  WHERE LOWER(customer_email) = $1 AND user_access_id = $2 LIMIT 1`,
+                  WHERE LOWER(customer_email) = $1 AND user_access_id = $2
+                 UNION ALL
+                 SELECT 1 FROM product_call_history
+                  WHERE LOWER(customer_email) = $1 AND user_access_id = $2
+                 LIMIT 1`,
                 [email, existing.id]
             );
             if (!used.length) {

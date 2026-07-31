@@ -223,6 +223,7 @@ app.use('/api/admin', require('./routes/admin-access'));
 // Armazenamento genérico de configs (gamification_config): app_config, login_config,
 // reviews_list, home_layout, live_notifications, flash_offers, etc. — não é só gamificação.
 app.use('/api/admin/gamification', require('./routes/admin-gamification'));
+app.use('/api/admin/roulette', require('./routes/admin-roulette'));
 app.use('/api/admin/notifications', require('./routes/admin-notifications'));
 app.use('/api/admin/home', require('./routes/admin-home'));
 app.use('/api/admin/upload', require('./routes/admin-upload'));
