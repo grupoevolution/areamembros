@@ -11682,8 +11682,14 @@ async function loadRouletteConfig(cfgValue) {
             const r = await fetch('/api/admin/gamification/roulette', { credentials: 'include' }).then(r => r.json());
             cfg = r?.value || {};
         }
-        const calls = _upgradeProducts.filter(p => p.product_type === 'video_call' && p.is_active);
-        const contents = _upgradeProducts.filter(p => p.product_type !== 'video_call' && p.is_active);
+        // CHAMADINHA tem 3 formas de cadastro no painel (mesma regra do editor de
+        // produto): tipo 'video_call', chamada vinculada (video_call_id) ou vídeo
+        // direto. Filtrar só pelo tipo deixava a lista VAZIA pros produtos reais
+        // do dono, que aparecem como "Externo · Chamadinha".
+        const isCall = p => !!(p.product_type === 'video_call' || p.video_call_id
+            || (p.direct_call_video_url && String(p.direct_call_video_url).trim()));
+        const calls = _upgradeProducts.filter(p => isCall(p) && p.is_active);
+        const contents = _upgradeProducts.filter(p => !isCall(p) && p.is_active);
         const opts = (list, sel) => '<option value="">— nenhuma —</option>' + list.map(p =>
             '<option value="' + p.id + '"' + (String(p.id) === String(sel || '') ? ' selected' : '') + '>' + escHtmlAdmin(p.name) + '</option>'
         ).join('');

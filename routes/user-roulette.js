@@ -197,6 +197,16 @@ async function spinPrizesToday(email) {
     return rows[0]?.n || 0;
 }
 
+// O que conta como produto de CHAMADINHA. O painel aceita 3 formas de cadastrar
+// (mesma regra do editor de produto): vídeo direto, chamada vinculada, ou o tipo
+// 'video_call'. Filtrar só pelo tipo deixava de fora os produtos reais do dono
+// (que aparecem como "Externo · Chamadinha" na lista).
+const CALL_PRODUCT_SQL = `(
+    product_type = 'video_call'
+    OR video_call_id IS NOT NULL
+    OR NULLIF(TRIM(COALESCE(direct_call_video_url, '')), '') IS NOT NULL
+)`;
+
 // Modelos de chamada disponíveis pro prêmio (na ordem que o dono configurou)
 async function callOptions(ids) {
     if (!ids.length) return [];
@@ -204,7 +214,7 @@ async function callOptions(ids) {
         `SELECT id, name,
                 COALESCE(NULLIF(call_photo_url, ''), NULLIF(banner_url, '')) AS photo
            FROM products
-          WHERE id = ANY($1::int[]) AND is_active = true AND product_type = 'video_call'
+          WHERE id = ANY($1::int[]) AND is_active = true AND ${CALL_PRODUCT_SQL}
           ORDER BY array_position($1::int[], id)`,
         [ids]
     );
