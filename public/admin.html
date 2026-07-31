@@ -7742,12 +7742,12 @@ a { color: inherit; text-decoration: none; }
                     </label>
                     <label class="toggle-row" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.06);border-radius:8px;cursor:pointer;margin-bottom:14px;">
                         <input type="checkbox" id="rlPopup"/>
-                        <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#fff;">Abrir sozinha no catálogo</div><div style="font-size:11px;color:rgba(255,255,255,.45);">Desligado (o normal): a roleta só abre quando o cliente toca no banner de Minhas Compras. Ligado: além do banner, ela também pula na cara do cliente sozinha quando ele abre o catálogo, no máximo 1 vez por dia.</div></div>
+                        <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:600;color:#fff;">Abrir sozinha (catálogo e volta do checkout)</div><div style="font-size:11px;color:rgba(255,255,255,.45);">Ligado (o normal): a roleta aparece sozinha em 2 momentos — quando o cliente abre o catálogo e quando ele volta do checkout sem comprar (carrinho abandonado). No máximo 1 vez por dia. Desligado: ela só abre quando o cliente toca no banner de Minhas Compras.</div></div>
                     </label>
                     <div class="form-row" style="margin-bottom:14px;max-width:280px;">
                         <label class="form-label">Aparece depois de quantos segundos no catálogo</label>
                         <input type="number" class="form-input" id="rlDelay" min="0" max="120" placeholder="5">
-                        <div class="form-help">Só vale com "Abrir sozinha no catálogo" ligado: tempo entre o cliente abrir o catálogo e a roleta pular na tela. 5 segundos é o recomendado.</div>
+                        <div class="form-help">Só vale com "Abrir sozinha" ligado: tempo entre o cliente abrir a tela e a roleta aparecer. 5 segundos é o recomendado.</div>
                     </div>
                     <div class="form-row" style="margin-bottom:14px;">
                         <label class="form-label">Modelos da chamada (até 3 — é entre elas que o cliente escolhe)</label>
@@ -11721,9 +11721,9 @@ async function loadRouletteConfig(cfgValue) {
         document.getElementById('rlContent').innerHTML = opts(contents, cfg.content_product_id)
             .replace('— nenhuma —', '— nenhum —');
         en.checked = cfg.enabled === true;
-        // "Abrir sozinha no catálogo" nasce DESLIGADO (config antiga não tem a chave)
+        // "Abrir sozinha" nasce LIGADO (config sem a chave = ligado, igual ao servidor)
         const pop = document.getElementById('rlPopup');
-        if (pop) pop.checked = cfg.popup_enabled === true;
+        if (pop) pop.checked = cfg.popup_enabled !== false;
         document.getElementById('rlDelay').value = (cfg.popup_delay_sec != null ? cfg.popup_delay_sec : 5);
         document.getElementById('rlRemind').value = (cfg.no_spins_reminder_days != null ? cfg.no_spins_reminder_days : 3);
         if (!calls.length) {

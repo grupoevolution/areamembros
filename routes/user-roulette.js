@@ -53,7 +53,7 @@ const TODAY_BR = `(NOW() AT TIME ZONE 'America/Sao_Paulo')::date`;
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadConfig() {
     const fallback = {
-        enabled: false, popup_enabled: false, popup_delay_sec: 5, call_product_ids: [],
+        enabled: false, popup_enabled: true, popup_delay_sec: 5, call_product_ids: [],
         content_product_id: null, no_spins_reminder_days: 3,
     };
     try {
@@ -65,10 +65,11 @@ async function loadConfig() {
             ? 3 : parseInt(v.no_spins_reminder_days, 10);
         return {
             enabled: v.enabled === true,
-            // A roleta NÃO abre mais sozinha no catálogo (decisão do dono).
-            // O caminho normal é o cliente tocar no banner de Minhas Compras.
-            // Só abre sozinha se o dono ligar essa chave no painel.
-            popup_enabled: v.popup_enabled === true,
+            // A roleta abre sozinha em 2 momentos (decisão do dono): ao entrar
+            // no CATÁLOGO e ao VOLTAR do checkout sem comprar (carrinho
+            // abandonado). O banner de Minhas Compras continua sendo o caminho
+            // pra abrir quando ele quiser. Ausente = LIGADO.
+            popup_enabled: v.popup_enabled !== false,
             popup_delay_sec: Math.max(0, Math.min(120, parseInt(v.popup_delay_sec, 10) || 5)),
             call_product_ids: (Array.isArray(v.call_product_ids) ? v.call_product_ids : [])
                 .map(n => parseInt(n, 10)).filter(Boolean).slice(0, 3),
@@ -148,10 +149,10 @@ async function getOrCreateState(email) {
 // o convite (/roulette/track-ref: alguém novo entra pelo link dele, +1 giro,
 // teto de 3 por dia) e o prêmio "+1 GIRO" da própria roda.
 //
-// O popup automático só existe se o dono ligar `popup_enabled` no painel
-// (padrão DESLIGADO). Ligado, abre no máximo 1x por dia (o próprio GET marca a
-// data). O caminho normal hoje é o cliente ABRIR a roleta pelo banner de
-// Minhas Compras — aí o app chama este endpoint com ?peek=1.
+// O popup automático (chave `popup_enabled`, LIGADA por padrão) abre no máximo
+// 1x por dia — o próprio GET marca a data. O app chama nos 2 momentos que o
+// dono pediu: ao abrir o catálogo e ao voltar do checkout sem comprar. Abrir
+// pelo banner de Minhas Compras usa ?peek=1 (não gasta o popup do dia).
 // ?peek=1 → só lê, NÃO gasta o popup do dia (usado depois de girar).
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/roulette/state', requireUser, async (req, res) => {

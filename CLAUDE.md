@@ -141,3 +141,63 @@ Grupos → Editar grupo → 🗓 Agenda → Importar arquivo (JSON).
 
 Commit pequeno por peça → push na `main`. O dono faz 1 deploy no EasyPanel. As
 migrações rodam sozinhas no boot. Mensagem de commit em PT-BR, objetiva.
+
+---
+
+## PROJETO FUTURO: IA NAS CONVERSAS (planejado jul/2026 — NÃO é fechado, aceita ajustes)
+
+Ideia alinhada com o dono, **ainda não implementada** (pausada por outra demanda +
+limite semanal). Pode e deve passar por ajustes/otimizações antes/durante a execução.
+
+**Objetivo:** IA conversa com os leads no chat das modelos (retenção pós-compra;
+o roteiro de VENDA continua 100% programado). Depois: suporte e grupos (no grupo
+ela seria vários personagens — fase futura, mais complexa).
+
+**Arquitetura decidida:**
+- **Sistema SEPARADO** (novo projeto, pasta própria, sobe na mesma VPS via EasyPanel).
+  Login ÚNICO (dono + sócio usam o mesmo) — dentro dele há "perfis" tipo atendentes
+  de WhatsApp; cada perfil tem um **token/código** pra conectar no sistema-aplicativo
+  de cada um. Ambos rodam o MESMO sistema-base (só cor/detalhes diferentes).
+- **Integração via API** entre o app e o sistema-de-IA (adiada — decidir formato
+  depois; provável: assíncrono estilo webhook, com chave por perfil).
+- No painel da IA: **biblioteca de personas** + **PROMPT MESTRE universal** (é aqui
+  que mora TODA a complexidade: regras de aço, arquétipos, anti-erro). Visão geral
+  de consumo (mensagens enviadas/recebidas, por perfil, comparar consumo).
+- No app de cada um (mudança mínima, dentro da seção Chats): escolher a **persona**
+  daquele chat + dados básicos (nome, idade, cidade, rotina) + liga/desliga da IA.
+  **Mídia (pastas Bunny) e links de oferta continuam no app** — a IA só decide
+  "cabe uma foto de X agora / hora de ofertar"; o app escolhe o arquivo/link.
+
+**Motor (rodar LOCAL na VPS, sem pagar token, sem censura):**
+- VPS: Hostinger KVM8 (8 vCPU, 33,7GB RAM, dividida com sócio). Consumo atual BAIXO
+  (~6,5GB RAM, CPU 2-5%) → **cabe com folga** (~10GB pra IA + picos de CPU só ao gerar).
+- Modelo nº 1 (testar): **`mradermacher/Nemo_RolePlay_PTBR_new-i1-GGUF` Q4_K_M** (~7GB)
+  — base Mistral Nemo 12B, feito pra roleplay adulto em PT-BR, sem censura.
+- Reservas: `MN-12B-Mag-Mell-R1` (RP consagrado, PT da base); `huihui_ai/gemma3-abliterated:12b`
+  (melhor PT nativo + LÊ IMAGEM — reagir à foto do lead; prosa menos "quente").
+- Rodar via **Ollama em Docker** (NUM_PARALLEL 1-2, KEEP_ALIVE alto, 1 modelo, limitar
+  cpus do container). **1º passo de execução: benchmark de velocidade na VPS real**
+  (vCPU compartilhada varia; decide o titular com número, não achismo).
+- Plano B (só se o local decepcionar): API OpenRouter (ToS permite adulto) ~R$7/mês
+  no volume atual; ou Featherless/Arli (flat ~R$50-130/mês). Nunca DeepSeek/Together/Novita
+  (proíbem no ToS = risco de ban).
+
+**Detalhes de comportamento combinados:**
+- Delays HUMANOS (a lentidão de CPU vira realismo): lead manda → ela "vê" após 40s-2min
+  → digita (tempo ~ tamanho da resposta) → responde. Delays inteligentes: às vezes
+  some 20-40min e volta com desculpa ligada à ROTINA da persona (dormindo/academia).
+- **Janela de agrupamento:** lead manda "oi"/"tudo bem"/"fazendo o quê" picado →
+  espera ~30-40s de silêncio, JUNTA tudo numa mensagem só → 1 resposta (mais real +
+  economiza CPU).
+- **"Aprendizado" (expectativa a alinhar):** IA local NÃO se re-treina sozinha. O
+  efeito de "melhora com o tempo" vem de: (a) **memória por lead** (resumo do que ela
+  sabe do cliente, reenviado nas próximas conversas — cria vínculo/recompra); (b)
+  **prompt afinado** com o que converte (medido no painel). Dia 1 boa; semana 4 parece
+  muito melhor porque conhece cada lead + prompt turbinado.
+- Regras de aço no prompt: nunca admitir que é IA, nunca marcar encontro real, nunca
+  inventar mídia, resposta curta estilo WhatsApp, teto diário por lead ("fica ocupada").
+- Ler foto: só o modelo de visão (Gemma) faz; custa +10-30s por foto em CPU — decidir
+  no teste (ou fallback: reage sem ver, "que foto é essa 🙈 me conta").
+- Painel da IA: DESIGN caprichado, estilo SaaS futurista/tech (ÍCONES SVG, nunca emoji).
+
+Detalhes completos e histórico: memória `projeto-ia-chat.md`.

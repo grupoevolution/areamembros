@@ -8846,6 +8846,7 @@ body.is-slowconn .prod-cta-fixed {
   .rl-btn { display:block; width:100%; border:none; border-radius:14px; padding:15px; font-size:15.5px; font-weight:900; letter-spacing:.4px; cursor:pointer; font-family:inherit; }
   .rl-btn.rl-red { background:linear-gradient(180deg,#ff3540,#c40711); color:#fff; box-shadow:0 10px 28px rgba(229,9,20,.45); }
   .rl-btn.rl-goldbtn { background:linear-gradient(180deg,#ffd75e,#f0a90f); color:#2a1c02; box-shadow:0 10px 28px rgba(240,169,15,.4); }
+  .rl-btn.rl-greenbtn { background:linear-gradient(180deg,#3ddc84,#1fa855); color:#06280f; box-shadow:0 10px 28px rgba(31,168,85,.38); }
   .rl-later { background:none; border:none; color:#8d8792; font-size:13px; text-decoration:underline; margin-top:10px; cursor:pointer; font-family:inherit; }
   /* roda */
   .rl-wrap { width:100%; max-width:360px; text-align:center; }
@@ -8934,6 +8935,7 @@ body.is-slowconn .prod-cta-fixed {
       </div>
       <div class="rl-sd">Manda o link do app pra um amigo ou num grupo. Quando alguém entrar pelo seu link, <b style="color:#ffd75e">um giro novo libera na hora</b> — e pode cair o de R$ 1.000.</div>
       <button class="rl-btn rl-goldbtn" style="margin-top:10px;" onclick="Roulette.share()">COMPARTILHAR MEU LINK</button>
+      <button class="rl-btn rl-greenbtn" style="margin-top:8px;" onclick="Roulette.copy(this)">COPIAR O LINK</button>
     </div>
     <button class="rl-later" onclick="Roulette.close()">agora não</button>
   </div>
@@ -9617,10 +9619,9 @@ window.ChatApp = (function() {
             return '';
         }
         // bolinhas AO VIVO na frente (lives no ar) — levam pra aba Lives
-        // Bolinhas de status: FIXO no máximo 3, independente de quantas lives
-        // estão no ar (o dono pode ter muitas lives na aba, mas o status mostra
-        // só 2-3 pra não virar uma fileira gigante).
-        const lives = (window.__LIVES_NOW || []).slice(0, 3);
+        // Bolinhas de status: FIXO no máximo 2 (pedido do dono) — 3 empurrava
+        // os stories das modelos pra fora da tela no celular.
+        const lives = (window.__LIVES_NOW || []).slice(0, 2);
         const liveItems = lives.map(l => {
             const bg = l.poster ? ' style="background-image:url(\'' + esc(l.poster) + '\')"' : '';
             return '<div class="ca-story-item" onclick="openExploreTab(\'lives\')">'
@@ -19584,6 +19585,9 @@ window.MV_stampUtm = function (url, src) {
 // à navegação da página (o checkout abre na MESMA guia logo em seguida).
 window.MV_intent = function (url, src) {
     if (!/^https?:\/\//i.test(url || '')) return;
+    // marca a ida pro checkout (a roleta usa isso pra aparecer quando ele
+    // volta sem comprar — carrinho abandonado)
+    try { localStorage.setItem('mv_checkout_at', String(Date.now())); } catch (_) {}
     const payload = JSON.stringify({ url, src: src || null });
     try {
         if (navigator.sendBeacon
@@ -22537,6 +22541,38 @@ window.Roulette = (function () {
     function shareLink() {
         return window.location.origin + '/' + (S.ref ? '?convite=' + encodeURIComponent(S.ref) : '');
     }
+    // COPIAR O LINK (botão verde): alguns clientes preferem colar na mão no
+    // WhatsApp em vez de usar o compartilhar do celular.
+    function copy(btn) {
+        var url = shareLink();
+        var done = function () {
+            if (!btn) return;
+            var antes = btn.textContent;
+            btn.textContent = 'LINK COPIADO';
+            setTimeout(function () { btn.textContent = antes; }, 2200);
+        };
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(done, function () { fallbackCopy(url, done); });
+                return;
+            }
+        } catch (_) {}
+        fallbackCopy(url, done);
+    }
+    function fallbackCopy(text, done) {
+        try {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            done();
+        } catch (_) {
+            try { prompt('Copie o seu link:', text); } catch (__) {}
+        }
+    }
+
     function share() {
         var url = shareLink();
         var txt = 'Entrei nesse app e ganhei uma chamada de vídeo de graça na roleta. Entra pelo meu link:';
@@ -22681,6 +22717,29 @@ window.Roulette = (function () {
         } catch (_) {}
     }, 3000);
 
+    // 2º momento pedido pelo dono: VOLTOU DO CHECKOUT SEM COMPRAR (carrinho
+    // abandonado). O MV_buy carimba a saída pro checkout; se ele reaparece no
+    // app em até 30 min, a roleta entra como consolo/isca — o mesmo popup,
+    // respeitando a janela de 1x por dia do servidor.
+    (function () {
+        function voltouDoCheckout() {
+            var t = 0;
+            try { t = parseInt(localStorage.getItem('mv_checkout_at'), 10) || 0; } catch (_) {}
+            if (!t) return false;
+            var recente = (Date.now() - t) < 30 * 60 * 1000;
+            try { localStorage.removeItem('mv_checkout_at'); } catch (_) {}
+            return recente;
+        }
+        // no boot (o checkout abre na MESMA guia: voltar recarrega o app)
+        setTimeout(function () { if (voltouDoCheckout()) { try { maybeShow(); } catch (_) {} } }, 2500);
+        // e quando o app volta pro primeiro plano (caso tenha aberto em outra aba)
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible' && voltouDoCheckout()) {
+                setTimeout(function () { try { maybeShow(); } catch (_) {} }, 1200);
+            }
+        });
+    })();
+
     // ?convite=CODIGO → credita giro pro dono do código e limpa a URL.
     (function () {
         try {
@@ -22699,7 +22758,7 @@ window.Roulette = (function () {
 
     return {
         go: go, close: close, dismiss: dismiss, redeem: redeem, spin: spin,
-        claimCall: claimCall, share: share, maybeShow: maybeShow, isOpen: isOpen,
+        claimCall: claimCall, share: share, copy: copy, maybeShow: maybeShow, isOpen: isOpen,
         open: open, banner: banner
     };
 })();
