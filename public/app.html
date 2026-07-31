@@ -9436,6 +9436,83 @@ function openExploreTab(sub) {
     if (window.Explore) window.Explore.showSub(sub === 'lives' && livesOn ? 'lives' : 'videos');
 }
 
+// ═══════════════ TELA DE "CHAMANDO..." (ELE liga PRA ela) ═══════════════
+// Uma tela só, usada em DOIS lugares: o botão de ligar dentro do chat e o
+// botão LIGAR do card de chamada em "Minhas Compras". Mostra o rosto dela,
+// o som de chamando (ringback) e o botão vermelho de desligar; passados
+// alguns segundos ela "atende" e quem chamou decide o que acontece.
+window.MVOutgoingCall = (function () {
+    var ringAudio = null;
+    function esc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function startRingback() {
+        try {
+            if (!ringAudio) { ringAudio = new Audio('/assets/ringback.wav'); ringAudio.loop = true; ringAudio.volume = 0.9; }
+            ringAudio.currentTime = 0;
+            var p = ringAudio.play();
+            if (p && p.catch) p.catch(function () {});
+        } catch (_) {}
+        try { if (navigator.vibrate) navigator.vibrate([400, 200, 400, 1200]); } catch (_) {}
+    }
+    function stopRingback() {
+        try { if (ringAudio) { ringAudio.pause(); ringAudio.currentTime = 0; } } catch (_) {}
+        try { if (navigator.vibrate) navigator.vibrate(0); } catch (_) {}
+    }
+    function close() {
+        stopRingback();
+        var o = document.getElementById('caCallScr');
+        if (o) {
+            clearTimeout(o._t1); clearTimeout(o._t2);
+            o.style.display = 'none';
+        }
+    }
+    // opts: { name, photo, answerMs, onAnswer, onHangup }
+    function open(opts) {
+        opts = opts || {};
+        var photo = String(opts.photo || '').replace(/'/g, '');
+        var answerMs = Math.max(1200, parseInt(opts.answerMs, 10) || 6200);
+        var o = document.getElementById('caCallScr');
+        if (!o) { o = document.createElement('div'); o.id = 'caCallScr'; document.body.appendChild(o); }
+        o.style.cssText = 'position:fixed;inset:0;z-index:730;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;background:#0c0708;overflow:hidden;';
+        o.innerHTML = ''
+            + '<div style="position:absolute;inset:0;background:#1a0e10 center/cover no-repeat;' + (photo ? 'background-image:url(\'' + photo + '\');' : '') + 'filter:brightness(.45);"></div>'
+            + '<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,7,8,.55),rgba(12,7,8,.2) 40%,rgba(12,7,8,.92));"></div>'
+            + '<div style="position:relative;z-index:2;padding-top:calc(64px + env(safe-area-inset-top));display:flex;flex-direction:column;align-items:center;gap:8px;">'
+            +   '<div id="caCallState" style="font-size:14px;color:rgba(255,255,255,.85);letter-spacing:.02em;">chamando...</div>'
+            +   '<div style="font-size:26px;font-weight:700;color:#fff;">' + esc(opts.name) + '</div>'
+            + '</div>'
+            + '<div style="position:relative;z-index:2;">'
+            +   '<div class="ca-ring"><div class="ca-ring-pulse"></div><div class="ca-ring-pulse" style="animation-delay:1s"></div>'
+            +     '<div class="ca-ring-av"' + (photo ? ' style="background-image:url(\'' + photo + '\')"' : '') + '></div></div>'
+            + '</div>'
+            + '<div style="position:relative;z-index:2;padding-bottom:calc(54px + env(safe-area-inset-bottom));">'
+            +   '<button id="caCallHang" aria-label="Desligar" style="width:64px;height:64px;border-radius:50%;background:#e53935;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.5);">'
+            +     '<svg width="28" height="28" fill="#fff" viewBox="0 0 24 24" style="transform:rotate(135deg)"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24 11.36 11.36 0 003.57.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z"/></svg>'
+            +   '</button>'
+            + '</div>';
+        o.style.display = 'flex';
+        startRingback();
+        o.querySelector('#caCallHang').onclick = function () {
+            close();
+            if (typeof opts.onHangup === 'function') { try { opts.onHangup(); } catch (_) {} }
+        };
+        clearTimeout(o._t1); clearTimeout(o._t2);
+        o._t1 = setTimeout(function () {
+            var st = document.getElementById('caCallState');
+            if (st) st.textContent = 'conectando...';
+        }, Math.max(600, answerMs - 1200));
+        o._t2 = setTimeout(function () {
+            stopRingback();
+            if (typeof opts.onAnswer === 'function') { try { opts.onAnswer(); } catch (_) {} }
+        }, answerMs);
+        return o;
+    }
+    return { open: open, close: close, startRingback: startRingback, stopRingback: stopRingback };
+})();
+
 // ═══════════════ CHAT INTEGRADO (estilo WhatsApp — mesmo motor do /chat-lab) ═══════════════
 window.ChatApp = (function() {
     function visitorId() {
@@ -10838,72 +10915,31 @@ window.ChatApp = (function() {
         outgoingCall(chat, isVip);
     }
 
-    // Tela de "chamando..." (ELE liga PRA ela) — toca o som de CHAMANDO (ringback).
-    let _ringAudio = null;
-    function startRingback() {
-        try {
-            if (!_ringAudio) { _ringAudio = new Audio('/assets/ringback.wav'); _ringAudio.loop = true; _ringAudio.volume = 0.9; }
-            _ringAudio.currentTime = 0;
-            const p = _ringAudio.play();
-            if (p && p.catch) p.catch(() => {});
-        } catch (_) {}
-        try { if (navigator.vibrate) navigator.vibrate([400, 200, 400, 1200]); } catch (_) {}
-    }
-    function stopRingback() {
-        try { if (_ringAudio) { _ringAudio.pause(); _ringAudio.currentTime = 0; } } catch (_) {}
-        try { if (navigator.vibrate) navigator.vibrate(0); } catch (_) {}
-    }
-    function closeCallScreen() {
-        stopRingback();
-        const o = document.getElementById('caCallScr');
-        if (o) o.style.display = 'none';
-    }
+    // Tela de "chamando..." (ELE liga PRA ela). A tela em si mora em
+    // window.MVOutgoingCall (a MESMA usada pelo LIGAR de Minhas Compras) —
+    // aqui só dizemos o que acontece quando ela "atende".
+    function closeCallScreen() { try { window.MVOutgoingCall.close(); } catch (_) {} }
     function outgoingCall(chat, isVip) {
-        const photo = ((chat.video_call && chat.video_call.model_photo) || chat.avatar_url || '').replace(/'/g, '');
-        let o = document.getElementById('caCallScr');
-        if (!o) { o = document.createElement('div'); o.id = 'caCallScr'; document.body.appendChild(o); }
-        o.style.cssText = 'position:fixed;inset:0;z-index:730;display:flex;flex-direction:column;align-items:center;justify-content:space-between;text-align:center;background:#0c0708;overflow:hidden;';
-        o.innerHTML = ''
-            + '<div style="position:absolute;inset:0;background:#1a0e10 center/cover no-repeat;' + (photo ? 'background-image:url(\'' + photo + '\');' : '') + 'filter:brightness(.45);"></div>'
-            + '<div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,7,8,.55),rgba(12,7,8,.2) 40%,rgba(12,7,8,.92));"></div>'
-            + '<div style="position:relative;z-index:2;padding-top:calc(64px + env(safe-area-inset-top));display:flex;flex-direction:column;align-items:center;gap:8px;">'
-            +   '<div id="caCallState" style="font-size:14px;color:rgba(255,255,255,.85);letter-spacing:.02em;">chamando...</div>'
-            +   '<div style="font-size:26px;font-weight:700;color:#fff;">' + esc(chat.name) + '</div>'
-            + '</div>'
-            + '<div style="position:relative;z-index:2;">'
-            +   '<div class="ca-ring"><div class="ca-ring-pulse"></div><div class="ca-ring-pulse" style="animation-delay:1s"></div>'
-            +     '<div class="ca-ring-av"' + (photo ? ' style="background-image:url(\'' + photo + '\')"' : '') + '></div></div>'
-            + '</div>'
-            + '<div style="position:relative;z-index:2;padding-bottom:calc(54px + env(safe-area-inset-bottom));">'
-            +   '<button id="caCallHang" aria-label="Desligar" style="width:64px;height:64px;border-radius:50%;background:#e53935;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.5);">'
-            +     '<svg width="28" height="28" fill="#fff" viewBox="0 0 24 24" style="transform:rotate(135deg)"><path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24 11.36 11.36 0 003.57.57 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z"/></svg>'
-            +   '</button>'
-            + '</div>';
-        o.style.display = 'flex';
-        startRingback();
-        o.querySelector('#caCallHang').onclick = closeCallScreen;
-        // "toca" ~5s e atende
-        clearTimeout(o._t1); clearTimeout(o._t2);
-        o._t1 = setTimeout(() => {
-            const st = document.getElementById('caCallState');
-            if (st) st.textContent = 'conectando...';
-        }, 5000);
-        o._t2 = setTimeout(() => {
-            stopRingback();
-            if (isVip) {
-                closeCallScreen();
-                try { window.VideoCall.open(chat.video_call, { skipSeenGuard: true, onClose: callDone }); watchCallEnd(); } catch (_) {}
-            } else {
-                CUR.callSeen = true;
-                try { api('/api/user/chats/' + CUR.id + '/call-seen'); } catch (_) {}
-                closeCallScreen();
-                // não atendeu → fica a "chamada perdida" no chat (igual WhatsApp).
-                // O gatilho de ligação (call_goto_key) já roda no onCall e a modelo
-                // "reage" pelo roteiro. O popup de PLANOS entra como nudge logo depois.
-                renderMissedCall();
-                setTimeout(() => openChatPaywall(), 700);
-            }
-        }, 6200);
+        window.MVOutgoingCall.open({
+            name: chat.name,
+            photo: (chat.video_call && chat.video_call.model_photo) || chat.avatar_url || '',
+            answerMs: 6200,
+            onAnswer: function () {
+                if (isVip) {
+                    closeCallScreen();
+                    try { window.VideoCall.open(chat.video_call, { skipSeenGuard: true, onClose: callDone }); watchCallEnd(); } catch (_) {}
+                } else {
+                    CUR.callSeen = true;
+                    try { api('/api/user/chats/' + CUR.id + '/call-seen'); } catch (_) {}
+                    closeCallScreen();
+                    // não atendeu → fica a "chamada perdida" no chat (igual WhatsApp).
+                    // O gatilho de ligação (call_goto_key) já roda no onCall e a modelo
+                    // "reage" pelo roteiro. O popup de PLANOS entra como nudge logo depois.
+                    renderMissedCall();
+                    setTimeout(() => openChatPaywall(), 700);
+                }
+            },
+        });
     }
     // Popup antigo "Chamada exclusiva" REMOVIDO — o chat usa um popup só:
     // o de planos VIP/PREMIUM (openChatPaywall), em toda ação travada.
@@ -14631,7 +14667,7 @@ function renderLibraryItem(product) {
             ? ('window.MV_buy(' + JSON.stringify(checkoutUrl) + ')')
             : ("showToast('library','⚠️','Checkout indisponível agora');");
         return ''
-            + '<div class="acervo-card acervo-card--recall" onclick="' + onclick + '">'
+            + '<div class="acervo-card acervo-card--recall acervo-card--used" onclick="' + onclick + '">'
             +     '<div class="acv-card-body">'
             +         '<div class="acv-thumb">'
             +             coverImg
@@ -14643,7 +14679,7 @@ function renderLibraryItem(product) {
             +         '</div>'
             +         '<div class="acv-info">'
             +             giftBadge
-            +             '<span class="acv-status recall"><span class="status-dot"></span>Quer de novo?</span>'
+            +             '<span class="acv-status usada"><span class="status-dot"></span>Chamada já realizada</span>'
             +             '<div class="acv-title">' + name + '</div>'
             +             '<div class="acv-recall-msg">' + escapeHtml(recallMsg) + '</div>'
             +             (modelLine || dateLine ? '<div class="acv-meta">' + [modelLine, dateLine].filter(Boolean).join(' · ') + '</div>' : '')
@@ -14660,7 +14696,7 @@ function renderLibraryItem(product) {
     // ===== Estado B: vídeo chamada disponível (não consumida) =====
     if (product.product_type === 'video_call' && !product.consumed) {
         return ''
-            + '<div class="acervo-card acervo-card--call" onclick="startLibraryCall(' + product.id + ')">'
+            + '<div class="acervo-card acervo-card--call acervo-card--livre" onclick="startLibraryCall(' + product.id + ')">'
             +     '<div class="acv-card-body">'
             +         '<div class="acv-thumb">'
             +             coverImg
@@ -14672,15 +14708,15 @@ function renderLibraryItem(product) {
             +         '</div>'
             +         '<div class="acv-info">'
             +             giftBadge
-            +             '<span class="acv-status novo"><span class="status-dot"></span>Disponível agora</span>'
+            +             '<span class="acv-status disponivel"><span class="status-dot"></span>Disponível agora</span>'
             +             '<div class="acv-title">' + name + '</div>'
             +             '<div class="acv-sub">Vídeo chamada exclusiva · acesso único</div>'
             +             (modelLine || dateLine ? '<div class="acv-meta">' + [modelLine, dateLine].filter(Boolean).join(' · ') + '</div>' : '')
             +         '</div>'
             +     '</div>'
-            +     '<div class="acv-urgency">'
+            +     '<div class="acv-urgency acv-urgency--go">'
             +         '<svg class="clock" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>'
-            +         '<span class="grow">Clique para começar a vídeo chamada</span>'
+            +         '<span class="grow">Toque para ligar — ela atende na hora</span>'
             +         '<span class="open-arrow">Ligar <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>'
             +     '</div>'
             + '</div>';
@@ -18801,6 +18837,11 @@ body.is-logged #pwaLandingBanner, body.pwa-installed #pwaLandingBanner { display
         // trata todos os casos e o placeholder quando não há video.
         loadCallVideo(call);
         $('videoCallOverlay').classList.add('is-open');
+        // autoAnswer: quem ligou foi ELE (LIGAR de Minhas Compras). A tela de
+        // "chamando..." já rolou lá fora e ela ACABOU de atender — então aqui
+        // pulamos a tela de "chamada recebida" (Recusar/Aceitar) e caímos
+        // direto em "conectando" → vídeo. Mesma tela, mesmo player.
+        if (currentOpts.autoAnswer) { answer(); return; }
         show('ringing');
         // dispara o ringtone (loop): URL configurada na chamada OU o som padrão
         // de "telefone tocando". Cleanup em answer/decline/closeOverlay.
@@ -20298,6 +20339,46 @@ document.addEventListener('keydown', function(e) {
 }
 .acervo-card.acervo-card--call .acv-thumb-tag.call { animation: acvPulseRing 1.8s ease-in-out infinite; }
 
+/* ===== CHAMADA: os 2 estados que o cliente entende de bate-pronto =====
+   DISPONÍVEL = tudo VERDE (pode ligar agora, é o botão que ele procura).
+   JÁ REALIZADA = apagado/vermelho, sem botão de ligar (não abre mais);
+   o único caminho é o CTA vermelho de comprar de novo.                    */
+.acv-status.disponivel { background: rgba(0,255,136,0.14); color: #00ff88; }
+.acv-status.usada      { background: rgba(229,9,20,0.16); color: #ff8a8f; }
+
+.acervo-card.acervo-card--livre {
+    border-color: rgba(0,255,136,0.42);
+    box-shadow: 0 6px 20px rgba(0,255,136,0.10);
+}
+.acervo-card.acervo-card--livre .acv-thumb-tag.call {
+    background: rgba(0,178,98,0.95);
+    animation: acvPulseGreen 1.8s ease-in-out infinite;
+}
+@keyframes acvPulseGreen {
+    0%,100% { box-shadow: 0 0 0 0 rgba(0,255,136,0.45); }
+    50%     { box-shadow: 0 0 0 7px rgba(0,255,136,0); }
+}
+.acv-urgency.acv-urgency--go {
+    background: rgba(0,255,136,0.10);
+    border-top-color: rgba(0,255,136,0.28);
+    color: #4dffa6;
+}
+.acv-urgency.acv-urgency--go .open-arrow {
+    background: #00b262; color: #04170d;
+    padding: 5px 10px; border-radius: 100px;
+    font-weight: 800; opacity: 1;
+}
+
+.acervo-card.acervo-card--used {
+    border-color: rgba(255,255,255,0.10);
+    background: linear-gradient(135deg, rgba(229,9,20,0.06), rgba(0,0,0,0.18)), var(--bg-elev);
+    box-shadow: none;
+}
+.acervo-card.acervo-card--used .acv-thumb { filter: grayscale(0.7) brightness(0.62); }
+.acervo-card.acervo-card--used .acv-thumb-tag.call { background: rgba(120,120,120,0.85); animation: none; }
+.acervo-card.acervo-card--used .acv-title { color: rgba(255,255,255,0.62); }
+.acervo-card.acervo-card--used .acv-recall-msg { color: rgba(255,217,179,0.78); }
+
 /* ===== TELA DE CONTEÚDO DO PRODUTO (galeria pós-compra) ===== */
 .libc-hero {
     position: relative; height: 230px;
@@ -20640,54 +20721,96 @@ document.addEventListener('keydown', function(e) {
     };
 
     // --- Start de chamada do acervo (estado B) ---
-    window.startLibraryCall = async function(productId) {
+    //
+    // Como é hoje (pedido do dono): quem liga é ELE. Toca em LIGAR → abre a
+    // tela "chamando..." com o rosto dela e o som de chamando → depois de
+    // 4 a 8 segundos (sorteado, pra parecer gente de verdade) ela ATENDE e o
+    // vídeo começa. É a MESMA tela do botão de ligar dentro do chat.
+    //
+    // A chamada só é marcada como USADA quando ela atende (o servidor grava no
+    // /start). Se ele desligar antes, não perde nada.
+    function libCardFlagUsed(product, data) {
+        product.consumed = true;
+        product.consumed_at = (data && data.consumed_at) || new Date().toISOString();
+        if (data && data.recall_message) product.recall_message = data.recall_message;
+        if (data && data.checkout_url)   product.checkout_url   = data.checkout_url;
+        if (typeof renderLibrary === 'function') renderLibrary();
+    }
+
+    window.startLibraryCall = function(productId) {
         const product = (window.AppState && AppState.library || []).find(p => p.id === productId);
         if (!product) return;
-        try {
-            const res = await fetch('/api/user/calls/' + encodeURIComponent(productId) + '/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({}),
-            });
-            const data = await res.json().catch(() => ({}));
-
-            if (res.status === 200 && data && data.ok && data.video_call && window.VideoCall) {
-                // toca a chamada no modo "acervo": pula o guard de "_seen"
-                // e quando fechar, re-busca a library (vai voltar como estado C)
-                window.VideoCall.open(data.video_call, {
-                    skipSeenGuard: true,
-                    onClose: function() {
-                        if (typeof loadLibrary === 'function') {
-                            loadLibrary().then(function() {
-                                if (typeof renderLibrary === 'function') renderLibrary();
-                            });
-                        }
-                    },
-                });
-                return;
-            }
-
-            if (res.status === 409 && data && data.error === 'already_consumed') {
-                // servidor é fonte da verdade: atualiza o card local pra estado C
-                product.consumed = true;
-                if (data.recall_message) product.recall_message = data.recall_message;
-                if (data.checkout_url)   product.checkout_url   = data.checkout_url;
-                if (typeof renderLibrary === 'function') renderLibrary();
-                if (typeof showToast === 'function') {
-                    showToast('library', '💬', 'Essa chamada você já assistiu. Quer outra?');
-                }
-                return;
-            }
-
-            if (typeof showToast === 'function') {
-                showToast('library', '⚠️', (data && data.error) || 'Não rolou abrir a chamada. Tenta de novo.');
-            }
-        } catch (err) {
-            if (typeof showToast === 'function') {
-                showToast('library', '⚠️', 'Sem conexão. Tenta de novo.');
-            }
+        // Card já usado nem chega aqui (não tem mais botão de ligar), mas se
+        // chegar por algum caminho antigo, não abre.
+        if (product.consumed) {
+            if (typeof showToast === 'function') showToast('library', '📵', 'Você já usou essa chamada');
+            return;
         }
+        const vc = product.video_call || {};
+        const nome = vc.model_name || product.model_name || product.name || 'Ela';
+        const foto = vc.model_photo || product.banner_url || '';
+        // 4 a 8 segundos "tocando" — nunca igual duas vezes.
+        const answerMs = 4000 + Math.floor(Math.random() * 4000);
+
+        window.MVOutgoingCall.open({
+            name: nome,
+            photo: foto,
+            answerMs: answerMs,
+            onAnswer: async function () {
+                try {
+                    const res = await fetch('/api/user/calls/' + encodeURIComponent(productId) + '/start', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({}),
+                    });
+                    const data = await res.json().catch(() => ({}));
+
+                    if (res.status === 200 && data && data.ok && data.video_call && window.VideoCall) {
+                        // ela ATENDEU: fecha o "chamando" e emenda direto no vídeo
+                        // (autoAnswer pula a tela de "chamada recebida").
+                        window.MVOutgoingCall.close();
+                        window.VideoCall.open(data.video_call, {
+                            skipSeenGuard: true,
+                            autoAnswer: true,
+                            onClose: function() {
+                                // acabou a chamada → volta pra Minhas Compras com o
+                                // card já marcado como usada.
+                                if (typeof loadLibrary === 'function') {
+                                    loadLibrary().then(function() {
+                                        if (typeof renderLibrary === 'function') renderLibrary();
+                                    }).catch(function () {});
+                                } else if (typeof renderLibrary === 'function') {
+                                    renderLibrary();
+                                }
+                            },
+                        });
+                        return;
+                    }
+
+                    window.MVOutgoingCall.close();
+
+                    // 'already_used' = chamadinha direta já vista; 'already_consumed'
+                    // = chamada legada (Remarketing). Os dois viram o mesmo aviso.
+                    if (res.status === 409 && data && (data.error === 'already_used' || data.error === 'already_consumed')) {
+                        libCardFlagUsed(product, data);
+                        if (typeof showToast === 'function') {
+                            showToast('library', '📵', 'Você já usou essa chamada');
+                        }
+                        return;
+                    }
+
+                    if (typeof showToast === 'function') {
+                        showToast('library', '⚠️', 'Não rolou completar a chamada. Tenta de novo.');
+                    }
+                } catch (err) {
+                    window.MVOutgoingCall.close();
+                    if (typeof showToast === 'function') {
+                        showToast('library', '⚠️', 'Sem conexão. Tenta de novo.');
+                    }
+                }
+            },
+        });
     };
 })();
 </script>
