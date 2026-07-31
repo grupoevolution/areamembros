@@ -8897,6 +8897,21 @@ body.is-slowconn .prod-cta-fixed {
   </div>
 </div>
 
+<!-- TELA 6: seus giros acabaram (lembrete de compartilhar — SEM confetti) -->
+<div class="rl-ov" id="rlS6">
+  <div class="rl-card">
+    <button class="rl-x" onclick="Roulette.close()">✕</button>
+    <div class="rl-gift">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    </div>
+    <div class="rl-eyebrow">ROLETA VIP</div>
+    <div class="rl-title">SEUS GIROS<br><b>ACABARAM</b></div>
+    <div class="rl-sub">Chame um amigo pelo seu link e <b style="color:#ffd75e">ganhe 1 giro na hora</b>. É só ele abrir o app pelo link que o giro cai pra você.</div>
+    <button class="rl-btn rl-goldbtn" onclick="Roulette.share()">COMPARTILHAR MEU LINK</button>
+    <button class="rl-later" onclick="Roulette.close()">agora não</button>
+  </div>
+</div>
+
 <!-- TELA 2: a roda -->
 <div class="rl-ov" id="rlS2">
   <div class="rl-wrap">
@@ -22288,8 +22303,11 @@ window.Roulette = (function () {
     }
 
     // ── TELAS ───────────────────────────────────────────────────────────
+    // Telas: 1 ganhou giro · 2 roda · 3 prêmio · 4 escolher modelo ·
+    //        5 confirmação · 6 "seus giros acabaram" (só compartilhar)
+    var TELAS = 6;
     function go(n) {
-        for (var i = 1; i <= 5; i++) {
+        for (var i = 1; i <= TELAS; i++) {
             var el = $('rlS' + i);
             if (el) el.classList.toggle('rl-on', i === n);
         }
@@ -22310,7 +22328,7 @@ window.Roulette = (function () {
     }
     function close() {
         stopGlint();
-        for (var i = 1; i <= 5; i++) { var el = $('rlS' + i); if (el) el.classList.remove('rl-on'); }
+        for (var i = 1; i <= TELAS; i++) { var el = $('rlS' + i); if (el) el.classList.remove('rl-on'); }
         try { document.body.style.overflow = ''; } catch (_) {}
         // Ganhou alguma coisa? fecha caindo direto em "Minhas Compras" —
         // o prêmio está lá e é o empurrãozinho pra ele usar na hora.
@@ -22323,7 +22341,7 @@ window.Roulette = (function () {
         }
     }
     function isOpen() {
-        for (var i = 1; i <= 5; i++) { var el = $('rlS' + i); if (el && el.classList.contains('rl-on')) return true; }
+        for (var i = 1; i <= TELAS; i++) { var el = $('rlS' + i); if (el && el.classList.contains('rl-on')) return true; }
         return false;
     }
 
@@ -22512,10 +22530,16 @@ window.Roulette = (function () {
             if (!d || !d.success || !d.enabled) return;
             S.spins = d.spins || 0;
             S.ref = d.ref_code || null;
-            if (!d.show_popup || S.spins <= 0) return;
+            if (!d.show_popup) return;
+            // Quem manda é o servidor:
+            //   mode 'spin'  → tem giro: convite pra girar (tela 1)
+            //   mode 'share' → sem giro: "seus giros acabaram" (tela 6)
+            var mode = d.mode || (S.spins > 0 ? 'spin' : null);
+            if (mode === 'spin' && S.spins <= 0) return;
+            if (mode !== 'spin' && mode !== 'share') return;
             try { localStorage.setItem('rl_popup_day', todayKey()); } catch (_) {}
             var delay = Math.max(0, Number(d.popup_delay_sec != null ? d.popup_delay_sec : 5)) * 1000;
-            setTimeout(function () { if (!isOpen()) go(1); }, delay);
+            setTimeout(function () { if (!isOpen()) go(mode === 'share' ? 6 : 1); }, delay);
         }).catch(function () {});
     }
 
