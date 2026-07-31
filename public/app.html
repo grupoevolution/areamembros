@@ -8880,6 +8880,25 @@ body.is-slowconn .prod-cta-fixed {
   .rl-share .rl-st { font-size:12.5px; font-weight:800; color:#ffd75e; letter-spacing:.4px; margin-bottom:5px; display:flex; gap:6px; align-items:center; }
   .rl-share .rl-sd { font-size:12px; color:#d9d2c5; line-height:1.5; }
   #rlConfetti { position:fixed; inset:0; z-index:100005; pointer-events:none; display:none; }
+
+  /* BANNER DOURADO no topo de Minhas Compras — mesmo peso visual do PASSE VIP
+     dos grupos (ouro + brilho varrendo). É o caminho principal pra roleta. */
+  .rl-banner { position:relative; overflow:hidden; display:flex; align-items:center; gap:11px; padding:13px 14px; border-radius:16px; cursor:pointer;
+      background:linear-gradient(115deg,#5a4310 0%,#8a6a1c 38%,#c9a13e 50%,#8a6a1c 62%,#5a4310 100%);
+      border:1px solid rgba(245,210,120,.6); box-shadow:0 8px 22px rgba(120,86,20,.35); }
+  .rl-banner:active { transform:scale(.985); }
+  .rl-banner::after { content:''; position:absolute; top:-60%; bottom:-60%; left:-70%; width:46px;
+      background:linear-gradient(90deg,transparent,rgba(255,245,205,.75),transparent); transform:skewX(-20deg);
+      animation:rlBanShine 3.6s ease-in-out infinite; pointer-events:none; }
+  @keyframes rlBanShine { 0% { left:-70%; } 55%,100% { left:135%; } }
+  .rl-banner > * { position:relative; z-index:1; }
+  .rl-bico { width:40px; height:40px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+      background:radial-gradient(circle at 35% 30%, #ffe9a8, #f5c542 65%, #c58f10); box-shadow:0 2px 8px rgba(0,0,0,.28); }
+  .rl-bmid { flex:1; min-width:0; }
+  .rl-bt { font-size:15px; font-weight:800; letter-spacing:1.5px; color:#fff6d8; text-shadow:0 1px 2px rgba(90,60,10,.5); }
+  .rl-bs { font-size:11.5px; color:#f2e2b0; margin-top:1px; }
+  .rl-barr { width:34px; height:34px; border-radius:50%; background:linear-gradient(180deg,#ffe9a8,#f5c542); color:#4a3204;
+      display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,.25); }
 </style>
 
 <!-- TELA 1: você ganhou 1 giro -->
@@ -8897,7 +8916,8 @@ body.is-slowconn .prod-cta-fixed {
   </div>
 </div>
 
-<!-- TELA 6: seus giros acabaram (lembrete de compartilhar — SEM confetti) -->
+<!-- TELA 6: sem giro → compartilhar (é PRA CÁ que cai quem abre a roleta
+     sem giro: pelo banner de Minhas Compras ou pelo card de chamada usada) -->
 <div class="rl-ov" id="rlS6">
   <div class="rl-card">
     <button class="rl-x" onclick="Roulette.close()">✕</button>
@@ -8906,8 +8926,15 @@ body.is-slowconn .prod-cta-fixed {
     </div>
     <div class="rl-eyebrow">ROLETA VIP</div>
     <div class="rl-title">SEUS GIROS<br><b>ACABARAM</b></div>
-    <div class="rl-sub">Chame um amigo pelo seu link e <b style="color:#ffd75e">ganhe 1 giro na hora</b>. É só ele abrir o app pelo link que o giro cai pra você.</div>
-    <button class="rl-btn rl-goldbtn" onclick="Roulette.share()">COMPARTILHAR MEU LINK</button>
+    <div class="rl-sub">Você já usou seu giro grátis. Pra girar de novo, chame gente pelo seu link.</div>
+    <div class="rl-share">
+      <div class="rl-st">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd75e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        GANHE MAIS 1 GIRO
+      </div>
+      <div class="rl-sd">Manda o link do app pra um amigo ou num grupo. Quando alguém entrar pelo seu link, <b style="color:#ffd75e">um giro novo libera na hora</b> — e pode cair o de R$ 1.000.</div>
+      <button class="rl-btn rl-goldbtn" style="margin-top:10px;" onclick="Roulette.share()">COMPARTILHAR MEU LINK</button>
+    </div>
     <button class="rl-later" onclick="Roulette.close()">agora não</button>
   </div>
 </div>
@@ -8951,23 +8978,17 @@ body.is-slowconn .prod-cta-fixed {
   </div>
 </div>
 
-<!-- TELA 5: confirmação + compartilhar -->
+<!-- TELA 5: RESGATE (o prêmio já está na conta — falta ele ir usar) -->
 <div class="rl-ov" id="rlS5">
-  <div class="rl-card">
+  <div class="rl-card rl-goldcard">
     <div class="rl-gift rl-ok">
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
     </div>
-    <div class="rl-title" style="font-size:21px" id="rlDoneTitle">Prêmio guardado em<br><b style="color:#fff">Minhas Compras</b></div>
+    <div class="rl-eyebrow rl-gold">PRÊMIO NA SUA CONTA</div>
+    <div class="rl-title" style="font-size:23px" id="rlDoneTitle">SEU PRÊMIO ESTÁ<br><b>LIBERADO</b></div>
     <div class="rl-sub" id="rlDoneSub"></div>
-    <div class="rl-share">
-      <div class="rl-st">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd75e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        GANHE MAIS 1 GIRO
-      </div>
-      <div class="rl-sd">Manda o link do app pra um amigo ou num grupo. Quando alguém entrar pelo seu link, <b style="color:#ffd75e">um giro novo libera na hora</b> — e pode cair o de R$ 1.000.</div>
-      <button class="rl-btn rl-goldbtn" style="margin-top:10px; padding:12px; font-size:13.5px" onclick="Roulette.share()">COMPARTILHAR MEU LINK</button>
-    </div>
-    <button class="rl-later" onclick="Roulette.close()">fechar</button>
+    <button class="rl-btn rl-goldbtn" onclick="Roulette.redeem()">RESGATAR AGORA</button>
+    <button class="rl-later" onclick="Roulette.dismiss()">fechar</button>
   </div>
 </div>
 
@@ -14561,6 +14582,7 @@ function renderLibrary() {
     if (total === 0) {
         containers.forEach(el => {
             el.innerHTML = `
+                <div data-roulette-banner></div>
                 <div style="padding:40px 20px;text-align:center;color:#888;">
                     <div style="font-size:48px;margin-bottom:12px;">📦</div>
                     <div style="font-size:16px;font-weight:600;margin-bottom:8px;color:#fff;">
@@ -14573,13 +14595,17 @@ function renderLibrary() {
                     <button onclick="switchScreen('home')" style="background:#e50914;border:none;color:#fff;font-size:14px;font-weight:700;padding:13px 26px;border-radius:12px;cursor:pointer;box-shadow:0 4px 14px rgba(229,9,20,.35);">Ver catálogo →</button>
                 </div>`;
         });
+        try { if (window.Roulette) Roulette.banner(); } catch (_) {}
         return;
     }
 
     const planHtml = plans.map(renderPlanCard).join('');
     containers.forEach(container => {
-        container.innerHTML = '<div data-upgrade-offer-slot></div>' + planHtml + AppState.library.map(renderLibraryItem).join('');
+        container.innerHTML = '<div data-roulette-banner></div><div data-upgrade-offer-slot></div>' + planHtml + AppState.library.map(renderLibraryItem).join('');
     });
+    // Banner dourado da ROLETA VIP no topo (some sozinho se a roleta estiver
+    // desligada no painel ou se o cliente não estiver identificado)
+    try { if (window.Roulette) Roulette.banner(); } catch (_) {}
     // Card de UPGRADE (pague a diferença) no topo — busca 1x por sessão de tela
     try { loadUpgradeOfferCard(); } catch (_) {}
     // Fase J2: garante countdowns atualizados logo após render (1ª passada com
@@ -14618,6 +14644,19 @@ async function loadUpgradeOfferCard() {
         + escapeHtml(up.target_name ? 'SUBIR PRO ' + up.target_name.toUpperCase() : 'FAZER UPGRADE AGORA')
         + '</button></div>';
 }
+
+// Card de chamada JÁ REALIZADA ("Liberar de novo agora"): abre a ROLETA VIP.
+// Sem giro, o cliente cai na tela de compartilhar o link (que rende giro novo).
+// Roleta desligada no painel → volta a ser o checkout de recompra de antes.
+function MV_recallGo(el) {
+    const url = (el && el.getAttribute && el.getAttribute('data-recall-url')) || '';
+    try {
+        if (window.Roulette && typeof Roulette.open === 'function') { Roulette.open(url); return; }
+    } catch (_) {}
+    if (url) { window.MV_buy(url); return; }
+    try { showToast('library', '⚠️', 'Indisponível agora'); } catch (_) {}
+}
+window.MV_recallGo = MV_recallGo;
 
 function renderLibraryItem(product) {
     // Fallback de capa: banner do produto OU primeira mídia da galeria OU foto da modelo (call)
@@ -14677,12 +14716,15 @@ function renderLibraryItem(product) {
     if (product.product_type === 'video_call' && product.consumed) {
         const checkoutUrl = product.checkout_url || '';
         const recallMsg = product.recall_message || ('A ' + (product.model_name || 'modelo') + ' tá te chamando de novo...');
+        // "Liberar de novo agora" abre a ROLETA VIP (decisão do dono): sem giro
+        // ele cai na tela de compartilhar o link e vira divulgação. Com a roleta
+        // desligada no painel, volta a ser o checkout de recompra de antes —
+        // e sem checkout cadastrado, o aviso de sempre.
         // Fase H: window.location.href dropava a SPA (tela branca + relogin). Abre em nova aba.
-        const onclick = checkoutUrl
-            ? ('window.MV_buy(' + JSON.stringify(checkoutUrl) + ')')
-            : ("showToast('library','⚠️','Checkout indisponível agora');");
+        // O link vai num data-attribute (URL com aspas quebrava o onclick inline).
+        const recallAttr = ' data-recall-url="' + escapeAttrData(checkoutUrl) + '"';
         return ''
-            + '<div class="acervo-card acervo-card--recall acervo-card--used" onclick="' + onclick + '">'
+            + '<div class="acervo-card acervo-card--recall acervo-card--used" onclick="MV_recallGo(this)"' + recallAttr + '>'
             +     '<div class="acv-card-body">'
             +         '<div class="acv-thumb">'
             +             coverImg
@@ -22130,7 +22172,7 @@ window.Roulette = (function () {
     var N = SLICES.length, ARC = (Math.PI * 2) / N;
     var DPR = Math.min(2, window.devicePixelRatio || 1);
 
-    var S = { spins: 0, ref: null, prizeId: null, kind: null, options: [], sel: null, productName: '', won: false };
+    var S = { spins: 0, ref: null, prizeId: null, kind: null, options: [], sel: null, productName: '', won: false, enabled: false };
     var angle = 0, glintT = 0, spinning = false, glintTimer = null, size = 318;
     var cv = null, cx = null, cf = null, fx = null, parts = [], cfRaf = 0;
     var armed = false, shownDay = null;
@@ -22339,7 +22381,13 @@ window.Roulette = (function () {
                 if (typeof showToast === 'function') showToast('library', '🎁', 'Seu prêmio está aqui');
             } catch (_) {}
         }
+        // O banner de Minhas Compras fala em giro: repinta com o saldo novo.
+        try { banner(); } catch (_) {}
     }
+    // Botão grande "RESGATAR AGORA": fecha e leva pra Minhas Compras.
+    function redeem() { S.won = true; close(); }
+    // "fechar" discreto: sai sem sair da tela em que ele estava.
+    function dismiss() { S.won = false; close(); }
     function isOpen() {
         for (var i = 1; i <= TELAS; i++) { var el = $('rlS' + i); if (el && el.classList.contains('rl-on')) return true; }
         return false;
@@ -22416,8 +22464,8 @@ window.Roulette = (function () {
             sub.innerHTML = 'Já está liberado na sua conta' + (S.productName ? ': <b>' + esc(S.productName) + '</b>' : '') + '. É só abrir em Minhas Compras.';
             btn.textContent = 'VER AGORA';
             btn.onclick = function () {
-                $('rlDoneTitle').innerHTML = 'Conteúdo liberado em<br><b style="color:#fff">Minhas Compras</b>';
-                $('rlDoneSub').innerHTML = 'Seu conteúdo secreto já está lá, esperando você.';
+                $('rlDoneTitle').innerHTML = 'SEU PRÊMIO ESTÁ<br><b>LIBERADO</b>';
+                $('rlDoneSub').innerHTML = 'Seu conteúdo secreto está em Minhas Compras, esperando você.';
                 refreshLibrary();
                 go(5);
             };
@@ -22463,8 +22511,8 @@ window.Roulette = (function () {
             if (btn) { btn.disabled = false; btn.textContent = 'LIGAR AGORA'; }
             if (!d || !d.success) { alert((d && d.error) || 'Não consegui liberar agora. Tenta de novo.'); return; }
             var nome = d.product_name || 'a modelo';
-            $('rlDoneTitle').innerHTML = 'Prêmio guardado em<br><b style="color:#fff">Minhas Compras</b>';
-            $('rlDoneSub').innerHTML = 'Sua chamada com a <b>' + esc(nome) + '</b> está lá, prontinha. É só tocar em LIGAR quando quiser.';
+            $('rlDoneTitle').innerHTML = 'SEU PRÊMIO ESTÁ<br><b>LIBERADO</b>';
+            $('rlDoneSub').innerHTML = 'Sua chamada com a <b>' + esc(nome) + '</b> está em Minhas Compras, prontinha.';
             refreshLibrary();
             go(5);
         }).catch(function () {
@@ -22516,10 +22564,78 @@ window.Roulette = (function () {
         alert(ok ? 'Link copiado! Agora é só colar no WhatsApp.' : 'Copie seu link: ' + url);
     }
 
-    // ── GATILHO NO CATÁLOGO ─────────────────────────────────────────────
-    // Cliente identificado abre o catálogo (tela "home") → 5s depois (ou o
-    // que o dono configurou) aparece o popup. No máximo 1x por dia: quem
-    // manda é o servidor, o localStorage é só reforço pra nem bater na API.
+    // ── ESTADO + BANNER + ABRIR NO TOQUE ────────────────────────────────
+    // Caminho PRINCIPAL da roleta: o cliente toca no banner dourado no topo
+    // de "Minhas Compras" (ou no card de chamada já usada) e ela abre.
+    //   com giro  → cai direto na roda (tela 2)
+    //   sem giro  → cai na tela de compartilhar o link (tela 6)
+    var stateFetched = false, statePending = false;
+
+    // ?peek=1: só LÊ o estado. Não gasta o convite automático do dia de quem
+    // ainda usa o popup (o dono pode ligar os dois ao mesmo tempo).
+    function readState(cb) {
+        api('/api/user/roulette/state?peek=1').then(function (d) {
+            d = d || {};
+            stateFetched = true;
+            S.enabled = (d.success === true && d.enabled === true);
+            S.spins = d.spins || 0;
+            S.ref = d.ref_code || S.ref;
+            if (cb) cb(d);
+        }).catch(function () {
+            stateFetched = true;   // sem internet: não fica tentando em loop
+            if (cb) cb({});
+        });
+    }
+
+    var BANNER = '<div class="rl-banner" onclick="Roulette.open()">'
+        + '<span class="rl-bico">'
+        + '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4a3204" stroke-width="2" stroke-linecap="round">'
+        + '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.2"/>'
+        + '<path d="M12 3v6M12 15v6M3 12h6M15 12h6M5.6 5.6l4.2 4.2M14.2 14.2l4.2 4.2M18.4 5.6l-4.2 4.2M9.8 14.2l-4.2 4.2"/></svg>'
+        + '</span>'
+        + '<span class="rl-bmid"><span class="rl-bt" style="display:block">ROLETA VIP</span>'
+        + '<span class="rl-bs" style="display:block">Gire e ganhe até R$ 1.000 no Pix</span></span>'
+        + '<span class="rl-barr">›</span></div>';
+
+    // Pinta (ou limpa) o banner no topo de Minhas Compras. Só cliente
+    // identificado e só com a roleta ligada e utilizável no painel.
+    function banner() {
+        var slot = document.querySelector('[data-roulette-banner]');
+        if (!slot) return;
+        if (!isIdentified()) { slot.innerHTML = ''; return; }
+        if (!stateFetched) {
+            if (!statePending) {
+                statePending = true;
+                readState(function () { statePending = false; banner(); });
+            }
+            return;
+        }
+        slot.innerHTML = S.enabled ? BANNER : '';
+    }
+
+    // Abre a roleta no toque. `fallbackUrl` é o plano B do card de chamada já
+    // usada: com a roleta desligada ele volta a ser o checkout de recompra —
+    // assim o card nunca fica sem ação nenhuma.
+    function open(fallbackUrl) {
+        if (isOpen() || !isIdentified()) {
+            if (!isIdentified() && fallbackUrl && window.MV_buy) window.MV_buy(fallbackUrl);
+            return;
+        }
+        readState(function () {
+            if (!S.enabled) {
+                if (fallbackUrl && window.MV_buy) window.MV_buy(fallbackUrl);
+                else if (typeof showToast === 'function') showToast('library', '⚠️', 'Indisponível agora');
+                try { banner(); } catch (_) {}   // sumiu do painel: some da tela
+                return;
+            }
+            go(S.spins > 0 ? 2 : 6);
+        });
+    }
+
+    // ── GATILHO NO CATÁLOGO (opcional — desligado por padrão) ───────────
+    // Só roda se o dono ligar "Abrir sozinha no catálogo" no painel. Ligado,
+    // o cliente abre o catálogo e o convite aparece depois de X segundos, no
+    // máximo 1x por dia: quem manda é o servidor, o localStorage é só reforço.
     function maybeShow() {
         if (armed || isOpen()) return;
         if (!isIdentified()) return;
@@ -22528,8 +22644,12 @@ window.Roulette = (function () {
         armed = true;
         api('/api/user/roulette/state').then(function (d) {
             if (!d || !d.success || !d.enabled) return;
+            stateFetched = true;
+            S.enabled = true;
             S.spins = d.spins || 0;
             S.ref = d.ref_code || null;
+            try { banner(); } catch (_) {}
+            if (d.popup_enabled !== true) return;   // dono não quer que abra sozinha
             if (!d.show_popup) return;
             // Quem manda é o servidor:
             //   mode 'spin'  → tem giro: convite pra girar (tela 1)
@@ -22577,7 +22697,11 @@ window.Roulette = (function () {
         } catch (_) {}
     })();
 
-    return { go: go, close: close, spin: spin, claimCall: claimCall, share: share, maybeShow: maybeShow, isOpen: isOpen };
+    return {
+        go: go, close: close, dismiss: dismiss, redeem: redeem, spin: spin,
+        claimCall: claimCall, share: share, maybeShow: maybeShow, isOpen: isOpen,
+        open: open, banner: banner
+    };
 })();
 </script>
 </body>
