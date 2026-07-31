@@ -8822,6 +8822,142 @@ body.is-slowconn .prod-cta-fixed {
     <div class="lv-stage" id="lvStage" style="display:none;"></div>
 </div>
 
+<!-- ═══════════════════════ ROLETA VIP ═══════════════════════
+     5 telas: 1 "você ganhou 1 giro" · 2 a roda · 3 o prêmio ·
+     4 escolher a modelo · 5 confirmação + compartilhar.
+     Tudo com prefixo "rl" pra não bater com as roletas antigas
+     (#roletaModal da gamificação e .p3-roulette do perfil). -->
+<style>
+  .rl-ov { position:fixed; inset:0; z-index:100004; background:rgba(5,4,6,.88); display:none; align-items:center; justify-content:center; padding:18px; overflow-y:auto; }
+  .rl-ov.rl-on { display:flex; }
+  .rl-card { position:relative; width:100%; max-width:340px; background:linear-gradient(170deg,#1b1016,#0e0a0e 65%); border:1.5px solid rgba(229,9,20,.5); border-radius:22px; padding:28px 20px 18px; text-align:center; box-shadow:0 30px 80px rgba(0,0,0,.7), 0 0 60px rgba(229,9,20,.12); animation:rlPop .45s cubic-bezier(.2,1.6,.4,1); }
+  .rl-card.rl-goldcard { border-color:rgba(255,215,94,.6); box-shadow:0 30px 80px rgba(0,0,0,.7), 0 0 60px rgba(255,215,94,.15); }
+  @keyframes rlPop { from { transform:scale(.7); opacity:0 } to { transform:scale(1); opacity:1 } }
+  .rl-x { position:absolute; top:10px; right:12px; width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,.08); border:none; color:#aaa; font-size:16px; cursor:pointer; line-height:1; }
+  .rl-gift { width:74px; height:74px; margin:0 auto 12px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #ff5b63, #e50914 60%, #7d0009); display:flex; align-items:center; justify-content:center; box-shadow:0 10px 34px rgba(229,9,20,.5); animation:rlPulse 1.6s ease-in-out infinite; }
+  @keyframes rlPulse { 0%,100% { transform:scale(1) } 50% { transform:scale(1.07) } }
+  .rl-gift svg { width:36px; height:36px; }
+  .rl-gift.rl-ok { background:radial-gradient(circle at 35% 30%, #4be08a, #1fa855 60%, #0a5c2b); box-shadow:0 10px 34px rgba(31,168,85,.4); animation:none; }
+  .rl-eyebrow { font-size:10.5px; font-weight:800; letter-spacing:3px; color:#ff8f95; }
+  .rl-eyebrow.rl-gold { color:#ffd75e; }
+  .rl-title { font-size:25px; font-weight:900; line-height:1.15; margin:8px 0 6px; color:#fff; }
+  .rl-title b { color:#ffd75e; }
+  .rl-sub { font-size:13.5px; color:#cfc7cc; line-height:1.5; margin-bottom:18px; }
+  .rl-btn { display:block; width:100%; border:none; border-radius:14px; padding:15px; font-size:15.5px; font-weight:900; letter-spacing:.4px; cursor:pointer; font-family:inherit; }
+  .rl-btn.rl-red { background:linear-gradient(180deg,#ff3540,#c40711); color:#fff; box-shadow:0 10px 28px rgba(229,9,20,.45); }
+  .rl-btn.rl-goldbtn { background:linear-gradient(180deg,#ffd75e,#f0a90f); color:#2a1c02; box-shadow:0 10px 28px rgba(240,169,15,.4); }
+  .rl-later { background:none; border:none; color:#8d8792; font-size:13px; text-decoration:underline; margin-top:10px; cursor:pointer; font-family:inherit; }
+  /* roda */
+  .rl-wrap { width:100%; max-width:360px; text-align:center; }
+  .rl-wh-title { font-size:21px; font-weight:900; margin-bottom:2px; color:#fff; }
+  .rl-wh-sub { font-size:12.5px; color:#b9b1b6; margin-bottom:14px; }
+  .rl-stage { position:relative; width:318px; height:318px; margin:0 auto 6px; max-width:100%; }
+  #rlWheel { display:block; width:318px; height:318px; }
+  .rl-hub { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:64px; height:64px; border-radius:50%; background:radial-gradient(circle at 35% 30%, #2a2a30, #101013); border:3px solid #d8b038; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:900; letter-spacing:1px; color:#ffd75e; z-index:3; box-shadow:0 4px 18px rgba(0,0,0,.7); cursor:pointer; }
+  .rl-pointer { position:absolute; top:-6px; left:50%; transform:translateX(-50%); z-index:4; filter:drop-shadow(0 3px 6px rgba(0,0,0,.6)); }
+  .rl-spins { font-size:12px; color:#b9b1b6; margin:10px 0 12px; }
+  .rl-spins b { color:#ffd75e; }
+  /* prêmio */
+  .rl-prize-emo { width:86px; height:86px; margin:0 auto 12px; border-radius:24px; background:linear-gradient(160deg,#20262e,#12151a); border:1.5px solid rgba(255,215,94,.55); display:flex; align-items:center; justify-content:center; box-shadow:0 0 44px rgba(255,215,94,.18); }
+  .rl-prize-emo svg { width:42px; height:42px; }
+  /* modelos */
+  .rl-models { display:flex; gap:10px; margin:16px 0 6px; }
+  .rl-mcard { flex:1; min-width:0; background:#17151a; border:1.5px solid rgba(255,255,255,.1); border-radius:16px; padding:10px 8px 12px; cursor:pointer; transition:transform .15s, border-color .15s; }
+  .rl-mcard:active { transform:scale(.96); }
+  .rl-mcard.rl-sel { border-color:#e50914; box-shadow:0 0 0 2px rgba(229,9,20,.35), 0 8px 26px rgba(229,9,20,.25); }
+  .rl-mava { position:relative; width:100%; aspect-ratio:3/4; border-radius:12px; margin-bottom:8px; background-size:cover; background-position:center; background-color:#2a1018; }
+  .rl-mava::after { content:''; position:absolute; inset:0; border-radius:12px; background:radial-gradient(45% 30% at 50% 28%, rgba(255,255,255,.28), transparent 65%); }
+  /* a cor de fundo é o "plano B": se a foto da modelo não carregar
+     (link quebrado, internet ruim), o card ainda fica bonito e diferente */
+  .rl-mava.rl-a1 { background-color:#3d1622; background-image:linear-gradient(160deg,#5d2233,#2a1018); }
+  .rl-mava.rl-a2 { background-color:#182840; background-image:linear-gradient(160deg,#22385d,#101a2a); }
+  .rl-mava.rl-a3 { background-color:#2c1e40; background-image:linear-gradient(160deg,#3f2a5d,#180f2a); }
+  .rl-mname { font-size:13.5px; font-weight:800; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rl-mtag { font-size:10.5px; color:#39d97c; display:flex; align-items:center; justify-content:center; gap:4px; margin-top:2px; }
+  .rl-dot { width:6px; height:6px; border-radius:50%; background:#39d97c; }
+  /* compartilhar */
+  .rl-share { background:rgba(255,215,94,.07); border:1px solid rgba(255,215,94,.35); border-radius:14px; padding:13px 12px; margin-top:14px; text-align:left; }
+  .rl-share .rl-st { font-size:12.5px; font-weight:800; color:#ffd75e; letter-spacing:.4px; margin-bottom:5px; display:flex; gap:6px; align-items:center; }
+  .rl-share .rl-sd { font-size:12px; color:#d9d2c5; line-height:1.5; }
+  #rlConfetti { position:fixed; inset:0; z-index:100005; pointer-events:none; display:none; }
+</style>
+
+<!-- TELA 1: você ganhou 1 giro -->
+<div class="rl-ov" id="rlS1">
+  <div class="rl-card">
+    <button class="rl-x" onclick="Roulette.close()">✕</button>
+    <div class="rl-gift">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+    </div>
+    <div class="rl-eyebrow">SÓ HOJE · PRA VOCÊ</div>
+    <div class="rl-title">VOCÊ GANHOU<br><b>1 GIRO ESPECIAL</b></div>
+    <div class="rl-sub">A casa liberou um giro na <b>Roleta VIP</b> pra você. Tem chamada de vídeo, conteúdo secreto e até <b style="color:#ffd75e">R$ 1.000 no Pix</b> esperando.</div>
+    <button class="rl-btn rl-red" onclick="Roulette.go(2)">GIRAR AGORA</button>
+    <button class="rl-later" onclick="Roulette.close()">deixar pra depois</button>
+  </div>
+</div>
+
+<!-- TELA 2: a roda -->
+<div class="rl-ov" id="rlS2">
+  <div class="rl-wrap">
+    <div class="rl-wh-title">Roleta VIP</div>
+    <div class="rl-wh-sub">Gira e leva — o que cair é seu, na hora</div>
+    <div class="rl-stage" id="rlStage">
+      <div class="rl-pointer">
+        <svg width="34" height="30" viewBox="0 0 34 30"><path d="M17 30 L3 4 Q17 -4 31 4 Z" fill="#ffd75e" stroke="#8a6a10" stroke-width="1.5"/></svg>
+      </div>
+      <canvas id="rlWheel" width="636" height="636"></canvas>
+      <div class="rl-hub" onclick="Roulette.spin()">GIRAR</div>
+    </div>
+    <div class="rl-spins" id="rlSpins">Você tem <b>1 giro</b> · compartilhe o app e ganhe mais</div>
+    <button class="rl-btn rl-red" id="rlSpinBtn" onclick="Roulette.spin()">GIRAR A ROLETA</button>
+    <button class="rl-later" onclick="Roulette.close()">agora não</button>
+  </div>
+</div>
+
+<!-- TELA 3: o prêmio -->
+<div class="rl-ov" id="rlS3">
+  <div class="rl-card rl-goldcard">
+    <div class="rl-prize-emo" id="rlPrizeIco"></div>
+    <div class="rl-eyebrow rl-gold">PRÊMIO LIBERADO</div>
+    <div class="rl-title" id="rlPrizeTitle"></div>
+    <div class="rl-sub" id="rlPrizeSub"></div>
+    <button class="rl-btn rl-goldbtn" id="rlPrizeBtn"></button>
+  </div>
+</div>
+
+<!-- TELA 4: escolher a modelo -->
+<div class="rl-ov" id="rlS4">
+  <div class="rl-card" style="max-width:360px">
+    <div class="rl-eyebrow rl-gold">SUA CHAMADA · ESCOLHA UMA</div>
+    <div class="rl-title" style="font-size:21px">Quem atende <b>você</b>?</div>
+    <div class="rl-models" id="rlModels"></div>
+    <button class="rl-btn rl-red" id="rlCallBtn" style="opacity:.4" onclick="Roulette.claimCall()">LIGAR AGORA</button>
+  </div>
+</div>
+
+<!-- TELA 5: confirmação + compartilhar -->
+<div class="rl-ov" id="rlS5">
+  <div class="rl-card">
+    <div class="rl-gift rl-ok">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="rl-title" style="font-size:21px" id="rlDoneTitle">Prêmio guardado em<br><b style="color:#fff">Minhas Compras</b></div>
+    <div class="rl-sub" id="rlDoneSub"></div>
+    <div class="rl-share">
+      <div class="rl-st">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd75e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        GANHE MAIS 1 GIRO
+      </div>
+      <div class="rl-sd">Manda o link do app pra um amigo ou num grupo. Quando alguém entrar pelo seu link, <b style="color:#ffd75e">um giro novo libera na hora</b> — e pode cair o de R$ 1.000.</div>
+      <button class="rl-btn rl-goldbtn" style="margin-top:10px; padding:12px; font-size:13.5px" onclick="Roulette.share()">COMPARTILHAR MEU LINK</button>
+    </div>
+    <button class="rl-later" onclick="Roulette.close()">fechar</button>
+  </div>
+</div>
+
+<canvas id="rlConfetti"></canvas>
+
 <div class="bottom-nav" id="bottomNav">
     <button class="nav-item active" data-nav="home">
         <svg class="nav-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9v9a2 2 0 01-2 2h-4v-6H9v6H5a2 2 0 01-2-2v-9z"/></svg>
@@ -9022,6 +9158,11 @@ document.addEventListener('gestureend', e => e.preventDefault());
         const fabSheet = document.getElementById('fabSheet');
         const notifSheet = document.getElementById('notifSheet');
 
+        // Roleta VIP aberta? o VOLTAR fecha ela primeiro (sem fricção)
+        if (window.Roulette && Roulette.isOpen && Roulette.isOpen()) {
+            Roulette.close();
+            return;
+        }
         if (roletaModal && roletaModal.classList.contains('show')) {
             if (typeof closeRoleta === 'function') closeRoleta();
             return;
@@ -21821,6 +21962,475 @@ window.Lives = (function () {
         if (dx < 0 && !onLives && livesOn) Explore.showSub('lives');   // ← esquerda: Lives
         else if (dx > 0 && onLives) Explore.showSub('videos');         // → direita: Vídeos
     }, { passive: true });
+})();
+</script>
+
+<!-- ═══════════════════════ ROLETA VIP (motor) ═══════════════════════
+     Quem sorteia é o SERVIDOR. O app só anima a roda até a fatia do
+     prêmio que veio da API — nada aqui decide o que o cliente ganha. -->
+<script>
+window.Roulette = (function () {
+    'use strict';
+
+    // 12 fatias: preto / vermelho / branco, e dourado SÓ no R$ 1.000.
+    // As fatias de VIP, PREMIUM, GRUPOS e R$ 1.000 são DECORAÇÃO —
+    // o servidor nunca sorteia elas.
+    var SLICES = [
+        { t: 'CHAMADA DE VÍDEO', c: '#141416', tc: '#ffffff', k: 'call' },
+        { t: 'ACESSO VIP',       c: '#c40711', tc: '#ffffff', k: null },
+        { t: '+1 GIRO',          c: '#f2f0eb', tc: '#141416', k: 'spin' },
+        { t: 'CONTEÚDO SECRETO', c: '#141416', tc: '#ffffff', k: 'content' },
+        { t: 'GRUPOS LIBERADOS', c: '#c40711', tc: '#ffffff', k: null },
+        { t: '★ R$ 1.000',       c: 'gold',    tc: '#3a2a05', k: null },
+        { t: 'CHAMADA DE VÍDEO', c: '#f2f0eb', tc: '#141416', k: 'call' },
+        { t: 'PREMIUM',          c: '#141416', tc: '#ffffff', k: null },
+        { t: '+1 GIRO',          c: '#c40711', tc: '#ffffff', k: 'spin' },
+        { t: 'CONTEÚDO SECRETO', c: '#f2f0eb', tc: '#141416', k: 'content' },
+        { t: 'CHAMADA DE VÍDEO', c: '#c40711', tc: '#ffffff', k: 'call' },
+        { t: 'GRUPOS LIBERADOS', c: '#141416', tc: '#ffffff', k: null }
+    ];
+    var N = SLICES.length, ARC = (Math.PI * 2) / N;
+    var DPR = Math.min(2, window.devicePixelRatio || 1);
+
+    var S = { spins: 0, ref: null, prizeId: null, kind: null, options: [], sel: null, productName: '', won: false };
+    var angle = 0, glintT = 0, spinning = false, glintTimer = null, size = 318;
+    var cv = null, cx = null, cf = null, fx = null, parts = [], cfRaf = 0;
+    var armed = false, shownDay = null;
+
+    function $(id) { return document.getElementById(id); }
+    function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    // "Hoje" em Brasília (UTC-3) — o mesmo dia que o servidor usa, senão o
+    // reforço do localStorage viraria de dia antes da hora.
+    function todayKey() {
+        try { return new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10); }
+        catch (_) { return 'x'; }
+    }
+    function isIdentified() {
+        return !!(window.currentUserEmail && window.MV_ANONYMOUS !== true
+            && !String(window.currentUserEmail).endsWith('@preview.local'));
+    }
+
+    function api(path, body) {
+        var opt = { credentials: 'include' };
+        if (body !== undefined) {
+            opt.method = 'POST';
+            opt.headers = { 'Content-Type': 'application/json' };
+            opt.body = JSON.stringify(body || {});
+        }
+        return fetch(path, opt).then(function (r) {
+            return r.json().catch(function () { return {}; });
+        });
+    }
+
+    // ── A RODA ──────────────────────────────────────────────────────────
+    function ensureCanvas() {
+        if (cv) return;
+        cv = $('rlWheel');
+        if (!cv) return;
+        cx = cv.getContext('2d');
+        resizeWheel();
+        window.addEventListener('resize', resizeWheel);
+    }
+    function resizeWheel() {
+        if (!cv) return;
+        size = Math.max(220, Math.min(318, window.innerWidth - 56));
+        cv.width = Math.round(size * DPR);
+        cv.height = Math.round(size * DPR);
+        cv.style.width = size + 'px';
+        cv.style.height = size + 'px';
+        var stage = $('rlStage');
+        if (stage) { stage.style.width = size + 'px'; stage.style.height = size + 'px'; }
+        drawWheel();
+    }
+    function drawWheel() {
+        if (!cx) return;
+        var R = size, k = size / 318;
+        cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+        cx.clearRect(0, 0, R, R);
+        var c = R / 2, r = c - 8;
+        cx.save();
+        cx.translate(c, c);
+        cx.rotate(angle);
+        for (var i = 0; i < N; i++) {
+            var a0 = i * ARC - Math.PI / 2 - ARC / 2, a1 = a0 + ARC;
+            cx.beginPath();
+            cx.moveTo(0, 0);
+            cx.arc(0, 0, r, a0, a1);
+            cx.closePath();
+            if (SLICES[i].c === 'gold') {
+                var g = cx.createRadialGradient(0, 0, 20 * k, 0, 0, r);
+                var glow = 0.5 + 0.5 * Math.sin(glintT / 18);
+                g.addColorStop(0, '#8a6a10');
+                g.addColorStop(.55, '#e8b83a');
+                g.addColorStop(.8, 'rgba(255,236,150,' + (0.85 + glow * 0.15) + ')');
+                g.addColorStop(1, '#c99a1d');
+                cx.fillStyle = g;
+            } else cx.fillStyle = SLICES[i].c;
+            cx.fill();
+            cx.strokeStyle = 'rgba(0,0,0,.35)';
+            cx.lineWidth = 1;
+            cx.stroke();
+            // Texto RADIAL (de dentro pra fora). No lado ESQUERDO da roda ele
+            // ficaria de cabeça pra baixo — ali é desenhado invertido, então
+            // fica sempre legível dos dois lados (igual roleta de verdade).
+            cx.save();
+            var mid = i * ARC - Math.PI / 2;
+            var world = ((mid + angle) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2);
+            var leftSide = world > Math.PI / 2 && world < Math.PI * 1.5;
+            cx.rotate(mid);
+            cx.textBaseline = 'middle';
+            cx.fillStyle = SLICES[i].tc;
+            var gold = SLICES[i].c === 'gold';
+            cx.font = (gold ? '900 ' + (15 * k).toFixed(1) + 'px' : '800 ' + (10.5 * k).toFixed(1) + 'px')
+                + ' -apple-system, Segoe UI, Roboto, sans-serif';
+            if (gold) {
+                cx.shadowColor = 'rgba(255,240,170,.9)';
+                cx.shadowBlur = (8 + 6 * Math.sin(glintT / 18)) * k;
+            }
+            if (leftSide) {
+                cx.rotate(Math.PI);
+                cx.textAlign = 'left';
+                cx.fillText(SLICES[i].t, -(r - 12 * k), 0);
+            } else {
+                cx.textAlign = 'right';
+                cx.fillText(SLICES[i].t, r - 12 * k, 0);
+            }
+            cx.restore();
+        }
+        cx.restore();
+        // aro dourado
+        cx.beginPath();
+        cx.arc(c, c, r + 4, 0, Math.PI * 2);
+        cx.lineWidth = 7 * k;
+        var ring = cx.createLinearGradient(0, 0, R, R);
+        ring.addColorStop(0, '#f5d67b'); ring.addColorStop(.5, '#b8860b'); ring.addColorStop(1, '#f5d67b');
+        cx.strokeStyle = ring;
+        cx.stroke();
+        // pinos
+        for (var j = 0; j < N; j++) {
+            var a = j * ARC + angle - Math.PI / 2 - ARC / 2;
+            cx.beginPath();
+            cx.arc(c + Math.cos(a) * (r + 4), c + Math.sin(a) * (r + 4), 3 * k, 0, Math.PI * 2);
+            cx.fillStyle = '#ffe9a8';
+            cx.fill();
+        }
+    }
+    // O brilho da fatia dourada só roda enquanto a roda está na tela
+    // (Android fraco: nada de timer eterno queimando bateria).
+    function startGlint() {
+        if (glintTimer) return;
+        glintTimer = setInterval(function () { glintT++; drawWheel(); }, 66);
+    }
+    function stopGlint() { if (glintTimer) { clearInterval(glintTimer); glintTimer = null; } }
+
+    // ── CONFETTI ────────────────────────────────────────────────────────
+    function ensureConfetti() {
+        if (cf) return;
+        cf = $('rlConfetti');
+        if (!cf) return;
+        fx = cf.getContext('2d');
+        sizeCf();
+        window.addEventListener('resize', sizeCf);
+    }
+    function sizeCf() { if (!cf) return; cf.width = Math.round(window.innerWidth * DPR); cf.height = Math.round(window.innerHeight * DPR); }
+    function confettiBurst() {
+        ensureConfetti();
+        if (!fx) return;
+        cf.style.display = 'block';
+        var COLORS = ['#e50914', '#ffd75e', '#ffffff', '#ff8f95', '#f0a90f'];
+        var n = window.innerWidth < 400 ? 90 : 130;
+        for (var i = 0; i < n; i++) parts.push({
+            x: cf.width / 2, y: cf.height * 0.35,
+            vx: (Math.random() - .5) * 22 * DPR, vy: (Math.random() * -14 - 4) * DPR,
+            s: (4 + Math.random() * 5) * DPR, r: Math.random() * Math.PI,
+            vr: (Math.random() - .5) * .3, c: COLORS[i % COLORS.length], life: 130
+        });
+        if (!cfRaf) cfRaf = requestAnimationFrame(cfFrame);
+    }
+    function cfFrame() {
+        cfRaf = 0;
+        if (!fx) return;
+        fx.clearRect(0, 0, cf.width, cf.height);
+        parts = parts.filter(function (p) { return p.life-- > 0; });
+        for (var i = 0; i < parts.length; i++) {
+            var p = parts[i];
+            p.x += p.vx; p.y += p.vy; p.vy += .55 * DPR; p.r += p.vr;
+            fx.save(); fx.translate(p.x, p.y); fx.rotate(p.r);
+            fx.fillStyle = p.c; fx.globalAlpha = Math.min(1, p.life / 40);
+            fx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * .6);
+            fx.restore();
+        }
+        if (parts.length) cfRaf = requestAnimationFrame(cfFrame);
+        else { fx.clearRect(0, 0, cf.width, cf.height); cf.style.display = 'none'; }
+    }
+
+    // ── TELAS ───────────────────────────────────────────────────────────
+    function go(n) {
+        for (var i = 1; i <= 5; i++) {
+            var el = $('rlS' + i);
+            if (el) el.classList.toggle('rl-on', i === n);
+        }
+        if (n === 2) { ensureCanvas(); resizeWheel(); startGlint(); } else stopGlint();
+        if (n === 2) {
+            var b = $('rlSpinBtn');
+            if (b) { b.textContent = 'GIRAR A ROLETA'; b.style.opacity = 1; }
+            renderSpins();
+        }
+        if (n === 1 || n === 3 || n === 5) confettiBurst();
+        try { document.body.style.overflow = n ? 'hidden' : ''; } catch (_) {}
+    }
+    function renderSpins() {
+        var el = $('rlSpins');
+        if (!el) return;
+        el.innerHTML = 'Você tem <b>' + S.spins + ' giro' + (S.spins === 1 ? '' : 's')
+            + '</b> · compartilhe o app e ganhe mais';
+    }
+    function close() {
+        stopGlint();
+        for (var i = 1; i <= 5; i++) { var el = $('rlS' + i); if (el) el.classList.remove('rl-on'); }
+        try { document.body.style.overflow = ''; } catch (_) {}
+        // Ganhou alguma coisa? fecha caindo direto em "Minhas Compras" —
+        // o prêmio está lá e é o empurrãozinho pra ele usar na hora.
+        if (S.won) {
+            S.won = false;
+            try {
+                if (typeof switchScreen === 'function') switchScreen('library');
+                if (typeof showToast === 'function') showToast('library', '🎁', 'Seu prêmio está aqui');
+            } catch (_) {}
+        }
+    }
+    function isOpen() {
+        for (var i = 1; i <= 5; i++) { var el = $('rlS' + i); if (el && el.classList.contains('rl-on')) return true; }
+        return false;
+    }
+
+    // ── GIRO ────────────────────────────────────────────────────────────
+    function sliceFor(kind) {
+        var pool = [];
+        for (var i = 0; i < N; i++) if (SLICES[i].k === kind) pool.push(i);
+        if (!pool.length) return 0;
+        return pool[Math.floor(Math.random() * pool.length)];
+    }
+    function spin() {
+        if (spinning) return;
+        spinning = true;
+        var btn = $('rlSpinBtn');
+        if (btn) { btn.textContent = 'GIRANDO...'; btn.style.opacity = .65; }
+        api('/api/user/roulette/spin', {}).then(function (d) {
+            if (!d || !d.success || !d.prize) {
+                spinning = false;
+                if (btn) { btn.textContent = 'GIRAR A ROLETA'; btn.style.opacity = 1; }
+                alert((d && d.error) || 'Não consegui girar agora. Tenta de novo.');
+                if (d && d.error && /giro/i.test(d.error)) close();
+                return;
+            }
+            S.kind = d.prize.kind;
+            S.prizeId = d.prize.id || d.prize.prize_id;
+            S.options = d.options || [];
+            S.productName = d.prize.product_name || '';
+            S.spins = (typeof d.spins === 'number') ? d.spins : S.spins;
+            animateTo(sliceFor(S.kind), function () { showPrize(); });
+        }).catch(function () {
+            spinning = false;
+            if (btn) { btn.textContent = 'GIRAR A ROLETA'; btn.style.opacity = 1; }
+            alert('Sem internet? Tenta de novo em instantes.');
+        });
+    }
+    function animateTo(target, done) {
+        // Onde a roda TEM que parar pra fatia `target` ficar embaixo da seta.
+        // 6 voltas cheias + o pedaço que falta a partir de onde ela está.
+        var TAU = Math.PI * 2;
+        var base = angle;
+        var baseNorm = ((base % TAU) + TAU) % TAU;
+        var wanted = ((TAU - target * ARC) % TAU + TAU) % TAU;
+        var total = TAU * 6 + ((wanted - baseNorm) % TAU + TAU) % TAU;
+        var t0 = performance.now(), DUR = 5600;
+        function frame(t) {
+            var p = Math.min(1, (t - t0) / DUR);
+            var ease = 1 - Math.pow(1 - p, 4); // desacelera igual caça-níquel
+            angle = base + total * ease;
+            drawWheel();
+            if (p < 1) requestAnimationFrame(frame);
+            else { spinning = false; confettiBurst(); setTimeout(done, 900); }
+        }
+        requestAnimationFrame(frame);
+    }
+
+    var ICO = {
+        call: '<svg viewBox="0 0 24 24" fill="none" stroke="#ffd75e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>',
+        content: '<svg viewBox="0 0 24 24" fill="none" stroke="#ffd75e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>',
+        spin: '<svg viewBox="0 0 24 24" fill="none" stroke="#ffd75e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 11-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>'
+    };
+    function showPrize() {
+        var ico = $('rlPrizeIco'), tit = $('rlPrizeTitle'), sub = $('rlPrizeSub'), btn = $('rlPrizeBtn');
+        if (S.kind === 'call') {
+            ico.innerHTML = ICO.call;
+            tit.innerHTML = 'UMA <b>CHAMADA DE VÍDEO</b><br>SÓ SUA';
+            sub.innerHTML = 'Você ganhou uma chamada íntima de verdade. Escolhe com quem você quer falar — ela atende na hora.';
+            btn.textContent = 'ESCOLHER A MODELO';
+            btn.onclick = function () { renderModels(); go(4); };
+        } else if (S.kind === 'content') {
+            ico.innerHTML = ICO.content;
+            tit.innerHTML = 'VOCÊ ABRIU O<br><b>CONTEÚDO SECRETO</b>';
+            sub.innerHTML = 'Já está liberado na sua conta' + (S.productName ? ': <b>' + esc(S.productName) + '</b>' : '') + '. É só abrir em Minhas Compras.';
+            btn.textContent = 'VER AGORA';
+            btn.onclick = function () {
+                $('rlDoneTitle').innerHTML = 'Conteúdo liberado em<br><b style="color:#fff">Minhas Compras</b>';
+                $('rlDoneSub').innerHTML = 'Seu conteúdo secreto já está lá, esperando você.';
+                refreshLibrary();
+                go(5);
+            };
+        } else {
+            ico.innerHTML = ICO.spin;
+            tit.innerHTML = 'CAIU <b>+1 GIRO</b><br>PRA VOCÊ';
+            sub.innerHTML = 'A sorte insistiu: você ganhou outro giro. Gira de novo e vai atrás do prêmio grande.';
+            btn.textContent = 'GIRAR DE NOVO';
+            btn.onclick = function () { go(2); };
+        }
+        go(3);
+    }
+
+    // ── ESCOLHER A MODELO ───────────────────────────────────────────────
+    function renderModels() {
+        var box = $('rlModels');
+        if (!box) return;
+        S.sel = null;
+        var btn = $('rlCallBtn');
+        if (btn) { btn.style.opacity = .4; btn.textContent = 'LIGAR AGORA'; }
+        box.innerHTML = S.options.map(function (o, i) {
+            var bg = o.photo ? ' style="background-image:url(' + esc(o.photo).replace(/\(|\)/g, '') + ')"' : '';
+            return '<div class="rl-mcard" data-id="' + o.id + '">'
+                + '<div class="rl-mava rl-a' + ((i % 3) + 1) + '"' + bg + '></div>'
+                + '<div class="rl-mname">' + esc(o.name) + '</div>'
+                + '<div class="rl-mtag"><span class="rl-dot"></span>online</div>'
+                + '</div>';
+        }).join('');
+        Array.prototype.forEach.call(box.querySelectorAll('.rl-mcard'), function (el) {
+            el.addEventListener('click', function () {
+                Array.prototype.forEach.call(box.querySelectorAll('.rl-mcard'), function (m) { m.classList.remove('rl-sel'); });
+                el.classList.add('rl-sel');
+                S.sel = parseInt(el.getAttribute('data-id'), 10);
+                if (btn) btn.style.opacity = 1;
+            });
+        });
+    }
+    function claimCall() {
+        if (!S.sel) return;
+        var btn = $('rlCallBtn');
+        if (btn) { if (btn.disabled) return; btn.disabled = true; btn.textContent = 'LIBERANDO...'; }
+        api('/api/user/roulette/claim-call', { prize_id: S.prizeId, product_id: S.sel }).then(function (d) {
+            if (btn) { btn.disabled = false; btn.textContent = 'LIGAR AGORA'; }
+            if (!d || !d.success) { alert((d && d.error) || 'Não consegui liberar agora. Tenta de novo.'); return; }
+            var nome = d.product_name || 'a modelo';
+            $('rlDoneTitle').innerHTML = 'Prêmio guardado em<br><b style="color:#fff">Minhas Compras</b>';
+            $('rlDoneSub').innerHTML = 'Sua chamada com a <b>' + esc(nome) + '</b> está lá, prontinha. É só tocar em LIGAR quando quiser.';
+            refreshLibrary();
+            go(5);
+        }).catch(function () {
+            if (btn) { btn.disabled = false; btn.textContent = 'LIGAR AGORA'; }
+            alert('Sem internet? Tenta de novo em instantes.');
+        });
+    }
+
+    // Prêmio caiu → a biblioteca precisa mostrar ele agora
+    function refreshLibrary() {
+        try {
+            if (typeof loadLibrary === 'function') {
+                loadLibrary().then(function () {
+                    if (typeof renderLibrary === 'function') renderLibrary();
+                }).catch(function () {});
+            }
+            S.won = true;
+        } catch (_) {}
+    }
+
+    // ── COMPARTILHAR ────────────────────────────────────────────────────
+    function shareLink() {
+        return window.location.origin + '/' + (S.ref ? '?convite=' + encodeURIComponent(S.ref) : '');
+    }
+    function share() {
+        var url = shareLink();
+        var txt = 'Entrei nesse app e ganhei uma chamada de vídeo de graça na roleta. Entra pelo meu link:';
+        if (navigator.share) {
+            navigator.share({ title: 'Roleta VIP', text: txt, url: url }).catch(function () {});
+            return;
+        }
+        var ok = false;
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txt + ' ' + url);
+                ok = true;
+            }
+        } catch (_) {}
+        if (!ok) {
+            try {
+                var ta = document.createElement('textarea');
+                ta.value = txt + ' ' + url;
+                ta.style.position = 'fixed'; ta.style.opacity = '0';
+                document.body.appendChild(ta); ta.select();
+                ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+            } catch (_) {}
+        }
+        alert(ok ? 'Link copiado! Agora é só colar no WhatsApp.' : 'Copie seu link: ' + url);
+    }
+
+    // ── GATILHO NO CATÁLOGO ─────────────────────────────────────────────
+    // Cliente identificado abre o catálogo (tela "home") → 5s depois (ou o
+    // que o dono configurou) aparece o popup. No máximo 1x por dia: quem
+    // manda é o servidor, o localStorage é só reforço pra nem bater na API.
+    function maybeShow() {
+        if (armed || isOpen()) return;
+        if (!isIdentified()) return;
+        try { shownDay = localStorage.getItem('rl_popup_day'); } catch (_) { shownDay = null; }
+        if (shownDay === todayKey()) return;
+        armed = true;
+        api('/api/user/roulette/state').then(function (d) {
+            if (!d || !d.success || !d.enabled) return;
+            S.spins = d.spins || 0;
+            S.ref = d.ref_code || null;
+            if (!d.show_popup || S.spins <= 0) return;
+            try { localStorage.setItem('rl_popup_day', todayKey()); } catch (_) {}
+            var delay = Math.max(0, Number(d.popup_delay_sec != null ? d.popup_delay_sec : 5)) * 1000;
+            setTimeout(function () { if (!isOpen()) go(1); }, delay);
+        }).catch(function () {});
+    }
+
+    // Wrapper do switchScreen: entrou no catálogo → arma o gatilho.
+    try {
+        var _prevSwitch = window.switchScreen;
+        window.switchScreen = function (name) {
+            var out = _prevSwitch.apply(this, arguments);
+            if (name === 'home') { try { maybeShow(); } catch (_) {} }
+            return out;
+        };
+    } catch (_) {}
+
+    // Quem já caiu direto na home (login automático do funil) também conta.
+    setTimeout(function () {
+        try {
+            var h = document.getElementById('home');
+            if (h && h.classList.contains('active')) maybeShow();
+        } catch (_) {}
+    }, 3000);
+
+    // ?convite=CODIGO → credita giro pro dono do código e limpa a URL.
+    (function () {
+        try {
+            var p = new URLSearchParams(window.location.search);
+            var code = (p.get('convite') || '').trim();
+            if (!code) return;
+            p.delete('convite');
+            var q = p.toString();
+            window.history.replaceState({}, '', window.location.pathname + (q ? '?' + q : '') + window.location.hash);
+            var vid = window.VID;
+            if (!vid) { try { vid = localStorage.getItem('mv_chat_visitor'); } catch (_) {} }
+            if (!vid) return;
+            api('/api/user/roulette/track-ref', { code: code, visitor_id: vid }).catch(function () {});
+        } catch (_) {}
+    })();
+
+    return { go: go, close: close, spin: spin, claimCall: claimCall, share: share, maybeShow: maybeShow, isOpen: isOpen };
 })();
 </script>
 </body>
