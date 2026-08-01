@@ -15722,7 +15722,7 @@ function gaImportFile(input) {
             });
             const d = await r.json();
             if (!d.success) { alert('Erro: ' + (d.error || '')); return; }
-            alert(d.imported + ' item(ns) importado(s) ✅' + (hasCfg ? '\nPastas de mídia aplicadas — recarregue o grupo pra ver.' : ''));
+            alert(d.imported + ' item(ns) importado(s) ✅' + (hasCfg ? '\nPastas de mídia aplicadas — recarregue o grupo pra ver.' : '') + (d.warning ? '\n\n⚠️ ' + d.warning : ''));
             gaLoadSchedule(gid);
         } catch (e) { alert('Erro: ' + e.message); }
     };

@@ -406,6 +406,10 @@ router.put('/:id', requireAdmin, async (req, res) => {
             `UPDATE groups SET ${updates.join(', ')} WHERE id = $${p} RETURNING *`, values
         );
         if (!rows.length) return res.status(404).json({ success: false, error: 'Não encontrado' });
+        // Qualquer edição invalida a fita assada: trocar pasta do Bunny,
+        // proporção, ciclo etc. antes só surtia efeito após 30 min de cache —
+        // o dono trocava a pasta e "nada mudava".
+        invalidateAgendaCache(id);
         return res.json({ success: true, group: rows[0] });
     } catch (err) {
         logger.error('Erro atualizando grupo:', err);
@@ -746,7 +750,18 @@ router.post('/:id/schedule/import', requireAdmin, async (req, res) => {
             );
         }
         invalidateAgendaCache(id);
-        return res.json({ success: true, imported: clean.length });
+        // Aviso: item com day além do ciclo do grupo é CLAMPADO pro último dia
+        // no runtime (dia 6 num ciclo de 7 acumula o volume de todos os dias
+        // sobrando) — antes isso acontecia em silêncio e o roteiro "repetia
+        // cedo" sem ninguém entender o porquê.
+        let warning = null;
+        try {
+            const { rows: [g] } = await db.query(`SELECT cycle_days FROM groups WHERE id = $1`, [id]);
+            const cyc = Math.max(1, parseInt(g && g.cycle_days, 10) || 7);
+            const beyond = clean.filter(it => it.day >= cyc).length;
+            if (beyond) warning = `${beyond} item(ns) com "day" maior que o ciclo do grupo (${cyc} dias) — eles vão TODOS cair no último dia do ciclo. Aumente o ciclo do grupo ou ajuste os dias do JSON.`;
+        } catch (_) {}
+        return res.json({ success: true, imported: clean.length, warning });
     } catch (err) {
         logger.error('Erro importando agenda:', err);
         return res.status(500).json({ success: false, error: err.message || 'Erro interno' });

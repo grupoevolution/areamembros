@@ -103,11 +103,27 @@ async function findOrCreateSession(groupId, ident, createIfMissing) {
         row = rows[0] || null;
     }
     if (row || !createIfMissing) return row;
-    const { rows: created } = await db.query(
-        `INSERT INTO group_sessions (group_id, customer_email, visitor_id) VALUES ($1, $2, $3) RETURNING *`,
-        [groupId, ident.email, ident.email ? null : ident.visitor]
-    );
-    return created[0];
+    // Trava atômica na criação: /open + /poll + /heartbeat chegam juntos no 1º
+    // acesso e criavam sessões duplicadas — as leituras pegam ORDER BY id DESC,
+    // então as cenas de entrada e o trial da sessão velha "sumiam". Com a
+    // trava, o 2º pedido espera e adota a sessão que o 1º criou.
+    const lockKey = `group_sess:${groupId}:${ident.email || ident.visitor}`;
+    return db.transaction(async (client) => {
+        await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [lockKey]);
+        const { rows: again } = ident.email
+            ? await client.query(
+                `SELECT * FROM group_sessions WHERE group_id = $1 AND LOWER(customer_email) = $2 ORDER BY id DESC LIMIT 1`,
+                [groupId, ident.email])
+            : await client.query(
+                `SELECT * FROM group_sessions WHERE group_id = $1 AND visitor_id = $2 AND customer_email IS NULL ORDER BY id DESC LIMIT 1`,
+                [groupId, ident.visitor]);
+        if (again[0]) return again[0];
+        const { rows: created } = await client.query(
+            `INSERT INTO group_sessions (group_id, customer_email, visitor_id) VALUES ($1, $2, $3) RETURNING *`,
+            [groupId, ident.email, ident.email ? null : ident.visitor]
+        );
+        return created[0];
+    });
 }
 
 // {cidade} das apresentações: geo por IP 1x por sessão (padrão do chat)
@@ -588,7 +604,16 @@ function publicShared(m, opts) {
     // vonce: mídia real SÓ pra quem pode abrir (membro/canal) — isca pros demais
     let media = m.media_url;
     let meta = m.meta || null;
-    if (m.type === 'vonce' && !opts.canOpenVonce) media = null;
+    if (m.type === 'vonce' && !opts.canOpenVonce) {
+        media = null;
+        // vonce vindo do Bunny STREAM guarda a URL de reprodução no meta
+        // (embed/thumb) — sem limpar, trial/locked assistia o vídeo pelo
+        // devtools de graça. Só media_url nulo não bastava.
+        if (meta && (meta.embed || meta.thumb || meta.hls)) {
+            meta = { ...meta };
+            delete meta.embed; delete meta.thumb; delete meta.hls;
+        }
+    }
     return {
         id: m.sid,
         sender: 'bot',
@@ -1190,7 +1215,10 @@ router.get('/groups/:id/poll', optionalUser, async (req, res) => {
         if (!Number.isFinite(afterMs)) afterMs = now; // sem cursor: só o que vier daqui pra frente
         afterMs = Math.max(afterMs, winFrom);
 
-        const shared = await servedShared(group, afterMs, now);
+        // Cap igual ao /open (últimas 400): celular que voltou do bolso com
+        // cursor velho recebia a janela de 72h INTEIRA num poll só (milhares
+        // de objetos serializados de uma vez — travava o Android fraco).
+        const shared = (await servedShared(group, afterMs, now)).slice(-400);
         // date_trunc: cursor em ms vs microssegundos do Postgres (sem isso a
         // mesma mensagem volta em todo poll até o cursor passar dela)
         const { rows: personal } = await db.query(
