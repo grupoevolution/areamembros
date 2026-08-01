@@ -10010,10 +10010,14 @@ window.ChatApp = (function() {
         loadList();
     }
 
+    let _opening = false; // evita /open duplo (toque rápido 2x, deep-link + toque)
     async function open(id) {
         // ISCA "só prévia": nunca abre a conversa (nem por notificação/deep-link)
         // — sempre o popup de virar VIP.
         try { const li = (LIST_CHATS || []).find(x => x.id === id); if (li && li.teaser) { openVipLocked(id); return; } } catch (_) {}
+        if (_opening) return;
+        _opening = true;
+        setTimeout(function () { _opening = false; }, 1500);
         stopPoll();
         try { if (window.GroupApp && GroupApp.stop) GroupApp.stop(); } catch (_) {} // mata timers órfãos do grupo
         switchScreen('chatconv');
@@ -13382,11 +13386,10 @@ function confirmPurchase() {
     }
     showToast('checkout', '🔒', 'Abrindo pagamento seguro...');
     if (navigator.vibrate) navigator.vibrate([10, 30, 10]);
-    // Abre o gateway NA MESMA janela (dentro do PWA standalone fica embarcado).
-    // Ao concluir, o gateway redireciona pra success_url configurada (que deve
-    // apontar de volta pra m.membrosvips.com).
+    // MV_buy: mesma guia + e-mail se anônimo + carrinho abandonado + carimbo
+    // de origem (antes navegava direto e pulava essas três proteções).
     setTimeout(() => {
-        window.location.href = url;
+        window.MV_buy(url, 'product_' + (product.id || 'page'));
     }, 600);
 }
 
@@ -14110,23 +14113,32 @@ async function loadUserData() {
 }
 
 /**
- * Carrega o catálogo completo (GET /catalog)
+ * Carrega o catálogo completo (GET /catalog).
+ * Dedupe de voo: no boot, loadAppData e loadHomeData disparavam este fetch
+ * QUASE juntos (o flag loaded.catalog só vira true quando a 1ª resposta
+ * chega) — em conexão lenta o catálogo baixava DUAS vezes. Agora o 2º
+ * chamador pega a MESMA promessa em andamento.
  */
+let _catalogInflight = null;
 async function loadCatalog() {
-    try {
-        const res = await fetch('/api/user/catalog', { credentials: 'include' });
-        if (!res.ok) return null;
-        const data = await res.json();
-        if (data.success) {
-            AppState.catalog = data.catalog || [];
-            AppState.activeGateway = data.activeGateway || 'kirvano';
-            AppState.loaded.catalog = true;
-            return AppState.catalog;
+    if (_catalogInflight) return _catalogInflight;
+    _catalogInflight = (async () => {
+        try {
+            const res = await fetch('/api/user/catalog', { credentials: 'include' });
+            if (!res.ok) return null;
+            const data = await res.json();
+            if (data.success) {
+                AppState.catalog = data.catalog || [];
+                AppState.activeGateway = data.activeGateway || 'kirvano';
+                AppState.loaded.catalog = true;
+                return AppState.catalog;
+            }
+        } catch (err) {
+            console.error('Erro loadCatalog:', err);
         }
-    } catch (err) {
-        console.error('Erro loadCatalog:', err);
-    }
-    return null;
+        return null;
+    })();
+    try { return await _catalogInflight; } finally { _catalogInflight = null; }
 }
 
 /**
@@ -14141,8 +14153,6 @@ async function loadLibrary() {
             AppState.library = data.library || [];
             AppState.plans = data.plans || [];
             AppState.loaded.library = true;
-            // Roleta: checa se cliente liberou prêmio comprando
-            try { if (typeof rouletteCheckClaim === 'function') rouletteCheckClaim(); } catch {}
             return AppState.library;
         }
     } catch (err) {
@@ -15701,7 +15711,7 @@ function buyProduct(productId) {
         return;
     }
     // Abre checkout do gateway (MV_buy: carimbo utm + e-mail se anônimo)
-    window.MV_buy(product.checkout.checkout_url);
+    window.MV_buy(product.checkout.checkout_url, 'product_' + productId);
     showToast('product', '💳', 'Abrindo checkout...');
 }
 
@@ -16374,23 +16384,19 @@ const APP_DATA = {
 
 async function loadAppData() {
     try {
-        // Busca config + catálogo em paralelo
-        const [cfgRes, catRes] = await Promise.all([
+        // Busca config + catálogo em paralelo (o catálogo via loadCatalog, que
+        // deduplica o fetch com o loadHomeData do boot — 1 request só)
+        const [cfgRes, catalogArr] = await Promise.all([
             fetch('/api/user/app-config', { credentials: 'include' }).then(r => r.json()).catch(() => null),
-            fetch('/api/user/catalog', { credentials: 'include' }).then(r => r.json()).catch(() => null),
+            (typeof loadCatalog === 'function' ? loadCatalog().catch(() => null) : Promise.resolve(null)),
         ]);
 
         if (cfgRes && cfgRes.success) {
             APP_DATA.config = cfgRes;
         }
-        if (catRes && catRes.success) {
-            APP_DATA.catalog = catRes.catalog || [];
-            // Sincroniza com AppState (usado em openProductPage e renderCatalog)
-            if (typeof AppState !== 'undefined') {
-                AppState.catalog = APP_DATA.catalog;
-                AppState.activeGateway = catRes.activeGateway || 'kirvano';
-                AppState.loaded.catalog = true;
-            }
+        if (catalogArr) {
+            // AppState já foi sincronizado dentro do loadCatalog
+            APP_DATA.catalog = catalogArr;
         }
         APP_DATA.loaded = true;
 
@@ -19806,7 +19812,12 @@ function onProductBuyClick() {
     const url = sel && sel.checkout_url;
     if (url) {
         try { if (typeof onPlanCheckout === 'function') onPlanCheckout(sel.id, encodeURIComponent(sel.name || '')); } catch(_) {}
-        window.open(url, '_blank', 'noopener');
+        // MV_buy = o caminho ÚNICO de compra: pede o e-mail se o lead é anônimo
+        // (funil 9,90 — sem isso ele pagava e o acesso não tinha e-mail pra
+        // cair), registra o carrinho abandonado, carimba a origem da venda e
+        // abre NA MESMA guia. Antes este botão abria aba nova pulando tudo.
+        const pid = window.__currentProductInfo && window.__currentProductInfo.id;
+        window.MV_buy(url, pid ? 'product_' + pid : 'product_page');
         return;
     }
     // Plano selecionado sem link de checkout → cai no sheet pra escolher (fallback)
@@ -19851,8 +19862,8 @@ function openPlansSheet(plans) {
                 <span class="plan-price-now">R$ ${price.reais}<span class="plan-price-cents">,${price.cents}</span></span>
             </div>
             ${benefits ? `<ul class="plan-benefits">${benefits}</ul>` : ''}
-            <a class="plan-cta" href="${escapeHtmlSheet(url)}" target="_blank" rel="noopener"
-               onclick="onPlanCheckout(${pl.id}, '${encodeURIComponent(pl.name||'')}')">
+            <a class="plan-cta" href="${escapeHtmlSheet(url)}" rel="noopener"
+               onclick="onPlanCheckout(${pl.id}, '${encodeURIComponent(pl.name||'')}'); if (window.MV_buy && this.href && this.href !== '#') { window.MV_buy(this.href, 'product_' + ((window.__currentProductInfo && window.__currentProductInfo.id) || 'page')); return false; } return true;">
                 ${pl.is_recommended ? 'QUERO ESSE →' : 'Escolher este'}
             </a>
         </div>`;
@@ -20103,7 +20114,10 @@ document.addEventListener('keydown', function(e) {
 
     window.MV_askEmailForCheckout = function (url, src) {
         if (!window.MV_ANONYMOUS) {
-            try { window.open(url, '_blank', 'noopener'); } catch (_) { window.location.href = url; }
+            // Identificado (ramo raro, corrida do estado): mesmo caminho do
+            // MV_buy — registra a intenção e abre NA MESMA guia.
+            try { if (window.MV_intent) window.MV_intent(url, src); } catch (_) {}
+            window.location.href = url;
             return;
         }
         pendingCheckout = url;
@@ -22359,8 +22373,11 @@ window.Roulette = (function () {
         }
         if (n === 2) { ensureCanvas(); resizeWheel(); startGlint(); } else stopGlint();
         if (n === 2) {
+            // SEM giro a roda ABRE MESMO ASSIM (decisão do dono: o visual da
+            // roleta é a isca) — o botão vira GANHAR GIROS e só o toque nele
+            // mostra a tela de compartilhar. Nada de popup quebrando a mágica.
             var b = $('rlSpinBtn');
-            if (b) { b.textContent = 'GIRAR A ROLETA'; b.style.opacity = 1; }
+            if (b) { b.textContent = S.spins > 0 ? 'GIRAR A ROLETA' : 'GANHAR GIROS'; b.style.opacity = 1; }
             renderSpins();
         }
         if (n === 1 || n === 3 || n === 5) confettiBurst();
@@ -22369,8 +22386,9 @@ window.Roulette = (function () {
     function renderSpins() {
         var el = $('rlSpins');
         if (!el) return;
-        el.innerHTML = 'Você tem <b>' + S.spins + ' giro' + (S.spins === 1 ? '' : 's')
-            + '</b> · compartilhe o app e ganhe mais';
+        el.innerHTML = S.spins > 0
+            ? 'Você tem <b>' + S.spins + ' giro' + (S.spins === 1 ? '' : 's') + '</b> · compartilhe o app e ganhe mais'
+            : 'Você está <b>sem giros</b> · toque no botão e veja como ganhar mais';
     }
     function close() {
         stopGlint();
@@ -22406,6 +22424,8 @@ window.Roulette = (function () {
     }
     function spin() {
         if (spinning) return;
+        // Sem giro, o botão é o GANHAR GIROS: abre a tela de compartilhar.
+        if (S.spins <= 0) { go(6); return; }
         spinning = true;
         var btn = $('rlSpinBtn');
         if (btn) { btn.textContent = 'GIRANDO...'; btn.style.opacity = .65; }
@@ -22616,11 +22636,26 @@ window.Roulette = (function () {
             S.enabled = (d.success === true && d.enabled === true);
             S.spins = d.spins || 0;
             S.ref = d.ref_code || S.ref;
+            S.pending = d.pending_call || null;
             if (cb) cb(d);
         }).catch(function () {
             stateFetched = true;   // sem internet: não fica tentando em loop
             if (cb) cb({});
         });
+    }
+
+    // Prêmio de chamada GANHO e não resgatado (saiu no meio, app fechou…):
+    // retoma DIRETO na tela de escolher a modelo — o giro já foi gasto, o
+    // prêmio é dele e não pode "sumir".
+    function resumePending() {
+        if (!S.pending || !S.pending.prize_id) return false;
+        S.kind = 'call';
+        S.prizeId = S.pending.prize_id;
+        S.options = S.pending.options || [];
+        S.pending = null;
+        renderModels();
+        go(4);
+        return true;
     }
 
     var BANNER = '<div class="rl-banner" onclick="Roulette.open()">'
@@ -22664,7 +22699,10 @@ window.Roulette = (function () {
                 try { banner(); } catch (_) {}   // sumiu do painel: some da tela
                 return;
             }
-            go(S.spins > 0 ? 2 : 6);
+            // 1º: prêmio pendente volta pra tela de escolher a modelo.
+            if (resumePending()) return;
+            // Com ou sem giro, abre a RODA (sem giro o botão vira GANHAR GIROS).
+            go(2);
         });
     }
 
@@ -22684,18 +22722,28 @@ window.Roulette = (function () {
             S.enabled = true;
             S.spins = d.spins || 0;
             S.ref = d.ref_code || null;
+            S.pending = d.pending_call || null;
             try { banner(); } catch (_) {}
+            // Prêmio ganho e não resgatado SEMPRE volta (não conta como popup
+            // do dia — é dele, não é convite).
+            if (S.pending && S.pending.prize_id) {
+                var dp = Math.max(0, Number(d.popup_delay_sec != null ? d.popup_delay_sec : 5)) * 1000;
+                setTimeout(function () { if (!isOpen()) resumePending(); }, dp);
+                return;
+            }
             if (d.popup_enabled !== true) return;   // dono não quer que abra sozinha
             if (!d.show_popup) return;
             // Quem manda é o servidor:
             //   mode 'spin'  → tem giro: convite pra girar (tela 1)
-            //   mode 'share' → sem giro: "seus giros acabaram" (tela 6)
+            //   mode 'share' → sem giro: abre a RODA com o botão GANHAR GIROS
+            //                  (o visual da roleta é a isca; a tela de
+            //                  compartilhar só aparece no toque do botão)
             var mode = d.mode || (S.spins > 0 ? 'spin' : null);
             if (mode === 'spin' && S.spins <= 0) return;
             if (mode !== 'spin' && mode !== 'share') return;
             try { localStorage.setItem('rl_popup_day', todayKey()); } catch (_) {}
             var delay = Math.max(0, Number(d.popup_delay_sec != null ? d.popup_delay_sec : 5)) * 1000;
-            setTimeout(function () { if (!isOpen()) go(mode === 'share' ? 6 : 1); }, delay);
+            setTimeout(function () { if (!isOpen()) go(mode === 'share' ? 2 : 1); }, delay);
         }).catch(function () {});
     }
 
@@ -22730,13 +22778,24 @@ window.Roulette = (function () {
             try { localStorage.removeItem('mv_checkout_at'); } catch (_) {}
             return recente;
         }
+        function tryReturnPopup() {
+            if (!voltouDoCheckout()) return;
+            // RE-ARMA o gatilho: o do catálogo já rodou nesta carga e deixava
+            // `armed` travado — o retorno do checkout nunca disparava. O "1x
+            // por dia" continua valendo (servidor + rl_popup_day decidem).
+            armed = false;
+            try { maybeShow(); } catch (_) {}
+        }
         // no boot (o checkout abre na MESMA guia: voltar recarrega o app)
-        setTimeout(function () { if (voltouDoCheckout()) { try { maybeShow(); } catch (_) {} } }, 2500);
+        setTimeout(tryReturnPopup, 2500);
+        // voltar que restaura a página da MEMÓRIA (bfcache do Android/Chrome):
+        // nada recarrega, então o gancho é o pageshow com persisted=true
+        window.addEventListener('pageshow', function (e) {
+            if (e && e.persisted) setTimeout(tryReturnPopup, 1200);
+        });
         // e quando o app volta pro primeiro plano (caso tenha aberto em outra aba)
         document.addEventListener('visibilitychange', function () {
-            if (document.visibilityState === 'visible' && voltouDoCheckout()) {
-                setTimeout(function () { try { maybeShow(); } catch (_) {} }, 1200);
-            }
+            if (document.visibilityState === 'visible') setTimeout(tryReturnPopup, 1200);
         });
     })();
 
