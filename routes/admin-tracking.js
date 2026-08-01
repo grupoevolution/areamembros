@@ -89,8 +89,17 @@ async function periodStats(A, B) {
           (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'chat_paywall_click' AND created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS paywall_clicks,
           -- clique no botão de OFERTA do roteiro (o link do checkout no chat)
           (SELECT COUNT(*)::int FROM tracking_events WHERE event_type = 'chat_cta_click' AND created_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND created_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS cta_clicks,
-          (SELECT COUNT(*)::int FROM user_access WHERE status = 'active' AND granted_by = 'webhook' AND granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND granted_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS purchases,
-          (SELECT COALESCE(SUM(sale_amount), 0)::float FROM user_access WHERE status = 'active' AND granted_by = 'webhook' AND granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND granted_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')) AS revenue
+          -- DEDUP por (gateway, sale_id): order bump grava o valor CHEIO em cada
+          -- item da mesma venda — sem dedup, 1 venda de 2 itens contava como 2
+          -- compras e receita em dobro.
+          (SELECT COUNT(*)::int FROM (
+              SELECT DISTINCT ON (gateway, COALESCE(sale_id, 'ua_' || id)) id
+              FROM user_access WHERE status = 'active' AND granted_by = 'webhook' AND granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND granted_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
+          ) dp) AS purchases,
+          (SELECT COALESCE(SUM(sale_amount), 0)::float FROM (
+              SELECT DISTINCT ON (gateway, COALESCE(sale_id, 'ua_' || id)) sale_amount
+              FROM user_access WHERE status = 'active' AND granted_by = 'webhook' AND granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND granted_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
+          ) dr) AS revenue
     `, [A, B]);
     return r;
 }
@@ -150,9 +159,14 @@ router.get('/funnel-analytics', requireAdmin, async (req, res) => {
                 SELECT to_char((granted_at - INTERVAL '3 hours')::date, 'YYYY-MM-DD') AS day,
                        COUNT(*)::int AS purchases,
                        COALESCE(SUM(sale_amount), 0)::float AS revenue
-                FROM user_access
-                WHERE status = 'active' AND granted_by = 'webhook'
-                  AND granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND granted_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
+                FROM (
+                    -- dedup por venda (order bump repetia o valor cheio por item)
+                    SELECT DISTINCT ON (gateway, COALESCE(sale_id, 'ua_' || id))
+                           granted_at, sale_amount
+                    FROM user_access
+                    WHERE status = 'active' AND granted_by = 'webhook'
+                      AND granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo') AND granted_at < ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
+                ) s
                 GROUP BY 1 ORDER BY 1
             `, [A, B]),
             db.query(`

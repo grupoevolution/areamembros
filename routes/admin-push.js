@@ -76,6 +76,10 @@ router.get('/status', requireAdmin, async (req, res) => {
 });
 
 router.post('/send', requireAdmin, async (req, res) => {
+    // try/catch no handler inteiro: era a ÚNICA rota do sistema sem — um blip
+    // de banco/VAPID rejeitava a promise e o Express 4 nunca respondia (o botão
+    // "Enviar" do painel ficava girando até o proxy estourar).
+    try {
     if (!webpush) {
         return res.status(500).json({ success: false, error: 'web-push não instalado. Adicione "web-push" ao package.json e rebuild.' });
     }
@@ -132,6 +136,10 @@ router.post('/send', requireAdmin, async (req, res) => {
     await bumpPushLog(pid, { targets: subs.length, accepted: sent });
 
     return res.json({ success: true, total: subs.length, sent, failed, pid });
+    } catch (err) {
+        logger.error('push send falhou:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno ao enviar — tente de novo' });
+    }
 });
 
 // =============================================================================

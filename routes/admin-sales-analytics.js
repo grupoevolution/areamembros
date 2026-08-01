@@ -65,31 +65,43 @@ router.get('/kpis', requireAdmin, async (req, res) => {
         // L13.2: exclui ofertas marcadas como aquisicao (vendas de trafego pago)
         // — esse painel mostra LTV PURO (compras feitas DENTRO do app).
         // Aquisicao tem seu proprio bloco "Performance dos Frontends".
+        // DEDUP por venda: order bump grava o valor CHEIO da venda em CADA item
+        // (2 itens = 2 linhas com o mesmo total). Somar por linha DOBRAVA o
+        // faturamento — deduplica por (gateway, sale_id) antes de somar, igual
+        // ao Ranking de clientes.
         const [curr, prev] = await Promise.all([
             db.query(`
                 SELECT
                     COUNT(*)::int AS sales_count,
-                    COALESCE(SUM(ua.net_amount), 0)::float AS net_total,
-                    COALESCE(SUM(ua.sale_amount), 0)::float AS gross_total
-                FROM user_access ua
-                LEFT JOIN product_offers po ON po.id = ua.offer_id
-                WHERE ua.net_amount IS NOT NULL
-                  AND ua.status = 'active'
-                  AND ua.granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo')
-                  AND ua.granted_at <  ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
-                  AND NOT COALESCE(po.is_acquisition, false)
+                    COALESCE(SUM(net_amount), 0)::float AS net_total,
+                    COALESCE(SUM(sale_amount), 0)::float AS gross_total
+                FROM (
+                    SELECT DISTINCT ON (ua.gateway, COALESCE(ua.sale_id, 'ua_' || ua.id))
+                           ua.net_amount, ua.sale_amount
+                    FROM user_access ua
+                    LEFT JOIN product_offers po ON po.id = ua.offer_id
+                    WHERE ua.net_amount IS NOT NULL
+                      AND ua.status = 'active'
+                      AND ua.granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo')
+                      AND ua.granted_at <  ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
+                      AND NOT COALESCE(po.is_acquisition, false)
+                ) s
             `, [from, to]),
             db.query(`
                 SELECT
                     COUNT(*)::int AS sales_count,
-                    COALESCE(SUM(ua.net_amount), 0)::float AS net_total
-                FROM user_access ua
-                LEFT JOIN product_offers po ON po.id = ua.offer_id
-                WHERE ua.net_amount IS NOT NULL
-                  AND ua.status = 'active'
-                  AND ua.granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo')
-                  AND ua.granted_at <  ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
-                  AND NOT COALESCE(po.is_acquisition, false)
+                    COALESCE(SUM(net_amount), 0)::float AS net_total
+                FROM (
+                    SELECT DISTINCT ON (ua.gateway, COALESCE(ua.sale_id, 'ua_' || ua.id))
+                           ua.net_amount
+                    FROM user_access ua
+                    LEFT JOIN product_offers po ON po.id = ua.offer_id
+                    WHERE ua.net_amount IS NOT NULL
+                      AND ua.status = 'active'
+                      AND ua.granted_at >= ($1::date::timestamp AT TIME ZONE 'America/Sao_Paulo')
+                      AND ua.granted_at <  ((($2::date + INTERVAL '1 day')::timestamp) AT TIME ZONE 'America/Sao_Paulo')
+                      AND NOT COALESCE(po.is_acquisition, false)
+                ) s
             `, [prevFrom, prevTo]),
         ]);
 
@@ -888,23 +900,28 @@ router.get('/orphans', requireAdmin, async (req, res) => {
 // Agrupa user_access por e-mail (só vendas de webhook). Uma VENDA = par
 // (gateway, sale_id) DISTINTO — a mesma venda pode gravar VÁRIAS linhas (uma
 // por produto/item) repetindo o sale_amount, então deduplicamos antes de somar.
-// Janela por created_at (fuso Brasília), igual ao "vendas por chat": renovação
-// de assinatura atualiza granted_at e faria venda antiga contar de novo.
+// Janela por granted_at (fuso Brasília): RENOVAÇÃO/recompra do mesmo produto
+// ATUALIZA a linha existente (created_at nunca muda, granted_at sim) — com a
+// janela em created_at o cara que renovou hoje era invisível na aba "hoje".
+// A venda antiga não conta de novo: a linha renovada aparece 1x, com o sale_id
+// e o valor da venda NOVA. Na aba "total", o nº de compras usa também o
+// contador real da tabela customers (que soma cada venda aprovada — inclusive
+// renovações que a linha única de user_access não consegue contar).
 router.get('/customer-ranking', requireAdmin, async (req, res) => {
     const TZ = 'America/Sao_Paulo';
     const period = String(req.query.period || '7');
     const search = String(req.query.search || '').trim().toLowerCase().slice(0, 120);
     let where;
     if (period === 'today') {
-        where = `ua.created_at >= (((NOW() AT TIME ZONE '${TZ}')::date)::timestamp AT TIME ZONE '${TZ}')`;
+        where = `ua.granted_at >= (((NOW() AT TIME ZONE '${TZ}')::date)::timestamp AT TIME ZONE '${TZ}')`;
     } else if (period === 'yesterday') {
-        where = `ua.created_at >= ((((NOW() AT TIME ZONE '${TZ}')::date - 1))::timestamp AT TIME ZONE '${TZ}')
-                 AND ua.created_at < (((NOW() AT TIME ZONE '${TZ}')::date)::timestamp AT TIME ZONE '${TZ}')`;
+        where = `ua.granted_at >= ((((NOW() AT TIME ZONE '${TZ}')::date - 1))::timestamp AT TIME ZONE '${TZ}')
+                 AND ua.granted_at < (((NOW() AT TIME ZONE '${TZ}')::date)::timestamp AT TIME ZONE '${TZ}')`;
     } else if (period === 'total') {
         where = `TRUE`;
     } else {
         const days = Math.max(1, Math.min(365, parseInt(period, 10) || 7));
-        where = `ua.created_at > NOW() - INTERVAL '${days} days'`;
+        where = `ua.granted_at > NOW() - INTERVAL '${days} days'`;
     }
     try {
         const params = [];
@@ -918,23 +935,32 @@ router.get('/customer-ranking', requireAdmin, async (req, res) => {
         const baseWhere = `ua.granted_by = 'webhook'
               AND ua.status NOT IN ('refunded', 'chargeback')
               AND ${where}${searchSql}`;
-        // 1 linha por venda distinta (sale_id NULL vira venda própria via id)
+        // 1 linha por venda distinta (sale_id NULL vira venda própria via id).
+        // No 'total', o nº de compras usa o MAIOR entre as linhas deduplicadas
+        // e customers.total_purchases (renovações da mesma linha).
+        const purchasesExpr = period === 'total'
+            ? `GREATEST(COUNT(*), COALESCE(MAX(c.total_purchases), 0))::int`
+            : `COUNT(*)::int`;
+        const customersJoin = period === 'total'
+            ? `LEFT JOIN customers c ON LOWER(c.email) = v.email`
+            : ``;
         const grouped = `
             WITH vendas AS (
                 SELECT DISTINCT ON (LOWER(ua.email), ua.gateway, COALESCE(ua.sale_id, 'ua_' || ua.id))
                        LOWER(ua.email) AS email,
-                       ua.sale_amount, ua.net_amount, ua.created_at
+                       ua.sale_amount, ua.net_amount, ua.created_at, ua.granted_at
                 FROM user_access ua
                 WHERE ${baseWhere}
                 ORDER BY LOWER(ua.email), ua.gateway, COALESCE(ua.sale_id, 'ua_' || ua.id), ua.created_at ASC
             )
             SELECT v.email,
-                   COUNT(*)::int AS purchases,
+                   ${purchasesExpr} AS purchases,
                    COALESCE(SUM(v.sale_amount), 0)::float AS total_gross,
                    COALESCE(SUM(v.net_amount), 0)::float AS total_net,
                    MIN(v.created_at) AS first_at,
-                   MAX(v.created_at) AS last_at
+                   MAX(v.granted_at) AS last_at
             FROM vendas v
+            ${customersJoin}
             GROUP BY v.email`;
         const [rank, summary] = await Promise.all([
             db.query(`${grouped} ORDER BY purchases DESC, total_gross DESC LIMIT 100`, params),
