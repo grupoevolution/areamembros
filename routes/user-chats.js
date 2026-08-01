@@ -265,11 +265,28 @@ async function findOrCreateSession(chatId, ident, createIfMissing) {
         row = await consolidateSessions(rows);
     }
     if (!row && createIfMissing && (ident.email || ident.visitor)) {
-        const { rows } = await db.query(
-            `INSERT INTO chat_sessions (chat_id, customer_email, visitor_id) VALUES ($1, $2, $3) RETURNING *`,
-            [chatId, ident.email, ident.visitor]
-        );
-        row = rows[0];
+        // Trava atômica (advisory lock) na criação: dois pedidos simultâneos do
+        // mesmo lead (boot dispara /chats + /open + /poll juntos) criavam DUAS
+        // sessões — o roteiro de abertura rodava em dobro e depois a fusão
+        // juntava as mensagens duplicadas. Com a trava, o 2º pedido espera e
+        // encontra a sessão que o 1º criou.
+        const lockKey = `chat_sess:${chatId}:${ident.email || ident.visitor}`;
+        row = await db.transaction(async (client) => {
+            await client.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [lockKey]);
+            const { rows: again } = ident.email
+                ? await client.query(
+                    `SELECT * FROM chat_sessions WHERE chat_id = $1 AND LOWER(customer_email) = $2 ORDER BY id ASC LIMIT 1`,
+                    [chatId, ident.email])
+                : await client.query(
+                    `SELECT * FROM chat_sessions WHERE chat_id = $1 AND visitor_id = $2 AND customer_email IS NULL ORDER BY id ASC LIMIT 1`,
+                    [chatId, ident.visitor]);
+            if (again[0]) return again[0];
+            const { rows } = await client.query(
+                `INSERT INTO chat_sessions (chat_id, customer_email, visitor_id) VALUES ($1, $2, $3) RETURNING *`,
+                [chatId, ident.email, ident.visitor]
+            );
+            return rows[0];
+        });
     }
     return row;
 }
@@ -799,12 +816,15 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
             session.current_flow = 'open';
             const steps = await loadSteps(chatId, 'open');
             if (steps.length > 0) fresh = await runScript(session, chat, steps, 0, ident);
-        } else if (session.awaiting === 'delay' && session.resume_at && new Date(session.resume_at) <= new Date()) {
+        } else if (session.awaiting === 'delay' && session.resume_at && new Date(session.resume_at) <= new Date()
+                   && !(await chatOfflineNow(chatId))) {
             // Delay venceu e o cliente abriu: retoma — MAS reivindica atomicamente
             // (awaiting 'delay'→'resuming') pra NÃO rodar junto com o worker. Sem isso,
             // os dois inseriam as mesmas mensagens = duplicadas/"cacetada" ao reabrir.
+            // Modelo OFFLINE no rodízio: NÃO retoma aqui — fica em 'delay' e o worker
+            // entrega quando ela voltar online (mesma regra do resumeDelayed).
             const claim = await db.query(
-                `UPDATE chat_sessions SET awaiting = 'resuming' WHERE id = $1 AND awaiting = 'delay' RETURNING id`,
+                `UPDATE chat_sessions SET awaiting = 'resuming', updated_at = NOW() WHERE id = $1 AND awaiting = 'delay' RETURNING id`,
                 [session.id]
             );
             if (claim.rows.length) {
@@ -828,6 +848,13 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         } else if (session.awaiting === 'call') {
             // Saiu no meio da ligação e voltou pra conversa: a chamada acabou —
             // retoma o roteiro pausado (mesma reivindicação atômica do /call-done).
+            if (await chatOfflineNow(chatId)) {
+                // Modelo offline: converte pra 'delay' vencido — o worker entrega
+                // quando ela voltar online (sem isso ficaria presa em 'call').
+                await db.query(
+                    `UPDATE chat_sessions SET awaiting = 'delay', resume_at = NOW(), updated_at = NOW()
+                     WHERE id = $1 AND awaiting = 'call'`, [session.id]);
+            } else {
             const claim = await db.query(
                 `UPDATE chat_sessions SET awaiting = 'resuming', updated_at = NOW()
                  WHERE id = $1 AND awaiting = 'call' RETURNING id`,
@@ -836,6 +863,7 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
             if (claim.rows.length) {
                 const steps = await loadSteps(chatId, session.current_flow || 'open');
                 fresh = await runScript(session, chat, steps, session.current_order, ident);
+            }
             }
         }
         const all = history.concat(fresh).map(publicMsg);
@@ -1186,9 +1214,11 @@ router.get('/chats/:id/poll', optionalUser, async (req, res) => {
         // Se o delay venceu, retoma o roteiro AGORA (cliente está com a tela aberta)
         // — com reivindicação ATÔMICA ('delay'→'resuming'), igual ao /open, pra não
         // rodar junto com o worker e duplicar mensagens.
-        if (session.awaiting === 'delay' && session.resume_at && new Date(session.resume_at) <= new Date()) {
+        if (session.awaiting === 'delay' && session.resume_at && new Date(session.resume_at) <= new Date()
+            && !(await chatOfflineNow(chatId))) {
+            // (offline no rodízio: fica em 'delay'; o worker entrega quando voltar)
             const claim = await db.query(
-                `UPDATE chat_sessions SET awaiting = 'resuming' WHERE id = $1 AND awaiting = 'delay' RETURNING id`,
+                `UPDATE chat_sessions SET awaiting = 'resuming', updated_at = NOW() WHERE id = $1 AND awaiting = 'delay' RETURNING id`,
                 [session.id]
             );
             if (claim.rows.length) {
@@ -1208,7 +1238,13 @@ router.get('/chats/:id/poll', optionalUser, async (req, res) => {
         // pausado em 'call' por 4+ min, retoma sozinho no próximo poll.
         if (session.awaiting === 'call' && session.updated_at &&
             (Date.now() - new Date(session.updated_at).getTime()) > 4 * 60000) {
-            const claim = await db.query(
+            if (await chatOfflineNow(chatId)) {
+                await db.query(
+                    `UPDATE chat_sessions SET awaiting = 'delay', resume_at = NOW(), updated_at = NOW()
+                     WHERE id = $1 AND awaiting = 'call'`, [session.id]);
+                session.awaiting = 'delay';
+            }
+            const claim = session.awaiting !== 'call' ? { rows: [] } : await db.query(
                 `UPDATE chat_sessions SET awaiting = 'resuming', updated_at = NOW()
                  WHERE id = $1 AND awaiting = 'call' RETURNING id`,
                 [session.id]
@@ -1300,7 +1336,7 @@ router.post('/chats/messages/:id/viewed', optionalUser, async (req, res) => {
                 // Reivindica atomicamente ('view_once'→'resuming') — dois toques
                 // rápidos na mídia (ou toque + poll) não podem retomar em dobro.
                 const claim = await db.query(
-                    `UPDATE chat_sessions SET awaiting = 'resuming' WHERE id = $1 AND awaiting = 'view_once' RETURNING id`,
+                    `UPDATE chat_sessions SET awaiting = 'resuming', updated_at = NOW() WHERE id = $1 AND awaiting = 'view_once' RETURNING id`,
                     [session.id]
                 );
                 const { rows: cr } = claim.rows.length
@@ -1419,6 +1455,24 @@ router.post('/chats/:id/photo', optionalUser, (req, res) => {
     });
 });
 
+// RODÍZIO: a modelo deste chat está OFFLINE agora? Mesmo conjunto e mesma conta
+// do worker (resumeDelayed). Usado pelos caminhos de retomada do /open e /poll:
+// sem esta checagem, o cabeçalho dizia "visto há 40 min" e, ao abrir a conversa,
+// a modelo "offline" começava a digitar na hora — quebrava a ilusão do rodízio.
+// Só roda queries quando o rodízio está LIGADO e há retomada devida (raro).
+async function chatOfflineNow(chatId) {
+    try {
+        const rotation = require('../lib/chat-rotation');
+        const rc = await rotation.loadRotationConfig();
+        if (!rc.enabled) return false;
+        const { rows } = await db.query(`SELECT id FROM chats WHERE active = true AND in_rotation = true`);
+        const ids = rows.map(r => r.id);
+        if (!ids.includes(chatId)) return false; // fora do rodízio = sempre online
+        const st = rotation.computeOnline(ids, rc, Date.now()).get(chatId);
+        return !!(st && !st.online);
+    } catch (_) { return false; }
+}
+
 // ── Retomada de delays (chamada pelo worker — app fechado) ───────────────────
 // Pega sessões cujo delay venceu, continua o roteiro do ponto pausado e
 // devolve as mensagens novas + dados pro push. Reusa o MESMO motor (runScript).
@@ -1430,6 +1484,18 @@ async function resumeDelayed(limit) {
     // resume_at, e elas voltavam SEMPRE no topo do ORDER BY — com 30+ sessões
     // offline acumuladas, o lote inteiro era consumido por elas a cada tick e
     // NENHUM chat entregava mensagem (nem os de funil, sempre online).
+    // RESGATE: sessão presa em 'resuming' há 3+ min = o processo caiu/reiniciou
+    // no meio da entrega (deploy, crash). Ninguém mais tocava nela e a conversa
+    // morria em silêncio pra sempre. Volta pra 'delay' e o worker re-entrega.
+    // (Todo claim 'x'→'resuming' carimba updated_at=NOW(); runScript termina em
+    // segundos, então 3 min parado = travou de verdade.)
+    try {
+        const { rowCount: rescued } = await db.query(
+            `UPDATE chat_sessions SET awaiting = 'delay', resume_at = COALESCE(resume_at, NOW())
+             WHERE awaiting = 'resuming' AND updated_at < NOW() - INTERVAL '3 minutes'`);
+        if (rescued) logger.warn('[chat] ' + rescued + ' sessão(ões) presas em resuming resgatadas');
+    } catch (_) {}
+
     let offlineIds = [];
     try {
         const rotation = require('../lib/chat-rotation');
@@ -1445,7 +1511,7 @@ async function resumeDelayed(limit) {
     } catch (_) {}
 
     const { rows: due } = await db.query(`
-        UPDATE chat_sessions SET awaiting = 'resuming'
+        UPDATE chat_sessions SET awaiting = 'resuming', updated_at = NOW()
         WHERE id IN (
             SELECT id FROM chat_sessions
             WHERE awaiting = 'delay' AND resume_at IS NOT NULL AND resume_at <= NOW()
@@ -1805,9 +1871,13 @@ async function processAbandonedCheckouts() {
     for (const it of due) {
         try {
             const email = String(it.customer_email).toLowerCase();
-            // pagou depois do clique? fecha em silêncio
+            // pagou depois do clique? fecha em silêncio. granted_at cobre a
+            // RENOVAÇÃO/recompra (o grantAccess atualiza a linha existente e
+            // created_at não muda — só created_at deixava o suporte cobrar
+            // cliente que acabou de pagar de novo).
             const { rows: bought } = await db.query(
-                `SELECT 1 FROM user_access WHERE LOWER(email) = $1 AND created_at >= $2 LIMIT 1`,
+                `SELECT 1 FROM user_access WHERE LOWER(email) = $1
+                   AND (created_at >= $2 OR granted_at >= $2) LIMIT 1`,
                 [email, it.created_at]);
             if (bought.length) {
                 await db.query(`UPDATE checkout_intents SET completed = true WHERE id = $1`, [it.id]);
@@ -1857,8 +1927,10 @@ async function processAbandonedCheckouts() {
         for (const it of due2) {
             try {
                 const email = String(it.customer_email).toLowerCase();
+                // granted_at cobre renovação/recompra (ver comentário na etapa 1)
                 const { rows: bought } = await db.query(
-                    `SELECT 1 FROM user_access WHERE LOWER(email) = $1 AND created_at >= $2 LIMIT 1`,
+                    `SELECT 1 FROM user_access WHERE LOWER(email) = $1
+                       AND (created_at >= $2 OR granted_at >= $2) LIMIT 1`,
                     [email, it.created_at]);
                 if (bought.length) {
                     await db.query(`UPDATE checkout_intents SET completed = true WHERE id = $1`, [it.id]);
