@@ -1833,6 +1833,9 @@ router.get('/app-config', async (req, res) => {
             // Lives: só a flag pra mostrar a sub-aba (o resto vem de /api/user/lives)
             lives: { enabled: (configs.lives_config || {}).enabled === true },
             pwa_gate: configs.pwa_gate_config,
+            // Pixel do Facebook (só a parte pública: id + quais eventos — o
+            // token do CAPI NUNCA sai do servidor). null = desligado.
+            meta_pixel: await require('../lib/meta-pixel').publicMetaConfig().catch(() => null),
             // Lista de produtos com progresso de visualização — vazia até ter player real
             continue_watching: [],
         });
@@ -2694,11 +2697,46 @@ router.post('/login/promote', async (req, res) => {
         // código pendente vindo do localStorage do cliente.
         const campaignResult = await tryRedeemCampaign(campanha, result.email, req);
 
+        // PIXEL META — evento Lead (o lead deu o e-mail = capturado). O CAPI
+        // sai DAQUI (servidor, com e-mail hasheado + etiqueta do clique — nada
+        // de bloqueador mata) e o event_id volta na resposta pro app disparar
+        // o fbq('Lead') IGUAL → o Meta deduplica os dois em 1 evento rico.
+        let metaLead = null;
+        try {
+            const metaPix = require('../lib/meta-pixel');
+            const cfg = await metaPix.loadMetaConfig();
+            if (cfg.enabled && cfg.pixel_id && cfg.ev_lead) {
+                const attr = await metaPix.findAttribution({ visitorId: vid, email: result.email });
+                if (vid || attr) {
+                    metaPix.upsertAttribution({ visitorId: vid, email: result.email }).catch(() => {});
+                }
+                const eventId = 'lead_' + require('crypto').randomBytes(8).toString('hex');
+                metaLead = { event_id: eventId };
+                if (cfg.capi_token) {
+                    metaPix.sendCapiEvents([{
+                        event_name: 'Lead',
+                        event_id: eventId,
+                        user_data: metaPix.buildUserData({
+                            email: result.email,
+                            ip: require('../lib/device-check').getIp(req),
+                            userAgent: req.headers['user-agent'],
+                            fbp: attr && attr.fbp,
+                            fbc: (attr && attr.fbc) || (attr && attr.fbclid
+                                ? metaPix.fbcFromFbclid(attr.fbclid, attr.updated_at ? new Date(attr.updated_at).getTime() : null)
+                                : null),
+                            externalId: vid,
+                        }),
+                    }]).catch(() => {});
+                }
+            }
+        } catch (_) { /* rastreio nunca quebra o login */ }
+
         return res.json({
             success: true,
             email: result.email,
             productsCount: result.productsCount,
             campaign: campaignResult,
+            meta_lead: metaLead,
         });
     } catch (err) {
         logger.error('Erro em /login/promote:', err);

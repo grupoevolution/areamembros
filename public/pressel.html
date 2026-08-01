@@ -241,6 +241,45 @@ var DATA = __PRESSEL_DATA__;
     // o padrão que o Meta pune.
     document.addEventListener('click', go, true);
 })();
+
+// ── PIXEL DO FACEBOOK (Fase 1) ───────────────────────────────────────────────
+// Dispara PageView aqui na pressel (1º toque do lead no nosso domínio) e
+// espelha via API de Conversões com o mesmo event_id (o servidor deduplica).
+// Config vem injetada pelo servidor em DATA.meta_pixel (null = desligado).
+(function () {
+    var MP = DATA.meta_pixel;
+    if (!MP || !MP.pixel_id) return;
+    try {
+        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', MP.pixel_id);
+        var eid = 'pv_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        if (MP.ev_pageview !== false) fbq('track', 'PageView', {}, { eventID: eid });
+        // espelho CAPI + atribuição (fbclid/UTMs da URL do anúncio)
+        var p = new URLSearchParams(location.search || '');
+        function ck(n) { var m = document.cookie.match(new RegExp('(?:^|; )' + n + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : null; }
+        var vid = null; try { vid = localStorage.getItem('mv_chat_visitor'); } catch (_) {}
+        setTimeout(function () {
+            try {
+                fetch('/api/user/meta/track', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include', keepalive: true,
+                    body: JSON.stringify({
+                        event: MP.ev_pageview !== false ? 'pageview' : null,
+                        event_id: eid,
+                        url: location.href.split('#')[0],
+                        visitor_id: vid,
+                        fbclid: p.get('fbclid') || null,
+                        fbp: ck('_fbp'), fbc: ck('_fbc'),
+                        utm: { source: p.get('utm_source'), medium: p.get('utm_medium'),
+                               campaign: p.get('utm_campaign'), content: p.get('utm_content'),
+                               term: p.get('utm_term') },
+                        funnel_slug: DATA.slug || null,
+                    }),
+                }).catch(function () {});
+            } catch (_) {}
+        }, 1200);
+    } catch (_) {}
+})();
 </script>
 </body>
 </html>

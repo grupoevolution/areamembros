@@ -245,6 +245,7 @@ app.use('/api/user', require('./routes/user-groups'));
 app.use('/api/user', require('./routes/user'));
 app.use('/api/user', require('./routes/user-lives'));
 app.use('/api/user', require('./routes/user-roulette'));
+app.use('/api/user', require('./routes/user-meta'));
 
 
 // ----------------------------------------------------------------------------
@@ -431,7 +432,10 @@ app.get('/p/:slug', async (req, res) => {
         ).catch(() => {});
         const fs = require('fs');
         let html = fs.readFileSync(path.join(__dirname, 'public/pressel.html'), 'utf8');
-        const data = { slug, mode, chats, groups, config: cfg };
+        // Pixel Meta (só a parte pública — id + eventos; o token nunca sai)
+        let metaPixel = null;
+        try { metaPixel = await require('./lib/meta-pixel').publicMetaConfig(); } catch (_) {}
+        const data = { slug, mode, chats, groups, config: cfg, meta_pixel: metaPixel };
         html = html.replace('__PRESSEL_DATA__', JSON.stringify(data).replace(/</g, '\\u003c'));
         return res.send(html);
     } catch (e) {

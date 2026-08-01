@@ -35,6 +35,7 @@ const VALID_KEYS = [
     'chat_greetings',
     'upgrade_rules',
     'roulette',
+    'meta_pixel',
 ];
 
 // =============================================================================
@@ -128,7 +129,12 @@ router.put('/:key', requireAdmin, async (req, res) => {
                 updated_by = EXCLUDED.updated_by,
                 updated_at = NOW()
         `, [key, JSON.stringify(value), adminUser]);
-        
+
+        // O lib do pixel cacheia a config por 60s — salvar aplica na hora
+        if (key === 'meta_pixel') {
+            try { require('../lib/meta-pixel').invalidateMetaConfig(); } catch (_) {}
+        }
+
         return res.json({ success: true, message: 'Configuração salva' });
     } catch (err) {
         logger.error('Erro salvando gamification:', err);
@@ -309,6 +315,15 @@ function validateValue(key, value) {
         }
         if (value.enabled === true && (!Array.isArray(value.call_product_ids) || value.call_product_ids.length === 0)) {
             return { ok: false, error: 'Escolha pelo menos 1 produto de CHAMADA antes de ligar a roleta' };
+        }
+    }
+
+    if (key === 'meta_pixel') {
+        if (value.enabled === true && !String(value.pixel_id || '').replace(/\D/g, '')) {
+            return { ok: false, error: 'Cole o ID do Pixel antes de ligar' };
+        }
+        if (value.pixel_id !== undefined && String(value.pixel_id || '').replace(/\D/g, '').length > 32) {
+            return { ok: false, error: 'ID do Pixel inválido' };
         }
     }
 

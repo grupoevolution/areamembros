@@ -84,6 +84,30 @@ window.addEventListener('appinstalled', function() {
         }
     } catch(e) { /* fail-safe */ }
 })();
+
+// PIXEL META — captura a "etiqueta do anúncio" (fbclid + UTMs) na ENTRADA,
+// antes de qualquer limpeza/navegação. Fica no localStorage até o app mandar
+// pro servidor (é o elo clique do anúncio → lead → venda). Clique novo com
+// fbclid substitui o antigo (atribuição do clique mais recente).
+(function captureAdParams() {
+    try {
+        const p = new URLSearchParams(window.location.search);
+        const fbclid = p.get('fbclid');
+        const hasUtm = p.get('utm_source') || p.get('utm_campaign') || p.get('utm_content');
+        if (!fbclid && !hasUtm) return;
+        let prev = {};
+        try { prev = JSON.parse(localStorage.getItem('mv_meta_attrib') || '{}') || {}; } catch (_) {}
+        localStorage.setItem('mv_meta_attrib', JSON.stringify({
+            fbclid: fbclid || prev.fbclid || null,
+            utm_source: p.get('utm_source') || prev.utm_source || null,
+            utm_medium: p.get('utm_medium') || prev.utm_medium || null,
+            utm_campaign: p.get('utm_campaign') || prev.utm_campaign || null,
+            utm_content: p.get('utm_content') || prev.utm_content || null,
+            utm_term: p.get('utm_term') || prev.utm_term || null,
+            at: Date.now(),
+        }));
+    } catch (_) {}
+})();
 </script>
 <link rel="mask-icon" href="/assets/icon.svg" color="#e50914">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -10682,6 +10706,7 @@ window.ChatApp = (function() {
                 const d = await r.json();
                 if (d.success) {
                     window.currentUserEmail = d.email; window.MV_ANONYMOUS = false;
+                    try { if (window.MVMeta && d.meta_lead) MVMeta.lead(d.meta_lead); } catch (_) {}
                     try { document.body.classList.remove('funnel-mode'); } catch(_) {}
                     try { if (window.PUSH && Notification.permission === 'granted') PUSH.subscribe(); } catch(_) {}
                     // Dispara a sequência do funil (notificações/conversas/etc). Sem
@@ -14892,6 +14917,9 @@ function openProductPage(productId) {
         || AppState.library.find(p => p.id === productId);
     if (!product) return;
 
+    // Pixel Meta: viu a página do produto (1x por produto por carga)
+    try { if (window.MVMeta) MVMeta.viewContent(product.name, productId); } catch (_) {}
+
     // Se o produto é uma CHAMADA DE VÍDEO vinculada, dispara overlay direto.
     if (product.video_call && window.VideoCall) {
         // Limpa o "seen" pra permitir reabrir essa chamada-produto
@@ -16403,6 +16431,9 @@ async function loadAppData() {
         // Aplica os dados
         applyAppMetadata();
         renderHomeFromBackend();
+
+        // Pixel Meta (Fase 1): liga o fbq + PageView se o dono configurou no painel
+        try { if (window.MVMeta && cfgRes && cfgRes.meta_pixel) MVMeta.init(cfgRes.meta_pixel); } catch (_) {}
     } catch (err) {
         console.warn('Data loader error (mantendo mockup):', err);
     }
@@ -19730,6 +19761,7 @@ window.MV_BOOT_PROMISE = (function bootFunnel() {
         })).then(r => r.json()).then(d => {
             if (d && d.success) {
                 window.currentUserEmail = d.email; window.MV_ANONYMOUS = false;
+                try { if (window.MVMeta && d.meta_lead) MVMeta.lead(d.meta_lead); } catch (_) {}
                 try { document.body.classList.remove('funnel-mode'); } catch(_) {}
                 try { if (window.PUSH && Notification.permission === 'granted') PUSH.subscribe(); } catch(_) {}
                 try { if (typeof window.tryTriggerCallAfterLogin === 'function') window.tryTriggerCallAfterLogin(); } catch(_) {}
@@ -20165,6 +20197,9 @@ document.addEventListener('keydown', function(e) {
     function promoteSuccess(data) {
         const pc = pendingCheckout; // captura ANTES do closeModal (que zera)
         const pcSrc = pendingCheckoutSrc;
+        // Pixel Meta: o servidor mandou o Lead via CAPI e devolveu o event_id —
+        // dispara o fbq igual pro Meta casar os dois num evento só.
+        try { if (window.MVMeta && data.meta_lead) MVMeta.lead(data.meta_lead); } catch (_) {}
         window.MV_ANONYMOUS = false;
         window.currentUserEmail = data.email;
         document.body.classList.remove('funnel-mode');
@@ -22820,6 +22855,88 @@ window.Roulette = (function () {
         claimCall: claimCall, share: share, copy: copy, maybeShow: maybeShow, isOpen: isOpen,
         open: open, banner: banner
     };
+})();
+</script>
+<script>
+// ═══════════════ PIXEL DO FACEBOOK (Meta) — Fase 1 ═══════════════
+// O navegador dispara o evento (fbq) e o servidor ESPELHA o mesmo evento via
+// API de Conversões com o MESMO event_id — o Meta deduplica e fica com a
+// versão mais rica. Config no painel (Pixel do Facebook): id, token e quais
+// eventos. Purchase NÃO sai daqui (é do checkout da Kirvano — Fase 2).
+window.MVMeta = (function () {
+    var cfg = null, inited = false, pvSent = false, vcSeen = {};
+    function rid(p) { return p + '_' + Math.random().toString(36).slice(2) + Date.now().toString(36); }
+    function cookie(name) {
+        try {
+            var m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+            return m ? decodeURIComponent(m[1]) : null;
+        } catch (_) { return null; }
+    }
+    function attrib() {
+        try { return JSON.parse(localStorage.getItem('mv_meta_attrib') || '{}') || {}; } catch (_) { return {}; }
+    }
+    function vid() {
+        try { return localStorage.getItem('mv_chat_visitor') || window.VID || null; } catch (_) { return window.VID || null; }
+    }
+    function post(payload) {
+        try {
+            fetch('/api/user/meta/track', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', keepalive: true, body: JSON.stringify(payload),
+            }).catch(function () {});
+        } catch (_) {}
+    }
+    function base(extra) {
+        var a = attrib();
+        return Object.assign({
+            visitor_id: vid(),
+            fbclid: a.fbclid || null,
+            fbp: cookie('_fbp'),
+            fbc: cookie('_fbc'),
+            utm: { source: a.utm_source, medium: a.utm_medium, campaign: a.utm_campaign, content: a.utm_content, term: a.utm_term },
+            funnel_slug: window.MV_FUNNEL_SLUG || null,
+            url: location.href.split('#')[0],
+        }, extra || {});
+    }
+    function loadFbq(id) {
+        if (window.fbq) { try { window.fbq('init', id); } catch (_) {} return; }
+        /* snippet oficial do Meta */
+        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+        window.fbq('init', id);
+    }
+    // Chamado pelo loadAppData quando a config chega (meta_pixel do /app-config)
+    function init(c) {
+        if (inited || !c || !c.pixel_id) return;
+        inited = true; cfg = c;
+        loadFbq(c.pixel_id);
+        if (c.ev_pageview !== false && !pvSent) {
+            pvSent = true;
+            var eid = rid('pv');
+            try { window.fbq('track', 'PageView', {}, { eventID: eid }); } catch (_) {}
+            // os cookies _fbp/_fbc só nascem depois do fbq carregar — espera um tico
+            setTimeout(function () { post(base({ event: 'pageview', event_id: eid })); }, 1500);
+        } else {
+            setTimeout(function () { post(base({})); }, 1500); // só a atribuição
+        }
+    }
+    // Viu a página de um produto (1x por produto por sessão de tela)
+    function viewContent(name, id) {
+        if (!inited || !cfg || cfg.ev_viewcontent === false) return;
+        var key = String(id || name || '');
+        if (!key || vcSeen[key]) return;
+        vcSeen[key] = 1;
+        var eid = rid('vc');
+        var nm = String(name || '').slice(0, 100);
+        try { window.fbq('track', 'ViewContent', { content_name: nm }, { eventID: eid }); } catch (_) {}
+        post(base({ event: 'viewcontent', event_id: eid, content_name: nm }));
+    }
+    // Lead: o SERVIDOR já mandou via CAPI no /login/promote e devolveu o
+    // event_id — aqui só disparamos o fbq igual pro Meta casar os dois.
+    function lead(ml) {
+        if (!ml || !ml.event_id) return;
+        try { if (window.fbq) window.fbq('track', 'Lead', {}, { eventID: ml.event_id }); } catch (_) {}
+    }
+    return { init: init, viewContent: viewContent, lead: lead };
 })();
 </script>
 </body>
