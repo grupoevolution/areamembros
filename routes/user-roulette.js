@@ -208,6 +208,25 @@ router.get('/roulette/state', requireUser, async (req, res) => {
             if (showPopup) mode = 'share';
         }
 
+        // PRÊMIO PENDENTE: ele ganhou a chamada e saiu antes de escolher a
+        // modelo (voltar do Android, app fechado, ligação…). Sem isso o giro
+        // já estava gasto, a pendência ficava presa no banco pra sempre e o
+        // cliente reabria com 0 giros — "a roleta roubou meu prêmio". O app
+        // usa pending_call pra cair DIRETO na tela de escolher a modelo.
+        let pendingCall = null;
+        try {
+            const { rows: [pend] } = await db.query(
+                `SELECT id FROM roulette_prizes
+                  WHERE LOWER(email) = $1 AND kind = 'call' AND claimed = false
+                  ORDER BY id DESC LIMIT 1`,
+                [email]
+            );
+            if (pend) {
+                const options = await callOptions(cfg.call_product_ids);
+                if (options.length) pendingCall = { prize_id: pend.id, options };
+            }
+        } catch (_) {}
+
         return res.json({
             success: true,
             enabled: true,
@@ -218,6 +237,7 @@ router.get('/roulette/state', requireUser, async (req, res) => {
             popup_enabled: popupOn,
             popup_delay_sec: cfg.popup_delay_sec,
             ref_code: st.ref_code,
+            pending_call: pendingCall,
         });
     } catch (err) {
         logger.error('[roleta] state:', err);
@@ -301,10 +321,12 @@ router.post('/roulette/spin', requireUser, async (req, res) => {
         const isFirst = spent[0].first_spin_done !== true;
 
         // ── Decide o prêmio ────────────────────────────────────────────────
+        // (first_spin_done só é marcado DEPOIS da entrega dar certo — se a
+        // config quebrar e o giro for devolvido, a garantia do 1º giro =
+        // chamada continua valendo na próxima tentativa)
         let kind;
         if (isFirst) {
             kind = 'call'; // 1º giro da vida: SEMPRE chamada (programado)
-            await db.query(`UPDATE roulette_state SET first_spin_done = true WHERE email = $1`, [email]);
         } else {
             const pool = ['call'];
             if (cfg.content_product_id) pool.push('content');
@@ -324,11 +346,24 @@ router.post('/roulette/spin', requireUser, async (req, res) => {
                 `INSERT INTO roulette_prizes (email, kind, claimed) VALUES ($1, 'call', false) RETURNING id`,
                 [email]
             );
+            if (isFirst) {
+                await db.query(`UPDATE roulette_state SET first_spin_done = true WHERE email = $1`, [email]);
+            }
             return res.json({ success: true, prize: { kind: 'call', prize_id: prize.id }, options, spins: spinsLeft });
         }
 
         if (kind === 'content') {
-            const granted = await grantAccess(email, cfg.content_product_id, null);
+            let granted;
+            try {
+                granted = await grantAccess(email, cfg.content_product_id, null);
+            } catch (err) {
+                // Produto do conteúdo foi desativado/apagado depois de configurado:
+                // devolve o giro (igual ao caminho da chamada) em vez de engolir
+                // o giro e responder "Erro interno".
+                logger.warn('[roleta] prêmio de conteúdo falhou (produto inválido?): ' + err.message);
+                await db.query(`UPDATE roulette_state SET spins = spins + 1 WHERE email = $1`, [email]).catch(() => {});
+                return res.status(503).json({ success: false, error: 'Roleta indisponível agora.' });
+            }
             const { rows: [prize] } = await db.query(
                 `INSERT INTO roulette_prizes (email, kind, product_id, claimed)
                  VALUES ($1, 'content', $2, true) RETURNING id`,
@@ -518,6 +553,14 @@ router.post('/roulette/track-ref', async (req, res) => {
               RETURNING spins`,
             [code, MAX_REF_CREDITS_PER_DAY]
         );
+        // Marca a visita que virou giro de verdade — o painel conta CREDITADOS,
+        // não visitas (visita com o teto do dia estourado não vira giro).
+        if (credited.length) {
+            await db.query(
+                `UPDATE roulette_ref_visits SET credited = true WHERE ref_code = $1 AND visitor_id = $2`,
+                [code, visitorId]
+            ).catch(() => {});
+        }
         return res.json({ success: true, credited: credited.length > 0 });
     } catch (err) {
         logger.error('[roleta] track-ref:', err);

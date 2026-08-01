@@ -37,10 +37,13 @@ router.get('/stats', requireAdmin, async (req, res) => {
             FROM roulette_prizes
         `);
 
+        // Só visitas que VIRARAM giro (credited) — visita com teto do dia
+        // estourado não credita e não pode inflar o "giros por convite".
         const { rows: [r] } = await db.query(`
             SELECT
-                COUNT(*)::int                                        AS total,
-                COUNT(*) FILTER (WHERE ${DAY_BR} = ${TODAY_BR})::int AS today
+                COUNT(*) FILTER (WHERE credited = true)::int         AS total,
+                COUNT(*) FILTER (WHERE credited = true
+                                 AND ${DAY_BR} = ${TODAY_BR})::int   AS today
             FROM roulette_ref_visits
         `);
 
