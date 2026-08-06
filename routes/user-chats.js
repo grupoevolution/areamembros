@@ -30,7 +30,19 @@ const multer = require('multer');
 const db = require('../db');
 const { logger } = require('../lib/logger');
 const { optionalUser } = require('../lib/user-auth');
-const { parseBunnyUrl, bunnyHlsUrl } = require('../lib/bunny');
+const { parseBunnyUrl, bunnyHlsUrl, bunnyThumbUrl } = require('../lib/bunny');
+
+// Vídeo do Bunny STREAM no chat: o link colado no painel (mediadelivery.net)
+// não toca em <video> cru. Entregamos junto o endereço HLS + a capa — o app
+// toca no player NATIVO (visual de WhatsApp), mesma infra das chamadinhas.
+// Sem BUNNY_HLS_HOST no env devolve null e o app cai no player embutido.
+function streamMediaMeta(url) {
+    const b = parseBunnyUrl(url);
+    if (!b) return null;
+    const hls = bunnyHlsUrl(b.guid);
+    if (!hls) return null;
+    return { hls, thumb: bunnyThumbUrl(b.guid, 'thumbnail.jpg') };
+}
 
 const MAX_STEPS_PER_RUN = 25;
 
@@ -571,14 +583,21 @@ async function runScript(session, chat, steps, idx, ident) {
 // Mídia de visualização única: só entrega a URL se ainda não foi vista
 function publicMsg(m) {
     const isOnce = m.type === 'view_once_image' || m.type === 'view_once_video';
+    const mediaUrl = isOnce && m.viewed_at ? null : m.media_url;
+    let meta = m.meta || null;
+    // vídeo do Stream: manda hls+thumb pro player nativo (estilo WhatsApp)
+    if ((m.type === 'video' || m.type === 'view_once_video') && mediaUrl) {
+        const sm = streamMediaMeta(mediaUrl);
+        if (sm) meta = { ...(meta || {}), hls: sm.hls, thumb: sm.thumb };
+    }
     return {
         id: m.id,
         sender: m.sender,
         type: m.type,
         content: m.content,
-        media_url: isOnce && m.viewed_at ? null : m.media_url,
+        media_url: mediaUrl,
         viewed: isOnce ? !!m.viewed_at : undefined,
-        meta: m.meta || null,
+        meta,
         created_at: m.created_at,
     };
 }
@@ -2012,7 +2031,8 @@ router.get('/chats/status', optionalUser, async (req, res) => {
             // Só trava se o story é VIP E existe produto de desbloqueio (próprio da
             // modelo OU o global). Sem produto nenhum → degrada pra story normal.
             const vipLocked = r.is_vip === true && !!effStoryProd && !(await ownsStoryVip(effStoryProd));
-            g.items.push({ id: r.id, type: r.type, media_url: r.media_url, caption: r.caption, bg_color: r.bg_color, created_at: r.created_at, is_vip: r.is_vip === true, vip_locked: vipLocked });
+            const stMeta = r.type === 'video' ? streamMediaMeta(r.media_url) : null;
+            g.items.push({ id: r.id, type: r.type, media_url: r.media_url, caption: r.caption, bg_color: r.bg_color, created_at: r.created_at, is_vip: r.is_vip === true, vip_locked: vipLocked, hls: stMeta ? stMeta.hls : undefined, thumb: stMeta ? stMeta.thumb : undefined });
             if (!r.seen && !vipLocked) g.has_unseen = true;
             if (vipLocked) g.has_vip_locked = true;
         }

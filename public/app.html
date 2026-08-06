@@ -9688,9 +9688,12 @@ window.ChatApp = (function() {
         const blurCls = locked ? ' class="vipblur"' : '';
         let media;
         // VIP travado: vídeo segue rodando (com áudio) porém BORRADO por trás do paywall.
-        // Link do Bunny STREAM no status vira o player embutido (o <video> cru não toca).
-        const stEmb = it.type === 'video' && window.MV_streamEmbed ? MV_streamEmbed(it.media_url) : null;
-        if (it.type === 'video' && stEmb) media = '<iframe id="caStoryVid"' + blurCls + ' src="' + esc(stEmb) + '?autoplay=true&preload=true" style="width:100%;height:100%;border:0;background:#000;" allow="autoplay;encrypted-media;fullscreen" allowfullscreen></iframe>';
+        // Link do Bunny STREAM: com HLS toca no player NATIVO (visual normal de
+        // story); sem HLS cai no player embutido (o <video> cru não toca).
+        const stHls = it.type === 'video' ? (it.hls || null) : null;
+        const stEmb = it.type === 'video' && !stHls && window.MV_streamEmbed ? MV_streamEmbed(it.media_url) : null;
+        if (it.type === 'video' && stHls) media = '<video id="caStoryVid"' + blurCls + ' autoplay playsinline' + (locked ? ' loop' : '') + (it.thumb ? ' poster="' + esc(it.thumb) + '"' : '') + '></video>';
+        else if (it.type === 'video' && stEmb) media = '<iframe id="caStoryVid"' + blurCls + ' src="' + esc(stEmb) + '?autoplay=true&preload=true" style="width:100%;height:100%;border:0;background:#000;" allow="autoplay;encrypted-media;fullscreen" allowfullscreen></iframe>';
         else if (it.type === 'video') media = '<video id="caStoryVid"' + blurCls + ' src="' + esc(it.media_url || '') + '" autoplay playsinline' + (locked ? ' loop' : '') + '></video>';
         else if (it.type === 'text') media = '<div class="txtcard' + (locked ? ' vipblur' : '') + '" style="background:' + (it.bg_color ? esc(it.bg_color) : '#128C7E') + '">' + esc(it.caption || '') + '</div>';
         else media = '<img' + blurCls + ' src="' + esc(it.media_url || '') + '" alt="">';
@@ -9708,6 +9711,25 @@ window.ChatApp = (function() {
             + '<div class="sgnav prev" onclick="ChatApp.storyNav(-1)">‹</div>'
             + '<div class="sgnav next" onclick="ChatApp.storyNav(1)">›</div>';
         el.classList.add('show');
+        // Stream com HLS: pluga o player nativo agora que o elemento existe
+        if (stHls) {
+            const sv = document.getElementById('caStoryVid');
+            if (sv && sv.tagName === 'VIDEO') {
+                MV_hlsAttach(sv, stHls, function () {
+                    // HLS falhou: troca pro player embutido
+                    const fe = window.MV_streamEmbed ? MV_streamEmbed(it.media_url) : null;
+                    if (fe) {
+                        const f = document.createElement('iframe');
+                        f.id = 'caStoryVid';
+                        if (locked) f.className = 'vipblur';
+                        f.src = fe + '?autoplay=true&preload=true';
+                        f.style.cssText = 'width:100%;height:100%;border:0;background:#000;';
+                        f.setAttribute('allow', 'autoplay;encrypted-media;fullscreen');
+                        sv.replaceWith(f);
+                    }
+                }).then(function (ok) { if (ok) sv.play().catch(function () {}); });
+            }
+        }
         // Arrastar pro lado = troca de MODELO (igual Instagram). Vale inclusive
         // no story VIP travado (o gesto é no container, acima do overlay).
         el.ontouchstart = (e) => { const t = e.touches[0]; el._sx = t.clientX; el._sy = t.clientY; };
@@ -10359,17 +10381,39 @@ window.ChatApp = (function() {
                 + (m.content ? '<div class="tx" style="margin-top:5px;">' + esc(m.content) + '</div>' : '') + tm;
         } else if (m.type === 'video') {
             // vídeo normal (assiste quantas vezes quiser, com controles).
-            // Link do Bunny STREAM vira o player embutido (o <video> cru dava
-            // tela preta com o play cortado); mp4 direto segue no <video>.
+            // Stream com HLS → player NATIVO com a capa do vídeo (visual de
+            // WhatsApp); Stream sem HLS → player embutido (fallback); mp4
+            // direto → <video> de sempre.
             d.className = 'ca-bub' + (mine ? ' mine' : '');
+            const vHls = m.meta && m.meta.hls;
+            const vThumb = (m.meta && m.meta.thumb) || '';
             const vEmb = window.MV_streamEmbed && MV_streamEmbed(m.media_url);
+            const embHtml = vEmb
+                ? '<div style="position:relative;width:230px;max-width:100%;padding-top:56.25%;border-radius:10px;overflow:hidden;background:#000;">'
+                    + '<iframe src="' + esc(vEmb) + '?autoplay=false&preload=false" style="position:absolute;inset:0;width:100%;height:100%;border:0;" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture" allowfullscreen loading="lazy"></iframe></div>'
+                : '';
             const vHtml = !m.media_url ? ''
-                : vEmb
-                    ? '<div style="position:relative;width:230px;max-width:100%;padding-top:56.25%;border-radius:10px;overflow:hidden;background:#000;">'
-                        + '<iframe src="' + esc(vEmb) + '?autoplay=false&preload=false" style="position:absolute;inset:0;width:100%;height:100%;border:0;" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture" allowfullscreen loading="lazy"></iframe></div>'
-                    : '<video class="photo" src="' + esc(m.media_url) + '" controls playsinline preload="metadata" style="max-width:100%;border-radius:10px;display:block;"></video>';
+                : vHls
+                    ? '<video class="photo ca-hlsvid"' + (vThumb ? ' poster="' + esc(vThumb) + '"' : '')
+                        + ' controls playsinline preload="none" style="max-width:100%;max-height:320px;border-radius:10px;display:block;background:#000;"></video>'
+                    : (vEmb ? embHtml
+                        : '<video class="photo" src="' + esc(m.media_url) + '" controls playsinline preload="metadata" style="max-width:100%;border-radius:10px;display:block;"></video>');
             d.innerHTML = vHtml
                 + (m.content ? '<div class="tx" style="margin-top:5px;">' + esc(m.content) + '</div>' : '') + tm;
+            if (vHls) {
+                const hv = d.querySelector('video.ca-hlsvid');
+                if (hv) {
+                    let hooked = false;
+                    hv.addEventListener('play', function () {
+                        if (hooked) return; hooked = true;
+                        hv.pause();
+                        MV_hlsAttach(hv, vHls, function () {
+                            // HLS falhou (host errado etc.): troca pro player embutido
+                            if (embHtml) { const w = document.createElement('div'); w.innerHTML = embHtml; hv.replaceWith(w.firstChild); }
+                        }).then(function (ok) { if (ok) hv.play().catch(function () {}); });
+                    });
+                }
+            }
         } else if (m.type === 'view_once_image' || m.type === 'view_once_video') {
             const isVid = m.type === 'view_once_video';
             d.className = 'ca-bub';
@@ -10379,6 +10423,7 @@ window.ChatApp = (function() {
                 d.dataset.msgId = m.id;
                 d.dataset.mediaUrl = m.media_url || '';
                 d.dataset.isVid = isVid ? '1' : '';
+                d.dataset.hls = (m.meta && m.meta.hls) ? m.meta.hls : '';
                 d.dataset.viewSeconds = (m.meta && m.meta.view_seconds) ? m.meta.view_seconds : '';
                 d.dataset.gate = (m.meta && m.meta.gate) ? '1' : '';
                 // simples igual WhatsApp: círculo "1" + Foto/Vídeo + hora
@@ -10875,22 +10920,26 @@ window.ChatApp = (function() {
         if (!url) return;
         vonceCur = bubble;
         const isVid = bubble.dataset.isVid === '1';
-        // Vídeo do Bunny STREAM: o <video src> cru dava TELA PRETA — abre no
-        // player embutido oficial, e fecha pelo tempo configurado (o player
-        // embutido não avisa quando o vídeo acaba).
+        // Vídeo do Bunny STREAM: o <video src> cru dava TELA PRETA.
+        //   1º) com HLS → player NATIVO (visual de WhatsApp, fecha quando o
+        //       vídeo ACABA, igual sempre foi);
+        //   2º) sem HLS → player embutido, fechando pelo tempo do bloco.
+        const vHls = isVid ? (bubble.dataset.hls || '') : '';
         const vEmb = isVid && window.MV_streamEmbed ? MV_streamEmbed(url) : null;
-        document.getElementById('caViewerMedia').innerHTML = isVid
-            ? (vEmb
-                ? '<iframe src="' + esc(vEmb) + '?autoplay=true&preload=true" style="width:100%;height:100%;border:0;background:#000;" allow="autoplay;encrypted-media;fullscreen;picture-in-picture" allowfullscreen></iframe>'
-                : '<video src="' + esc(url) + '" autoplay playsinline></video>')
+        const isDirect = isVid && !vHls && !vEmb;
+        const mediaBox = document.getElementById('caViewerMedia');
+        mediaBox.innerHTML = isVid
+            ? ((vHls || isDirect)
+                ? '<video ' + (isDirect ? 'src="' + esc(url) + '" ' : '') + 'autoplay playsinline></video>'
+                : '<iframe src="' + esc(vEmb) + '?autoplay=true&preload=true" style="width:100%;height:100%;border:0;background:#000;" allow="autoplay;encrypted-media;fullscreen;picture-in-picture" allowfullscreen></iframe>')
             : '<img src="' + esc(url) + '" alt="">';
         const viewer = document.getElementById('caViewer');
         viewer.classList.add('show');
         const bar = document.getElementById('caVonceBar');
         clearTimeout(vonceTimer); vonceTimer = null;
 
-        if (isVid && vEmb) {
-            // tempo do bloco (view_seconds) ou 60s — a barra escoa junto
+        // player embutido (sem HLS): fecha pelo tempo do bloco ou 60s
+        function embTimer() {
             const secs = Math.max(5, Math.min(300, parseInt(bubble.dataset.viewSeconds, 10) || 60));
             if (bar) {
                 bar.style.transition = 'none';
@@ -10900,7 +10949,18 @@ window.ChatApp = (function() {
                 bar.style.width = '0%';
             }
             vonceTimer = setTimeout(() => closeVonce(), secs * 1000);
-            return;
+        }
+        if (isVid && !vHls && vEmb) { embTimer(); return; }
+        if (isVid && vHls) {
+            const vv = mediaBox.querySelector('video');
+            MV_hlsAttach(vv, vHls, function () {
+                // HLS falhou: cai pro player embutido com timer
+                if (vEmb) {
+                    mediaBox.innerHTML = '<iframe src="' + esc(vEmb) + '?autoplay=true&preload=true" style="width:100%;height:100%;border:0;background:#000;" allow="autoplay;encrypted-media;fullscreen;picture-in-picture" allowfullscreen></iframe>';
+                    clearTimeout(vonceTimer); embTimer();
+                }
+            }).then(function (ok) { if (ok && vv) vv.play().catch(function () {}); });
+            // continua no fluxo normal de vídeo abaixo (fecha no 'ended')
         }
 
         if (isVid) {
@@ -19641,6 +19701,34 @@ window.MV_streamEmbed = function (url) {
         if (!m) return null;
         return 'https://iframe.mediadelivery.net/embed/' + m[1] + '/' + m[2];
     } catch (_) { return null; }
+};
+
+// Toca um endereço HLS (Bunny Stream) num <video> NATIVO — visual de mídia de
+// WhatsApp, sem o player do Bunny por cima. iPhone toca HLS nativo; Android
+// usa o hls.js (baixado sob demanda). onFail = fallback (player embutido).
+window.MV_hlsAttach = function (videoEl, hlsUrl, onFail) {
+    var failed = false;
+    var fail = function () { if (failed) return; failed = true; try { onFail && onFail(); } catch (_) {} };
+    try {
+        if (videoEl.canPlayType && videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+            videoEl.addEventListener('error', fail, { once: true });
+            videoEl.src = hlsUrl;
+            return Promise.resolve(true);
+        }
+    } catch (_) {}
+    return window.loadHls().then(function () {
+        if (!window.Hls || !Hls.isSupported()) { fail(); return false; }
+        try {
+            var h = new Hls({ maxBufferLength: 12 });
+            h.on(Hls.Events.ERROR, function (_, data) {
+                if (data && data.fatal) { try { h.destroy(); } catch (_) {} fail(); }
+            });
+            h.loadSource(hlsUrl);
+            h.attachMedia(videoEl);
+            videoEl._hls = h;
+            return true;
+        } catch (_) { fail(); return false; }
+    });
 };
 
 // ═══════════════ HELPERS GLOBAIS DE COMPRA ═══════════════
