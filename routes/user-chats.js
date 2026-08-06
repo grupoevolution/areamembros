@@ -132,6 +132,88 @@ async function ownsChatVip(email, chat) {
     return ownsProduct(email, (chat && chat.product_id) || null);
 }
 
+// O cliente é PREMIUM do chat? (plano 49,90 — oferta is_premium ou selo
+// metadata.premium na linha do acesso; e-mail de preview conta como premium)
+async function ownsChatPremium(email) {
+    if (!email) return false;
+    try { if (await require('../lib/preview').isPreviewEmail(email)) return true; } catch (_) {}
+    const pid = await chatPlanProductId();
+    if (!pid) return false;
+    try {
+        const { rows } = await db.query(
+            `SELECT 1 FROM user_access ua
+             LEFT JOIN product_offers po ON po.id = ua.offer_id
+             WHERE LOWER(ua.email) = $1 AND ua.product_id = $2 AND ua.status = 'active'
+               AND (ua.expires_at IS NULL OR ua.expires_at > NOW())
+               AND (COALESCE(po.is_premium, false) = true OR ua.metadata->>'premium' = 'true')
+             LIMIT 1`,
+            [email, pid]
+        );
+        return rows.length > 0;
+    } catch (_) { return false; }
+}
+
+// ── CHAMADA SÓ NO PREMIUM (config do painel: gamification_config) ────────────
+// VIP (19,90) conversa liberado, mas ligar/atender é do PREMIUM (49,90).
+// Quem está no FUNIL (não pagou) continua com as chamadas do roteiro — a
+// copy depende disso. Desligada, tudo segue como sempre foi.
+let _callPremCache = { at: 0, val: null };
+async function callPremiumConfig() {
+    if (_callPremCache.val && Date.now() - _callPremCache.at < 60000) return _callPremCache.val;
+    let cfg = {
+        enabled: false,
+        title: 'Chamadas são exclusivas do PREMIUM',
+        text: 'Seu plano VIP libera as conversas — mas ligar e atender as chamadas dela é só no PREMIUM. Faz o upgrade pagando só a diferença.',
+        checkout_url: '',
+        decline_message: 'aff 😞 eu queria tanto essa chamadinha amor... mas apareceu aqui que seu plano não pega chamada, só o premium. faz o upgrade pra gente se ver de verdade, vai 🥺 enquanto isso me conta aqui: o que você ia querer ver?',
+    };
+    try {
+        const { rows } = await db.query(`SELECT value FROM gamification_config WHERE key = 'chat_call_premium'`);
+        const v = rows[0]?.value || {};
+        cfg = {
+            enabled: v.enabled === true,
+            title: (typeof v.title === 'string' && v.title.trim()) ? v.title.trim().slice(0, 80) : cfg.title,
+            text: (typeof v.text === 'string' && v.text.trim()) ? v.text.trim().slice(0, 300) : cfg.text,
+            checkout_url: typeof v.checkout_url === 'string' ? v.checkout_url.trim().slice(0, 500) : '',
+            decline_message: (typeof v.decline_message === 'string' && v.decline_message.trim()) ? v.decline_message.trim().slice(0, 500) : cfg.decline_message,
+        };
+    } catch (_) {}
+    // Sem link configurado: herda o checkout do plano/oferta PREMIUM (não fica
+    // sem botão nunca)
+    if (!cfg.checkout_url) {
+        try {
+            const pid = await chatPlanProductId();
+            if (pid) {
+                const { rows: pl } = await db.query(
+                    `SELECT checkout_url FROM product_plans
+                     WHERE product_id = $1 AND active = true AND is_premium = true AND checkout_url IS NOT NULL
+                     ORDER BY display_order, id LIMIT 1`, [pid]);
+                if (pl[0]) cfg.checkout_url = pl[0].checkout_url;
+                if (!cfg.checkout_url) {
+                    const { rows: off } = await db.query(
+                        `SELECT checkout_url FROM product_offers
+                         WHERE product_id = $1 AND is_active = true AND COALESCE(is_premium, false) = true AND checkout_url IS NOT NULL
+                         ORDER BY priority DESC, id LIMIT 1`, [pid]);
+                    if (off[0]) cfg.checkout_url = off[0].checkout_url;
+                }
+            }
+        } catch (_) {}
+    }
+    _callPremCache = { at: Date.now(), val: cfg };
+    return cfg;
+}
+
+// O que o /open manda pro app quando o gate de chamada se aplica a este lead
+// (VIP identificado que ainda não é premium). null = chamadas liberadas.
+async function callPremiumGate(ident, perm) {
+    try {
+        const cfg = await callPremiumConfig();
+        if (!cfg.enabled || !perm || !perm.is_vip || !ident.email) return null;
+        if (await ownsChatPremium(ident.email)) return null;
+        return { required: true, title: cfg.title, text: cfg.text, checkout_url: cfg.checkout_url || null };
+    } catch (_) { return null; }
+}
+
 // Monta a info de desbloqueio (produto + planos) usada nos paywalls VIP
 // (conversa, stories). O frontend renderiza o banner com o nome/preço/planos.
 async function loadUnlock(productId, checkoutUrl) {
@@ -910,6 +992,10 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
             // sem isso, gatilhos sem erro do servidor caíam no popup "genérico"
             // sem planos e sem link de checkout.
             paywall_unlock: perm.is_vip ? null : await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url),
+            // CHAMADA SÓ NO PREMIUM: VIP que ainda não é premium recebe o gate —
+            // a chamada TOCA, mas atender/ligar abre o popup de upgrade.
+            // null = liberado (premium, funil/anônimo, ou função desligada).
+            call_premium: await callPremiumGate(ident, perm),
         });
     } catch (err) {
         logger.error('Erro abrindo chat:', err);
@@ -1395,6 +1481,28 @@ router.post('/chats/:id/call-done', optionalUser, async (req, res) => {
         if (!cr.length) return res.status(404).json({ success: false, error: 'Chat não encontrado' });
         const chat = cr[0];
         let fresh = [];
+
+        // CHAMADA SÓ NO PREMIUM: VIP sem premium encerrou uma chamada barrada →
+        // a modelo manda a mensagem padrão ("queria tanto a chamadinha...").
+        // Dedupe: só se a ÚLTIMA mensagem do bot não for essa mesma frase
+        // (onClose + vigia do app podem chamar o /call-done duas vezes).
+        try {
+            const owns0 = await ownsChatVip(ident.email, chat);
+            const perm0 = permissions(chat, owns0, ident);
+            const gate = await callPremiumGate(ident, perm0);
+            if (gate) {
+                const cfg = await callPremiumConfig();
+                const txt = await fillVars(cfg.decline_message, { ...ident, city: session.city, cityFallback: chat.city_fallback });
+                const { rows: [last] } = await db.query(
+                    `SELECT content FROM chat_messages WHERE session_id = $1 AND sender = 'bot'
+                     ORDER BY id DESC LIMIT 1`, [session.id]);
+                if (!last || last.content !== txt) {
+                    const dm = await insertMsg(session.id, 'bot', 'text', txt, null, { typing_ms: 2500 }, null);
+                    fresh.push(dm);
+                }
+            }
+        } catch (_) {}
+
         // reivindica atomicamente (call → resuming) pra não rodar 2x (onClose +
         // vigia disparando juntos, ou junto com o /open)
         const claim = await db.query(
@@ -1406,7 +1514,7 @@ router.post('/chats/:id/call-done', optionalUser, async (req, res) => {
             ident.city = session.city;
             ident.cityFallback = chat.city_fallback;
             const steps = await loadSteps(chatId, session.current_flow || 'open');
-            fresh = await runScript(session, chat, steps, session.current_order, ident);
+            fresh = fresh.concat(await runScript(session, chat, steps, session.current_order, ident));
         }
         const owns = await ownsChatVip(ident.email, chat);
         return res.json({
@@ -1576,6 +1684,62 @@ async function resumeDelayed(limit) {
         }
     }
     return results;
+}
+
+// ── RECEPÇÃO VIP: virou VIP/Premium → as modelos "chegam" espalhadas no tempo ─
+// Config no painel (gamification_config.vip_reception): lista de conversas
+// participantes, cada uma com público (só VIP / VIP e Premium) e janela de
+// minutos (de X a Y — o sorteio por lead deixa real, ninguém fala em coro).
+// LEVE de propósito: só agenda o roteiro 'open' de cada chat com awaiting=
+// 'delay' + resume_at sorteado — o worker de sempre entrega e manda o PUSH
+// ("Fulana te enviou uma mensagem"). Zero worker novo, zero custo extra.
+async function scheduleVipReception(email, tier) {
+    const e = String(email || '').toLowerCase().trim();
+    if (!e || e.endsWith('@preview.local')) return 0;
+    let cfg = { enabled: false, entries: [] };
+    try {
+        const { rows } = await db.query(`SELECT value FROM gamification_config WHERE key = 'vip_reception'`);
+        const v = rows[0]?.value || {};
+        cfg.enabled = v.enabled === true;
+        cfg.entries = Array.isArray(v.entries) ? v.entries : [];
+    } catch (_) {}
+    if (!cfg.enabled || !cfg.entries.length) return 0;
+    let scheduled = 0;
+    for (const en of cfg.entries) {
+        const chatId = parseInt(en && en.chat_id, 10);
+        if (!chatId) continue;
+        const audience = en.audience === 'vip' ? 'vip' : 'both';
+        // Premium só recebe as marcadas "VIP e Premium"; VIP recebe todas
+        if (tier === 'premium' && audience === 'vip') continue;
+        try {
+            const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
+            if (!cr.length) continue;
+            const session = await findOrCreateSession(chatId, { email: e, visitor: null }, true);
+            if (!session) continue;
+            // conversa que JÁ aconteceu (funil, recepção antiga, renovação):
+            // não reinicia nada — recepção é só pra conversa zerada
+            const { rows: [n] } = await db.query(
+                `SELECT COUNT(*)::int AS n FROM chat_messages WHERE session_id = $1`, [session.id]);
+            if (n.n > 0 || session.awaiting) continue;
+            const steps = await loadSteps(chatId, 'open');
+            if (!steps.length) continue;
+            const minM = Math.max(0, Math.min(1440, parseFloat(en.min_min) || 0));
+            const maxM = Math.max(minM, Math.min(1440, parseFloat(en.max_min) || minM));
+            const waitSec = Math.round((minM + Math.random() * (maxM - minM)) * 60);
+            await db.query(
+                `UPDATE chat_sessions
+                    SET current_flow = 'open', current_order = 0, awaiting = 'delay',
+                        resume_at = NOW() + make_interval(secs => $2), updated_at = NOW()
+                  WHERE id = $1`,
+                [session.id, Math.max(5, waitSec)]
+            );
+            scheduled++;
+        } catch (err) {
+            logger.warn('[recepcao-vip] chat ' + chatId + ' falhou: ' + err.message);
+        }
+    }
+    if (scheduled) logger.info(`[recepcao-vip] ${scheduled} conversa(s) agendada(s) pra ${e} (${tier})`);
+    return scheduled;
 }
 
 // ── Pós-compra: inicia o roteiro dos chats vinculados ao produto comprado ────
@@ -2208,3 +2372,5 @@ module.exports.invalidateSupportConfig = invalidateSupportConfig;
 module.exports.postDueStatusSchedules = postDueStatusSchedules;
 module.exports.startChatForIdentity = startChatForIdentity;
 module.exports.processAbandonedCheckouts = processAbandonedCheckouts;
+module.exports.scheduleVipReception = scheduleVipReception;
+module.exports.invalidateCallPremiumConfig = () => { _callPremCache = { at: 0, val: null }; };

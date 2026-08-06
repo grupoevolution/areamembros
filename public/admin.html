@@ -5937,6 +5937,57 @@ a { color: inherit; text-decoration: none; }
                     </div>
                 </div>
 
+                <!-- RECEPÇÃO VIP: virou VIP/Premium → modelas mandam mensagem espalhadas no tempo -->
+                <div style="margin-top:16px; background:linear-gradient(135deg, rgba(245,214,123,.08), rgba(0,0,0,.25)); border:1px solid rgba(245,214,123,.3); border-radius:14px; padding:16px 18px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:240px;">
+                            <div style="font-size:14px; font-weight:700; color:#f5d67b;">Recepção VIP</div>
+                            <div class="form-help" style="margin-top:4px;">Cliente virou VIP ou Premium → as conversas marcadas aqui "chegam" nele sozinhas: cada uma dispara o próprio roteiro de abertura num horário <b>sorteado dentro da janela</b> (de X a Y minutos após a compra) — com push no celular ("Fulana te enviou uma mensagem"). O sorteio por cliente evita todas falarem juntas. Só dispara em conversa <b>zerada</b> (nunca reinicia conversa que já rolou). O conteúdo (mensagens, chamada de boas-vindas) é o roteiro normal de cada conversa.</div>
+                        </div>
+                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; flex-shrink:0;"><input type="checkbox" id="vrEnabled" style="width:16px; height:16px;"> Ligada</label>
+                    </div>
+                    <div id="vrList" style="margin-top:12px;"></div>
+                    <div style="display:flex; align-items:center; gap:12px; margin-top:10px; flex-wrap:wrap;">
+                        <button class="btn-secondary" onclick="vrAddRow()">+ Adicionar conversa</button>
+                        <button class="btn-primary" onclick="saveVipReception()">Salvar recepção</button>
+                        <span id="vrStatus" style="font-size:12px; color:rgba(255,255,255,.55);"></span>
+                    </div>
+                </div>
+
+                <!-- CHAMADA SÓ NO PREMIUM: VIP conversa, mas ligar/atender exige o plano Premium -->
+                <div style="margin-top:16px; background:linear-gradient(135deg, rgba(245,214,123,.08), rgba(0,0,0,.25)); border:1px solid rgba(245,214,123,.3); border-radius:14px; padding:16px 18px;">
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                        <div style="flex:1; min-width:240px;">
+                            <div style="font-size:14px; font-weight:700; color:#f5d67b;">Chamada só no PREMIUM</div>
+                            <div class="form-help" style="margin-top:4px;">Ligada: cliente <b>VIP</b> conversa e manda foto normal, mas as chamadas de vídeo do chat viram exclusividade do <b>PREMIUM</b> — a chamada TOCA, ele tenta atender (ou ligar) e aparece o popup de upgrade. Fechou sem comprar → fica "chamada perdida" e a modelo manda a mensagem abaixo. <b>Não muda nada</b> pro lead do funil (as chamadas da copy continuam) nem pras chamadinhas avulsas de Minhas Compras.</div>
+                        </div>
+                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; flex-shrink:0;"><input type="checkbox" id="cpEnabled2" style="width:16px; height:16px;"> Ligada</label>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px; margin-top:12px;">
+                        <div>
+                            <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Título do popup</label>
+                            <input class="form-control" type="text" id="cpTitle" maxlength="80" placeholder="Chamadas são exclusivas do PREMIUM">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link do checkout do upgrade (R$ da diferença)</label>
+                            <input class="form-control" type="text" id="cpCheckout" placeholder="https://pay... (vazio = usa o link do plano Premium)">
+                        </div>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Texto do popup</label>
+                        <textarea class="form-textarea" id="cpText" maxlength="300" style="min-height:60px;" placeholder="Seu plano VIP libera as conversas — mas ligar e atender é só no PREMIUM..."></textarea>
+                    </div>
+                    <div style="margin-top:10px;">
+                        <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Mensagem da modelo depois da chamada barrada</label>
+                        <textarea class="form-textarea" id="cpDecline" maxlength="500" style="min-height:70px;" placeholder="aff eu queria tanto a chamadinha... mas seu plano não pega chamada, só o premium 🥺"></textarea>
+                        <div class="form-help" style="margin-top:4px;">Sai como mensagem dela na conversa logo que a tela de chamada fecha sem upgrade. Aceita {nome} e {cidade}.</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:12px; margin-top:12px;">
+                        <button class="btn-primary" onclick="saveCallPremium()">Salvar chamadas</button>
+                        <span id="cpStatus2" style="font-size:12px; color:rgba(255,255,255,.55);"></span>
+                    </div>
+                </div>
+
                 <!-- PRODUTO ÚNICO DO CHAT: o popup VIP/PREMIUM de TODAS as conversas -->
                 <div id="chatPaywallCard" style="margin-top:16px; background:linear-gradient(135deg, rgba(229,9,20,.10), rgba(0,0,0,.25)); border:1px solid rgba(229,9,20,.35); border-radius:14px; padding:16px 18px;">
                     <div style="color:rgba(255,255,255,.5); font-size:12px;">Carregando produto do chat…</div>
@@ -16550,11 +16601,111 @@ async function loadSalesBySource() {
 }
 window.loadSalesBySource = loadSalesBySource;
 
+// ─── Recepção VIP + Chamada só no Premium ───────────────────────────────────
+let _vrChats = null;
+async function _vrChatOptions(sel) {
+    if (!_vrChats) {
+        // só CACHEIA se a busca deu certo — um 401/erro momentâneo não pode
+        // deixar a lista vazia pra sempre
+        let list = [];
+        try {
+            const r = await fetch('/api/admin/chats', { credentials: 'include' }).then(r => r.json());
+            if (r && r.success) { list = (r.chats || []).filter(c => c.active !== false); _vrChats = list; }
+        } catch (_) {}
+        if (!_vrChats) return '<option value="">— erro ao carregar, reabra a tela —</option>';
+    }
+    return '<option value="">— escolha a conversa —</option>' + _vrChats.map(c =>
+        '<option value="' + c.id + '"' + (String(c.id) === String(sel || '') ? ' selected' : '') + '>' + escHtmlAdmin(c.name || ('#' + c.id)) + '</option>'
+    ).join('');
+}
+async function vrAddRow(entry) {
+    const list = document.getElementById('vrList');
+    if (!list) return;
+    const e = entry || {};
+    const row = document.createElement('div');
+    row.className = 'vr-row';
+    row.style.cssText = 'display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.07); border-radius:10px; padding:8px 10px;';
+    row.innerHTML = '<select class="form-control vr-chat" style="flex:2; min-width:170px;"></select>'
+        + '<select class="form-control vr-aud" style="flex:1; min-width:130px;">'
+        +   '<option value="both"' + (e.audience !== 'vip' ? ' selected' : '') + '>VIP e Premium</option>'
+        +   '<option value="vip"' + (e.audience === 'vip' ? ' selected' : '') + '>Só VIP</option>'
+        + '</select>'
+        + '<span style="font-size:12px; color:rgba(255,255,255,.55);">de</span>'
+        + '<input class="form-control vr-min" type="number" min="0" max="1440" style="width:74px;" value="' + (e.min_min != null ? e.min_min : 0) + '">'
+        + '<span style="font-size:12px; color:rgba(255,255,255,.55);">até</span>'
+        + '<input class="form-control vr-max" type="number" min="0" max="1440" style="width:74px;" value="' + (e.max_min != null ? e.max_min : 5) + '">'
+        + '<span style="font-size:12px; color:rgba(255,255,255,.55);">min</span>'
+        + '<button class="btn-secondary" style="padding:5px 10px; font-size:12px; color:#ff7b72;" onclick="this.closest(\'.vr-row\').remove()">×</button>';
+    list.appendChild(row);
+    row.querySelector('.vr-chat').innerHTML = await _vrChatOptions(e.chat_id);
+}
+window.vrAddRow = vrAddRow;
+async function loadVipReceptionCard() {
+    const en = document.getElementById('vrEnabled');
+    if (!en) return;
+    try {
+        const r = await fetch('/api/admin/gamification/vip_reception', { credentials: 'include' }).then(r => r.json());
+        const c = (r && r.value) || {};
+        en.checked = c.enabled === true;
+        const list = document.getElementById('vrList');
+        if (list) list.innerHTML = '';
+        const entries = Array.isArray(c.entries) ? c.entries : [];
+        for (const e of entries) await vrAddRow(e);
+        // sugestão inicial: 3 janelas escalonadas prontas pra escolher as modelos
+        if (!entries.length) { await vrAddRow({ min_min: 0, max_min: 2 }); await vrAddRow({ min_min: 3, max_min: 10 }); await vrAddRow({ min_min: 15, max_min: 40 }); }
+    } catch (_) {}
+}
+async function saveVipReception() {
+    const st = document.getElementById('vrStatus');
+    const entries = [];
+    document.querySelectorAll('#vrList .vr-row').forEach(row => {
+        const chatId = parseInt(row.querySelector('.vr-chat').value, 10);
+        if (!chatId) return;
+        let mn = parseFloat(row.querySelector('.vr-min').value); if (isNaN(mn) || mn < 0) mn = 0;
+        let mx = parseFloat(row.querySelector('.vr-max').value); if (isNaN(mx) || mx < mn) mx = mn;
+        entries.push({ chat_id: chatId, audience: row.querySelector('.vr-aud').value === 'vip' ? 'vip' : 'both', min_min: mn, max_min: mx });
+    });
+    const enabled = document.getElementById('vrEnabled').checked;
+    if (enabled && !entries.length) { if (st) st.textContent = 'Escolha pelo menos 1 conversa antes de ligar.'; return; }
+    const result = await _saveGamification('vip_reception', { enabled, entries });
+    if (st) { st.textContent = result.ok ? 'Salvo (' + entries.length + ' conversa(s))' : ('Erro: ' + (result.error || '')); setTimeout(() => { st.textContent = ''; }, 3500); }
+}
+window.saveVipReception = saveVipReception;
+
+async function loadCallPremiumCard() {
+    const en = document.getElementById('cpEnabled2');
+    if (!en) return;
+    try {
+        const r = await fetch('/api/admin/gamification/chat_call_premium', { credentials: 'include' }).then(r => r.json());
+        const c = (r && r.value) || {};
+        en.checked = c.enabled === true;
+        document.getElementById('cpTitle').value = c.title || '';
+        document.getElementById('cpText').value = c.text || '';
+        document.getElementById('cpCheckout').value = c.checkout_url || '';
+        document.getElementById('cpDecline').value = c.decline_message || '';
+    } catch (_) {}
+}
+async function saveCallPremium() {
+    const st = document.getElementById('cpStatus2');
+    const value = {
+        enabled: document.getElementById('cpEnabled2').checked,
+        title: String(document.getElementById('cpTitle').value || '').trim(),
+        text: String(document.getElementById('cpText').value || '').trim(),
+        checkout_url: String(document.getElementById('cpCheckout').value || '').trim(),
+        decline_message: String(document.getElementById('cpDecline').value || '').trim(),
+    };
+    const result = await _saveGamification('chat_call_premium', value);
+    if (st) { st.textContent = result.ok ? 'Salvo' : ('Erro: ' + (result.error || '')); setTimeout(() => { st.textContent = ''; }, 3500); }
+}
+window.saveCallPremium = saveCallPremium;
+
 async function loadAdminChats() {
     loadChatPaywallCard();
     loadSupportConfig();
     loadRotationConfig();
     loadGreetingsConfig();
+    loadVipReceptionCard();
+    loadCallPremiumCard();
     const list = document.getElementById('adminChatsList');
     if (!list) return;
     try {

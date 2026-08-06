@@ -36,6 +36,8 @@ const VALID_KEYS = [
     'upgrade_rules',
     'roulette',
     'meta_pixel',
+    'vip_reception',
+    'chat_call_premium',
 ];
 
 // =============================================================================
@@ -133,6 +135,10 @@ router.put('/:key', requireAdmin, async (req, res) => {
         // O lib do pixel cacheia a config por 60s — salvar aplica na hora
         if (key === 'meta_pixel') {
             try { require('../lib/meta-pixel').invalidateMetaConfig(); } catch (_) {}
+        }
+        // Idem pro gate de chamada do chat (cache de 60s em user-chats)
+        if (key === 'chat_call_premium') {
+            try { require('./user-chats').invalidateCallPremiumConfig(); } catch (_) {}
         }
 
         return res.json({ success: true, message: 'Configuração salva' });

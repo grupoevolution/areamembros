@@ -10097,6 +10097,9 @@ window.ChatApp = (function() {
             return;
         }
         CUR = { id, chat: data.chat, perm: data.permissions, callSeen: data.call_seen === true, awaiting: data.awaiting, lastButtonsAllowInput: false };
+        // CHAMADA SÓ NO PREMIUM: VIP sem premium → a chamada toca, mas atender/
+        // ligar abre o popup de upgrade (o servidor decide quem é barrado).
+        CUR.callPremium = data.call_premium || null;
         // planos do popup de assinar (VIP/PREMIUM) — usados por TODOS os
         // gatilhos de paywall desta conversa (digitar, ligar, atender, foto)
         CUR.payUnlock = data.paywall_unlock || null;
@@ -10505,12 +10508,18 @@ window.ChatApp = (function() {
             // atender OU recusar abre o popup de planos (gateAnswer).
             if (m._fresh && CUR && CUR.chat.video_call && window.VideoCall) {
                 const gated = CUR.paywalled === true;
+                // VIP sem premium: toca normal, atender/recusar abre o UPGRADE
+                // (a mensagem "queria tanto a chamadinha..." vem do servidor no
+                // /call-done, disparado quando a tela de chamada fecha)
+                const premGate = !gated && CUR.callPremium && CUR.callPremium.required;
                 setTimeout(() => {
                     try {
                         window.VideoCall.open(CUR.chat.video_call, {
                             skipSeenGuard: true,
                             onClose: callDone,
-                            gateAnswer: gated ? function () { try { openChatPaywall(); } catch (_) {} } : null,
+                            gateAnswer: gated ? function () { try { openChatPaywall(); } catch (_) {} }
+                                : premGate ? function () { try { openCallUpgrade(); } catch (_) {} }
+                                : null,
                         });
                         watchCallEnd();
                     } catch(_) {}
@@ -11055,6 +11064,22 @@ window.ChatApp = (function() {
         if (!CUR) return;
         // Depois do paywall, ligar também exige VIP: o botão vira porta do popup.
         if (CUR.paywalled) { openChatPaywall(); return; }
+        // CHAMADA SÓ NO PREMIUM: VIP sem premium liga → toca "chamando...",
+        // ela "atende" e aparece o upgrade. Fechou sem comprar → chamada
+        // perdida + a mensagem dela (servidor manda no /call-done).
+        if (CUR.callPremium && CUR.callPremium.required) {
+            const c = CUR.chat;
+            window.MVOutgoingCall.open({
+                name: c.name,
+                photo: (c.video_call && c.video_call.model_photo) || c.avatar_url || '',
+                answerMs: 6200,
+                onAnswer: function () {
+                    closeCallScreen();
+                    openCallUpgrade(function () { renderMissedCall(); callDone(); });
+                },
+            });
+            return;
+        }
         const chat = CUR.chat;
         if (!chat.has_call || !chat.video_call) { showSoonToast('Ela não pode atender agora'); return; }
         // gatilho de ligação: a modelo "reage" no roteiro (pula pro call_goto_key).
@@ -11181,6 +11206,42 @@ window.ChatApp = (function() {
             + '<div style="font-size:12px;color:#8a949c;">perdida · ' + hhmm(new Date().toISOString()) + '</div></div></div>';
         body.appendChild(d);
         body.scrollTop = body.scrollHeight;
+    }
+
+    // ── UPGRADE DE CHAMADA (VIP → PREMIUM) ──────────────────────────────────
+    // VIP tentou ligar/atender: popup dourado com a oferta do upgrade (paga só
+    // a diferença). onCloseCb roda quando ele fecha SEM comprar (chamada
+    // perdida + a mensagem da modelo via /call-done).
+    function openCallUpgrade(onCloseCb) {
+        const g = CUR && CUR.callPremium;
+        if (!g) { if (onCloseCb) onCloseCb(); return; }
+        let ov = document.getElementById('caCallUp');
+        if (ov) ov.remove();
+        ov = document.createElement('div');
+        ov.id = 'caCallUp';
+        ov.style.cssText = 'position:fixed;inset:0;z-index:100003;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:22px;';
+        ov.innerHTML = '<div style="background:#15171c;border:1px solid rgba(245,214,123,.4);border-radius:18px;max-width:340px;width:100%;padding:24px 20px;text-align:center;box-shadow:0 18px 60px rgba(0,0,0,.6);">'
+            + '<span style="width:58px;height:58px;border-radius:50%;background:rgba(245,214,123,.12);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">'
+            + '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f5d67b" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></span>'
+            + '<div style="font-size:17px;font-weight:800;color:#f5d67b;line-height:1.3;margin-bottom:8px;">' + esc(g.title || 'Chamadas são do PREMIUM') + '</div>'
+            + '<div style="font-size:13px;color:rgba(255,255,255,.75);line-height:1.55;margin-bottom:16px;">' + esc(g.text || '') + '</div>'
+            + (g.checkout_url
+                ? '<button id="caCallUpGo" style="width:100%;background:linear-gradient(135deg,#f5d67b,#d4a017);color:#3a2c04;border:none;border-radius:12px;padding:14px;font-size:14px;font-weight:800;cursor:pointer;">FAZER UPGRADE AGORA</button>'
+                : '')
+            + '<button id="caCallUpNo" style="display:block;margin:12px auto 0;background:none;border:none;color:rgba(255,255,255,.45);font-size:12.5px;text-decoration:underline;cursor:pointer;">agora não</button>'
+            + '</div>';
+        document.body.appendChild(ov);
+        const closeUp = function (bought) {
+            try { ov.remove(); } catch (_) {}
+            if (!bought && onCloseCb) { try { onCloseCb(); } catch (_) {} }
+        };
+        const go = document.getElementById('caCallUpGo');
+        if (go) go.addEventListener('click', function () {
+            closeUp(true);
+            try { window.MV_buy(g.checkout_url, 'call_upgrade'); } catch (_) {}
+        });
+        document.getElementById('caCallUpNo').addEventListener('click', function () { closeUp(false); });
+        ov.addEventListener('click', function (e) { if (e.target === ov) closeUp(false); });
     }
 
     // Foto de perfil enquadrada (toque no avatar do topo)
