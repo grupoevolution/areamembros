@@ -9688,7 +9688,10 @@ window.ChatApp = (function() {
         const blurCls = locked ? ' class="vipblur"' : '';
         let media;
         // VIP travado: vídeo segue rodando (com áudio) porém BORRADO por trás do paywall.
-        if (it.type === 'video') media = '<video id="caStoryVid"' + blurCls + ' src="' + esc(it.media_url || '') + '" autoplay playsinline' + (locked ? ' loop' : '') + '></video>';
+        // Link do Bunny STREAM no status vira o player embutido (o <video> cru não toca).
+        const stEmb = it.type === 'video' && window.MV_streamEmbed ? MV_streamEmbed(it.media_url) : null;
+        if (it.type === 'video' && stEmb) media = '<iframe id="caStoryVid"' + blurCls + ' src="' + esc(stEmb) + '?autoplay=true&preload=true" style="width:100%;height:100%;border:0;background:#000;" allow="autoplay;encrypted-media;fullscreen" allowfullscreen></iframe>';
+        else if (it.type === 'video') media = '<video id="caStoryVid"' + blurCls + ' src="' + esc(it.media_url || '') + '" autoplay playsinline' + (locked ? ' loop' : '') + '></video>';
         else if (it.type === 'text') media = '<div class="txtcard' + (locked ? ' vipblur' : '') + '" style="background:' + (it.bg_color ? esc(it.bg_color) : '#128C7E') + '">' + esc(it.caption || '') + '</div>';
         else media = '<img' + blurCls + ' src="' + esc(it.media_url || '') + '" alt="">';
         const cap = (!locked && it.type !== 'text' && it.caption) ? '<div class="scap">' + esc(it.caption) + '</div>' : '';
@@ -10355,9 +10358,17 @@ window.ChatApp = (function() {
             d.innerHTML = (m.media_url ? '<img class="photo" src="' + esc(m.media_url) + '" alt="" loading="lazy">' : '')
                 + (m.content ? '<div class="tx" style="margin-top:5px;">' + esc(m.content) + '</div>' : '') + tm;
         } else if (m.type === 'video') {
-            // vídeo normal (assiste quantas vezes quiser, com controles)
+            // vídeo normal (assiste quantas vezes quiser, com controles).
+            // Link do Bunny STREAM vira o player embutido (o <video> cru dava
+            // tela preta com o play cortado); mp4 direto segue no <video>.
             d.className = 'ca-bub' + (mine ? ' mine' : '');
-            d.innerHTML = (m.media_url ? '<video class="photo" src="' + esc(m.media_url) + '" controls playsinline preload="metadata" style="max-width:100%;border-radius:10px;display:block;"></video>' : '')
+            const vEmb = window.MV_streamEmbed && MV_streamEmbed(m.media_url);
+            const vHtml = !m.media_url ? ''
+                : vEmb
+                    ? '<div style="position:relative;width:230px;max-width:100%;padding-top:56.25%;border-radius:10px;overflow:hidden;background:#000;">'
+                        + '<iframe src="' + esc(vEmb) + '?autoplay=false&preload=false" style="position:absolute;inset:0;width:100%;height:100%;border:0;" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture" allowfullscreen loading="lazy"></iframe></div>'
+                    : '<video class="photo" src="' + esc(m.media_url) + '" controls playsinline preload="metadata" style="max-width:100%;border-radius:10px;display:block;"></video>';
+            d.innerHTML = vHtml
                 + (m.content ? '<div class="tx" style="margin-top:5px;">' + esc(m.content) + '</div>' : '') + tm;
         } else if (m.type === 'view_once_image' || m.type === 'view_once_video') {
             const isVid = m.type === 'view_once_video';
@@ -10864,13 +10875,33 @@ window.ChatApp = (function() {
         if (!url) return;
         vonceCur = bubble;
         const isVid = bubble.dataset.isVid === '1';
+        // Vídeo do Bunny STREAM: o <video src> cru dava TELA PRETA — abre no
+        // player embutido oficial, e fecha pelo tempo configurado (o player
+        // embutido não avisa quando o vídeo acaba).
+        const vEmb = isVid && window.MV_streamEmbed ? MV_streamEmbed(url) : null;
         document.getElementById('caViewerMedia').innerHTML = isVid
-            ? '<video src="' + esc(url) + '" autoplay playsinline></video>'
+            ? (vEmb
+                ? '<iframe src="' + esc(vEmb) + '?autoplay=true&preload=true" style="width:100%;height:100%;border:0;background:#000;" allow="autoplay;encrypted-media;fullscreen;picture-in-picture" allowfullscreen></iframe>'
+                : '<video src="' + esc(url) + '" autoplay playsinline></video>')
             : '<img src="' + esc(url) + '" alt="">';
         const viewer = document.getElementById('caViewer');
         viewer.classList.add('show');
         const bar = document.getElementById('caVonceBar');
         clearTimeout(vonceTimer); vonceTimer = null;
+
+        if (isVid && vEmb) {
+            // tempo do bloco (view_seconds) ou 60s — a barra escoa junto
+            const secs = Math.max(5, Math.min(300, parseInt(bubble.dataset.viewSeconds, 10) || 60));
+            if (bar) {
+                bar.style.transition = 'none';
+                bar.style.width = '100%';
+                void bar.offsetWidth;
+                bar.style.transition = 'width ' + secs + 's linear';
+                bar.style.width = '0%';
+            }
+            vonceTimer = setTimeout(() => closeVonce(), secs * 1000);
+            return;
+        }
 
         if (isVid) {
             // VÍDEO 1x: fecha sozinho QUANDO O VÍDEO ACABA (sem tempo fixo). A barra
@@ -19596,6 +19627,20 @@ window.MV_emailFree = function () {
             && window.MV_FUNNEL_DATA && window.MV_FUNNEL_DATA.behavior
             && window.MV_FUNNEL_DATA.behavior.email_gate === 'purchase';
     } catch (_) { return false; }
+};
+
+// ═══════════════ HELPER GLOBAL: VÍDEO DO BUNNY STREAM ═══════════════
+// Link do Bunny Stream (mediadelivery.net/play/... ou /embed/...) NÃO é um
+// arquivo de vídeo — jogar num <video src> dá tela preta com play cortado.
+// Detecta e devolve a URL do player embutido oficial (toca em qualquer
+// Android). Retorna null pra link comum (mp4 direto), que segue no <video>.
+window.MV_streamEmbed = function (url) {
+    try {
+        if (!url || String(url).indexOf('mediadelivery.net') === -1) return null;
+        var m = String(url).match(/\/(\d+)\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/);
+        if (!m) return null;
+        return 'https://iframe.mediadelivery.net/embed/' + m[1] + '/' + m[2];
+    } catch (_) { return null; }
 };
 
 // ═══════════════ HELPERS GLOBAIS DE COMPRA ═══════════════
