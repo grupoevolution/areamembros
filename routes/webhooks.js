@@ -37,8 +37,27 @@ const kirvanoAdapter = require('../lib/gateways/kirvano');
 const perfectpayAdapter = require('../lib/gateways/perfectpay');
 
 // Eventos que DERRUBAM acesso de cliente — só processam com assinatura válida.
-// ('approved'/'pending'/'refused' seguem entrando mesmo com token errado.)
 const DESTRUCTIVE_EVENTS = ['refunded', 'chargeback', 'canceled'];
+
+// INCIDENTE (ago/2026): lead com Pix PENDENTE ganhou acesso sem pagar — um
+// SALE_APPROVED que a Kirvano não reconhece (forjado/replay). A porta era:
+// "aprovada entra mesmo com assinatura inválida". REGRA NOVA:
+//   - Token CONFIGURADO no painel + assinatura inválida → bloqueia TUDO
+//     (inclusive aprovada). A Kirvano sempre manda o token certo, então
+//     venda legítima nunca é perdida; o bloqueio fica vermelho no painel
+//     de Webhooks pra reprocessar se for o caso.
+//   - Token NÃO configurado → aprovada continua entrando com aviso (não
+//     quebra quem nunca configurou o token), mas destrutivo segue bloqueado.
+async function invalidSignatureAction(gateway, event) {
+    let secretConfigured = false;
+    try {
+        const { getSecret } = require('../lib/gateway-secrets');
+        const s = await getSecret(gateway);
+        secretConfigured = !!(s && String(s).trim());
+    } catch (_) {}
+    if (secretConfigured) return 'block';
+    return DESTRUCTIVE_EVENTS.includes(event) ? 'block' : 'warn';
+}
 
 
 /**
@@ -161,14 +180,12 @@ router.post('/kirvano', webhookLimiter, async (req, res) => {
         return res.status(200).json({ success: true, message: 'Ignorado', reason: normalized.reason });
     }
 
-    // 4b. Assinatura inválida: venda APROVADA entra mesmo assim (nunca perder
-    //     venda paga por token errado), mas evento DESTRUTIVO (reembolso/
-    //     chargeback/cancelamento) forjado derrubaria cliente pagante — esses
-    //     só passam com assinatura válida. O log fica processed=false (vermelho
-    //     no painel): corrija o token e use Reprocessar se for legítimo.
-    if (!signatureValid && DESTRUCTIVE_EVENTS.includes(normalized.data.event)) {
-        const msg = `Evento '${normalized.data.event}' com assinatura inválida — bloqueado por segurança (não revoga acesso). Confira o token e reprocesse se for legítimo.`;
-        logger.warn(`Webhook Kirvano: ${msg}`);
+    // 4b. Assinatura inválida: ver regra em invalidSignatureAction — com o
+    //     token configurado no painel, NADA entra sem assinatura válida
+    //     (fecha o forjamento de compra aprovada E de reembolso).
+    if (!signatureValid && (await invalidSignatureAction('kirvano', normalized.data.event)) === 'block') {
+        const msg = `Evento '${normalized.data.event}' com ASSINATURA INVÁLIDA — bloqueado por segurança (ninguém ganha nem perde acesso). Se for legítimo: confira o token no painel = Kirvano e use Reprocessar.`;
+        logger.warn(`Webhook Kirvano: ${msg} IP: ${getIp(req)}`);
         await logWebhookProcessed(logId, { processed: false, error: msg });
         return res.status(200).json({ success: false, error: 'invalid_signature' });
     }
@@ -237,10 +254,10 @@ router.post('/perfectpay', webhookLimiter, async (req, res) => {
         return res.status(200).json({ success: true, message: 'Ignorado', reason: normalized.reason });
     }
 
-    // Igual à Kirvano: destrutivo forjado não passa sem assinatura válida.
-    if (!signatureValid && DESTRUCTIVE_EVENTS.includes(normalized.data.event)) {
-        const msg = `Evento '${normalized.data.event}' com assinatura inválida — bloqueado por segurança (não revoga acesso). Confira o token e reprocesse se for legítimo.`;
-        logger.warn(`Webhook PerfectPay: ${msg}`);
+    // Igual à Kirvano: com token configurado, nada entra sem assinatura válida.
+    if (!signatureValid && (await invalidSignatureAction('perfectpay', normalized.data.event)) === 'block') {
+        const msg = `Evento '${normalized.data.event}' com ASSINATURA INVÁLIDA — bloqueado por segurança (ninguém ganha nem perde acesso). Se for legítimo: confira o token no painel = PerfectPay e use Reprocessar.`;
+        logger.warn(`Webhook PerfectPay: ${msg} IP: ${getIp(req)}`);
         await logWebhookProcessed(logId, { processed: false, error: msg });
         return res.status(200).json({ success: false, error: 'invalid_signature' });
     }
