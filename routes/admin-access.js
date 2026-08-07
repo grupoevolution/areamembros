@@ -145,7 +145,7 @@ router.post('/access/grant', requireAdmin, async (req, res) => {
     
     try {
         const { rows: [product] } = await db.query(
-            'SELECT id FROM products WHERE id = $1',
+            'SELECT id, is_chat_plan FROM products WHERE id = $1',
             [product_id]
         );
         if (!product) {
@@ -178,6 +178,20 @@ router.post('/access/grant', requireAdmin, async (req, res) => {
         ]);
         
         logger.info(`Acesso manual liberado por ${req.admin.username}: ${email} → produto ${product_id}`);
+
+        // RECEPÇÃO VIP também no acesso dado NA MÃO: o gatilho de compra só
+        // roda no webhook — sem isto, liberar a assinatura de chat pelo painel
+        // (teste do dono, cortesia, suporte) não fazia as modelas "chegarem".
+        // Manual não tem oferta → conta como VIP (recebe todas as marcadas).
+        if (product.is_chat_plan === true) {
+            try {
+                const chatsApi = require('./user-chats');
+                if (typeof chatsApi.scheduleVipReception === 'function') {
+                    await chatsApi.scheduleVipReception(email.toLowerCase().trim(), 'vip');
+                }
+            } catch (e) { logger.warn('recepção VIP (manual) falhou: ' + e.message); }
+        }
+
         return res.status(201).json({ success: true, access_id: created.id });
     } catch (err) {
         logger.error('Erro liberando acesso manual:', err);
@@ -196,7 +210,7 @@ router.post('/access/grant-bulk', requireAdmin, async (req, res) => {
         return res.status(400).json({ success: false, error: 'Lista de e-mails e produto são obrigatórios' });
     }
     try {
-        const { rows: [product] } = await db.query('SELECT id, name FROM products WHERE id = $1', [product_id]);
+        const { rows: [product] } = await db.query('SELECT id, name, is_chat_plan FROM products WHERE id = $1', [product_id]);
         if (!product) return res.status(404).json({ success: false, error: 'Produto não encontrado' });
 
         const re = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -220,6 +234,15 @@ router.post('/access/grant-bulk', requireAdmin, async (req, res) => {
                     [email, product_id, req.admin.username, JSON.stringify({ note: note || 'importação em massa', granted_manually: true, bulk: true })]
                 );
                 granted++;
+                // Recepção VIP também na importação em massa da assinatura de chat
+                if (product.is_chat_plan === true) {
+                    try {
+                        const chatsApi = require('./user-chats');
+                        if (typeof chatsApi.scheduleVipReception === 'function') {
+                            await chatsApi.scheduleVipReception(email, 'vip');
+                        }
+                    } catch (_) {}
+                }
             } catch (e) { errors++; }
         }
         logger.info(`Importação em massa por ${req.admin.username}: produto ${product_id} (${product.name}) — ${granted} liberados, ${already} já tinham, ${invalid.length} inválidos, ${errors} erros`);
