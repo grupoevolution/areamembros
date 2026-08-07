@@ -163,6 +163,8 @@ async function callPremiumConfig() {
     let cfg = {
         enabled: false,
         title: 'Chamadas são só no PREMIUM',
+        // "o que você JÁ tem" (valoriza o VIP dele — é upgrade, não venda fria)
+        vip_benefits: ['Acesso total às conversas', 'Fotos e mensagens liberadas'],
         // popup enxuto: benefícios em linhas curtas (o dono edita no painel)
         benefits: ['Chamadas ilimitadas com as modelos', 'Status + vídeos liberados', 'Grupo VIP incluso'],
         button_label: 'FAZER UPGRADE AGORA',
@@ -184,6 +186,9 @@ async function callPremiumConfig() {
         cfg = {
             enabled: v.enabled === true,
             title: str(v.title, 80, cfg.title),
+            vip_benefits: Array.isArray(v.vip_benefits) && v.vip_benefits.length
+                ? v.vip_benefits.map(b => String(b).trim().slice(0, 80)).filter(Boolean).slice(0, 4)
+                : cfg.vip_benefits,
             benefits: Array.isArray(v.benefits) && v.benefits.length
                 ? v.benefits.map(b => String(b).trim().slice(0, 80)).filter(Boolean).slice(0, 5)
                 : cfg.benefits,
@@ -197,17 +202,26 @@ async function callPremiumConfig() {
             sup_cta_label: str(v.sup_cta_label, 60, cfg.sup_cta_label),
         };
     } catch (_) {}
-    // Sem link configurado: herda o checkout do plano/oferta PREMIUM (não fica
-    // sem botão nunca)
+    // Sem link configurado no card: herda AUTOMATICAMENTE, nesta ordem:
+    //   1º) a oferta 'Upgrade Premium' (R$ da diferença — cadastrada no card
+    //       da Assinatura do Chat) — é o certo pra quem JÁ é VIP;
+    //   2º) o plano/oferta PREMIUM cheio (49,90) — último recurso.
     if (!cfg.checkout_url) {
         try {
             const pid = await chatPlanProductId();
             if (pid) {
-                const { rows: pl } = await db.query(
-                    `SELECT checkout_url FROM product_plans
-                     WHERE product_id = $1 AND active = true AND is_premium = true AND checkout_url IS NOT NULL
-                     ORDER BY display_order, id LIMIT 1`, [pid]);
-                if (pl[0]) cfg.checkout_url = pl[0].checkout_url;
+                const { rows: up } = await db.query(
+                    `SELECT checkout_url FROM product_offers
+                     WHERE product_id = $1 AND is_active = true AND LOWER(offer_name) = 'upgrade premium'
+                       AND checkout_url IS NOT NULL LIMIT 1`, [pid]);
+                if (up[0]) cfg.checkout_url = up[0].checkout_url;
+                if (!cfg.checkout_url) {
+                    const { rows: pl } = await db.query(
+                        `SELECT checkout_url FROM product_plans
+                         WHERE product_id = $1 AND active = true AND is_premium = true AND checkout_url IS NOT NULL
+                         ORDER BY display_order, id LIMIT 1`, [pid]);
+                    if (pl[0]) cfg.checkout_url = pl[0].checkout_url;
+                }
                 if (!cfg.checkout_url) {
                     const { rows: off } = await db.query(
                         `SELECT checkout_url FROM product_offers
@@ -230,7 +244,8 @@ async function callPremiumGate(ident, perm) {
         if (!cfg.enabled || !perm || !perm.is_vip || !ident.email) return null;
         if (await ownsChatPremium(ident.email)) return null;
         return {
-            required: true, title: cfg.title, benefits: cfg.benefits,
+            required: true, title: cfg.title,
+            vip_benefits: cfg.vip_benefits, benefits: cfg.benefits,
             button_label: cfg.button_label, checkout_url: cfg.checkout_url || null,
         };
     } catch (_) { return null; }

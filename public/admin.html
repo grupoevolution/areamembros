@@ -5988,9 +5988,11 @@ a { color: inherit; text-decoration: none; }
                     </div>
                     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px; margin-top:10px;">
                         <div>
-                            <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Benefícios do popup (um por linha, curtos)</label>
+                            <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">"VOCÊ JÁ TEM" — o que o VIP dele inclui (um por linha)</label>
+                            <textarea class="form-textarea" id="cpVipBenefits" style="min-height:52px;" placeholder="Acesso total às conversas&#10;Fotos e mensagens liberadas"></textarea>
+                            <div class="form-help" style="margin-top:4px;">Valoriza o que ele pagou — o popup mostra primeiro o que ele JÁ tem (check verde) e depois o que o Premium libera (check dourado). Sensação de upgrade, não de venda nova.</div>
+                            <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin:10px 0 4px;">"COM O PREMIUM VOCÊ LIBERA" (um por linha)</label>
                             <textarea class="form-textarea" id="cpBenefits" style="min-height:70px;" placeholder="Chamadas ilimitadas com as modelos&#10;Status + vídeos liberados&#10;Grupo VIP incluso"></textarea>
-                            <div class="form-help" style="margin-top:4px;">Cada linha vira um item com check dourado — direto ao ponto, sem parágrafo.</div>
                         </div>
                         <div>
                             <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Texto do botão</label>
@@ -16388,6 +16390,17 @@ async function loadChatPaywallCard() {
             + '<select class="form-control" id="cpwGateway" style="width:100%;height:34px;font-size:12.5px;"><option value="kirvano"' + (d.gateway === 'kirvano' ? ' selected' : '') + '>Kirvano</option><option value="perfectpay"' + (d.gateway === 'perfectpay' ? ' selected' : '') + '>PerfectPay</option></select></div>'
             + '</div>'
             + plans.map(planRow).join('')
+            + '<div style="background:rgba(245,214,123,.06);border:1px solid rgba(245,214,123,.35);border-radius:10px;padding:10px 12px;margin-top:8px;">'
+            + '<div style="font-size:12px;font-weight:800;color:#f5d67b;margin-bottom:3px;">⬆ UPGRADE → PREMIUM (R$ da diferença)</div>'
+            + '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:7px;line-height:1.45;">Checkout que o cliente VIP paga pra virar Premium (ex.: R$ 30). Vale pro popup da chamada, pro banner de Minhas Compras e pra oferta do suporte. Quem paga por este código vira PREMIUM sozinho (webhook).</div>'
+            + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+            + cpwField('Link do checkout', 'cpwUpUrl', (d.chat.upgrade && d.chat.upgrade.checkout_url) || '', 'https://pay...')
+            + cpwField('Código da oferta', 'cpwUpCode', (d.chat.upgrade && d.chat.upgrade.offer_code) || '', 'ex: f2af64...', '150px')
+            + '</div>'
+            + ((d.chat.upgrade && d.chat.upgrade.offer_code)
+                ? '<div style="font-size:11px;color:#7ee0a1;margin-top:6px;">✓ código ok (quem pagar vira Premium sozinho)</div>'
+                : '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:6px;">sem código — o upgrade ainda não libera sozinho</div>')
+            + '</div>'
             + (story
                 ? '<div style="font-weight:800;color:#fff;font-size:13px;margin-top:16px;">📸 Status VIP — destrava os stories borrados de todas as modelos</div>'
                 + '<div style="background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 12px;margin-top:8px;">'
@@ -16421,6 +16434,10 @@ async function saveChatPaywall() {
             checkout_url: val('cpwStUrl'),
             offer_code: val('cpwStCode'),
         } : null,
+        upgrade: {
+            checkout_url: val('cpwUpUrl'),
+            offer_code: val('cpwUpCode'),
+        },
     };
     try {
         const r = await fetch('/api/admin/chats/paywall-product', {
@@ -16740,6 +16757,7 @@ async function loadCallPremiumCard() {
         en.checked = c.enabled === true;
         document.getElementById('cpTitle').value = c.title || '';
         document.getElementById('cpCheckout').value = c.checkout_url || '';
+        document.getElementById('cpVipBenefits').value = Array.isArray(c.vip_benefits) ? c.vip_benefits.join('\n') : '';
         document.getElementById('cpBenefits').value = Array.isArray(c.benefits) ? c.benefits.join('\n') : '';
         document.getElementById('cpBtnLabel').value = c.button_label || '';
         document.getElementById('cpUpsellText').value = c.upsell_text || '';
@@ -16754,9 +16772,12 @@ async function saveCallPremium() {
     const st = document.getElementById('cpStatus2');
     const benefits = String(document.getElementById('cpBenefits').value || '')
         .split('\n').map(l => l.trim()).filter(Boolean).slice(0, 5);
+    const vipBenefits = String(document.getElementById('cpVipBenefits').value || '')
+        .split('\n').map(l => l.trim()).filter(Boolean).slice(0, 4);
     const value = {
         enabled: document.getElementById('cpEnabled2').checked,
         title: String(document.getElementById('cpTitle').value || '').trim(),
+        vip_benefits: vipBenefits,
         benefits: benefits,
         button_label: String(document.getElementById('cpBtnLabel').value || '').trim(),
         checkout_url: String(document.getElementById('cpCheckout').value || '').trim(),

@@ -113,7 +113,7 @@ async function loadPaywallState() {
          FROM product_plans WHERE product_id = $1 AND active = true ORDER BY display_order, id`, [storyProd.id]
     );
     const { rows: offers } = await db.query(
-        `SELECT product_id, gateway, offer_id, offer_name FROM product_offers
+        `SELECT product_id, gateway, offer_id, offer_name, checkout_url FROM product_offers
          WHERE product_id = ANY($1::int[]) AND is_active = true ORDER BY id`,
         [[chatProd.id, storyProd.id]]
     );
@@ -123,11 +123,20 @@ async function loadPaywallState() {
         return o ? o.offer_id : '';
     };
     const gateway = offers.length ? offers[0].gateway : 'kirvano';
+    // Oferta do UPGRADE (R$ da diferença VIP→Premium): mora no MESMO produto,
+    // com o nome fixo 'Upgrade Premium' (o "premium" no nome marca a oferta
+    // como premium — quem paga vira Premium sozinho pelo webhook).
+    const upOffer = offers.find(x => x.product_id === chatProd.id
+        && (x.offer_name || '').toLowerCase() === 'upgrade premium');
     return {
         gateway,
         chat: {
             product_id: chatProd.id,
             plans: plans.map(p => ({ ...p, offer_code: codeFor(chatProd.id, p.name) })),
+            upgrade: {
+                offer_code: upOffer ? upOffer.offer_id : '',
+                checkout_url: upOffer ? (upOffer.checkout_url || '') : '',
+            },
         },
         story: {
             product_id: storyProd.id,
@@ -199,6 +208,31 @@ router.put('/paywall-product', requireAdmin, async (req, res) => {
         }
         if (req.body?.story && state.story.plan) {
             await savePlan(state.story.product_id, state.story.plan.id, state.story.plan.name, req.body.story);
+        }
+        // Oferta do UPGRADE R$30 (sem plano na roda de vendas — é só a porta de
+        // entrega: código do gateway → webhook marca Premium e libera tudo)
+        if (req.body?.upgrade) {
+            const u = req.body.upgrade;
+            const upCode = (u.offer_code || '').trim().slice(0, 100);
+            const upUrl = (u.checkout_url || '').trim().slice(0, 1000) || null;
+            await db.query(
+                `UPDATE product_offers SET is_active = false, updated_at = NOW()
+                 WHERE product_id = $1 AND LOWER(offer_name) = 'upgrade premium' AND ($2 = '' OR offer_id <> $2)`,
+                [state.chat.product_id, upCode]
+            );
+            if (upCode) {
+                await db.query(
+                    `INSERT INTO product_offers (product_id, gateway, offer_id, offer_name, checkout_url, price, is_active, is_premium)
+                     VALUES ($1, $2, $3, 'Upgrade Premium', $4, NULL, true, true)
+                     ON CONFLICT (gateway, offer_id) DO UPDATE SET
+                        product_id = EXCLUDED.product_id, offer_name = EXCLUDED.offer_name,
+                        checkout_url = EXCLUDED.checkout_url,
+                        is_active = true, is_premium = true, updated_at = NOW()`,
+                    [state.chat.product_id, gateway, upCode, upUrl]
+                );
+            }
+            // o gate de chamada cacheia 60s — link novo vale na hora
+            try { require('./user-chats').invalidateCallPremiumConfig(); } catch (_) {}
         }
         const fresh = await loadPaywallState();
         return res.json({ success: true, ...fresh });
