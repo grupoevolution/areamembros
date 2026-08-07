@@ -5942,7 +5942,7 @@ a { color: inherit; text-decoration: none; }
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
                         <div style="flex:1; min-width:240px;">
                             <div style="font-size:14px; font-weight:700; color:#f5d67b;">Recepção VIP</div>
-                            <div class="form-help" style="margin-top:4px;">Cliente virou VIP ou Premium → as conversas marcadas aqui "chegam" nele sozinhas: cada uma dispara o próprio roteiro de abertura num horário <b>sorteado dentro da janela</b> (de X a Y minutos após a compra) — com push no celular ("Fulana te enviou uma mensagem"). O sorteio por cliente evita todas falarem juntas. Só dispara em conversa <b>zerada</b> (nunca reinicia conversa que já rolou). O conteúdo (mensagens, chamada de boas-vindas) é o roteiro normal de cada conversa.</div>
+                            <div class="form-help" style="margin-top:4px;">Cliente virou VIP ou Premium → as conversas marcadas aqui "chegam" nele sozinhas, <b>em FILA</b>: a janela de cada linha conta <b>a partir da conversa ANTERIOR</b> (a 1ª conta da compra). Ex.: 1ª de 0 a 2 min, 2ª de 1 a 2 min = a segunda fala de 1 a 2 minutos <b>depois da primeira</b>. Cada cliente tem sorteio próprio — com push no celular ("Fulana te enviou uma mensagem"). Só dispara em conversa <b>zerada</b> (nunca reinicia conversa que já rolou). O conteúdo é o roteiro de abertura normal de cada conversa.</div>
                         </div>
                         <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; flex-shrink:0;"><input type="checkbox" id="vrEnabled" style="width:16px; height:16px;"> Ligada</label>
                     </div>
@@ -5979,21 +5979,47 @@ a { color: inherit; text-decoration: none; }
                     <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px; margin-top:12px;">
                         <div>
                             <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Título do popup</label>
-                            <input class="form-control" type="text" id="cpTitle" maxlength="80" placeholder="Chamadas são exclusivas do PREMIUM">
+                            <input class="form-control" type="text" id="cpTitle" maxlength="80" placeholder="Chamadas são só no PREMIUM">
                         </div>
                         <div>
                             <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Link do checkout do upgrade (R$ da diferença)</label>
-                            <input class="form-control" type="text" id="cpCheckout" placeholder="https://pay... (vazio = usa o link do plano Premium)">
+                            <input class="form-control" type="text" id="cpCheckout" placeholder="https://pay... (vazio = usa o link do plano Premium 49,90)">
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px; margin-top:10px;">
+                        <div>
+                            <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Benefícios do popup (um por linha, curtos)</label>
+                            <textarea class="form-textarea" id="cpBenefits" style="min-height:70px;" placeholder="Chamadas ilimitadas com as modelos&#10;Status + vídeos liberados&#10;Grupo VIP incluso"></textarea>
+                            <div class="form-help" style="margin-top:4px;">Cada linha vira um item com check dourado — direto ao ponto, sem parágrafo.</div>
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Texto do botão</label>
+                            <input class="form-control" type="text" id="cpBtnLabel" maxlength="40" placeholder="FAZER UPGRADE AGORA">
+                            <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin:10px 0 4px;">Texto do banner de Minhas Compras (card VIP)</label>
+                            <input class="form-control" type="text" id="cpUpsellText" maxlength="140" placeholder="Vire PREMIUM por só R$ 30 — status + vídeos + grupo VIP inclusos">
+                            <div class="form-help" style="margin-top:4px;">Com o link do upgrade preenchido, o botão FAZER UPGRADE de Minhas Compras passa a usar o link e ESTE texto (em vez do preço cheio de 49,90).</div>
                         </div>
                     </div>
                     <div style="margin-top:10px;">
-                        <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Texto do popup</label>
-                        <textarea class="form-textarea" id="cpText" maxlength="300" style="min-height:60px;" placeholder="Seu plano VIP libera as conversas — mas ligar e atender é só no PREMIUM..."></textarea>
-                    </div>
-                    <div style="margin-top:10px;">
-                        <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Mensagem da modelo depois da chamada barrada</label>
+                        <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Mensagem PADRÃO da modelo depois da chamada barrada (reserva)</label>
                         <textarea class="form-textarea" id="cpDecline" maxlength="500" style="min-height:70px;" placeholder="aff eu queria tanto a chamadinha... mas seu plano não pega chamada, só o premium 🥺"></textarea>
-                        <div class="form-help" style="margin-top:4px;">Sai como mensagem dela na conversa logo que a tela de chamada fecha sem upgrade. Aceita {nome} e {cidade}.</div>
+                        <div class="form-help" style="margin-top:4px;">Melhor ainda: monte o fluxo <b>🚫 Chamada barrada (upgrade)</b> no roteiro de cada conversa — aí cada modelo reage do jeito DELA e a conversa continua (pergunta, foto, o que quiser). Esta mensagem aqui só é usada nas conversas SEM esse fluxo. Aceita {nome} e {cidade}.</div>
+                    </div>
+                    <div style="margin-top:14px; border-top:1px solid rgba(255,255,255,.08); padding-top:12px;">
+                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer;"><input type="checkbox" id="cpSupEnabled" style="width:16px; height:16px;"> Oferecer o upgrade no SUPORTE logo após a compra do VIP</label>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px; margin-top:10px;">
+                            <div>
+                                <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Mensagem do suporte</label>
+                                <textarea class="form-textarea" id="cpSupText" maxlength="500" style="min-height:70px;" placeholder="amor, por só R$ 30 a mais você vira PREMIUM e libera tudo... olha 👇"></textarea>
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Vídeo (link do Bunny — mostra o app/o que libera)</label>
+                                <input class="form-control" type="text" id="cpSupVideo" placeholder="https://iframe.mediadelivery.net/play/...">
+                                <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin:10px 0 4px;">Texto do botão do suporte</label>
+                                <input class="form-control" type="text" id="cpSupCta" maxlength="60" placeholder="FAZER UPGRADE — R$ 30">
+                            </div>
+                        </div>
+                        <div class="form-help" style="margin-top:6px;">Comprou o VIP (19,90) → o suporte manda a mensagem + o vídeo + o botão com o link do upgrade, com push. Quem já comprou o Premium direto não recebe.</div>
                     </div>
                     <div style="display:flex; align-items:center; gap:12px; margin-top:12px;">
                         <button class="btn-primary" onclick="saveCallPremium()">Salvar chamadas</button>
@@ -16713,19 +16739,33 @@ async function loadCallPremiumCard() {
         const c = (r && r.value) || {};
         en.checked = c.enabled === true;
         document.getElementById('cpTitle').value = c.title || '';
-        document.getElementById('cpText').value = c.text || '';
         document.getElementById('cpCheckout').value = c.checkout_url || '';
+        document.getElementById('cpBenefits').value = Array.isArray(c.benefits) ? c.benefits.join('\n') : '';
+        document.getElementById('cpBtnLabel').value = c.button_label || '';
+        document.getElementById('cpUpsellText').value = c.upsell_text || '';
         document.getElementById('cpDecline').value = c.decline_message || '';
+        document.getElementById('cpSupEnabled').checked = c.sup_enabled === true;
+        document.getElementById('cpSupText').value = c.sup_text || '';
+        document.getElementById('cpSupVideo').value = c.sup_video_url || '';
+        document.getElementById('cpSupCta').value = c.sup_cta_label || '';
     } catch (_) {}
 }
 async function saveCallPremium() {
     const st = document.getElementById('cpStatus2');
+    const benefits = String(document.getElementById('cpBenefits').value || '')
+        .split('\n').map(l => l.trim()).filter(Boolean).slice(0, 5);
     const value = {
         enabled: document.getElementById('cpEnabled2').checked,
         title: String(document.getElementById('cpTitle').value || '').trim(),
-        text: String(document.getElementById('cpText').value || '').trim(),
+        benefits: benefits,
+        button_label: String(document.getElementById('cpBtnLabel').value || '').trim(),
         checkout_url: String(document.getElementById('cpCheckout').value || '').trim(),
+        upsell_text: String(document.getElementById('cpUpsellText').value || '').trim(),
         decline_message: String(document.getElementById('cpDecline').value || '').trim(),
+        sup_enabled: document.getElementById('cpSupEnabled').checked,
+        sup_text: String(document.getElementById('cpSupText').value || '').trim(),
+        sup_video_url: String(document.getElementById('cpSupVideo').value || '').trim(),
+        sup_cta_label: String(document.getElementById('cpSupCta').value || '').trim(),
     };
     const result = await _saveGamification('chat_call_premium', value);
     if (st) { st.textContent = result.ok ? 'Salvo' : ('Erro: ' + (result.error || '')); setTimeout(() => { st.textContent = ''; }, 3500); }
@@ -17040,6 +17080,7 @@ const CHAT_FLOWS = [
     { key: 'call', label: '📞 Tentou ligar' },
     { key: 'inactive', label: '💤 Inativo' },
     { key: 'vip', label: '💎 VIP respondeu (pós-venda)' },
+    { key: 'call_blocked', label: '🚫 Chamada barrada (upgrade)' },
 ];
 function renderChatFlowTabs() {
     const box = document.getElementById('chatFlowTabs');

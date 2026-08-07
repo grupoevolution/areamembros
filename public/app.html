@@ -11220,13 +11220,20 @@ window.ChatApp = (function() {
         ov = document.createElement('div');
         ov.id = 'caCallUp';
         ov.style.cssText = 'position:fixed;inset:0;z-index:100003;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;padding:22px;';
+        // Visual enxuto (pedido do dono): selo do plano + título + benefícios
+        // em linhas curtas com check dourado — nada de parágrafo.
+        const check = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f5d67b" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>';
+        const bens = (Array.isArray(g.benefits) ? g.benefits : []).slice(0, 5).map(b =>
+            '<div style="display:flex;align-items:center;gap:9px;font-size:13.5px;color:#fff;font-weight:600;text-align:left;">' + check + esc(b) + '</div>'
+        ).join('');
         ov.innerHTML = '<div style="background:#15171c;border:1px solid rgba(245,214,123,.4);border-radius:18px;max-width:340px;width:100%;padding:24px 20px;text-align:center;box-shadow:0 18px 60px rgba(0,0,0,.6);">'
-            + '<span style="width:58px;height:58px;border-radius:50%;background:rgba(245,214,123,.12);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;">'
-            + '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f5d67b" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></span>'
-            + '<div style="font-size:17px;font-weight:800;color:#f5d67b;line-height:1.3;margin-bottom:8px;">' + esc(g.title || 'Chamadas são do PREMIUM') + '</div>'
-            + '<div style="font-size:13px;color:rgba(255,255,255,.75);line-height:1.55;margin-bottom:16px;">' + esc(g.text || '') + '</div>'
+            + '<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(200,205,215,.12);border:1px solid rgba(200,205,215,.25);border-radius:999px;padding:4px 12px;font-size:10.5px;font-weight:800;letter-spacing:1px;color:#d7dbe2;margin-bottom:12px;">SEU PLANO: VIP</div>'
+            + '<div style="margin-bottom:10px;"><span style="width:58px;height:58px;border-radius:50%;background:rgba(245,214,123,.12);display:inline-flex;align-items:center;justify-content:center;">'
+            + '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f5d67b" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></span></div>'
+            + '<div style="font-size:18px;font-weight:900;color:#f5d67b;line-height:1.25;margin-bottom:14px;">' + esc(g.title || 'Chamadas são só no PREMIUM') + '</div>'
+            + (bens ? '<div style="display:flex;flex-direction:column;gap:9px;margin:0 auto 18px;max-width:270px;">' + bens + '</div>' : '')
             + (g.checkout_url
-                ? '<button id="caCallUpGo" style="width:100%;background:linear-gradient(135deg,#f5d67b,#d4a017);color:#3a2c04;border:none;border-radius:12px;padding:14px;font-size:14px;font-weight:800;cursor:pointer;">FAZER UPGRADE AGORA</button>'
+                ? '<button id="caCallUpGo" style="width:100%;background:linear-gradient(135deg,#f5d67b,#d4a017);color:#3a2c04;border:none;border-radius:12px;padding:15px;font-size:14.5px;font-weight:900;letter-spacing:.4px;cursor:pointer;box-shadow:0 6px 22px rgba(212,160,23,.35);">' + esc(g.button_label || 'FAZER UPGRADE AGORA') + '</button>'
                 : '')
             + '<button id="caCallUpNo" style="display:block;margin:12px auto 0;background:none;border:none;color:rgba(255,255,255,.45);font-size:12.5px;text-decoration:underline;cursor:pointer;">agora não</button>'
             + '</div>';
@@ -14631,10 +14638,16 @@ function renderPlanCard(plan) {
     if (plan.kind === 'vip') {
         const up = plan.upgrade;
         const preco = (v) => { const nn = parseFloat(v); return isNaN(nn) ? '' : 'R$ ' + nn.toFixed(2).replace('.', ','); };
+        // com o upgrade R$30 configurado, o servidor manda `label` pronto (o
+        // texto do painel) e o link da DIFERENÇA — senão, formato antigo (preço
+        // cheio do plano Premium)
+        const upLabel = (up && up.label)
+            ? '💎 ' + escapeHtml(up.label)
+            : '💎 Vire PREMIUM' + (up && up.price ? ' por ' + preco(up.price) : '') + ' — status + vídeos + grupo VIP inclusos';
         const upgradeBox = (up && up.checkout_url)
             ? '<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.1);padding-top:10px;">'
-              + '<div style="font-size:12px;font-weight:800;color:#f5d67b;">💎 Vire PREMIUM por ' + preco(up.price) + ' — status + vídeos + grupo VIP inclusos</div>'
-              + '<button onclick="window.MV_buy(\'' + escapeAttrData(up.checkout_url) + '\')" style="margin-top:8px;width:100%;background:linear-gradient(90deg,#d4af37,#f5d67b);border:none;color:#241a05;font-size:12.5px;font-weight:900;letter-spacing:.4px;padding:11px;border-radius:10px;cursor:pointer;">FAZER UPGRADE 💎</button>'
+              + '<div style="font-size:12px;font-weight:800;color:#f5d67b;">' + upLabel + '</div>'
+              + '<button onclick="window.MV_buy(\'' + escapeAttrData(up.checkout_url) + '\', \'call_upgrade\')" style="margin-top:8px;width:100%;background:linear-gradient(90deg,#d4af37,#f5d67b);border:none;color:#241a05;font-size:12.5px;font-weight:900;letter-spacing:.4px;padding:11px;border-radius:10px;cursor:pointer;">FAZER UPGRADE 💎</button>'
               + '</div>'
             : '';
         return '<div class="acervo-card" style="border:1px solid rgba(200,205,215,.4);background:linear-gradient(135deg,rgba(58,62,70,.5),rgba(22,24,28,.75));border-radius:14px;padding:14px 16px;">'

@@ -21,7 +21,9 @@ const INPUT_MODES = ['always', 'gated'];
 // Fluxos por gatilho (cada modelo tem um roteiro independente por fluxo)
 // 'vip' = 💎 VIP respondeu: dispara na 1ª mensagem livre que o lead manda
 // DEPOIS de pagar (com o roteiro parado) — a continuação pós-venda.
-const FLOWS = ['open', 'status_reply', 'call', 'inactive', 'vip'];
+// 'call_blocked' = 🚫 Chamada barrada: VIP (sem premium) tentou ligar/atender
+// e não fez o upgrade — a modelo reage do jeito DELA e a conversa continua.
+const FLOWS = ['open', 'status_reply', 'call', 'inactive', 'vip', 'call_blocked'];
 const cleanFlow = (f) => FLOWS.includes(f) ? f : 'open';
 
 // ── CHATS (personas) ─────────────────────────────────────────────────────────

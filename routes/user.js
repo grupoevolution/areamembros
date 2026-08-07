@@ -688,8 +688,26 @@ async function loadUserPlans(email) {
                         if (pg) plan.vip_group_id = pg.id;
                     } catch (_) {}
                 } else {
-                    // VIP: anexa o plano Premium pro CTA de upgrade no card prata
+                    // VIP: anexa o plano Premium pro CTA de upgrade no card prata.
+                    // Com o UPGRADE R$30 configurado (card "Chamada só no PREMIUM"),
+                    // o banner usa o link da DIFERENÇA e o texto de lá — VIP não
+                    // pode ver "vire premium por 49,90" se pra ele custa 30.
                     plan.upgrade = await loadPremiumPlan();
+                    try {
+                        const { rows: [cc] } = await db.query(
+                            `SELECT value FROM gamification_config WHERE key = 'chat_call_premium'`);
+                        const v = (cc && cc.value) || {};
+                        if (typeof v.checkout_url === 'string' && v.checkout_url.trim()) {
+                            plan.upgrade = {
+                                ...(plan.upgrade || {}),
+                                checkout_url: v.checkout_url.trim(),
+                                price: null,
+                                label: (typeof v.upsell_text === 'string' && v.upsell_text.trim())
+                                    ? v.upsell_text.trim().slice(0, 140)
+                                    : 'Vire PREMIUM por só R$ 30 — status + vídeos + grupo VIP inclusos',
+                            };
+                        }
+                    } catch (_) {}
                 }
                 plans.push(plan);
             }
