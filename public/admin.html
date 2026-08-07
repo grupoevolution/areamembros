@@ -5952,6 +5952,19 @@ a { color: inherit; text-decoration: none; }
                         <button class="btn-primary" onclick="saveVipReception()">Salvar recepção</button>
                         <span id="vrStatus" style="font-size:12px; color:rgba(255,255,255,.55);"></span>
                     </div>
+                    <div style="margin-top:12px; border-top:1px solid rgba(255,255,255,.08); padding-top:12px;">
+                        <div style="font-size:12px; font-weight:700; color:rgba(255,255,255,.75); margin-bottom:6px;">Testar recepção (ver como fica pro lead)</div>
+                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                            <input class="form-control" type="email" id="vrTestEmail" placeholder="e-mail de teste" style="width:230px;">
+                            <select class="form-control" id="vrTestTier" style="width:130px;">
+                                <option value="vip">como VIP</option>
+                                <option value="premium">como Premium</option>
+                            </select>
+                            <button class="btn-secondary" onclick="testVipReception()">Disparar agora</button>
+                            <span id="vrTestStatus" style="font-size:12px; color:rgba(255,255,255,.55);"></span>
+                        </div>
+                        <div class="form-help" style="margin-top:6px;">Dispara SEM regra nenhuma (não precisa ter acesso nem conversa zerada — pode repetir à vontade). Usa a config SALVA acima — salve antes de testar. Depois é só logar no app com esse e-mail e esperar as janelas.</div>
+                    </div>
                 </div>
 
                 <!-- CHAMADA SÓ NO PREMIUM: VIP conversa, mas ligar/atender exige o plano Premium -->
@@ -16671,6 +16684,26 @@ async function saveVipReception() {
     if (st) { st.textContent = result.ok ? 'Salvo (' + entries.length + ' conversa(s))' : ('Erro: ' + (result.error || '')); setTimeout(() => { st.textContent = ''; }, 3500); }
 }
 window.saveVipReception = saveVipReception;
+async function testVipReception() {
+    const st = document.getElementById('vrTestStatus');
+    const email = String(document.getElementById('vrTestEmail').value || '').trim();
+    const tier = document.getElementById('vrTestTier').value;
+    if (!email) { if (st) st.textContent = 'Digite um e-mail.'; return; }
+    if (st) st.textContent = 'disparando...';
+    try {
+        const r = await fetch('/api/admin/chats/vip-reception/test', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+            body: JSON.stringify({ email, tier }),
+        }).then(r => r.json());
+        if (st) {
+            st.textContent = r.success
+                ? (r.scheduled + ' conversa(s) agendada(s) — loga no app com ' + email + ' e espera as janelas')
+                : ('Erro: ' + (r.error || ''));
+            setTimeout(() => { st.textContent = ''; }, 8000);
+        }
+    } catch (_) { if (st) st.textContent = 'Erro de rede'; }
+}
+window.testVipReception = testVipReception;
 
 async function loadCallPremiumCard() {
     const en = document.getElementById('cpEnabled2');

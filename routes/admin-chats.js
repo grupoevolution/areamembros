@@ -1036,4 +1036,24 @@ router.get('/sales-by-source', requireAdmin, async (req, res) => {
     }
 });
 
+// POST /vip-reception/test { email, tier } — botão "Testar recepção" do painel.
+// Dispara a recepção pro e-mail informado SEM regra nenhuma (não precisa ter
+// acesso, nem conversa zerada) — é só pro dono ver a experiência do lead.
+router.post('/vip-reception/test', requireAdmin, async (req, res) => {
+    const email = String(req.body?.email || '').toLowerCase().trim();
+    const tier = req.body?.tier === 'premium' ? 'premium' : 'vip';
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        return res.status(400).json({ success: false, error: 'E-mail inválido' });
+    }
+    try {
+        const chatsApi = require('./user-chats');
+        const n = await chatsApi.scheduleVipReception(email, tier, { force: true });
+        logger.info(`[recepcao-vip] TESTE disparado por ${req.admin.username} pra ${email} (${tier}): ${n} conversa(s)`);
+        return res.json({ success: true, scheduled: n });
+    } catch (err) {
+        logger.error('Teste da recepção VIP falhou:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
 module.exports = router;

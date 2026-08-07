@@ -1693,7 +1693,8 @@ async function resumeDelayed(limit) {
 // LEVE de propósito: só agenda o roteiro 'open' de cada chat com awaiting=
 // 'delay' + resume_at sorteado — o worker de sempre entrega e manda o PUSH
 // ("Fulana te enviou uma mensagem"). Zero worker novo, zero custo extra.
-async function scheduleVipReception(email, tier) {
+async function scheduleVipReception(email, tier, opts) {
+    const force = !!(opts && opts.force); // teste do painel: ignora "conversa zerada"
     const e = String(email || '').toLowerCase().trim();
     if (!e || e.endsWith('@preview.local')) return 0;
     let cfg = { enabled: false, entries: [] };
@@ -1717,10 +1718,13 @@ async function scheduleVipReception(email, tier) {
             const session = await findOrCreateSession(chatId, { email: e, visitor: null }, true);
             if (!session) continue;
             // conversa que JÁ aconteceu (funil, recepção antiga, renovação):
-            // não reinicia nada — recepção é só pra conversa zerada
-            const { rows: [n] } = await db.query(
-                `SELECT COUNT(*)::int AS n FROM chat_messages WHERE session_id = $1`, [session.id]);
-            if (n.n > 0 || session.awaiting) continue;
+            // não reinicia nada — recepção é só pra conversa zerada.
+            // (force = botão "Testar" do painel: roda mesmo assim, do zero)
+            if (!force) {
+                const { rows: [n] } = await db.query(
+                    `SELECT COUNT(*)::int AS n FROM chat_messages WHERE session_id = $1`, [session.id]);
+                if (n.n > 0 || session.awaiting) continue;
+            }
             const steps = await loadSteps(chatId, 'open');
             if (!steps.length) continue;
             const minM = Math.max(0, Math.min(1440, parseFloat(en.min_min) || 0));
