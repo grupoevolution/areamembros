@@ -8494,9 +8494,9 @@ body.is-slowconn .prod-cta-fixed {
     background-size: cover; background-position: center; background-color: #6b5312; margin-left: -10px; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
 .ga-pass2 .avs span:first-child { margin-left: 0; }
 .ga-pass2 .mid3 { flex: 1; min-width: 0; }
-/* título SEMPRE numa linha só (pedido do dono): fonte menor + nowrap */
-.ga-pass2 .t { font-size: 11px; font-weight: 800; letter-spacing: .3px; color: #fff6d8; text-shadow: 0 1px 2px rgba(90,60,10,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ga-pass2 .s { font-size: 10px; color: #f2e2b0; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* título SEMPRE numa linha só (pedido do dono): nowrap + fonte calibrada */
+.ga-pass2 .t { font-size: 13px; font-weight: 800; letter-spacing: .4px; color: #fff6d8; text-shadow: 0 1px 2px rgba(90,60,10,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ga-pass2 .s { font-size: 11px; color: #f2e2b0; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ga-pass2 .arr2 { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(180deg,#ffe9a8,#f5c542); color: #4a3204;
     display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
 /* prévia borrada DE VERDADE na lista (grupo travado) */
@@ -11405,7 +11405,7 @@ window.GroupApp = (function () {
                 // ver OS grupos que vai liberar vende mais que texto)
                 PASS._avatars = groups.filter(g => g.avatar_url).slice(0, 6).map(g => g.avatar_url);
                 PASS._count = groups.length;
-                const avs = groups.filter(g => g.avatar_url).slice(0, 4)
+                const avs = groups.filter(g => g.avatar_url).slice(0, 3)
                     .map(g => '<span style="background-image:url(\'' + esc(g.avatar_url) + '\')"></span>').join('')
                     || '<span></span><span></span><span></span>';
                 html += '<div class="ga-pass2" onclick="GroupApp.openPass()">'
