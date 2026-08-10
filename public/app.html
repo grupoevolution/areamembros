@@ -8480,7 +8480,7 @@ body.is-slowconn .prod-cta-fixed {
     padding: 10px 16px; font-size: 12.5px; font-weight: 800; color: #fff; cursor: pointer; font-family: inherit;
     flex-shrink: 0; box-shadow: 0 4px 14px rgba(229,9,20,.35); }
 /* banner COMPACTO do Passe (lista de grupos) — ouro rico + brilho varrendo */
-.ga-pass2 { position: relative; overflow: hidden; display: flex; align-items: center; gap: 11px; margin: 11px 12px; padding: 12px 14px;
+.ga-pass2 { position: relative; overflow: hidden; display: flex; align-items: center; gap: 9px; margin: 11px 12px; padding: 12px 12px;
     border-radius: 16px; cursor: pointer;
     background: linear-gradient(115deg, #5a4310 0%, #8a6a1c 38%, #c9a13e 50%, #8a6a1c 62%, #5a4310 100%);
     border: 1px solid rgba(245,210,120,.6); box-shadow: 0 8px 22px rgba(120,86,20,.35); }
@@ -8490,14 +8490,15 @@ body.is-slowconn .prod-cta-fixed {
 @keyframes passShine { 0% { left: -70%; } 55%, 100% { left: 135%; } }
 .ga-pass2 > * { position: relative; z-index: 1; }
 .ga-pass2 .avs { display: flex; flex-shrink: 0; }
-.ga-pass2 .avs span { width: 32px; height: 32px; border-radius: 50%; border: 2px solid #7a5c15;
+.ga-pass2 .avs span { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #7a5c15;
     background-size: cover; background-position: center; background-color: #6b5312; margin-left: -10px; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
 .ga-pass2 .avs span:first-child { margin-left: 0; }
 .ga-pass2 .mid3 { flex: 1; min-width: 0; }
-.ga-pass2 .t { font-size: 15px; font-weight: 800; letter-spacing: 1.5px; color: #fff6d8; text-shadow: 0 1px 2px rgba(90,60,10,.5); }
-.ga-pass2 .s { font-size: 11.5px; color: #f2e2b0; margin-top: 1px; }
-.ga-pass2 .arr2 { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(180deg,#ffe9a8,#f5c542); color: #4a3204;
-    display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+/* título SEMPRE numa linha só (pedido do dono): fonte menor + nowrap */
+.ga-pass2 .t { font-size: 11px; font-weight: 800; letter-spacing: .3px; color: #fff6d8; text-shadow: 0 1px 2px rgba(90,60,10,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ga-pass2 .s { font-size: 10px; color: #f2e2b0; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ga-pass2 .arr2 { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(180deg,#ffe9a8,#f5c542); color: #4a3204;
+    display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,.25); }
 /* prévia borrada DE VERDADE na lista (grupo travado) */
 .pv-blur { filter: blur(3.5px); user-select: none; }
 /* banner do Telegram (grupo gratuito) */
@@ -11409,7 +11410,7 @@ window.GroupApp = (function () {
                     || '<span></span><span></span><span></span>';
                 html += '<div class="ga-pass2" onclick="GroupApp.openPass()">'
                     + '<div class="avs">' + avs + '</div>'
-                    + '<div class="mid3"><div class="t">ENTRAR EM TODOS OS GRUPOS</div><div class="s">Um acesso só — entra em todos de uma vez</div></div>'
+                    + '<div class="mid3"><div class="t">ENTRAR EM TODOS OS GRUPOS</div><div class="s">LIBERE TODOS OS GRUPOS</div></div>'
                     + '<span class="arr2">›</span></div>';
             }
             html += '<div class="ca-sec-block">';
