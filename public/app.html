@@ -85,6 +85,28 @@ window.addEventListener('appinstalled', function() {
     } catch(e) { /* fail-safe */ }
 })();
 
+// ARMAZENAMENTO À PROVA DE WEBVIEW: no Instagram/TikTok o localStorage pode
+// estar BLOQUEADO — aí cada F5 virava um "visitante novo" (roteiro repetia do
+// zero, funil replayava, cara de fake). Grava SEMPRE nos dois lugares
+// (localStorage + cookie de 1 ano); lê do que estiver vivo.
+window.MV_store = {
+    get: function (k) {
+        try { var v = localStorage.getItem(k); if (v !== null && v !== undefined) return v; } catch (_) {}
+        try {
+            var m = document.cookie.match(new RegExp('(?:^|; )mvst_' + k + '=([^;]*)'));
+            return m ? decodeURIComponent(m[1]) : null;
+        } catch (_) { return null; }
+    },
+    set: function (k, v) {
+        try { localStorage.setItem(k, v); } catch (_) {}
+        try { document.cookie = 'mvst_' + k + '=' + encodeURIComponent(v) + '; max-age=' + (365 * 24 * 3600) + '; path=/; SameSite=Lax'; } catch (_) {}
+    },
+    del: function (k) {
+        try { localStorage.removeItem(k); } catch (_) {}
+        try { document.cookie = 'mvst_' + k + '=; max-age=0; path=/'; } catch (_) {}
+    },
+};
+
 // PIXEL META — captura a "etiqueta do anúncio" (fbclid + UTMs) na ENTRADA,
 // antes de qualquer limpeza/navegação. Fica no localStorage até o app mandar
 // pro servidor (é o elo clique do anúncio → lead → venda). Clique novo com
@@ -8364,6 +8386,10 @@ body.is-slowconn .prod-cta-fixed {
 .ca-tabs button { border: none; background: none; padding: 11px 2px 13px; font-size: 15.5px; font-weight: 700; font-family: inherit; cursor: pointer; color: #9a948d; position: relative; letter-spacing: .2px; }
 .ca-tabs button.on { color: #1b1b1b; }
 .ca-tabs button.on::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; border-radius: 3px 3px 0 0; background: #25a55f; }
+/* bolinha verde PULSANDO nas abas (nº de mensagens novas) — o lead leigo não
+   percebia que existia outra aba; a bolinha puxa o olho e o clique */
+.ca-tab-badge { display:inline-flex; min-width:18px; height:18px; border-radius:999px; background:#25D366; color:#fff; font-size:10.5px; font-weight:800; align-items:center; justify-content:center; padding:0 5px; margin-left:6px; vertical-align:2px; animation: caTabPulse 1.6s ease-in-out infinite; }
+@keyframes caTabPulse { 0%,100% { transform:scale(1); box-shadow:0 0 0 0 rgba(37,211,102,.55); } 50% { transform:scale(1.1); box-shadow:0 0 0 6px rgba(37,211,102,0); } }
 /* faixa verde "Mídias do grupo" */
 .ga-media-banner { background: #25a55f; padding: 11px 14px; display: flex; align-items: center; gap: 9px; cursor: pointer; }
 .ga-media-banner .tx { flex: 1; font-size: 13px; font-weight: 600; color: #fff; }
@@ -8540,13 +8566,15 @@ body.is-slowconn .prod-cta-fixed {
         <div id="caStoriesFixed" style="background:#fff;"></div>
         <!-- Abas: Conversas (1:1) | Grupos. A de Grupos só aparece quando há grupo ativo. -->
         <div class="ca-tabs" id="caTabs" style="display:none;">
-            <button id="caTabChats" class="on" onclick="GroupApp.tab('chats')">Conversas</button>
-            <button id="caTabGroups" onclick="GroupApp.tab('groups')">Grupos</button>
+            <button id="caTabChats" class="on" onclick="GroupApp.tab('chats')">Conversas<span class="ca-tab-badge" id="caTabChatsBadge" style="display:none;"></span></button>
+            <button id="caTabGroups" onclick="GroupApp.tab('groups')">Grupos<span class="ca-tab-badge" id="caTabGroupsBadge" style="display:none;"></span></button>
         </div>
-        <div id="caListScroll" style="background:#fff; min-height:100%; padding-bottom:100px;">
+        <!-- padding maior que a barra inferior + botão central: o último item
+             precisa rolar pra CIMA da barra (100px deixava ele escondido) -->
+        <div id="caListScroll" style="background:#fff; min-height:100%; padding-bottom:170px;">
             <div class="ca-empty">Carregando conversas...</div>
         </div>
-        <div id="gaListScroll" style="display:none; background:#fff; min-height:100%; padding-bottom:100px;">
+        <div id="gaListScroll" style="display:none; background:#fff; min-height:100%; padding-bottom:170px;">
             <div class="ca-empty">Carregando grupos...</div>
         </div>
     </div>
@@ -9578,14 +9606,15 @@ window.MVOutgoingCall = (function () {
 // ═══════════════ CHAT INTEGRADO (estilo WhatsApp — mesmo motor do /chat-lab) ═══════════════
 window.ChatApp = (function() {
     function visitorId() {
-        // try/catch OBRIGATÓRIO: em webview (Instagram/TikTok/anônimo) o
-        // localStorage pode lançar — sem a proteção, a exceção aborta o IIFE
-        // inteiro do ChatApp e o app abre MORTO pro tráfego de anúncio.
+        // MV_store = localStorage + COOKIE de reserva: em webview com o
+        // localStorage bloqueado, o cookie segura o mesmo visitante entre
+        // refreshes (antes cada F5 virava visitante novo = roteiro repetido).
         try {
-            let v = localStorage.getItem('mv_chat_visitor');
+            let v = window.MV_store ? MV_store.get('mv_chat_visitor') : localStorage.getItem('mv_chat_visitor');
             if (!v) {
                 v = 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
-                localStorage.setItem('mv_chat_visitor', v);
+                if (window.MV_store) MV_store.set('mv_chat_visitor', v);
+                else localStorage.setItem('mv_chat_visitor', v);
             }
             return v;
         } catch (_) {
@@ -9948,6 +9977,8 @@ window.ChatApp = (function() {
                 dot.textContent = convsUnread > 9 ? '9+' : String(convsUnread);
                 dot.style.display = convsUnread > 0 ? 'flex' : 'none';
             }
+            // bolinha pulsando na aba interna (total de MENSAGENS novas)
+            try { MV_tabBadge('caTabChatsBadge', chats.reduce((s, c) => s + (c.unread || 0), 0)); } catch (_) {}
         } catch (e) {
             scroll.innerHTML = '<div class="ca-empty">Erro carregando conversas.</div>';
         }
@@ -9960,13 +9991,15 @@ window.ChatApp = (function() {
         const unlock = c.unlock || {};
         if (window.MVPaywall) {
             // Personalizado com o nome — mas o plano libera TODAS as conversas VIP.
+            // Produto PRÓPRIO da conversa (unlock.custom): popup vira a cara dele.
             try { window.TRACK && TRACK.event('chat_paywall_open', { chat_id: id, ctx: 'list' }); } catch (_) {}
+            const cst = unlock.custom === true;
             MVPaywall.openModal(unlock, {
                 icon: 'lock',
                 eyebrow: 'ACESSO EXCLUSIVO',
-                title: 'Conversa VIP 🔥',
+                title: cst ? ((unlock.name || 'Conteúdo exclusivo') + ' 🔥') : 'Conversa VIP 🔥',
                 subtitle: 'A ' + c.name + ' tá esperando sua mensagem 🔥',
-                ctaText: 'QUERO SER VIP',
+                ctaText: cst ? 'LIBERAR AGORA' : 'QUERO SER VIP',
                 src: 'chat_' + id,   // carimba a venda com o chat de origem
                 track: { type: 'chat_paywall_click', meta: { chat_id: id } },
             });
@@ -10004,6 +10037,7 @@ window.ChatApp = (function() {
                 dot.textContent = convsUnread > 9 ? '9+' : String(convsUnread);
                 dot.style.display = convsUnread > 0 ? 'flex' : 'none';
             }
+            try { MV_tabBadge('caTabChatsBadge', (data.chats || []).reduce((s, c) => s + (c.unread || 0), 0)); } catch (_) {}
         } catch (_) {}
     }
 
@@ -10593,12 +10627,16 @@ window.ChatApp = (function() {
             ? 'A ' + nome + ' tá esperando sua resposta 🔥'
             : 'Libere e fale sem limites com todas elas 🔥');
         try { window.TRACK && TRACK.event('chat_paywall_open', { chat_id: cid, ctx: 'send' }); } catch (_) {}
+        // Conversa com produto PRÓPRIO (u.custom, ex.: vende um grupo): o popup
+        // vira a cara DESSE produto — nome no título e botão neutro. Sem isso,
+        // toda conversa mostrava "Conversa VIP / QUERO SER VIP" da assinatura.
+        const custom = u && u.custom === true;
         MVPaywall.openModal(u, {
             icon: 'lock',
             eyebrow: 'ACESSO EXCLUSIVO',
-            title: 'Conversa VIP 🔥',
+            title: custom ? ((u.name || 'Conteúdo exclusivo') + ' 🔥') : 'Conversa VIP 🔥',
             subtitle: sub,
-            ctaText: 'QUERO SER VIP',
+            ctaText: custom ? 'LIBERAR AGORA' : 'QUERO SER VIP',
             src: cid ? ('chat_' + cid) : null,   // carimba a venda com o chat de origem
             track: { type: 'chat_paywall_click', meta: { chat_id: cid } },
         });
@@ -11290,8 +11328,12 @@ window.ChatApp = (function() {
 window.GroupApp = (function () {
     let VID = '';
     try {
-        VID = localStorage.getItem('mv_chat_visitor') || '';
-        if (!VID) { VID = 'v' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); localStorage.setItem('mv_chat_visitor', VID); }
+        VID = (window.MV_store ? MV_store.get('mv_chat_visitor') : localStorage.getItem('mv_chat_visitor')) || '';
+        if (!VID) {
+            VID = 'v' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+            if (window.MV_store) MV_store.set('mv_chat_visitor', VID);
+            else localStorage.setItem('mv_chat_visitor', VID);
+        }
     } catch (_) {}
     const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     const hhmm = (iso) => { try { const d = new Date(iso); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); } catch (_) { return ''; } };
@@ -11351,18 +11393,23 @@ window.GroupApp = (function () {
             GROUPS_ON = groups.length > 0;
             const tabs = document.getElementById('caTabs');
             if (tabs) tabs.style.display = GROUPS_ON ? 'flex' : 'none';
+            try { MV_tabBadge('caTabGroupsBadge', groups.reduce((s, g) => s + (g.unread || 0), 0)); } catch (_) {}
             if (!groups.length) { scroll.innerHTML = '<div class="ca-empty">Nenhum grupo disponível ainda.</div>'; return; }
             let html = '';
             // banner COMPACTO do PASSE VIP (fotos empilhadas — estilo referência);
             // o popup do bilhete dourado continua ao tocar
             PASS = data.pass || null;
             if (PASS) {
+                // guarda as fotos/quantidade pro POPUP do Passe (lead visual:
+                // ver OS grupos que vai liberar vende mais que texto)
+                PASS._avatars = groups.filter(g => g.avatar_url).slice(0, 6).map(g => g.avatar_url);
+                PASS._count = groups.length;
                 const avs = groups.filter(g => g.avatar_url).slice(0, 4)
                     .map(g => '<span style="background-image:url(\'' + esc(g.avatar_url) + '\')"></span>').join('')
                     || '<span></span><span></span><span></span>';
                 html += '<div class="ga-pass2" onclick="GroupApp.openPass()">'
                     + '<div class="avs">' + avs + '</div>'
-                    + '<div class="mid3"><div class="t">PASSE VIP</div><div class="s">Todos os grupos liberados</div></div>'
+                    + '<div class="mid3"><div class="t">LIBERAR TODOS OS GRUPOS</div><div class="s">Um acesso só — entra em todos de uma vez</div></div>'
                     + '<span class="arr2">›</span></div>';
             }
             html += '<div class="ca-sec-block">';
@@ -11409,6 +11456,9 @@ window.GroupApp = (function () {
             GROUPS_ON = !!(d.success && d.groups && d.groups.length);
             const tabs = document.getElementById('caTabs');
             if (tabs) tabs.style.display = GROUPS_ON ? 'flex' : 'none';
+            // bolinha pulsando na aba Grupos (mensagens novas somadas) — sem
+            // ela o lead leigo nem percebia que a aba existia
+            try { MV_tabBadge('caTabGroupsBadge', (d.groups || []).reduce((s, g) => s + (g.unread || 0), 0)); } catch (_) {}
         } catch (_) {}
     }
 
@@ -11989,9 +12039,17 @@ window.GroupApp = (function () {
             // brilho varrendo o cartão (mesma vibe do banner dourado da lista)
             + '<span style="content:\'\';position:absolute;top:-60%;bottom:-60%;left:-70%;width:52px;background:linear-gradient(90deg,transparent,rgba(255,245,205,.14),transparent);transform:skewX(-20deg);animation:passShine 4.2s ease-in-out infinite;pointer-events:none;"></span>'
             + '<div style="width:52px;height:52px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffe9a8,#f5c542 55%,#a8811f);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:23px;box-shadow:0 8px 22px rgba(245,197,66,.35);">👑</div>'
-            + '<div style="font-size:10px;font-weight:800;letter-spacing:3px;color:#f5c542;">✦ PASSE VIP · ACESSO VITALÍCIO</div>'
+            + '<div style="font-size:10px;font-weight:800;letter-spacing:3px;color:#f5c542;">✦ ACESSO VITALÍCIO</div>'
             + '<div style="font-size:22px;font-weight:800;color:#fff;margin:6px 0 3px;line-height:1.15;">TODOS OS GRUPOS,<br>PRA SEMPRE</div>'
-            + '<div style="font-size:12.5px;color:#cdbd8a;margin-bottom:13px;">Um pagamento. Zero mensalidade. Tudo aberto.</div>'
+            + '<div style="font-size:12.5px;color:#cdbd8a;margin-bottom:10px;">Um pagamento. Zero mensalidade. Tudo aberto.</div>'
+            // REFERÊNCIA VISUAL (lead leigo/visual): as fotos reais dos grupos
+            // que ele destrava — prova concreta do que está comprando
+            + ((p._avatars && p._avatars.length)
+                ? '<div style="display:flex;justify-content:center;margin-bottom:4px;">'
+                    + p._avatars.map((u, i) => '<span style="width:38px;height:38px;border-radius:50%;border:2px solid #f5c542;background:#000 center/cover no-repeat;background-image:url(\'' + esc(u) + '\');display:inline-block;' + (i ? 'margin-left:-10px;' : '') + 'box-shadow:0 3px 10px rgba(0,0,0,.5);"></span>').join('')
+                    + '</div>'
+                    + '<div style="font-size:11.5px;font-weight:700;color:#f5c542;margin-bottom:12px;">' + (p._count > 1 ? 'os ' + p._count + ' grupos liberados de uma vez' : 'tudo liberado de uma vez') + '</div>'
+                : '')
             + '<div style="background:rgba(245,197,66,.08);border:1px solid rgba(245,197,66,.3);border-radius:14px;padding:11px 12px 12px;margin-bottom:13px;">'
             + (off ? '<div style="font-size:12px;color:#b8a568;">de <span style="text-decoration:line-through;">' + fmtR$(p.original_price) + '</span> por</div>' : '')
             + '<div style="font-size:34px;font-weight:800;color:#f5c542;line-height:1.1;">' + fmtR$(p.price)
@@ -12019,7 +12077,9 @@ window.GroupApp = (function () {
             try { window.TRACK && TRACK.event('group_cta_click', { group_id: CUR.id, ctx: 'channel' }); } catch (_) {}
             if (g.cta_link) {
                 if (String(g.cta_link).charAt(0) === '/') { if (typeof mvNavigate === 'function') mvNavigate(g.cta_link); else window.location.href = g.cta_link; }
-                else window.open(g.cta_link, '_blank', 'noopener');
+                // link externo (checkout): caminho oficial — e-mail do anônimo,
+                // carrinho abandonado, carimbo da venda e MESMA guia
+                else window.MV_buy(g.cta_link, 'group_' + CUR.id);
             }
             return;
         }
@@ -19395,9 +19455,12 @@ window.tryTriggerCallAfterLogin = async function() {
     // do app. Ao reabrir: o que venceu dispara na hora (escalonado), o resto
     // continua agendado relativo ao momento da conversão (startedAt).
     const PROGRESS_KEY = 'mv_funnel_progress';
-    const loadProgress = () => { try { return JSON.parse(localStorage.getItem(PROGRESS_KEY) || 'null'); } catch(_) { return null; } };
-    const saveProgress = (p) => { try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(p)); } catch(_) {} };
-    const clearProgress = () => { try { localStorage.removeItem(PROGRESS_KEY); } catch(_) {} };
+    // MV_store (localStorage + cookie): em webview com storage bloqueado, o
+    // progresso do funil sobrevive ao refresh — sem isso a sequência REPLAYAVA
+    // inteira (ligação de novo, notificação de novo = cara de fake)
+    const loadProgress = () => { try { return JSON.parse((window.MV_store ? MV_store.get(PROGRESS_KEY) : localStorage.getItem(PROGRESS_KEY)) || 'null'); } catch(_) { return null; } };
+    const saveProgress = (p) => { try { const s = JSON.stringify(p); if (window.MV_store) MV_store.set(PROGRESS_KEY, s); else localStorage.setItem(PROGRESS_KEY, s); } catch(_) {} };
+    const clearProgress = () => { try { if (window.MV_store) MV_store.del(PROGRESS_KEY); else localStorage.removeItem(PROGRESS_KEY); } catch(_) {} };
 
     let saved = loadProgress();
     // Sem cookie de funil mas com sequência pendente salva (mesmo e-mail) → retoma
@@ -19622,12 +19685,13 @@ function executeFunnelStep(step, funnelSlug, email) {
 // com os delays contando a partir DESTE momento.
 window.MVFunnelInteraction = function() {
     try {
-        const raw = localStorage.getItem('mv_funnel_progress');
+        const raw = window.MV_store ? MV_store.get('mv_funnel_progress') : localStorage.getItem('mv_funnel_progress');
         if (!raw) return;
         const cur = JSON.parse(raw);
         if (!cur || cur.interactedAt) return;
         cur.interactedAt = Date.now();
-        localStorage.setItem('mv_funnel_progress', JSON.stringify(cur));
+        if (window.MV_store) MV_store.set('mv_funnel_progress', JSON.stringify(cur));
+        else localStorage.setItem('mv_funnel_progress', JSON.stringify(cur));
         console.log('[funnel-trigger] 1\u00aa intera\u00e7\u00e3o do lead \u2014 fila destravada');
         if (typeof window.tryTriggerCallAfterLogin === 'function') window.tryTriggerCallAfterLogin();
     } catch(_) {}
@@ -19782,6 +19846,16 @@ window.MV_emailFree = function () {
 // arquivo de vídeo — jogar num <video src> dá tela preta com play cortado.
 // Detecta e devolve a URL do player embutido oficial (toca em qualquer
 // Android). Retorna null pra link comum (mp4 direto), que segue no <video>.
+// Bolinha de não-lidas das abas Conversas | Grupos (nº de MENSAGENS novas)
+window.MV_tabBadge = function (id, n) {
+    try {
+        var el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = n > 99 ? '99+' : String(n);
+        el.style.display = n > 0 ? 'inline-flex' : 'none';
+    } catch (_) {}
+};
+
 window.MV_streamEmbed = function (url) {
     try {
         if (!url || String(url).indexOf('mediadelivery.net') === -1) return null;
@@ -21527,7 +21601,7 @@ window.Explore = (function () {
             const s = data && !data.has_access ? loadSeen().size : 0;
             const exhausted = data && !data.has_access
                 && (s >= (data.free_limit || 9999) || (data._freeCount > 0 && s >= data._freeCount));
-            if (exhausted) openPaywall();
+            if (exhausted) lockFeed();
             else playActive();
             return;
         }
@@ -21558,10 +21632,10 @@ window.Explore = (function () {
                     seen.clear(); saveSeen(); list = shuffle(all);
                 } else {
                     // SEM acesso e já viu todo o grátis: NÃO zera o contador
-                    // (zerar reabria o grátis pra sempre) — mostra o paywall.
+                    // (zerar reabria o grátis pra sempre) — tranca e mostra o paywall.
                     data.videos = shuffle(all);
                     build();
-                    openPaywall();
+                    lockFeed();
                     return;
                 }
             }
@@ -21692,6 +21766,8 @@ window.Explore = (function () {
         // chegou perto do fim do que está montado → anexa o próximo bloco
         if (i >= renderedCount - 3) { try { appendChunk(); } catch (_) {} }
         const slides = feedEl().querySelectorAll('.tk-slide');
+        // Cadeado ligado: nada toca — reabre o popup e pronto
+        if (limitLocked && data && !data.has_access) { pauseAll(); openPaywall(); return; }
         // Lead ANÔNIMO (modo funil): só o 1º vídeo roda no fundo. Tentar rolar pro
         // próximo trava e abre o popup de e-mail (capta o lead antes de liberar).
         // Exceção: funil "e-mail só na compra" → deixa rolar livre (cai no gate
@@ -21710,10 +21786,9 @@ window.Explore = (function () {
         }
         const watched = loadSeen().size; // vídeos únicos já assistidos na vida
         if (!data.has_access) {
-            // Chegou no slide-isca (depois do último grátis) → paywall na hora
+            // Chegou no slide-isca (depois do último grátis) → tranca na hora
             if (i >= data.videos.length) {
-                pauseAll();
-                openPaywall();
+                lockFeed();
                 return;
             }
             // Gate de PWA: sem instalar, libera só pwa_gate_after vídeos
@@ -21722,10 +21797,9 @@ window.Explore = (function () {
                 try { ChatApp.gateInstall(() => { gatePassed = true; playActive(); }); } catch (_) { gatePassed = true; playActive(); }
                 return;
             }
-            // Paywall: já usou os vídeos grátis
+            // Paywall: já usou os vídeos grátis → tranca
             if (watched >= (data.free_limit || 9999)) {
-                pauseAll();
-                openPaywall();
+                lockFeed();
                 return;
             }
         }
@@ -21742,6 +21816,9 @@ window.Explore = (function () {
     }
 
     function playActive(i) {
+        // cadeado ligado: nunca volta a tocar (o showSub/reabrir a aba caía
+        // aqui e retomava o vídeo por baixo do popup)
+        if (limitLocked && data && !data.has_access) { pauseAll(); openPaywall(); return; }
         if (i == null) i = activeIndex;
         const feed = feedEl(); if (!feed) return;
         const slides = feed.querySelectorAll('.tk-slide');
@@ -21754,6 +21831,20 @@ window.Explore = (function () {
     function pauseAll() {
         const feed = feedEl(); if (!feed) return;
         feed.querySelectorAll('video').forEach(v => v.pause());
+    }
+
+    // ── CADEADO do grátis ───────────────────────────────────────────────
+    // Bateu o limite → tranca DE VERDADE: nada mais toca nem baixa (antes o
+    // "agora não" fechava o popup e dava pra continuar assistindo — e o vídeo
+    // seguia puxando banda do Bunny por trás). Qualquer tentativa de voltar a
+    // assistir reabre o popup. Só destrava pagando (recheckAccess limpa).
+    let limitLocked = false;
+    function lockFeed() {
+        limitLocked = true;
+        try { pauseAll(); } catch (_) {}
+        // solta os players (para o download dos pedaços do vídeo = custo Bunny)
+        try { feedEl().querySelectorAll('.tk-slide').forEach(s => release(s)); } catch (_) {}
+        openPaywall();
     }
 
     function prepare(slide) {
@@ -21807,6 +21898,7 @@ window.Explore = (function () {
                 // O feed de vídeos fica marcado pra rebuscar na próxima aberta
                 // (a lista do grátis vem CORTADA do servidor — o VIP precisa
                 // da completa).
+                limitLocked = false; // pagou → cadeado abre
                 if (accessHandler) {
                     const h = accessHandler;
                     stopAccessWatch();
@@ -22074,13 +22166,18 @@ window.Lives = (function () {
         const st = stage(); if (!st || !cur) return;
         stopTimers();
         const locked = cur.locked || (cur.kind === 'free' && !data.has_access && freeLeft <= 0);
+        // TRAVA POR TEMPO (acabou o grátis): o vídeo é REMOVIDO de verdade —
+        // antes ficava tocando só-áudio por trás (gastava banda do Bunny à toa
+        // e o dono pediu pra tirar). A isca sonora continua SÓ na live +18 VIP
+        // (trava de plano, não de tempo — lá é proposital).
+        const timeLocked = locked && cur.kind !== 'vip';
         const initial = (cur.name || '?').charAt(0).toUpperCase();
         const avStyle = cur.poster ? 'style="background-image:url(' + esc(cur.poster) + ')"' : '';
-        // Travada: capa PARADA borrada (.lv-tease) + vídeo só-ÁUDIO (2px, isca
-        // sonora — o lead OUVE a live sem ver). Liberada: vídeo em tela cheia.
+        // Travada: capa PARADA borrada (.lv-tease); +18 VIP mantém o vídeo
+        // só-ÁUDIO (2px, isca sonora). Liberada: vídeo em tela cheia.
         let html = '<div class="lv-bg' + (locked ? ' blurred' : '') + '" id="lvBg">'
             + (locked ? '<div class="lv-tease"' + (cur.poster ? ' style="background-image:url(' + esc(cur.poster) + ')"' : '') + '></div>' : '')
-            + (cur.hls_url ? '<video playsinline loop muted' + (locked ? ' class="lv-audio"' : '') + '></video>' : '')
+            + (cur.hls_url && !timeLocked ? '<video playsinline loop muted' + (locked ? ' class="lv-audio"' : '') + '></video>' : '')
             + '</div><div class="lv-shade"></div>'
             // header enxuto: foto+nome no canto ESQUERDO (ao lado das abas),
             // visualizações no canto DIREITO. Sem X flutuante.
@@ -22113,7 +22210,12 @@ window.Lives = (function () {
         if (!lvSound && !locked) html += '<div class="lv-soundgate" id="lvSoundGate"><div class="ring">' + ICO.sound + '</div><p>Toque pra ativar o som</p></div>';
         st.innerHTML = html;
 
-        if (cur.hls_url) startVideo(); // toca sempre (embaçado quando travado)
+        if (cur.hls_url && !timeLocked) startVideo(); // +18 VIP mantém a isca sonora
+        else {
+            // trava por tempo: MATA o player antigo (sem isso o hls seguia
+            // baixando pedaços num elemento solto = custo Bunny invisível)
+            try { if (hls) { hls.destroy(); hls = null; } } catch (_) {}
+        }
         // swipe vertical troca de live (quando há mais de uma no ar)
         attachSwipe(st);
         const gate = st.querySelector('#lvSoundGate');

@@ -16849,7 +16849,19 @@ async function loadChatProductsDropdown(selectedId, callId, triggerIds, storyVip
         const sel = document.getElementById('cpProduct');
         if (sel) {
             sel.innerHTML = '<option value="">— nenhum (usa o plano de chat) —</option>' + products.map(p => '<option value="'+p.id+'">'+plabel(p)+'</option>').join('');
-            if (selectedId) sel.value = selectedId;
+            if (selectedId) {
+                sel.value = selectedId;
+                // produto vinculado fora da lista (inativo/erro de rede): NÃO
+                // pode sumir em silêncio — injeta a opção e mantém o vínculo
+                if (String(sel.value) !== String(selectedId)) {
+                    const o = document.createElement('option');
+                    o.value = selectedId;
+                    o.textContent = 'Produto #' + selectedId + ' (vinculado — fora da lista atual)';
+                    sel.appendChild(o);
+                    sel.value = selectedId;
+                }
+            }
+            sel.dataset.ready = '1'; // o salvar só confia no select DEPOIS de carregado
         }
         // Produto que libera os Stories VIP desta modelo
         const svSel = document.getElementById('cpStoryVipProduct');
@@ -16998,6 +17010,10 @@ function editChatPersona(c) {
     document.getElementById('cpOrder').value = c.display_order || 0;
     let trig = [];
     try { trig = Array.isArray(c.trigger_product_ids) ? c.trigger_product_ids : JSON.parse(c.trigger_product_ids || '[]'); } catch(_) {}
+    // guarda o vínculo ORIGINAL: se o dropdown ainda não carregou na hora de
+    // salvar, o salvar usa este valor (antes salvava '' e APAGAVA o produto
+    // vinculado em silêncio — o paywall voltava pro plano de chat sem avisar)
+    try { const s0 = document.getElementById('cpProduct'); if (s0) { s0.dataset.ready = ''; s0.dataset.orig = c.product_id || ''; } } catch (_) {}
     loadChatProductsDropdown(c.product_id || '', c.call_video_call_id || '', trig, c.story_vip_product_id || '');
     document.getElementById('chatStepsSection').style.display = 'block';
     _curChatFlow = 'open';
@@ -17016,7 +17032,13 @@ async function saveChatPersona(e) {
         tag: document.getElementById('cpTag').value.trim() || null,
         show_online: document.getElementById('cpOnline').checked,
         access: document.getElementById('cpAccess').value,
-        product_id: document.getElementById('cpProduct').value || null,
+        product_id: (function () {
+            const s = document.getElementById('cpProduct');
+            if (!s) return null;
+            // dropdown ainda carregando/falhou → preserva o vínculo original
+            if (s.dataset.ready !== '1' && s.dataset.orig) return s.dataset.orig;
+            return s.value || null;
+        })(),
         checkout_url: document.getElementById('cpCheckout').value.trim() || null,
         story_vip_product_id: document.getElementById('cpStoryVipProduct').value || null,
         story_vip_checkout_url: document.getElementById('cpStoryVipCheckout').value.trim() || null,
