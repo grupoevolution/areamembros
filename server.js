@@ -345,14 +345,31 @@ app.get('/f/:slug', async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     // Só seta o cookie se o funil EXISTE e está ATIVO — slug aleatório não
     // liga o modo funil (antes qualquer /f/qualquercoisa ligava).
+    // ⚠️ E NUNCA pra lead JÁ IDENTIFICADO (e-mail real no member_token): o
+    // endereço fica em /f/slug pra sempre, e re-armar o modo funil a cada F5
+    // re-anonimizava o lead — perdia o login e o roteiro repetia (bug grave).
     if (slug) {
         try {
-            const db = require('./db');
-            const { rows } = await db.query(
-                `SELECT 1 FROM funnels WHERE slug = $1 AND active = true LIMIT 1`, [slug]
-            );
-            if (rows.length) {
-                res.cookie('mv_funnel', slug, { maxAge: 7*24*60*60*1000, path: '/', httpOnly: false, sameSite: 'lax' });
+            let identified = false;
+            try {
+                const { verifyUserToken, USER_COOKIE_NAME } = require('./lib/user-auth');
+                const tok = req.cookies?.[USER_COOKIE_NAME];
+                if (tok) {
+                    const v = verifyUserToken(tok);
+                    identified = !!(v && v.valid && !v.anonymous);
+                }
+            } catch (_) {}
+            if (!identified) {
+                const db = require('./db');
+                const { rows } = await db.query(
+                    `SELECT 1 FROM funnels WHERE slug = $1 AND active = true LIMIT 1`, [slug]
+                );
+                if (rows.length) {
+                    res.cookie('mv_funnel', slug, { maxAge: 7*24*60*60*1000, path: '/', httpOnly: false, sameSite: 'lax' });
+                }
+            } else {
+                // identificado: garante que o modo funil não re-liga
+                res.clearCookie('mv_funnel', { path: '/' });
             }
         } catch (_) { /* banco fora: serve o app sem modo funil */ }
     }

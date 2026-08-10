@@ -799,7 +799,10 @@ router.get('/chats', optionalUser, async (req, res) => {
             const isTeaser = c.teaser_locked === true && !perm.is_vip;
             if (isTeaser) perm.locked = true;
             // enriquece o desbloqueio com produto + planos (banner VIP rico)
-            if (perm.locked) perm.unlock = await loadUnlock(await chatUnlockProductId(c), c.checkout_url);
+            if (perm.locked) {
+                perm.unlock = await loadUnlock(await chatUnlockProductId(c), c.checkout_url);
+                if (perm.unlock && c.product_id) perm.unlock.custom = true;
+            }
             // RODÍZIO: estado online desta conversa (null = sempre online)
             const rotState = (onlineMap && c.in_rotation) ? onlineMap.get(c.id) : null;
             const isOffline = !!(rotState && !rotState.online);
@@ -885,7 +888,11 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         // ISCA "só prévia": trava também no /open (defesa se chamarem a API direto)
         if (chat.teaser_locked === true && !perm.is_vip) perm.locked = true;
         // enriquece o desbloqueio com produto + planos (banner VIP rico)
-        if (perm.locked) perm.unlock = await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url);
+        if (perm.locked) {
+            perm.unlock = await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url);
+            // produto PRÓPRIO da conversa → popup com a cara DESSE produto
+            if (perm.unlock && chat.product_id) perm.unlock.custom = true;
+        }
 
         // RODÍZIO: o cabeçalho da conversa precisa contar a MESMA história da
         // lista — modelo offline abria mostrando "online" (bug relatado pelo
@@ -1028,7 +1035,14 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
             // qualquer gatilho de paywall no app renderiza os cards completos —
             // sem isso, gatilhos sem erro do servidor caíam no popup "genérico"
             // sem planos e sem link de checkout.
-            paywall_unlock: perm.is_vip ? null : await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url),
+            paywall_unlock: perm.is_vip ? null : await (async () => {
+                const pu = await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url);
+                // Conversa com produto PRÓPRIO (ex.: vende um grupo): o popup
+                // tem que ser DESSE produto (nome/planos/preço), não a cara
+                // fixa "Conversa VIP" da assinatura — o app usa este flag.
+                if (pu && chat.product_id) pu.custom = true;
+                return pu;
+            })(),
             // CHAMADA SÓ NO PREMIUM: VIP que ainda não é premium recebe o gate —
             // a chamada TOCA, mas atender/ligar abre o popup de upgrade.
             // null = liberado (premium, funil/anônimo, ou função desligada).

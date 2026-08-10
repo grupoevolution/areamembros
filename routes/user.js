@@ -2786,14 +2786,45 @@ router.get('/campaign/:code', async (req, res) => {
 router.post('/login/anon', async (req, res) => {
     try {
         const slug = (req.body?.funnel_slug || '').toLowerCase().slice(0, 80) || null;
+
+        // ⚠️ BUG GRAVE corrigido (ago/2026): este endpoint criava uma identidade
+        // NOVA a cada chamada, POR CIMA do cookie existente. O boot do funil
+        // chama ele em todo carregamento → o lead que já tinha dado o E-MAIL
+        // (promote) era RE-ANONIMIZADO num simples F5: perdia o login, a sessão
+        // do chat órfã recriava e o roteiro repetia do zero ("mensagem em dobro",
+        // cara de fake). Agora:
+        //   - cookie com e-mail REAL → não toca em nada, devolve o login vivo;
+        //   - cookie anônimo ainda VÁLIDO → reusa a MESMA identidade anônima
+        //     (renova o prazo) — refresh não zera mais a jornada do anônimo.
+        try {
+            const { verifyUserToken } = require('../lib/user-auth');
+            const existing = req.cookies?.[USER_COOKIE_NAME]
+                ? verifyUserToken(req.cookies[USER_COOKIE_NAME]) : null;
+            if (existing && existing.valid && !existing.anonymous) {
+                return res.json({ success: true, email: existing.email, anonymous: false, funnel: existing.funnel || slug });
+            }
+            if (existing && existing.valid && existing.anonymous) {
+                const jwt0 = require('jsonwebtoken');
+                const renewed = jwt0.sign(
+                    { email: existing.email, type: 'user_anon', funnel: existing.funnel || slug },
+                    process.env.JWT_SECRET + ':user',
+                    { expiresIn: '30d' }
+                );
+                res.cookie(USER_COOKIE_NAME, renewed, USER_COOKIE_OPTIONS);
+                return res.json({ success: true, email: existing.email, anonymous: true, funnel: existing.funnel || slug });
+            }
+        } catch (_) { /* token podre → segue e cria um novo */ }
+
         const rand = require('crypto').randomBytes(8).toString('hex');
         const anonEmail = 'anon_' + rand + '@preview.local';
-        // Token JWT igual ao login normal, mas marcado como anônimo
+        // Token JWT igual ao login normal, mas marcado como anônimo.
+        // 30 dias (era 2h): o anônimo que volta amanhã continua a MESMA pessoa —
+        // histórico de conversa, funil e contadores seguem dele.
         const jwt = require('jsonwebtoken');
         const token = jwt.sign(
             { email: anonEmail, type: 'user_anon', funnel: slug },
             process.env.JWT_SECRET + ':user',
-            { expiresIn: '2h' }
+            { expiresIn: '30d' }
         );
         res.cookie(USER_COOKIE_NAME, token, USER_COOKIE_OPTIONS);
         return res.json({ success: true, email: anonEmail, anonymous: true, funnel: slug });
