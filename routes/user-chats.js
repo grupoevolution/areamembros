@@ -566,7 +566,8 @@ async function runScript(session, chat, steps, idx, ident) {
             const btns = Array.isArray(s.buttons) ? s.buttons : [];
             const msg = await insertMsg(session.id, 'bot', 'buttons',
                 await fillVars(s.content, ident), null,
-                { buttons: btns.map(b => ({ label: String(b.label || '').slice(0, 60) })), typing_ms: typing, allow_input: s.allow_input === true }, s.id);
+                // nav = "Levar pra": o app navega pra área/grupo ao tocar
+                { buttons: btns.map(b => ({ label: String(b.label || '').slice(0, 60), nav: b.nav || null })), typing_ms: typing, allow_input: s.allow_input === true }, s.id);
             out.push(msg);
             awaiting = 'buttons';
             break;

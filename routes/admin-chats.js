@@ -599,10 +599,24 @@ function cleanTriggerIds(raw) {
     return ids.length ? JSON.stringify(ids) : null;
 }
 
+// Destino de NAVEGAÇÃO opcional do botão ("Levar pra"): além de responder,
+// o toque leva o lead pra uma área do app. Whitelist: home (catálogo),
+// chats, groups, videos, lives ou group:<id> (grupo específico).
+function cleanBtnNav(v) {
+    const s = String(v || '').trim().slice(0, 20);
+    if (!s) return null;
+    if (['home', 'chats', 'groups', 'videos', 'lives'].includes(s)) return s;
+    const m = s.match(/^group:(\d+)$/);
+    return m ? ('group:' + parseInt(m[1], 10)) : null;
+}
 function parseButtons(raw) {
     if (!Array.isArray(raw)) return null;
     const out = raw
-        .map(b => ({ label: String(b?.label || '').trim().slice(0, 60), goto: String(b?.goto || '').trim().slice(0, 40) || null }))
+        .map(b => ({
+            label: String(b?.label || '').trim().slice(0, 60),
+            goto: String(b?.goto || '').trim().slice(0, 40) || null,
+            nav: cleanBtnNav(b?.nav),
+        }))
         .filter(b => b.label)
         .slice(0, 4);
     return out.length ? JSON.stringify(out) : null;

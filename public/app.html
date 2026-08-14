@@ -10604,12 +10604,16 @@ window.ChatApp = (function() {
 
     async function choose(i) {
         if (!CUR) return;
+        // "Levar pra" do botão: captura ANTES de zerar (a navegação acontece
+        // depois da resposta ser registrada — a conversa continua por trás)
+        const chosenNav = (lastButtons && lastButtons[i] && lastButtons[i].nav) || null;
         document.getElementById('caChoices').style.display = 'none';
         lastButtons = null;
         const { data } = await api('/api/user/chats/' + CUR.id + '/advance', { choice: i });
         if (data.success) {
             handleAdvance(data, true);
             try { window.MVFunnelInteraction && MVFunnelInteraction(); } catch (_) {}
+            if (chosenNav) setTimeout(function () { try { MV_navTo(chosenNav); } catch (_) {} }, 400);
         }
     }
 
@@ -19847,6 +19851,22 @@ window.MV_emailFree = function () {
 // arquivo de vídeo — jogar num <video src> dá tela preta com play cortado.
 // Detecta e devolve a URL do player embutido oficial (toca em qualquer
 // Android). Retorna null pra link comum (mp4 direto), que segue no <video>.
+// NAVEGAÇÃO POR DESTINO (botões do roteiro "Levar pra"): leva o lead pra uma
+// área do app — catálogo, conversas, grupos, um grupo específico, vídeos, lives.
+window.MV_navTo = function (dest) {
+    try {
+        dest = String(dest || '');
+        if (!dest) return;
+        if (dest === 'home') { switchScreen('home'); return; }
+        if (dest === 'chats') { switchScreen('chat'); try { GroupApp.tab('chats'); } catch (_) {} return; }
+        if (dest === 'groups') { switchScreen('chat'); try { GroupApp.tab('groups'); } catch (_) {} return; }
+        if (dest === 'videos') { if (typeof openExploreTab === 'function') openExploreTab('videos'); return; }
+        if (dest === 'lives') { if (typeof openExploreTab === 'function') openExploreTab('lives'); return; }
+        var m = dest.match(/^group:(\d+)$/);
+        if (m && window.GroupApp) { switchScreen('chat'); try { GroupApp.tab('groups'); } catch (_) {} GroupApp.open(parseInt(m[1], 10)); return; }
+    } catch (_) {}
+};
+
 // Bolinha de não-lidas das abas Conversas | Grupos (nº de MENSAGENS novas)
 window.MV_tabBadge = function (id, n) {
     try {

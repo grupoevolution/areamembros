@@ -17290,21 +17290,73 @@ window.updateChatStepFields = function() {
     document.getElementById('csDelayWrap').style.display = t === 'delay' ? 'block' : 'none';
 };
 
-function addChatBtnRow(label, goto) {
+// Grupos ativos pro "Levar pra grupo específico" (cache; só busca se usar)
+let _btnNavGroups = null;
+async function _btnNavGroupOptions(sel) {
+    if (!_btnNavGroups) {
+        try {
+            const r = await fetch('/api/admin/groups', { credentials: 'include' }).then(r => r.json());
+            if (r && r.success) _btnNavGroups = (r.groups || []).filter(g => g.active !== false);
+        } catch (_) {}
+        if (!_btnNavGroups) return '<option value="">— erro, reabra —</option>';
+    }
+    return '<option value="">— escolha o grupo —</option>' + _btnNavGroups.map(g =>
+        '<option value="' + g.id + '"' + (String(g.id) === String(sel || '') ? ' selected' : '') + '>' + escHtmlAdmin(g.name || ('#' + g.id)) + '</option>'
+    ).join('');
+}
+async function chatBtnNavChange(sel) {
+    const gsel = sel.parentNode.querySelector('[data-btn-nav-group]');
+    if (!gsel) return;
+    if (sel.value === 'group') {
+        gsel.style.display = '';
+        if (gsel.options.length <= 1) gsel.innerHTML = await _btnNavGroupOptions(gsel.value || '');
+    } else {
+        gsel.style.display = 'none';
+    }
+}
+async function addChatBtnRow(label, goto, nav) {
     const rows = document.getElementById('csButtonRows');
     if (rows.children.length >= 4) return;
+    const navGroupId = (String(nav || '').match(/^group:(\d+)$/) || [])[1] || '';
+    const navBase = navGroupId ? 'group' : (nav || '');
+    const opt = (v, t) => '<option value="' + v + '"' + (navBase === v ? ' selected' : '') + '>' + t + '</option>';
     const d = document.createElement('div');
-    d.style.cssText = 'display:flex; gap:6px;';
-    d.innerHTML = '<input class="form-control" data-btn-label maxlength="60" placeholder="Rótulo do botão" value="'+escHtmlAdmin(label||'')+'" style="flex:2;"/>'
+    d.dataset.btnRow = '1';
+    d.style.cssText = 'display:flex; flex-direction:column; gap:5px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07); border-radius:8px; padding:6px;';
+    d.innerHTML = '<div style="display:flex; gap:6px;">'
+        + '<input class="form-control" data-btn-label maxlength="60" placeholder="Rótulo do botão" value="'+escHtmlAdmin(label||'')+'" style="flex:2;"/>'
         + '<input class="form-control" data-btn-goto maxlength="40" placeholder="Pulo" value="'+escHtmlAdmin(goto||'')+'" style="flex:1;"/>'
-        + '<button type="button" class="btn-danger" style="font-size:11px;padding:4px 10px;" onclick="this.parentNode.remove()">×</button>';
+        + '<button type="button" class="btn-danger" style="font-size:11px;padding:4px 10px;" onclick="this.closest(\'[data-btn-row]\').remove()">×</button>'
+        + '</div>'
+        + '<div style="display:flex; gap:6px; align-items:center;">'
+        + '<span style="font-size:10.5px; color:rgba(255,255,255,.45); flex-shrink:0;">Levar pra</span>'
+        + '<select class="form-control" data-btn-nav style="flex:1; height:30px; font-size:11.5px;" onchange="chatBtnNavChange(this)">'
+        +   opt('', '— só responde (nada) —')
+        +   opt('home', 'Catálogo (Início)')
+        +   opt('chats', 'Conversas')
+        +   opt('groups', 'Grupos (aba)')
+        +   opt('group', 'Grupo específico…')
+        +   opt('videos', 'Vídeos')
+        +   opt('lives', 'Lives')
+        + '</select>'
+        + '<select class="form-control" data-btn-nav-group style="flex:1; height:30px; font-size:11.5px;' + (navBase === 'group' ? '' : ' display:none;') + '"></select>'
+        + '</div>';
     rows.appendChild(d);
+    if (navBase === 'group') {
+        d.querySelector('[data-btn-nav-group]').innerHTML = await _btnNavGroupOptions(navGroupId);
+    }
 }
 function collectChatBtns() {
-    return Array.from(document.querySelectorAll('#csButtonRows [data-btn-label]')).map((el, i) => ({
-        label: el.value.trim(),
-        goto: document.querySelectorAll('#csButtonRows [data-btn-goto]')[i].value.trim() || null,
-    })).filter(b => b.label);
+    return Array.from(document.querySelectorAll('#csButtonRows [data-btn-row]')).map(row => {
+        const label = row.querySelector('[data-btn-label]').value.trim();
+        const goto = row.querySelector('[data-btn-goto]').value.trim() || null;
+        let nav = row.querySelector('[data-btn-nav]') ? row.querySelector('[data-btn-nav]').value : '';
+        if (nav === 'group') {
+            const g = row.querySelector('[data-btn-nav-group]');
+            nav = (g && g.value) ? ('group:' + g.value) : '';
+        }
+        return { label, goto, nav: nav || null };
+    }).filter(b => b.label);
 }
 
 async function loadChatStepProducts(selectedId) {
@@ -17369,7 +17421,7 @@ function editChatStep(s) {
     else { document.getElementById('csDelayValue').value = ds || 10; document.getElementById('csDelayUnit').value = ds && ds < 60 ? '1' : '60'; }
     const rows = document.getElementById('csButtonRows');
     rows.innerHTML = '';
-    (Array.isArray(s.buttons) ? s.buttons : []).forEach(b => addChatBtnRow(b.label, b.goto));
+    (Array.isArray(s.buttons) ? s.buttons : []).forEach(b => addChatBtnRow(b.label, b.goto, b.nav));
     if (!rows.children.length) addChatBtnRow();
     updateChatStepFields();
     document.getElementById('chatStepModalBackdrop').style.display = 'flex';
