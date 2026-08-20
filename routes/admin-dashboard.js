@@ -42,15 +42,25 @@ function windowSql(period, col = 'created_at') {
 // identidade única de um session_start (email > vid)
 const IDENT = `COALESCE(LOWER(customer_email), metadata->>'vid', metadata->>'visitor_id')`;
 
-// classificação do carimbo de origem da venda → fatia da pizza
+// Classificação da venda → fatia da pizza. PELO PRODUTO (pedido do dono):
+// o carimbo (utm) só desempata — venda antiga/renovação sem carimbo também
+// cai na categoria certa. Ordem importa (upgrade antes do plano de chat).
+// $EXPLORE_PID = produto de Vídeos/Lives (config do Explorar), injetado.
 const PIE_CASE = `CASE
-    WHEN utm_content LIKE 'chat\\_%' THEN 'chat'
-    WHEN utm_content LIKE 'group\\_%' OR utm_content = 'group_pass' THEN 'grupos'
-    WHEN utm_content LIKE 'product\\_%' THEN 'catalogo'
-    WHEN utm_content = 'call_upgrade' THEN 'chamadas'
-    WHEN utm_content IN ('upgrade_offer', 'explore_premium') THEN 'upgrades'
-    WHEN utm_content IS NULL OR utm_content = '' THEN 'outros'
-    ELSE 'anuncio'
+    WHEN LOWER(COALESCE(po.offer_name, '')) = 'upgrade premium'
+         OR ua.utm_content = 'upgrade_offer' THEN 'upgrade'
+    WHEN COALESCE(p.is_chat_plan, false) = true
+         AND (COALESCE(po.is_premium, false) = true OR ua.metadata->>'premium' = 'true') THEN 'chat_premium'
+    WHEN COALESCE(p.is_chat_plan, false) = true THEN 'chat_vip'
+    WHEN p.product_type = 'video_call' OR p.video_call_id IS NOT NULL
+         OR NULLIF(TRIM(COALESCE(p.direct_call_video_url, '')), '') IS NOT NULL THEN 'chamadas'
+    WHEN COALESCE(p.is_group_pass, false) = true
+         OR ua.product_id IN (SELECT product_id FROM groups WHERE product_id IS NOT NULL)
+         OR ua.utm_content LIKE 'group%' THEN 'grupos'
+    WHEN ($EXPLORE_PID > 0 AND ua.product_id = $EXPLORE_PID)
+         OR ua.utm_content = 'explore_premium' THEN 'videos_lives'
+    WHEN ua.product_id IS NOT NULL THEN 'catalogo'
+    ELSE 'outros'
 END`;
 
 // vendas deduplicadas (1 linha por venda real) dentro da janela
@@ -127,10 +137,25 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
                LEFT JOIN e ON e.day = dias.day LEFT JOIN p ON p.day = dias.day
                ORDER BY dias.day`),
 
-            // pizza por área
-            q(`SELECT ${PIE_CASE} AS area, COUNT(*)::int AS n,
-                      COALESCE(SUM(sale_amount), 0)::float AS gross
-               FROM (${dedupSales(period)}) s GROUP BY 1 ORDER BY n DESC`),
+            // pizza por área (classificada pelo PRODUTO, com joins)
+            q(`WITH vendas AS (
+                   SELECT DISTINCT ON (ua.gateway, COALESCE(ua.sale_id, 'ua_' || ua.id))
+                          ua.sale_amount,
+                          ${PIE_CASE.replace(/\$EXPLORE_PID/g, '$1')} AS area
+                   FROM user_access ua
+                   LEFT JOIN product_offers po ON po.id = ua.offer_id
+                   LEFT JOIN products p ON p.id = ua.product_id
+                   WHERE ua.granted_by = 'webhook' AND ua.status NOT IN ('refunded', 'chargeback')
+                     AND ${windowSql(period, 'ua.granted_at')}
+               )
+               SELECT area, COUNT(*)::int AS n, COALESCE(SUM(sale_amount), 0)::float AS gross
+               FROM vendas GROUP BY 1 ORDER BY n DESC`,
+               [await (async () => {
+                   try {
+                       const { rows } = await db.query(`SELECT value->>'product_id' AS pid FROM gamification_config WHERE key = 'explore_config'`);
+                       return parseInt((rows[0] || {}).pid, 10) || 0;
+                   } catch (_) { return 0; }
+               })()]),
 
             // dinheiro
             q(`SELECT COUNT(*)::int AS vendas,

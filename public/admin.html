@@ -9910,18 +9910,21 @@ async function loadDashboardV2() {
     }).join('');
     const sum = k => dias.reduce((s, d) => s + (d[k] || 0), 0);
     const pct = (a, b) => b > 0 ? (a / b * 100).toFixed(a / b * 100 < 10 ? 1 : 0) + '%' : '—';
+    const fmtN = n => (Number(n) || 0).toLocaleString('pt-BR');
     const sv = sum('visitors'), sc = sum('chatted'), se = sum('emails'), sp = sum('purchases');
+    // NÚMEROS + porcentagens (pedido do dono: "1000 acessos, 300 e-mails,
+    // 30 compras" — não só os %). Cada card: total da etapa + conversão.
     document.getElementById('dv2Rates').innerHTML =
-        `<div class="dv2-taxa"><div class="p">${pct(sc, sv)}</div><div class="l">visitou → conversou</div></div>`
-        + `<div class="dv2-taxa"><div class="p">${pct(se, sc)}</div><div class="l">conversou → e-mail</div></div>`
-        + `<div class="dv2-taxa"><div class="p">${pct(sp, se)}</div><div class="l">e-mail → comprou</div></div>`
-        + `<div class="dv2-taxa"><div class="p">${pct(sp, sv)}</div><div class="l">visitou → comprou</div></div>`;
+        `<div class="dv2-taxa"><div class="p" style="color:#3b82f6;">${fmtN(sv)}</div><div class="l">visitantes únicos no período</div></div>`
+        + `<div class="dv2-taxa"><div class="p" style="color:#a78bfa;">${fmtN(sc)}</div><div class="l">conversaram · <b style="color:#4ade80;">${pct(sc, sv)}</b> dos visitantes</div></div>`
+        + `<div class="dv2-taxa"><div class="p" style="color:#fbbf24;">${fmtN(se)}</div><div class="l">deram o e-mail · <b style="color:#4ade80;">${pct(se, sc)}</b> de quem conversou</div></div>`
+        + `<div class="dv2-taxa"><div class="p" style="color:#4ade80;">${fmtN(sp)}</div><div class="l">compraram · <b style="color:#4ade80;">${pct(sp, se)}</b> dos e-mails · <b style="color:#4ade80;">${pct(sp, sv)}</b> geral</div></div>`;
     // PIZZA
     const AREAS = {
-        chat: ['Conversas (chat)', '#25D366'], grupos: ['Grupos + Passe', '#f5c542'],
-        catalogo: ['Catálogo (produtos)', '#e50914'], chamadas: ['Chamadas de vídeo', '#a78bfa'],
-        upgrades: ['Upgrades (Premium)', '#3b82f6'], anuncio: ['Anúncio direto', '#fb923c'],
-        outros: ['Outros / sem carimbo', '#6b7280'],
+        chat_premium: ['Chat — Premium', '#f5c542'], chat_vip: ['Chat — VIP', '#25D366'],
+        upgrade: ['Upgrade (VIP → Premium)', '#3b82f6'], grupos: ['Grupos + Passe', '#e50914'],
+        chamadas: ['Chamadas de vídeo', '#a78bfa'], videos_lives: ['Vídeos e Lives', '#fb923c'],
+        catalogo: ['Produtos do catálogo', '#22d3ee'], outros: ['Outros', '#6b7280'],
     };
     const pie = (data.pie || []).filter(p => p.n > 0);
     const totalPie = pie.reduce((s, p) => s + p.n, 0);
@@ -9937,7 +9940,11 @@ async function loadDashboardV2() {
         + `<text x="21" y="26" text-anchor="middle" font-size="3" fill="rgba(255,255,255,.5)">vendas</text>`;
     document.getElementById('dv2PieLeg').innerHTML = pie.map(p => {
         const [nome, cor] = AREAS[p.area] || [p.area, '#6b7280'];
-        return `<div class="dv2-pzitem"><i style="background:${cor}"></i><span class="n">${nome}</span><b>${p.n}</b>&nbsp;<span class="rs">${_dv2R$(p.gross)}</span></div>`;
+        const fr = totalPie ? (p.n / totalPie * 100) : 0;
+        const frTxt = fr > 0 && fr < 1 ? '<1%' : Math.round(fr) + '%';
+        return `<div class="dv2-pzitem"><i style="background:${cor}"></i><span class="n">${nome}</span>`
+            + `<span style="color:${cor};font-weight:800;font-size:11.5px;min-width:34px;text-align:right;">${frTxt}</span>`
+            + `<b style="min-width:34px;text-align:right;">${p.n}</b>&nbsp;<span class="rs">${_dv2R$(p.gross)}</span></div>`;
     }).join('') || '<div style="font-size:12px;color:rgba(255,255,255,.4);">Nenhuma venda no período.</div>';
     // TOP VENDEDORAS
     document.getElementById('dv2TopSellers').innerHTML = (data.top_sellers || []).map(s =>
