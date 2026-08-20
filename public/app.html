@@ -130,6 +130,27 @@ window.MV_store = {
         }));
     } catch (_) {}
 })();
+
+// CORTINA DO FUNIL: em modo funil o app renderizava a HOME (hero + rodapé
+// padrão) por alguns instantes ANTES de navegar pro destino do funil — o lead
+// via um "flash" de tela errada (bug relatado pelo dono). Com o cookie do
+// funil presente, uma cortina preta com spinner cobre TUDO até o destino
+// abrir (ou 9s de segurança — nunca prende o lead numa tela preta).
+(function funnelBootCurtain() {
+    try {
+        if (document.cookie.indexOf('mv_funnel=') === -1) return;
+        document.documentElement.classList.add('mv-funnel-boot');
+        var st = document.createElement('style');
+        st.textContent = 'html.mv-funnel-boot body::before{content:"";position:fixed;inset:0;z-index:999998;background:#0a0a0c;}'
+            + 'html.mv-funnel-boot body::after{content:"";position:fixed;top:50%;left:50%;width:42px;height:42px;margin:-21px 0 0 -21px;border:3px solid rgba(229,9,20,.25);border-top-color:#e50914;border-radius:50%;z-index:999999;animation:mvFunnelSpin .9s linear infinite;}'
+            + '@keyframes mvFunnelSpin{to{transform:rotate(360deg);}}';
+        document.head.appendChild(st);
+        window.MV_funnelBootDone = function () {
+            try { document.documentElement.classList.remove('mv-funnel-boot'); } catch (_) {}
+        };
+        setTimeout(function () { try { window.MV_funnelBootDone(); } catch (_) {} }, 9000);
+    } catch (_) {}
+})();
 </script>
 <link rel="mask-icon" href="/assets/icon.svg" color="#e50914">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -8390,6 +8411,8 @@ body.is-slowconn .prod-cta-fixed {
    percebia que existia outra aba; a bolinha puxa o olho e o clique */
 .ca-tab-badge { display:inline-flex; min-width:18px; height:18px; border-radius:999px; background:#25D366; color:#fff; font-size:10.5px; font-weight:800; align-items:center; justify-content:center; padding:0 5px; margin-left:6px; vertical-align:2px; animation: caTabPulse 1.6s ease-in-out infinite; }
 @keyframes caTabPulse { 0%,100% { transform:scale(1); box-shadow:0 0 0 0 rgba(37,211,102,.55); } 50% { transform:scale(1.1); box-shadow:0 0 0 6px rgba(37,211,102,0); } }
+/* seta pulsando do guia de instalação do iOS (aponta pro Compartilhar) */
+@keyframes caBounceDown { 0%,100% { transform: translateY(0); } 50% { transform: translateY(7px); } }
 /* faixa verde "Mídias do grupo" */
 .ga-media-banner { background: #25a55f; padding: 11px 14px; display: flex; align-items: center; gap: 9px; cursor: pointer; }
 .ga-media-banner .tx { flex: 1; font-size: 13px; font-weight: 600; color: #fff; }
@@ -9678,7 +9701,7 @@ window.ChatApp = (function() {
         const lives = (window.__LIVES_NOW || []).slice(0, 2);
         const liveItems = lives.map(l => {
             const bg = l.poster ? ' style="background-image:url(\'' + esc(l.poster) + '\')"' : '';
-            return '<div class="ca-story-item" onclick="openExploreTab(\'lives\')">'
+            return '<div class="ca-story-item" onclick="ChatApp.liveBubble()">'
                 + '<div class="ca-live-ring"><div class="av"' + bg + '></div></div><div class="ca-live-badge"><span class="d"></span>AO VIVO</div>'
                 + '<div class="nm" style="color:#fff;font-weight:700;">' + esc(l.name) + '</div></div>';
         }).join('');
@@ -9705,6 +9728,15 @@ window.ChatApp = (function() {
         if (!group || !group.items.length) return;
         // Gate de PWA pra ver stories (se ligado no painel e ainda não instalou)
         pwaGate('gate_stories', () => { STORY = { group, gIdx: STORIES.indexOf(group), idx: 0 }; renderStory(); });
+    }
+    // Bolinha AO VIVO dos status: anônimo do funil pede o E-MAIL antes de sair
+    // pras Lives (era a ÚNICA saída sem gate — o lead ficava preso lá dentro,
+    // porque pra VOLTAR o interceptor pedia e-mail; bug relatado pelo dono).
+    function liveBubble() {
+        if (window.MV_ANONYMOUS === true && !(window.MV_emailFree && window.MV_emailFree())) {
+            if (typeof window.MV_openLoginModal === 'function') { window.MV_openLoginModal(); return; }
+        }
+        openExploreTab('lives');
     }
     function renderStory() {
         if (!STORY) return;
@@ -10839,7 +10871,8 @@ window.ChatApp = (function() {
         const host = location.host;
         const email = window.currentUserEmail || '';
         const q = email ? ('?e=' + encodeURIComponent(email)) : '';
-        const path = '/f/' + slug + q;
+        // sem funil (cliente normal preso no webview): manda pra raiz logada
+        const path = (slug ? '/f/' + slug : '/') + q;
         const target = location.protocol + '//' + host + path;
         const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
         const nome = (CUR && CUR.chat && CUR.chat.name) ? esc(CUR.chat.name) : 'ela';
@@ -10883,6 +10916,10 @@ window.ChatApp = (function() {
         opts = opts || {};
         const forced = opts.force === true; // pós-compra: sem "pular", obriga instalar
         if (isStandalone() || _gateInstalled) { closeGate(); action(); return; }
+        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        // RASTREIO do funil de instalação (antes este gate — o caminho PRINCIPAL
+        // do tráfego — não registrava NADA; os números do painel saíam irreais)
+        const gt = (type, meta) => { try { window.TRACK && TRACK.event(type, Object.assign({ ctx: 'gate', ios: isIOS }, meta || {})); } catch (_) {} };
         const nome = (CUR && CUR.chat && CUR.chat.name) ? esc(CUR.chat.name) : 'ela';
         const LOGO = '<div style="width:56px;height:56px;border-radius:16px;background:#e50914;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;font-weight:800;color:#fff;">M</div>';
         // Ao prosseguir: pede permissão de notificação e registra a subscription,
@@ -10902,26 +10939,36 @@ window.ChatApp = (function() {
         // Instrução manual de instalar (iOS sempre; Android quando o prompt
         // automático não veio — critério não atendido ou já dispensado).
         function showManualInstall() {
-            const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            gt('pwa_manual_shown');
+            // ícone REAL do Compartilhar do Safari (quadrado + seta) inline no
+            // passo — o público leigo precisa VER o botão, não ler a descrição
+            const shareIco = '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0b84fe" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;"><path d="M12 3v13"/><path d="M8 7l4-4 4 4"/><rect x="5" y="11" width="14" height="10" rx="2"/></svg>';
             const steps = isIOS
-                ? stepRow(1, 'Toque no botão <b>Compartilhar</b> do navegador (quadrado com seta pra cima)')
-                  + stepRow(2, 'Role e toque em <b>"Adicionar à Tela de Início"</b>')
+                ? stepRow(1, 'Toque no botão <b>Compartilhar</b> ' + shareIco + ' — fica <b>embaixo, no meio</b> da tela')
+                  + stepRow(2, 'Role a lista e toque em <b>"Adicionar à Tela de Início"</b>')
+                  + stepRow(3, 'Pronto! Depois é só abrir pelo <b>ícone M</b> novo na sua tela de início')
                 : stepRow(1, 'Toque no menu <b>⋮</b> do navegador (canto de cima)')
                   + stepRow(2, 'Toque em <b>"Instalar app"</b> ou <b>"Adicionar à tela inicial"</b>');
             gateOverlay(
                 LOGO
-                + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:12px;">Adicionar à tela inicial</div>'
+                + '<div style="font-size:18px;font-weight:700;color:#111;margin-bottom:12px;">' + (isIOS ? 'São só 2 toques 👇' : 'Adicionar à tela inicial') + '</div>'
                 + steps
-                + '<button id="caManualDone" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;margin-top:6px;">Já adicionei — continuar</button>'
+                + '<button id="caManualDone" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;margin-top:6px;">Adicionei ✓ — continuar</button>'
+                // seta pulsando apontando pro lugar REAL do botão Compartilhar (iOS)
+                + (isIOS ? '<div style="position:fixed;left:0;right:0;bottom:10px;text-align:center;z-index:2147483647;pointer-events:none;"><div style="display:inline-block;background:#e50914;color:#fff;font-size:12.5px;font-weight:700;padding:9px 16px;border-radius:999px;box-shadow:0 6px 20px rgba(229,9,20,.5);animation:caBounceDown 1.2s ease-in-out infinite;">O botão Compartilhar ' + shareIco.replace('#0b84fe', '#fff') + ' fica aqui ⬇</div></div>' : '')
             );
-            document.getElementById('caManualDone').addEventListener('click', proceed);
+            document.getElementById('caManualDone').addEventListener('click', () => { gt('pwa_manual_done'); proceed(); });
         }
         // Navegador interno do Meta (Instagram/Facebook): instalar é impossível ali.
         // No FUNIL, mandamos o lead pro navegador externo (onde o PWA instala) — só
         // depois que ele já confirmou o e-mail e tocar no botão. Fora do funil (app
         // normal aberto dentro do Instagram), não tem pra onde mandar: segue ali mesmo.
         if (isInAppBrowser()) {
-            if (window.MV_FUNNEL_SLUG) breakoutToBrowser(proceed);
+            gt('pwa_breakout_shown', { funnel: !!window.MV_FUNNEL_SLUG });
+            // dentro do Instagram/TikTok instalar é impossível: manda pro
+            // navegador de verdade. Cliente normal (fora do funil) também —
+            // antes era pulado em silêncio e nunca instalava.
+            if (window.MV_FUNNEL_SLUG || window.currentUserEmail) breakoutToBrowser(proceed);
             else proceed();
             return;
         }
@@ -10933,26 +10980,31 @@ window.ChatApp = (function() {
             + '<div style="font-size:13px;color:#777;line-height:1.55;margin-bottom:16px;">' + (forced
                 ? 'Seu pagamento foi confirmado! Instale o app na tela inicial pra <b>liberar seu acesso</b> e receber as mensagens dela — é só um toque.'
                 : 'Adicione o app à tela inicial pra abrir o conteúdo e receber as mensagens de ' + nome + ' aqui no celular. É só um toque.') + '</div>'
-            + '<button id="caGateInstall" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;">' + (forced ? 'Instalar e liberar acesso' : 'Adicionar e ver') + '</button>'
+            // iOS: botão HONESTO — não existe instalação de 1 toque no iPhone,
+            // prometer "Adicionar e ver" fazia parecer que quebrou (bug report)
+            + '<button id="caGateInstall" style="width:100%;background:#e50914;border:none;color:#fff;font-size:15px;font-weight:700;padding:14px;border-radius:12px;cursor:pointer;">'
+            + (isIOS ? (forced ? 'Ver como instalar (2 toques)' : 'Instalar em 2 toques') : (forced ? 'Instalar e liberar acesso' : 'Adicionar e ver')) + '</button>'
             + (forced ? '' : '<button id="caGateSkip" style="width:100%;background:none;border:none;color:#999;font-size:13px;padding:11px;margin-top:4px;cursor:pointer;">Continuar mesmo assim</button>')
         );
+        gt('pwa_prompt_shown');
         document.getElementById('caGateInstall').addEventListener('click', () => {
+            gt('pwa_install_clicked');
             const dp2 = window.deferredPrompt; // relê na hora do clique (pode ter chegado depois)
             if (dp2 && dp2.prompt) {
                 try {
                     dp2.prompt();
                     dp2.userChoice.then(res => {
                         window.deferredPrompt = null;
-                        if (res && res.outcome === 'accepted') { try { localStorage.setItem('mv_pwa_installed', '1'); } catch (_) {} proceed(); }
-                        else showManualInstall(); // recusou o prompt → mostra como fazer manual
+                        if (res && res.outcome === 'accepted') { gt('pwa_install_accepted'); try { localStorage.setItem('mv_pwa_installed', '1'); } catch (_) {} proceed(); }
+                        else { gt('pwa_install_dismissed'); showManualInstall(); } // recusou o prompt → mostra como fazer manual
                     }).catch(() => showManualInstall());
                 } catch (_) { showManualInstall(); }
             } else {
-                showManualInstall(); // sem prompt automático → instrução manual
+                showManualInstall(); // sem prompt automático (iOS sempre) → guia visual
             }
         });
         const skip = document.getElementById('caGateSkip');
-        if (skip) skip.addEventListener('click', proceed);
+        if (skip) skip.addEventListener('click', () => { gt('pwa_gate_skipped'); proceed(); });
     }
 
     // Gate de PWA GLOBAL (vale pra logado normal também, não só funil): se a ação
@@ -11324,7 +11376,7 @@ window.ChatApp = (function() {
     if (input) input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
     return { loadList, open, back, send, photo, sendPhoto, unlock, closeVonce, onCall, refreshUnreadDot, openProfile, closeProfile,
-             openStory, closeStory, storyNav, storyReply, openVipLocked, openPayBanner,
+             openStory, closeStory, storyNav, storyReply, openVipLocked, openPayBanner, liveBubble,
              gateInstall, isStandalone, stop: stopPoll,
              curId: () => (CUR ? CUR.id : null) };
 })();
@@ -17880,6 +17932,13 @@ const PUSH = {
             await PUSH.subscribe();
             return;
         }
+        // iPHONE (PWA instalado): o iOS SÓ aceita o pedido de permissão vindo
+        // de um TOQUE do usuário — o pedido automático de 90s é recusado em
+        // silêncio e NENHUM iPhone entrava na máquina de push. Aqui aparece um
+        // banner de 1 toque; o resto (Android) segue no fluxo automático.
+        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+        if (isIOS && standalone) { PUSH._iosBanner(); return; }
         setTimeout(async () => {
             // Pede só se cliente está em foco há um tempo
             if (document.visibilityState !== 'visible') return;
@@ -17889,6 +17948,32 @@ const PUSH = {
                 localStorage.setItem(PUSH.SKIP_KEY, String(Date.now() + PUSH.SKIP_HOURS * 3600 * 1000));
             }
         }, PUSH.PROMPT_DELAY_MS);
+    },
+    // Banner de 1 toque pro iOS standalone: "🔔 Ativar notificações"
+    _iosBanner() {
+        try {
+            if (document.getElementById('mvIosPushBar')) return;
+            const bar = document.createElement('div');
+            bar.id = 'mvIosPushBar';
+            bar.style.cssText = 'position:fixed;left:12px;right:12px;bottom:calc(96px + env(safe-area-inset-bottom));z-index:99990;background:linear-gradient(135deg,#1c1e24,#101216);border:1px solid rgba(37,211,102,.4);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:11px;box-shadow:0 10px 30px rgba(0,0,0,.5);';
+            bar.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>'
+                + '<div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:700;color:#fff;">Ativar notificações</div>'
+                + '<div style="font-size:11.5px;color:rgba(255,255,255,.55);">Saiba na hora quando elas te mandarem mensagem</div></div>'
+                + '<button id="mvIosPushGo" style="background:#25D366;border:none;color:#fff;font-size:12.5px;font-weight:800;padding:9px 14px;border-radius:10px;cursor:pointer;flex-shrink:0;">ATIVAR</button>'
+                + '<button id="mvIosPushNo" style="background:none;border:none;color:rgba(255,255,255,.4);font-size:16px;padding:4px 6px;cursor:pointer;flex-shrink:0;">×</button>';
+            document.body.appendChild(bar);
+            document.getElementById('mvIosPushGo').addEventListener('click', async () => {
+                // o requestPermission PRECISA nascer deste toque (regra do iOS)
+                const ok = await PUSH.askPermission();
+                bar.remove();
+                if (ok) await PUSH.subscribe();
+                else localStorage.setItem(PUSH.SKIP_KEY, String(Date.now() + PUSH.SKIP_HOURS * 3600 * 1000));
+            });
+            document.getElementById('mvIosPushNo').addEventListener('click', () => {
+                bar.remove();
+                try { localStorage.setItem(PUSH.SKIP_KEY, String(Date.now() + PUSH.SKIP_HOURS * 3600 * 1000)); } catch (_) {}
+            });
+        } catch (_) {}
     },
     async askPermission() {
         try {
@@ -19977,10 +20062,12 @@ window.MV_buy = function (url, src) {
 (function funnelEntryNav() {
     let navigated = false;
     let tries = 0;
+    const done = () => { try { window.MV_funnelBootDone && MV_funnelBootDone(); } catch (_) {} };
     const t = setInterval(() => {
         tries++;
-        if (tries > 60) { clearInterval(t); return; }
-        if (!window.MV_FUNNEL_MODE || navigated) { if (navigated) clearInterval(t); return; }
+        if (tries > 60) { clearInterval(t); done(); return; }
+        if (!window.MV_FUNNEL_MODE) { clearInterval(t); done(); return; }
+        if (navigated) { clearInterval(t); return; }
         const fd = window.MV_FUNNEL_DATA;
         const ready = fd && typeof openProductPage === 'function'
             && window.AppState && Array.isArray(AppState.catalog) && AppState.catalog.length > 0;
@@ -20028,6 +20115,8 @@ window.MV_buy = function (url, src) {
             }
             // 'home' → não navega (hero já destaca o produto do funil, se configurado)
         } catch(_) {}
+        // destino aberto (ou é a própria home): tira a cortina do funil
+        done();
     }, 400);
 })();
 
