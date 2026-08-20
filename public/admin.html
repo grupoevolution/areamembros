@@ -3117,6 +3117,10 @@ a { color: inherit; text-decoration: none; }
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                     Visão geral
                 </div>
+                <div class="nav-item" data-screen="acquisition" onclick="switchAdminScreen(this, 'acquisition', 'Aquisição'); loadAcquisitionScreen();">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+                    Aquisição
+                </div>
             </div>
 
             <div class="nav-section">
@@ -3324,163 +3328,115 @@ a { color: inherit; text-decoration: none; }
                     </div>
                 </div>
 
-                <!-- KPI Cards -->
-                <div class="kpi-grid">
-                    <div class="kpi-card">
-                        <div class="kpi-card-head">
-                            <span class="kpi-label">Vendas (24h)</span>
-                            <div class="kpi-icon sales">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                            </div>
-                        </div>
-                        <div class="kpi-value" id="kpiSales24h">—</div>
-                        <div>
-                            <span class="kpi-trend-sub" id="kpiSalesSub">últimas 24 horas</span>
-                        </div>
-                    </div>
 
-                    <div class="kpi-card">
-                        <div class="kpi-card-head">
-                            <span class="kpi-label">Vendas (7 dias)</span>
-                            <div class="kpi-icon sales">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-                            </div>
-                        </div>
-                        <div class="kpi-value" id="kpiSales7d">—</div>
-                        <div><span class="kpi-trend-sub">últimos 7 dias</span></div>
-                    </div>
-
-                    <div class="kpi-card">
-                        <div class="kpi-card-head">
-                            <span class="kpi-label">Vendas (30 dias)</span>
-                            <div class="kpi-icon sales">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                            </div>
-                        </div>
-                        <div class="kpi-value" id="kpiSales30d">—</div>
-                        <div><span class="kpi-trend-sub">últimos 30 dias</span></div>
-                    </div>
-
-                    <div class="kpi-card">
-                        <div class="kpi-card-head">
-                            <span class="kpi-label">Acessos ativos</span>
-                            <div class="kpi-icon users">
-                                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857"/><circle cx="12" cy="7" r="4"/></svg>
-                            </div>
-                        </div>
-                        <div class="kpi-value" id="kpiActiveAccess">—</div>
-                        <div><span class="kpi-trend-sub">acessos liberados</span></div>
-                    </div>
-                </div>
-
-                <div class="form-card" style="margin-top:18px; padding:20px;">
-                    <div class="form-card-head" style="margin-bottom:12px;">
-                        <div class="form-card-title">📊 Funil do dia (horário de Brasília)</div>
-                        <div class="form-card-sub">Acessos → e-mails novos → usando o app instalado → vendas → faturamento. Toque num card do período pra trocar o gráfico.</div>
-                    </div>
-<!-- período -->
-                <div style="display:flex; gap:8px; margin:4px 0 16px; flex-wrap:wrap;">
-                    <button class="btn-secondary rs-period on" data-days="7" onclick="rsSetPeriod(7, this)">7 dias</button>
-                    <button class="btn-secondary rs-period" data-days="14" onclick="rsSetPeriod(14, this)">14 dias</button>
-                    <button class="btn-secondary rs-period" data-days="30" onclick="rsSetPeriod(30, this)">30 dias</button>
-                </div>
                 <style>
-                .rs-period.on { background:rgba(229,9,20,.18); border-color:rgba(229,9,20,.55); color:#fff; }
-                .rs-kpi { cursor:pointer; transition:border-color .15s; }
-                .rs-kpi.on { border-color:rgba(229,9,20,.6); box-shadow:0 0 0 1px rgba(229,9,20,.35); }
-                .rs-bars { display:flex; align-items:flex-end; gap:6px; height:180px; padding:10px 4px 0; }
-                .rs-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0; }
-                .rs-bar { width:100%; max-width:34px; border-radius:6px 6px 2px 2px; background:linear-gradient(180deg,#ff3b30,#b00610); min-height:2px; position:relative; }
-                .rs-bar .v { position:absolute; top:-19px; left:50%; transform:translateX(-50%); font-size:10.5px; font-weight:700; color:rgba(255,255,255,.85); white-space:nowrap; }
-                .rs-bar-day { font-size:10px; color:rgba(255,255,255,.5); white-space:nowrap; }
+                .dv2-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; }
+                .dv2-card { background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:15px 16px; }
+                .dv2-card .lb { font-size:10.5px; font-weight:700; letter-spacing:.5px; color:rgba(255,255,255,.45); text-transform:uppercase; }
+                .dv2-card .v { font-size:24px; font-weight:800; color:#fff; margin-top:5px; }
+                .dv2-card .cmp { font-size:11px; margin-top:3px; color:rgba(255,255,255,.4); }
+                .dv2-up { color:#4ade80 !important; } .dv2-down { color:#f87171 !important; }
+                .dv2-per { display:flex; gap:6px; flex-wrap:wrap; }
+                .dv2-per span { font-size:11px; font-weight:700; padding:4px 11px; border-radius:999px; background:rgba(255,255,255,.06); color:rgba(255,255,255,.5); cursor:pointer; }
+                .dv2-per span.on { background:#e50914; color:#fff; }
+                .dv2-bars { display:flex; gap:8px; align-items:flex-end; height:180px; margin-top:14px; }
+                .dv2-dia { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; min-width:0; }
+                .dv2-dia .bs { display:flex; gap:3px; align-items:flex-end; height:152px; width:100%; justify-content:center; }
+                .dv2-dia .b { width:22%; max-width:13px; border-radius:3px 3px 0 0; min-height:2px; }
+                .dv2-dia .dl { font-size:9.5px; color:rgba(255,255,255,.4); margin-top:6px; white-space:nowrap; }
+                .dv2-leg { display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; font-size:11px; color:rgba(255,255,255,.6); }
+                .dv2-leg i { width:9px; height:9px; border-radius:3px; display:inline-block; margin-right:5px; vertical-align:-1px; }
+                .dv2-taxas { display:flex; gap:10px; margin-top:14px; flex-wrap:wrap; }
+                .dv2-taxa { flex:1; min-width:120px; background:rgba(255,255,255,.03); border-radius:10px; padding:9px 10px; text-align:center; }
+                .dv2-taxa .p { font-size:17px; font-weight:800; color:#4ade80; }
+                .dv2-taxa .l { font-size:9.5px; color:rgba(255,255,255,.45); margin-top:2px; }
+                .dv2-2col { display:grid; grid-template-columns:1.4fr 1fr; gap:16px; }
+                @media (max-width:1000px){ .dv2-2col { grid-template-columns:1fr; } }
+                .dv2-pzitem { display:flex; align-items:center; gap:9px; font-size:12.5px; margin-bottom:8px; }
+                .dv2-pzitem i { width:11px; height:11px; border-radius:3px; flex-shrink:0; }
+                .dv2-pzitem .n { flex:1; color:rgba(255,255,255,.8); }
+                .dv2-pzitem b { color:#fff; }
+                .dv2-pzitem .rs { color:#4ade80; font-weight:700; font-size:11.5px; }
+                .dv2-pill { display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.04); border-radius:10px; padding:9px 13px; font-size:12.5px; color:rgba(255,255,255,.75); margin-bottom:7px; }
+                .dv2-pill b { color:#fff; }
+                .dv2-tbl { width:100%; border-collapse:collapse; }
+                .dv2-tbl th { font-size:10px; text-transform:uppercase; letter-spacing:.5px; color:rgba(255,255,255,.4); text-align:left; padding:6px 8px; border-bottom:1px solid rgba(255,255,255,.08); }
+                .dv2-tbl td { font-size:12.5px; padding:8px; border-bottom:1px solid rgba(255,255,255,.05); color:rgba(255,255,255,.85); }
+                .dv2-tbl .r { text-align:right; }
+                .dv2-hh { display:flex; gap:3px; align-items:flex-end; height:90px; margin-top:10px; }
+                .dv2-hh .hc { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
+                .dv2-hh .hb { width:100%; max-width:16px; border-radius:2px 2px 0 0; background:linear-gradient(180deg,#f5c542,#b8860b); min-height:1px; }
+                .dv2-hh .hl { font-size:8.5px; color:rgba(255,255,255,.35); margin-top:4px; }
+                .dv2-online { display:inline-block; width:8px; height:8px; border-radius:50%; background:#4ade80; margin-right:6px; animation:dv2pl 1.6s infinite; }
+                @keyframes dv2pl { 0%,100%{ box-shadow:0 0 0 0 rgba(74,222,128,.5);} 50%{ box-shadow:0 0 0 6px rgba(74,222,128,0);} }
                 </style>
 
-                <!-- resumo HOJE -->
-                <div style="font-size:12px; font-weight:700; letter-spacing:.6px; color:rgba(255,255,255,.55); margin-bottom:8px;">HOJE</div>
-                <div class="kpi-grid" id="rsToday" style="margin-bottom:18px;"></div>
-
-                <!-- gráfico diário (clica num card do período pra trocar a métrica) -->
-                <div style="font-size:12px; font-weight:700; letter-spacing:.6px; color:rgba(255,255,255,.55); margin-bottom:8px;">SOMA DO PERÍODO <span style="font-weight:400; text-transform:none; letter-spacing:0;">(toque num card pra ver o gráfico dele)</span></div>
-                <div class="kpi-grid" id="rsTotals" style="margin-bottom:18px;"></div>
-                <div style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:16px;">
-                    <div id="rsChartTitle" style="font-size:13px; font-weight:700; color:#fff; margin-bottom:6px;">Acessos por dia</div>
-                    <div class="rs-bars" id="rsChart"></div>
+                <!-- ═══ HOJE (sempre fixo, compara com ontem no mesmo horário) ═══ -->
+                <div class="form-card" style="margin-top:16px; padding:18px;">
+                    <div class="form-card-title" style="margin-bottom:12px;">📌 Hoje <span style="font-size:10.5px; font-weight:600; color:rgba(255,255,255,.4);">vs ontem no mesmo horário</span></div>
+                    <div class="dv2-cards" id="dv2Today"><div class="dv2-card"><div class="lb">Carregando…</div></div></div>
                 </div>
 
-                <!-- produtos mais vendidos -->
-                <div style="font-size:12px; font-weight:700; letter-spacing:.6px; color:rgba(255,255,255,.55); margin:20px 0 8px;">PRODUTOS MAIS VENDIDOS NO PERÍODO</div>
-                <div style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); border-radius:14px; padding:6px 16px;" id="rsTopProducts"></div>
+                <!-- ═══ FUNIL DIÁRIO ═══ -->
+                <div class="form-card" style="margin-top:16px; padding:18px;">
+                    <div class="form-card-head" style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:4px;">
+                        <div class="form-card-title">📉 Funil diário</div>
+                        <div class="dv2-per" id="dv2Periods">
+                            <span data-p="today">hoje</span><span data-p="yesterday">ontem</span><span data-p="7" class="on">7 dias</span><span data-p="month">este mês</span>
+                        </div>
+                    </div>
+                    <div class="form-card-sub">Pessoas ÚNICAS por etapa (não conta recarregamento de página). O período vale pra tela toda.</div>
+                    <div class="dv2-bars" id="dv2Funnel"></div>
+                    <div class="dv2-leg">
+                        <span><i style="background:#3b82f6"></i>Visitantes únicos</span>
+                        <span><i style="background:#a78bfa"></i>Conversaram</span>
+                        <span><i style="background:#fbbf24"></i>Deram o e-mail</span>
+                        <span><i style="background:#4ade80"></i>Compraram</span>
+                    </div>
+                    <div class="dv2-taxas" id="dv2Rates"></div>
                 </div>
 
-                <!-- ═══════════════ ANÁLISE DE LUCRO (Fase L4) ═══════════════
-                     Seletor de período + KPI Lucro + Ranking Top Produtos + Alerta de Vendas Órfãs.
-                     Considera APENAS vendas com net_amount (vendas pós Fase L1, 24/05/2026).
-                -->
-                <div class="form-card" style="margin-top:18px; padding:20px;">
-                    <div class="form-card-head" style="margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
-                        <div>
-                            <div class="form-card-title">💰 Análise de Lucro</div>
-                            <div class="form-card-sub">Valor líquido (já abatido taxa Kirvano + impostos). Vendas antigas (pré 24/05/2026) ficam de fora.</div>
+                <!-- ═══ PIZZA + DINHEIRO ═══ -->
+                <div class="dv2-2col" style="margin-top:16px;">
+                    <div class="form-card" style="padding:18px;">
+                        <div class="form-card-title" style="margin-bottom:10px;">🥧 Vendas por área do app</div>
+                        <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
+                            <svg id="dv2Pie" width="150" height="150" viewBox="0 0 42 42" style="flex-shrink:0;"></svg>
+                            <div style="flex:1; min-width:200px;" id="dv2PieLeg"></div>
                         </div>
-                        <div id="salesPeriodTabs" style="display:flex; gap:6px; flex-wrap:wrap;">
-                            <button type="button" class="sap-tab active" data-period="today">Hoje</button>
-                            <button type="button" class="sap-tab" data-period="yesterday">Ontem</button>
-                            <button type="button" class="sap-tab" data-period="7d">7 dias</button>
-                            <button type="button" class="sap-tab" data-period="30d">30 dias</button>
-                            <button type="button" class="sap-tab" data-period="custom">Personalizado</button>
+                        <div style="margin-top:14px; border-top:1px solid rgba(255,255,255,.07); padding-top:12px;">
+                            <div style="font-size:12px; font-weight:700; color:#f5c542; margin-bottom:8px;">👑 Top vendedoras (modelo/grupo)</div>
+                            <div id="dv2TopSellers" style="font-size:12.5px;"></div>
                         </div>
                     </div>
-
-                    <!-- Date range custom -->
-                    <div id="salesCustomRange" style="display:none; gap:10px; margin:8px 0 14px; align-items:end; flex-wrap:wrap;">
-                        <div>
-                            <label style="display:block; font-size:11px; color:rgba(255,255,255,.55); margin-bottom:3px;">De</label>
-                            <input type="date" id="sapFrom" class="form-control" style="height:34px; padding:4px 8px;"/>
-                        </div>
-                        <div>
-                            <label style="display:block; font-size:11px; color:rgba(255,255,255,.55); margin-bottom:3px;">Até</label>
-                            <input type="date" id="sapTo" class="form-control" style="height:34px; padding:4px 8px;"/>
-                        </div>
-                        <button type="button" class="btn-primary" style="height:34px;" onclick="loadSalesAnalytics()">Aplicar</button>
+                    <div class="form-card" style="padding:18px;">
+                        <div class="form-card-title" style="margin-bottom:10px;">💰 Dinheiro</div>
+                        <div class="dv2-cards" style="grid-template-columns:1fr 1fr; margin-bottom:10px;" id="dv2Money"></div>
+                        <table class="dv2-tbl"><thead><tr><th>Top produtos</th><th class="r">Vendas</th><th class="r">Líquido</th></tr></thead><tbody id="dv2TopProducts"></tbody></table>
+                        <div id="dv2Orphans" style="font-size:11.5px; color:#ffaa00; margin-top:8px; display:none;"></div>
                     </div>
+                </div>
 
-                    <!-- KPIs: vendas + lucro + comparativo -->
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-top:6px;">
-                        <div class="form-card" style="padding:14px 16px; background:rgba(0,217,107,.06); border-color:rgba(0,217,107,.18);">
-                            <div style="font-size:11px; color:rgba(255,255,255,.6); text-transform:uppercase; letter-spacing:.05em;">Vendas no período</div>
-                            <div id="sapKpiSales" style="font-size:28px; font-weight:800; color:#fff; margin-top:4px;">—</div>
-                            <div id="sapKpiSalesCmp" style="font-size:11px; color:rgba(255,255,255,.55); margin-top:2px;">—</div>
-                        </div>
-                        <div class="form-card" style="padding:14px 16px; background:rgba(0,217,107,.06); border-color:rgba(0,217,107,.18);">
-                            <div style="font-size:11px; color:rgba(255,255,255,.6); text-transform:uppercase; letter-spacing:.05em;">Lucro líquido</div>
-                            <div id="sapKpiNet" style="font-size:28px; font-weight:800; color:#00dc8a; margin-top:4px;">—</div>
-                            <div id="sapKpiNetCmp" style="font-size:11px; color:rgba(255,255,255,.55); margin-top:2px;">—</div>
-                        </div>
-                        <div class="form-card" style="padding:14px 16px;">
-                            <div style="font-size:11px; color:rgba(255,255,255,.6); text-transform:uppercase; letter-spacing:.05em;">Ticket médio</div>
-                            <div id="sapKpiAvg" style="font-size:28px; font-weight:800; color:#fff; margin-top:4px;">—</div>
-                            <div id="sapKpiAvgSub" style="font-size:11px; color:rgba(255,255,255,.55); margin-top:2px;">lucro / venda</div>
-                        </div>
+                <!-- ═══ HORÁRIOS + INSTALAÇÃO + ENGAJAMENTO/RECOMPRA ═══ -->
+                <div class="dv2-2col" style="margin-top:16px;">
+                    <div class="form-card" style="padding:18px;">
+                        <div class="form-card-title">🕐 Vendas por hora <span style="font-size:10.5px; font-weight:600; color:rgba(255,255,255,.4);">últimos 7 dias — calibra push/lives</span></div>
+                        <div class="dv2-hh" id="dv2Hours"></div>
                     </div>
-
-                    <!-- Alerta vendas órfãs -->
-                    <div id="sapOrphansBox" style="display:none; margin-top:14px; padding:12px 14px; background:rgba(255,170,0,.08); border:1px solid rgba(255,170,0,.3); border-radius:10px;">
-                        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-                            <div>
-                                <div style="font-weight:700; color:#ffaa00; font-size:13px;">⚠ Vendas órfãs detectadas</div>
-                                <div id="sapOrphansSummary" style="font-size:12px; color:rgba(255,255,255,.7); margin-top:2px;">—</div>
-                            </div>
-                            <button type="button" class="btn-secondary" style="height:30px; padding:0 12px; font-size:12px;" onclick="toggleOrphansList()">Ver detalhes</button>
-                        </div>
-                        <div id="sapOrphansList" style="display:none; margin-top:10px;"></div>
+                    <div class="form-card" style="padding:18px;">
+                        <div class="form-card-title" style="margin-bottom:10px;">📲 Instalação do app <span style="font-size:10.5px; font-weight:600; color:rgba(255,255,255,.4);">números reais</span></div>
+                        <div class="dv2-cards" style="grid-template-columns:1fr 1fr;" id="dv2Installs"></div>
+                        <div style="font-size:10.5px; color:rgba(255,255,255,.4); margin-top:8px;">"Instalou" = abriu o app pelo ícone da tela inicial (detecção certeira, iPhone incluído).</div>
                     </div>
-
-                    <!-- Ranking de top produtos -->
-                    <div style="margin-top:18px;">
-                        <div style="font-size:13px; font-weight:700; color:#fff; margin-bottom:8px;">🏆 Top produtos no período</div>
-                        <div id="sapRankingWrap" style="overflow-x:auto;">
-                            <div style="color:var(--text-muted); font-size:12px; padding:14px 0;">—</div>
-                        </div>
+                </div>
+                <div class="dv2-2col" style="margin-top:16px;">
+                    <div class="form-card" style="padding:18px;">
+                        <div class="form-card-title" style="margin-bottom:10px;">⏱ Engajamento</div>
+                        <div id="dv2Engage"></div>
+                    </div>
+                    <div class="form-card" style="padding:18px;">
+                        <div class="form-card-title" style="margin-bottom:10px;">🔁 Recompra</div>
+                        <div id="dv2Repurchase"></div>
                     </div>
                 </div>
 
@@ -3551,6 +3507,15 @@ a { color: inherit; text-decoration: none; }
                     </div>
                 </div>
 
+            </div>
+
+            <div class="screen-content" id="screen-acquisition">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">📈 Aquisição &amp; Cohorts</h1>
+                        <p class="page-subtitle">Análises profundas (frontends, LTV por cohort, recompra detalhada, funil do PWA, engajamento por lead). A decisão diária de tráfego mora na Visão Geral.</p>
+                    </div>
+                </div>
                 <!-- ═══════════════ AQUISIÇÃO — PERFORMANCE FRONTENDS (Fase L13.2) ═══════════════
                      Mostra SO as vendas de tráfego pago (ofertas marcadas como aquisição).
                      Quebrado por offer_id pra ver take rate dos bumps.
@@ -3780,56 +3745,6 @@ a { color: inherit; text-decoration: none; }
                 .sap-orphan-row { padding:8px 10px; background:rgba(0,0,0,.2); border-radius:6px; margin-bottom:6px; font-size:12px; display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; }
                 </style>
 
-                <!-- 2 colunas: gráfico + atividade recente -->
-                <div style="display:grid;grid-template-columns:1fr 380px;gap:18px;margin-top:18px;">
-
-                    <!-- Gráfico de vendas -->
-                    <div class="form-card" style="padding:20px;">
-                        <div class="form-card-head" style="margin-bottom:16px;">
-                            <div class="form-card-title">Vendas dos últimos 30 dias</div>
-                            <div class="form-card-sub" id="chartSubtitle">—</div>
-                        </div>
-                        <div id="salesChart" style="height:240px;display:flex;align-items:flex-end;gap:3px;padding:10px 0;border-bottom:1px solid var(--border-subtle);position:relative;">
-                            <div style="color:var(--text-muted);font-size:13px;margin:auto;">Carregando...</div>
-                        </div>
-                        <div id="salesChartLabels" style="display:flex;justify-content:space-between;padding:8px 0 0;font-size:10px;color:var(--text-muted);"></div>
-                    </div>
-
-                    <!-- Atividade recente -->
-                    <div class="form-card" style="padding:20px;">
-                        <div class="form-card-head" style="margin-bottom:14px;">
-                            <div class="form-card-title">Atividade recente</div>
-                            <div class="form-card-sub">Últimos 5 webhooks</div>
-                        </div>
-                        <div id="recentActivity">
-                            <div style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px;">Carregando...</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Status dos gateways -->
-                <div class="form-card" style="margin-top:18px;padding:20px;">
-                    <div class="form-card-head" style="margin-bottom:16px;">
-                        <div class="form-card-title">Status dos gateways</div>
-                        <div class="form-card-sub">Configure em "Gateways" pra começar a receber vendas</div>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-                        <div id="kirvanoStatus" style="padding:14px;background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;display:flex;justify-content:space-between;align-items:center;">
-                            <div>
-                                <div style="font-weight:600;font-size:13px;color:var(--text);">Kirvano</div>
-                                <div style="font-size:11px;color:var(--text-muted);" id="kirvanoStatusText">verificando...</div>
-                            </div>
-                            <span id="kirvanoStatusBadge" class="badge">—</span>
-                        </div>
-                        <div id="perfectpayStatus" style="padding:14px;background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;display:flex;justify-content:space-between;align-items:center;">
-                            <div>
-                                <div style="font-weight:600;font-size:13px;color:var(--text);">PerfectPay</div>
-                                <div style="font-size:11px;color:var(--text-muted);" id="perfectpayStatusText">verificando...</div>
-                            </div>
-                            <span id="perfectpayStatusBadge" class="badge">—</span>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <div class="screen-content" id="screen-chat-ranking">
@@ -9946,48 +9861,151 @@ async function deleteCategory(id, name) {
 // ============================================================================
 // DASHBOARD V2
 // ============================================================================
+// ═══════════════ DASHBOARD NOVO (ago/2026) ═══════════════
+// Uma fonte só (/api/admin/dashboard-v2): vendas SEMPRE deduplicadas por
+// venda real, visitantes = PESSOAS únicas (o COUNT(*) antigo dava 20 mil/dia).
+let _dv2Period = '7';
+const _dv2R$ = v => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+function dv2SetPeriod(p, el) {
+    _dv2Period = p;
+    document.querySelectorAll('#dv2Periods span').forEach(s => s.classList.toggle('on', s === el));
+    loadDashboardV2();
+}
+async function loadDashboardV2() {
+    const { ok, data } = await API.call('/api/admin/dashboard-v2?period=' + _dv2Period);
+    if (!ok || !data.success) return;
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    const cmp = (agora, antes, moeda) => {
+        if (!antes && !agora) return '<span class="cmp">sem dado ontem</span>';
+        const d = agora - antes;
+        const cls = d > 0 ? 'dv2-up' : d < 0 ? 'dv2-down' : '';
+        const seta = d > 0 ? '▲' : d < 0 ? '▼' : '·';
+        const val = moeda ? _dv2R$(Math.abs(d)) : Math.abs(d);
+        return `<span class="cmp ${cls}">${seta} ${d >= 0 ? '+' : '−'}${val} vs ontem</span>`;
+    };
+    // HOJE
+    const t = data.today || {};
+    document.getElementById('dv2Today').innerHTML =
+        `<div class="dv2-card"><div class="lb">Faturamento</div><div class="v">${_dv2R$(t.revenue)}</div>${cmp(t.revenue, t.revenue_prev, true)}</div>`
+        + `<div class="dv2-card"><div class="lb">Vendas</div><div class="v">${t.sales}</div>${cmp(t.sales, t.sales_prev)}</div>`
+        + `<div class="dv2-card"><div class="lb">Visitantes únicos</div><div class="v">${t.visitors}</div>${cmp(t.visitors, t.visitors_prev)}</div>`
+        + `<div class="dv2-card"><div class="lb">Carrinhos abandonados</div><div class="v">${t.carts}</div><div class="cmp">${t.carts_recovered} recuperados pelo suporte</div></div>`
+        + `<div class="dv2-card"><div class="lb">Online agora</div><div class="v"><span class="dv2-online"></span>${t.online_now}</div><div class="cmp">últimos 5 min</div></div>`;
+    // FUNIL DIÁRIO
+    const dias = data.funnel_days || [];
+    // escala pelo MAIOR valor de qualquer série (compras > visitantes em dia
+    // de teste estourava a barra pra fora do gráfico)
+    const max = Math.max(1, ...dias.map(d => Math.max(d.visitors, d.chatted, d.emails, d.purchases)));
+    const DSEM = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    document.getElementById('dv2Funnel').innerHTML = dias.map(d => {
+        const h = v => Math.min(100, Math.max(2, Math.round(v / max * 100))) + '%';
+        const dt = new Date(d.day + 'T12:00:00');
+        const lbl = dias.length <= 7 ? DSEM[dt.getDay()] + ' ' + dt.getDate() : String(dt.getDate());
+        return `<div class="dv2-dia" title="${d.day}: ${d.visitors} visit · ${d.chatted} conv · ${d.emails} email · ${d.purchases} compras (${_dv2R$(d.revenue)})">`
+            + `<div class="bs"><div class="b" style="height:${h(d.visitors)};background:#3b82f6"></div>`
+            + `<div class="b" style="height:${h(d.chatted)};background:#a78bfa"></div>`
+            + `<div class="b" style="height:${h(d.emails)};background:#fbbf24"></div>`
+            + `<div class="b" style="height:${h(d.purchases)};background:#4ade80"></div></div>`
+            + `<div class="dl">${lbl}</div></div>`;
+    }).join('');
+    const sum = k => dias.reduce((s, d) => s + (d[k] || 0), 0);
+    const pct = (a, b) => b > 0 ? (a / b * 100).toFixed(a / b * 100 < 10 ? 1 : 0) + '%' : '—';
+    const sv = sum('visitors'), sc = sum('chatted'), se = sum('emails'), sp = sum('purchases');
+    document.getElementById('dv2Rates').innerHTML =
+        `<div class="dv2-taxa"><div class="p">${pct(sc, sv)}</div><div class="l">visitou → conversou</div></div>`
+        + `<div class="dv2-taxa"><div class="p">${pct(se, sc)}</div><div class="l">conversou → e-mail</div></div>`
+        + `<div class="dv2-taxa"><div class="p">${pct(sp, se)}</div><div class="l">e-mail → comprou</div></div>`
+        + `<div class="dv2-taxa"><div class="p">${pct(sp, sv)}</div><div class="l">visitou → comprou</div></div>`;
+    // PIZZA
+    const AREAS = {
+        chat: ['Conversas (chat)', '#25D366'], grupos: ['Grupos + Passe', '#f5c542'],
+        catalogo: ['Catálogo (produtos)', '#e50914'], chamadas: ['Chamadas de vídeo', '#a78bfa'],
+        upgrades: ['Upgrades (Premium)', '#3b82f6'], anuncio: ['Anúncio direto', '#fb923c'],
+        outros: ['Outros / sem carimbo', '#6b7280'],
+    };
+    const pie = (data.pie || []).filter(p => p.n > 0);
+    const totalPie = pie.reduce((s, p) => s + p.n, 0);
+    let off = 25, circ = '';
+    pie.forEach(p => {
+        const [nome, cor] = AREAS[p.area] || [p.area, '#6b7280'];
+        const frac = totalPie ? p.n / totalPie * 100 : 0;
+        circ += `<circle cx="21" cy="21" r="15.9" fill="none" stroke="${cor}" stroke-width="7" stroke-dasharray="${frac} ${100 - frac}" stroke-dashoffset="${off}"></circle>`;
+        off -= frac;
+    });
+    document.getElementById('dv2Pie').innerHTML = circ
+        + `<text x="21" y="20" text-anchor="middle" font-size="6.5" font-weight="800" fill="#fff">${totalPie}</text>`
+        + `<text x="21" y="26" text-anchor="middle" font-size="3" fill="rgba(255,255,255,.5)">vendas</text>`;
+    document.getElementById('dv2PieLeg').innerHTML = pie.map(p => {
+        const [nome, cor] = AREAS[p.area] || [p.area, '#6b7280'];
+        return `<div class="dv2-pzitem"><i style="background:${cor}"></i><span class="n">${nome}</span><b>${p.n}</b>&nbsp;<span class="rs">${_dv2R$(p.gross)}</span></div>`;
+    }).join('') || '<div style="font-size:12px;color:rgba(255,255,255,.4);">Nenhuma venda no período.</div>';
+    // TOP VENDEDORAS
+    document.getElementById('dv2TopSellers').innerHTML = (data.top_sellers || []).map(s =>
+        `<div class="dv2-pzitem"><i style="background:${s.kind === 'chat' ? '#25D366' : '#f5c542'}"></i><span class="n">${esc(s.label)} <span style="color:rgba(255,255,255,.35);font-size:10.5px;">${s.kind}</span></span><b>${s.n}</b>&nbsp;<span class="rs">${_dv2R$(s.gross)}</span></div>`
+    ).join('') || '<div style="font-size:12px;color:rgba(255,255,255,.4);">Sem vendas carimbadas no período.</div>';
+    // DINHEIRO
+    const m = data.money || {};
+    document.getElementById('dv2Money').innerHTML =
+        `<div class="dv2-card" style="padding:11px 13px;"><div class="lb">Líquido</div><div class="v" style="font-size:19px;">${_dv2R$(m.net)}</div></div>`
+        + `<div class="dv2-card" style="padding:11px 13px;"><div class="lb">Ticket médio</div><div class="v" style="font-size:19px;">${_dv2R$(m.ticket)}</div></div>`;
+    document.getElementById('dv2TopProducts').innerHTML = (m.top || []).map(p =>
+        `<tr><td>${esc(p.name || 'Produto removido')}</td><td class="r">${p.vendas}</td><td class="r">${_dv2R$(p.net)}</td></tr>`
+    ).join('') || '<tr><td colspan="3" style="color:rgba(255,255,255,.4);">Nenhuma venda no período.</td></tr>';
+    const orf = document.getElementById('dv2Orphans');
+    if (m.orphans > 0) { orf.style.display = 'block'; orf.innerHTML = `⚠️ ${m.orphans} venda(s) órfã(s) esperando cadastro de oferta — resolva na tela Webhooks`; }
+    else orf.style.display = 'none';
+    // HORAS
+    const horas = new Array(24).fill(0);
+    (data.sales_by_hour || []).forEach(h => { horas[h.h] = h.n; });
+    const hmax = Math.max(1, ...horas);
+    document.getElementById('dv2Hours').innerHTML = horas.map((n, h) =>
+        `<div class="hc" title="${h}h: ${n} venda(s)"><div class="hb" style="height:${Math.max(2, Math.round(n / hmax * 100))}%"></div>${h % 3 === 0 ? `<div class="hl">${h}h</div>` : '<div class="hl">&nbsp;</div>'}</div>`
+    ).join('');
+    // INSTALAÇÃO
+    const ins = data.installs || {};
+    const insRate = ins.clicks > 0 ? Math.round((ins.installed || 0) / ins.clicks * 100) + '% converteu' : '';
+    document.getElementById('dv2Installs').innerHTML =
+        `<div class="dv2-card" style="padding:11px 13px;"><div class="lb">Instalaram (abriram pelo ícone)</div><div class="v" style="font-size:19px;">${ins.installed || 0}</div></div>`
+        + `<div class="dv2-card" style="padding:11px 13px;"><div class="lb">Tocaram em instalar</div><div class="v" style="font-size:19px;">${ins.clicks || 0}</div><div class="cmp">${insRate}</div></div>`;
+    // ENGAJAMENTO
+    const e = data.engagement || {};
+    document.getElementById('dv2Engage').innerHTML =
+        `<div class="dv2-pill">Tempo médio no app: <b>&nbsp;${e.avg_minutes || 0} min/dia</b></div>`
+        + `<div class="dv2-pill">Pessoas com uso medido no período: <b>&nbsp;${e.people || 0}</b></div>`
+        + `<div class="dv2-pill">Compradores sumidos há 7d+: <b>&nbsp;${e.gone_buyers || 0}</b>&nbsp;<span style="font-size:11px;color:rgba(255,255,255,.4);">(lista na aba Aquisição)</span></div>`;
+    // RECOMPRA
+    const r = data.repurchase || {};
+    const rpct = r.buyers > 0 ? Math.round(r.repeat / r.buyers * 100) : 0;
+    document.getElementById('dv2Repurchase').innerHTML =
+        `<div class="dv2-pill">Compraram DE NOVO no período: <b>&nbsp;${r.repeat} cliente(s) (${rpct}%)</b></div>`
+        + `<div class="dv2-pill">Clientes com 2+ produtos diferentes: <b>&nbsp;${r.multi_product}</b></div>`
+        + `<div class="dv2-pill">R$ vindo de quem já era cliente: <b>&nbsp;${_dv2R$(r.repeat_gross)}</b></div>`;
+}
+document.addEventListener('click', e => {
+    const p = e.target.closest && e.target.closest('#dv2Periods span');
+    if (p) dv2SetPeriod(p.dataset.p, p);
+});
+
 async function loadDashboard() {
-    try { loadResults(); } catch (_) {} // funil do dia (mesma tela)
-    const { ok, data } = await API.call('/api/admin/dashboard');
-    if (!ok || !data.success) {
-        const sub = document.getElementById('dashboardSubtitle');
-        if (sub) sub.textContent = 'Erro ao carregar dados';
-        return;
-    }
-    
-    const stats = data.stats || {};
-    
-    // KPIs
-    setText('kpiSales24h', stats.sales_24h || 0);
-    setText('kpiSales7d', stats.sales_7d || 0);
-    setText('kpiSales30d', stats.sales_30d || 0);
-    setText('kpiActiveAccess', stats.active_access || 0);
-    setText('kpiSalesSub', `${stats.webhooks_24h || 0} webhooks recebidos hoje`);
-    
+    loadDashboardV2();
+    // Saúde do negócio (bloco mantido) — janelas fixas 24h/30d/90d
+    try {
+        const healthRes = await API.call('/api/admin/sales-analytics/health-metrics').catch(() => ({ ok: false }));
+        if (healthRes.ok && healthRes.data?.success) _renderHealthMetrics(healthRes.data);
+    } catch (_) {}
     const sub = document.getElementById('dashboardSubtitle');
-    if (sub) {
-        const totals = `${stats.products || 0} produtos · ${stats.customers || 0} clientes`;
-        sub.textContent = totals;
-    }
-    
-    // Render gráfico
-    renderSalesChart(data.sales_by_day || []);
+    if (sub) sub.textContent = 'Números por PESSOA e por VENDA real (sem inflar por recarregamento/reenvio)';
+    // Alerta produtos publicados sem conteúdo
+    try { loadNoContentAlert(); } catch (_) {}
+}
 
-    // Atividade recente
-    renderRecentActivity(data.recent_activity || []);
-
-    // Status dos gateways
-    updateGatewayStatusCards(stats);
-
-    // Fase L4: Análise de Lucro (KPI + ranking + órfãs)
-    initSalesAnalytics();
-    loadSalesAnalytics();
-
-    // Fase L5: Engajamento
-    loadEngagement();
-
-    // Fase L9: Alerta produtos publicados sem conteudo
-    loadNoContentAlert();
+// Aba Aquisição: os blocos profundos que saíram da Visão Geral
+function loadAcquisitionScreen() {
+    try { loadPwaFunnel(); } catch (_) {}
+    try { loadAcquisitionPerformance(); } catch (_) {}
+    try { loadLtvByCohort(); } catch (_) {}
+    try { loadRepurchaseRate(); } catch (_) {}
+    try { loadEngagement(); } catch (_) {}
 }
 
 function setText(id, val) {
