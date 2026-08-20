@@ -218,6 +218,7 @@ app.use('/webhook', require('./routes/webhooks'));
 // API routes (com rate limit)
 app.use('/api', apiLimiter);
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/admin', require('./routes/admin-dashboard'));
 app.use('/api/admin/products', require('./routes/admin-products'));
 app.use('/api/admin', require('./routes/admin-access'));
 // Armazenamento genérico de configs (gamification_config): app_config, login_config,

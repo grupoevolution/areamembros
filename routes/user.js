@@ -404,6 +404,19 @@ router.get('/me', requireUser, async (req, res) => {
 
 router.post('/heartbeat', requireUser, async (req, res) => {
     const email = req.user.email;
+    // TEMPO NO APP (dashboard): cada batida de 60s soma +1 minuto no dia da
+    // pessoa — identidade = e-mail (ou o anônimo do funil, que também conta
+    // como "gente usando o app"). Mesmo padrão leve do contador das lives.
+    try {
+        const identity = req.user.anonymous
+            ? ('v:' + String(req.body?.visitor_id || req.user.email).replace(/[^a-zA-Z0-9_:@.-]/g, '').slice(0, 80))
+            : email;
+        await db.query(`
+            INSERT INTO usage_minutes (identity, day_key, minutes)
+            VALUES ($1, (NOW() AT TIME ZONE 'America/Sao_Paulo')::date, 1)
+            ON CONFLICT (identity, day_key) DO UPDATE SET minutes = usage_minutes.minutes + 1
+        `, [identity]);
+    } catch (_) { /* tabela pode não existir no 1º boot — inofensivo */ }
     if (req.user.anonymous) return res.json({ success: true, ignored: 'anonymous' });
     try {
         await db.query(`
