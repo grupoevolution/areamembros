@@ -232,6 +232,8 @@ app.use('/api/admin/tracking', require('./routes/admin-tracking'));
 app.use('/api/admin/push', require('./routes/admin-push'));
 app.use('/api/admin/calls', require('./routes/admin-calls'));
 app.use('/api/admin/funnels', require('./routes/admin-funnels'));
+app.use('/api/admin/quiz', require('./routes/admin-quiz'));
+app.use('/api/quiz', require('./routes/quiz'));
 app.use('/api/admin/recall-messages', require('./routes/admin-recall'));
 app.use('/api/admin/preview-emails', require('./routes/admin-preview'));
 app.use('/api/admin/gifts', require('./routes/admin-gifts'));
@@ -459,6 +461,51 @@ app.get('/p/:slug', async (req, res) => {
     } catch (e) {
         return res.redirect(302, '/f/' + slug + qs);
     }
+});
+
+// QUIZ DE ENTRADA — /q/:slug (pressel elaborada em formato de quiz).
+// Página estática ultraleve: perguntas visuais montadas no painel, resultado
+// com a {cidade} do lead (geo por IP), e o CTA final cai no link de funil
+// existente (/f/slug). Igual à pressel: nada acontece sozinho — o crawler do
+// Meta vê a pergunta 1 discreta (sem foto) parada.
+app.get('/q/:slug', async (req, res) => {
+    const slug = String(req.params.slug || '').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 80);
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    try {
+        const db = require('./db');
+        const { rows } = await db.query(
+            `SELECT slug, config FROM quizzes WHERE slug = $1 AND active = true LIMIT 1`, [slug]
+        );
+        if (!rows.length) return res.redirect(302, '/');
+        // cidade por IP (mesmo motor da {cidade} dos grupos/chat)
+        const ip = (String(req.headers['x-forwarded-for'] || '').split(',')[0].trim())
+            || req.headers['x-real-ip'] || req.ip || '';
+        let city = null;
+        try { city = require('./lib/geo').resolveCity(ip); } catch (_) {}
+        // métrica: visita do quiz (não bloqueia a resposta)
+        db.query(
+            `INSERT INTO tracking_events (event_type, metadata) VALUES ('quiz_view', $1::jsonb)`,
+            [JSON.stringify({ quiz: slug, ip: (ip || '').slice(0, 45) || null })]
+        ).catch(() => {});
+        let metaPixel = null;
+        try { metaPixel = await require('./lib/meta-pixel').publicMetaConfig(); } catch (_) {}
+        const data = { slug, config: rows[0].config || {}, city, meta_pixel: metaPixel };
+        const fs = require('fs');
+        let html = fs.readFileSync(path.join(__dirname, 'public/quiz.html'), 'utf8');
+        html = html.replace('__QUIZ_DATA__', JSON.stringify(data).replace(/</g, '\\u003c'));
+        return res.send(html);
+    } catch (e) {
+        return res.redirect(302, '/');
+    }
+});
+
+// Páginas legais (exigência do Meta pra página de anúncio: política + termos).
+// Isentas da trava anti-desktop no device-check — são só texto institucional.
+app.get('/privacidade', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public/privacidade.html'));
+});
+app.get('/termos', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public/termos.html'));
 });
 
 // /app mantido como alias (compatibilidade com links antigos)

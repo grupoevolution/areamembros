@@ -3227,6 +3227,10 @@ a { color: inherit; text-decoration: none; }
                     <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/></svg>
                     Análise de Funis
                 </div>
+                <div class="nav-item" data-screen="quiz" onclick="switchAdminScreen(this, 'quiz', 'Quiz de Entrada'); loadQuizzes();">
+                    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Quiz de Entrada
+                </div>
             </div>
 
             <div class="nav-section">
@@ -5802,6 +5806,22 @@ a { color: inherit; text-decoration: none; }
                     </div>
                 </div>
                 <div id="funnelsList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:24px;">
+                    <div style="color:rgba(255,255,255,.5)">Carregando...</div>
+                </div>
+            </div>
+
+            <!-- ═══════ QUIZ DE ENTRADA ═══════ -->
+            <div class="screen-content" id="screen-quiz">
+                <div class="page-header">
+                    <div>
+                        <h1 class="page-title">Quiz de Entrada</h1>
+                        <p class="page-subtitle">Pressel em formato de quiz: perguntas visuais que filtram o lead e jogam ele no funil certo. O link do anúncio é <b>/q/nome-do-quiz</b>. A 1ª pergunta deve ser a mais discreta (sem foto) — é o que o robô do Meta vê.</p>
+                    </div>
+                    <div class="page-actions">
+                        <button class="btn-primary" onclick="openQuizEditor(null)">+ Novo Quiz</button>
+                    </div>
+                </div>
+                <div id="quizList" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:24px;">
                     <div style="color:rgba(255,255,255,.5)">Carregando...</div>
                 </div>
             </div>
@@ -18862,6 +18882,383 @@ async function importProductsJSON(ev) {
             return result;
         };
     }
+})();
+</script>
+
+<script>
+// ═══════════════════════ QUIZ DE ENTRADA (painel) ═══════════════════════
+// Editor completo: perguntas (discreta/fotos), opções com "leva pra", variáveis
+// ({perfil} etc.), resultados com {cidade} e destino (funil ou chamada grátis).
+(function () {
+    const QZ = { list: [], cur: null, curId: null, funnels: [], callProducts: [], helpersLoaded: false };
+    const ICONS = [
+        ['pin', 'Localização'], ['group', 'Grupos'], ['wifi', 'Online'], ['play', 'Play'],
+        ['video', 'Câmera'], ['chat', 'Balão de chat'], ['user', 'Pessoa'], ['heart', 'Coração'],
+        ['fire', 'Fogo'], ['star', 'Estrela'],
+    ];
+    const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const api = (url, opts) => fetch(url, Object.assign({ credentials: 'include' }, opts || {})).then(r => r.json());
+    const jpost = (url, method, body) => api(url, {
+        method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+
+    // ── LISTA ────────────────────────────────────────────────────────────
+    window.loadQuizzes = async function () {
+        const el = document.getElementById('quizList');
+        if (!el) return;
+        try {
+            const d = await api('/api/admin/quiz');
+            if (!d.success) { el.innerHTML = '<div style="color:#f55">' + esc(d.error || 'erro') + '</div>'; return; }
+            QZ.list = d.quizzes;
+            if (!d.quizzes.length) {
+                el.innerHTML = '<div style="grid-column:1/-1;padding:40px;text-align:center;color:rgba(255,255,255,.5)">Nenhum quiz criado ainda. Clique em <b>+ Novo Quiz</b> — ele já vem com um modelo pronto de 3 perguntas pra você editar.</div>';
+                return;
+            }
+            const origin = window.location.origin;
+            el.innerHTML = d.quizzes.map(q => {
+                const st = q.stats || { views: 0, completes: 0, ctas: 0 };
+                const status = q.active
+                    ? '<span style="background:rgba(76,217,100,.15);color:#4CD964;padding:3px 8px;border-radius:8px;font-size:11px;font-weight:600">Ativo</span>'
+                    : '<span style="background:rgba(255,59,48,.15);color:#FF3B30;padding:3px 8px;border-radius:8px;font-size:11px;font-weight:600">Desligado</span>';
+                const url = origin + '/q/' + q.slug;
+                const compl = st.views > 0 ? Math.round(st.completes / st.views * 100) : 0;
+                return '<div style="background:var(--card,#1a1a1a);border:1px solid var(--border,rgba(255,255,255,.08));border-radius:14px;padding:16px;">'
+                    + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;">'
+                    + '<div style="font-size:15px;font-weight:700;color:#fff;">' + esc(q.name) + '</div>' + status + '</div>'
+                    + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">'
+                    + '<code style="font-size:11.5px;color:rgba(255,255,255,.55);background:rgba(255,255,255,.05);padding:4px 8px;border-radius:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">' + esc(url) + '</code>'
+                    + '<button class="btn-secondary" style="padding:5px 10px;font-size:11px;flex-shrink:0;" onclick="navigator.clipboard.writeText(\'' + esc(url) + '\').then(()=>{this.textContent=\'Copiado!\';setTimeout(()=>this.textContent=\'Copiar\',1200)})">Copiar</button></div>'
+                    + '<div style="display:flex;gap:14px;font-size:12px;color:rgba(255,255,255,.6);margin-bottom:14px;">'
+                    + '<span><b style="color:#fff">' + st.views + '</b> visitas</span>'
+                    + '<span><b style="color:#fff">' + st.completes + '</b> completaram (' + compl + '%)</span>'
+                    + '<span><b style="color:#fff">' + st.ctas + '</b> cliques finais</span></div>'
+                    + '<div style="font-size:10px;color:rgba(255,255,255,.35);margin:-8px 0 10px;">últimos 30 dias</div>'
+                    + '<div style="display:flex;gap:8px;flex-wrap:wrap;">'
+                    + '<button class="btn-primary" style="padding:7px 14px;font-size:12px;" onclick="openQuizEditor(' + q.id + ')">Editar</button>'
+                    + '<a class="btn-secondary" style="padding:7px 14px;font-size:12px;text-decoration:none;" href="' + esc(url) + '" target="_blank">Ver quiz</a>'
+                    + '<button class="btn-secondary" style="padding:7px 14px;font-size:12px;" onclick="toggleQuiz(' + q.id + ')">' + (q.active ? 'Desligar' : 'Ligar') + '</button>'
+                    + '<button class="btn-secondary" style="padding:7px 14px;font-size:12px;color:#FF3B30;" onclick="deleteQuiz(' + q.id + ', \'' + esc(q.name).replace(/'/g, '') + '\')">Excluir</button>'
+                    + '</div></div>';
+            }).join('');
+        } catch (e) { el.innerHTML = '<div style="color:#f55">Erro de conexão</div>'; }
+    };
+
+    window.toggleQuiz = async function (id) {
+        const d = await jpost('/api/admin/quiz/' + id + '/toggle', 'POST', {});
+        if (!d.success) return alert(d.error || 'Erro');
+        loadQuizzes();
+    };
+    window.deleteQuiz = async function (id, name) {
+        if (!confirm('Excluir o quiz "' + name + '" de vez? O link /q/ dele para de funcionar na hora.')) return;
+        const d = await api('/api/admin/quiz/' + id, { method: 'DELETE' });
+        if (!d.success) return alert(d.error || 'Erro');
+        loadQuizzes();
+    };
+
+    // ── MODELO INICIAL (esqueleto aprovado: 3 perguntas + 2 resultados) ──
+    function starterConfig() {
+        return {
+            start: 'q1',
+            city_fallback: 'sua região',
+            analyzing: ['Buscando {perfil} perto de você', 'Verificando quem está online em {cidade}', 'Liberando seu acesso gratuito'],
+            questions: [
+                { id: 'q1', type: 'list', title: 'O que você está procurando?', sub: 'Responda 3 perguntas rápidas · leva 10 segundos', options: [
+                    { label: 'Conhecer mulheres perto de mim', icon: 'pin', image: '', next: 'q2', var_name: '', var_value: '' },
+                    { label: 'Entrar em grupos', icon: 'group', image: '', next: 'q2', var_name: '', var_value: '' },
+                    { label: 'Mulheres online agora', icon: 'wifi', image: '', next: 'q2', var_name: '', var_value: '' },
+                    { label: 'Chamada de vídeo', icon: 'video', image: '', next: 'q2', var_name: '', var_value: '' },
+                ] },
+                { id: 'q2', type: 'photos', title: 'Qual perfil você prefere?', sub: 'Toque na sua preferida', options: [
+                    { label: 'Novinhas (18-24)', icon: 'user', image: '', next: 'q3', var_name: 'perfil', var_value: 'novinhas' },
+                    { label: 'Coroas (30+)', icon: 'user', image: '', next: 'q3', var_name: 'perfil', var_value: 'coroas' },
+                    { label: 'Casadas', icon: 'user', image: '', next: 'q3', var_name: 'perfil', var_value: 'casadas' },
+                    { label: 'Solteiras', icon: 'user', image: '', next: 'q3', var_name: 'perfil', var_value: 'solteiras' },
+                ] },
+                { id: 'q3', type: 'photos', title: 'Quer ver as {perfil} que estão online agora?', sub: 'Acesso gratuito e anônimo', options: [
+                    { label: 'Sim, mostrar agora', icon: 'fire', image: '', next: 'r:res1', var_name: '', var_value: '' },
+                    { label: 'Quero escolher com calma', icon: 'chat', image: '', next: 'r:res1', var_name: '', var_value: '' },
+                ] },
+            ],
+            results: [
+                { id: 'res1', name: 'Acesso normal', badge: 'Online agora em {cidade}', title: '3 {perfil} de {cidade} online agora',
+                  sub: 'Baseado nas suas respostas, elas já estão te esperando — acesso 100% gratuito e anônimo.',
+                  cta: 'LIBERAR MEU ACESSO GRÁTIS', dest_type: 'funnel', funnel_slug: '', call_product_ids: [], card_title: '', card_sub: '' },
+            ],
+        };
+    }
+
+    // ── EDITOR ───────────────────────────────────────────────────────────
+    async function loadHelpers() {
+        if (QZ.helpersLoaded) return;
+        const d = await api('/api/admin/quiz/helpers/options');
+        if (d.success) { QZ.funnels = d.funnels; QZ.callProducts = d.call_products; QZ.helpersLoaded = true; }
+    }
+
+    window.openQuizEditor = async function (id) {
+        await loadHelpers();
+        if (id) {
+            const d = await api('/api/admin/quiz/' + id);
+            if (!d.success) return alert(d.error || 'Erro');
+            QZ.curId = id;
+            QZ.cur = { name: d.quiz.name, slug: d.quiz.slug, config: d.quiz.config || starterConfig() };
+            if (!Array.isArray(QZ.cur.config.questions)) QZ.cur.config = starterConfig();
+        } else {
+            QZ.curId = null;
+            QZ.cur = { name: '', slug: '', config: starterConfig() };
+        }
+        renderEditor();
+    };
+
+    function ov() {
+        let o = document.getElementById('qzEditorOv');
+        if (!o) {
+            o = document.createElement('div'); o.id = 'qzEditorOv';
+            o.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;align-items:flex-start;justify-content:center;overflow-y:auto;padding:30px 14px;';
+            document.body.appendChild(o);
+        }
+        return o;
+    }
+    window.closeQuizEditor = function () { const o = document.getElementById('qzEditorOv'); if (o) o.style.display = 'none'; };
+
+    // ids disponíveis pro "Leva pra"
+    function destOptions(sel) {
+        const c = QZ.cur.config;
+        let h = '';
+        c.questions.forEach((q, i) => {
+            h += '<option value="' + esc(q.id) + '"' + (sel === q.id ? ' selected' : '') + '>Pergunta ' + (i + 1) + ' — ' + esc((q.title || '').slice(0, 40)) + '</option>';
+        });
+        c.results.forEach(r => {
+            const v = 'r:' + r.id;
+            h += '<option value="' + esc(v) + '"' + (sel === v ? ' selected' : '') + '>Resultado — ' + esc(r.name || r.id) + '</option>';
+        });
+        return h;
+    }
+
+    const inp = (val, attrs) => '<input class="form-control" ' + attrs + ' value="' + esc(val) + '">';
+    const lbl = (t) => '<label style="display:block;font-size:11px;color:rgba(255,255,255,.55);margin:8px 0 3px;font-weight:600;">' + t + '</label>';
+
+    function renderEditor() {
+        const c = QZ.cur.config;
+        let h = '<div style="background:#141419;border:1px solid rgba(255,255,255,.1);border-radius:16px;max-width:860px;width:100%;padding:22px 22px 26px;color:#fff;">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;">'
+            + '<div style="font-size:18px;font-weight:800;">' + (QZ.curId ? 'Editar quiz' : 'Novo quiz') + '</div>'
+            + '<button class="btn-secondary" onclick="closeQuizEditor()">Fechar</button></div>'
+            // nome + slug
+            + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
+            + '<div>' + lbl('Nome (interno)') + inp(QZ.cur.name, 'id="qzName" placeholder="Quiz principal"') + '</div>'
+            + '<div>' + lbl('Slug (vira o link /q/...)') + inp(QZ.cur.slug, 'id="qzSlug" placeholder="descubra"') + '</div></div>'
+            + '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:6px;">Nos textos você pode usar <b>{cidade}</b> (cidade do lead pela internet dele) e variáveis guardadas nas opções (ex.: <b>{perfil}</b>).</div>';
+
+        // ── perguntas ──
+        h += '<div style="margin-top:20px;font-size:14px;font-weight:800;color:#f5d67b;">PERGUNTAS <span style="font-weight:400;color:rgba(255,255,255,.4);font-size:11px;">— a 1ª deve ser discreta (tipo Lista, sem foto)</span></div>';
+        c.questions.forEach((q, qi) => {
+            h += '<div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;margin-top:12px;background:rgba(255,255,255,.02);">'
+                + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">'
+                + '<div style="font-size:13px;font-weight:800;">Pergunta ' + (qi + 1) + ' <code style="font-size:10px;color:rgba(255,255,255,.35);">' + esc(q.id) + '</code></div>'
+                + '<div style="display:flex;gap:6px;">'
+                + (qi > 0 ? '<button class="btn-secondary" style="padding:4px 9px;font-size:11px;" onclick="qzMoveQ(' + qi + ',-1)">↑</button>' : '')
+                + (qi < c.questions.length - 1 ? '<button class="btn-secondary" style="padding:4px 9px;font-size:11px;" onclick="qzMoveQ(' + qi + ',1)">↓</button>' : '')
+                + '<button class="btn-secondary" style="padding:4px 9px;font-size:11px;color:#FF3B30;" onclick="qzDelQ(' + qi + ')">Remover</button></div></div>'
+                + '<div style="display:grid;grid-template-columns:2fr 1fr;gap:10px;">'
+                + '<div>' + lbl('Título') + inp(q.title, 'data-q="' + qi + '" data-f="title"') + '</div>'
+                + '<div>' + lbl('Tipo') + '<select class="form-control" data-q="' + qi + '" data-f="type">'
+                + '<option value="list"' + (q.type !== 'photos' ? ' selected' : '') + '>Lista discreta (ícone, sem foto)</option>'
+                + '<option value="photos"' + (q.type === 'photos' ? ' selected' : '') + '>Cartões com FOTO</option></select></div></div>'
+                + lbl('Subtítulo (opcional)') + inp(q.sub, 'data-q="' + qi + '" data-f="sub"');
+            // opções
+            q.options.forEach((o, oi) => {
+                h += '<div style="border-top:1px dashed rgba(255,255,255,.1);margin-top:12px;padding-top:10px;">'
+                    + '<div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:11px;font-weight:700;color:rgba(255,255,255,.6);">Opção ' + (oi + 1) + '</div>'
+                    + '<button class="btn-secondary" style="padding:3px 8px;font-size:10px;color:#FF3B30;" onclick="qzDelOpt(' + qi + ',' + oi + ')">remover</button></div>'
+                    + '<div style="display:grid;grid-template-columns:2fr 1.4fr;gap:8px;margin-top:4px;">'
+                    + '<div>' + lbl('Texto do botão') + inp(o.label, 'data-q="' + qi + '" data-o="' + oi + '" data-f="label"') + '</div>'
+                    + '<div>' + lbl('Leva pra') + '<select class="form-control" data-q="' + qi + '" data-o="' + oi + '" data-f="next">' + destOptions(o.next) + '</select></div></div>';
+                if (q.type === 'photos') {
+                    h += '<div style="display:flex;gap:8px;align-items:flex-end;">'
+                        + '<div style="flex:1;">' + lbl('Foto (URL)') + inp(o.image, 'data-q="' + qi + '" data-o="' + oi + '" data-f="image" placeholder="cole a URL ou envie →"') + '</div>'
+                        + '<button class="btn-secondary" style="padding:9px 12px;font-size:11px;flex-shrink:0;" onclick="qzUpload(' + qi + ',' + oi + ')">Enviar foto</button>'
+                        + (o.image ? '<div style="width:38px;height:38px;border-radius:8px;background:#222 center/cover no-repeat;background-image:url(\'' + esc(o.image) + '\');flex-shrink:0;"></div>' : '')
+                        + '</div>';
+                } else {
+                    h += lbl('Ícone') + '<select class="form-control" data-q="' + qi + '" data-o="' + oi + '" data-f="icon" style="max-width:220px;">'
+                        + ICONS.map(([v, n]) => '<option value="' + v + '"' + (o.icon === v ? ' selected' : '') + '>' + n + '</option>').join('') + '</select>';
+                }
+                h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:440px;">'
+                    + '<div>' + lbl('Guardar variável (opcional)') + inp(o.var_name, 'data-q="' + qi + '" data-o="' + oi + '" data-f="var_name" placeholder="perfil"') + '</div>'
+                    + '<div>' + lbl('Valor da variável') + inp(o.var_value, 'data-q="' + qi + '" data-o="' + oi + '" data-f="var_value" placeholder="casadas"') + '</div></div>'
+                    + '</div>';
+            });
+            h += '<button class="btn-secondary" style="margin-top:12px;padding:6px 12px;font-size:12px;" onclick="qzAddOpt(' + qi + ')">+ Opção</button></div>';
+        });
+        h += '<button class="btn-secondary" style="margin-top:12px;padding:8px 14px;font-size:12px;" onclick="qzAddQ()">+ Pergunta</button>';
+
+        // ── resultados ──
+        h += '<div style="margin-top:24px;font-size:14px;font-weight:800;color:#f5d67b;">RESULTADOS FINAIS <span style="font-weight:400;color:rgba(255,255,255,.4);font-size:11px;">— a tela "encontramos..." + o botão que joga pro app</span></div>';
+        c.results.forEach((r, ri) => {
+            h += '<div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;margin-top:12px;background:rgba(255,255,255,.02);">'
+                + '<div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:13px;font-weight:800;">Resultado: ' + esc(r.name || r.id) + ' <code style="font-size:10px;color:rgba(255,255,255,.35);">' + esc(r.id) + '</code></div>'
+                + '<button class="btn-secondary" style="padding:4px 9px;font-size:11px;color:#FF3B30;" onclick="qzDelR(' + ri + ')">Remover</button></div>'
+                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+                + '<div>' + lbl('Nome (interno)') + inp(r.name, 'data-r="' + ri + '" data-f="name"') + '</div>'
+                + '<div>' + lbl('Selo verde (ex.: Online agora em {cidade})') + inp(r.badge, 'data-r="' + ri + '" data-f="badge"') + '</div></div>'
+                + lbl('Título (ex.: 3 {perfil} de {cidade} online agora)') + inp(r.title, 'data-r="' + ri + '" data-f="title"')
+                + lbl('Texto de apoio') + inp(r.sub, 'data-r="' + ri + '" data-f="sub"')
+                + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+                + '<div>' + lbl('Texto do botão') + inp(r.cta, 'data-r="' + ri + '" data-f="cta"') + '</div>'
+                + '<div>' + lbl('Tipo de destino') + '<select class="form-control" data-r="' + ri + '" data-f="dest_type">'
+                + '<option value="funnel"' + (r.dest_type !== 'free_call' ? ' selected' : '') + '>Funil normal</option>'
+                + '<option value="free_call"' + (r.dest_type === 'free_call' ? ' selected' : '') + '>Chamada de vídeo GRÁTIS</option></select></div></div>'
+                + lbl('Funil de destino (o link /f/ que o botão abre)')
+                + '<select class="form-control" data-r="' + ri + '" data-f="funnel_slug"><option value="">— escolha o funil —</option>'
+                + QZ.funnels.map(f => '<option value="' + esc(f.slug) + '"' + (r.funnel_slug === f.slug ? ' selected' : '') + '>' + esc(f.name) + ' (/f/' + esc(f.slug) + ')</option>').join('') + '</select>';
+            if (r.dest_type === 'free_call') {
+                h += '<div style="border:1px solid rgba(229,9,20,.35);border-radius:10px;padding:12px;margin-top:12px;background:rgba(229,9,20,.05);">'
+                    + '<div style="font-size:12px;font-weight:800;color:#ff6b6b;margin-bottom:4px;">CHAMADA GRÁTIS (estilo roleta)</div>'
+                    + '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-bottom:8px;">Dentro do app o lead escolhe 1 destas modelos, confirma o e-mail no clique e a chamada cai em Minhas Compras (1 grátis por e-mail por quiz).</div>';
+                for (let k = 0; k < 3; k++) {
+                    const cur = r.call_product_ids[k] || '';
+                    h += lbl('Modelo ' + (k + 1) + (k === 0 ? '' : ' (opcional)'))
+                        + '<select class="form-control" data-r="' + ri + '" data-f="call_' + k + '"><option value="">—</option>'
+                        + QZ.callProducts.map(p => '<option value="' + p.id + '"' + (cur === p.id ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('') + '</select>';
+                }
+                h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+                    + '<div>' + lbl('Título do cartão (padrão: 1 chamada de vídeo grátis)') + inp(r.card_title, 'data-r="' + ri + '" data-f="card_title"') + '</div>'
+                    + '<div>' + lbl('Texto do cartão (padrão: Válida só hoje...)') + inp(r.card_sub, 'data-r="' + ri + '" data-f="card_sub"') + '</div></div></div>';
+            }
+            h += '</div>';
+        });
+        h += '<button class="btn-secondary" style="margin-top:12px;padding:8px 14px;font-size:12px;" onclick="qzAddR()">+ Resultado</button>';
+
+        // ── analisando ──
+        h += '<div style="margin-top:24px;">' + lbl('Tela "Analisando suas respostas" — uma frase por linha (aceita {cidade} e variáveis)')
+            + '<textarea class="form-textarea" id="qzAnalyzing" style="min-height:80px;font-size:12.5px;">' + esc((c.analyzing || []).join('\n')) + '</textarea></div>'
+            + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:440px;">'
+            + '<div>' + lbl('Texto reserva da {cidade} (quando o IP não resolve)') + inp(c.city_fallback || 'sua região', 'id="qzCityFb"') + '</div></div>';
+
+        // ── salvar ──
+        h += '<div id="qzWarnings" style="margin-top:14px;"></div>'
+            + '<div style="display:flex;gap:10px;margin-top:16px;align-items:center;">'
+            + '<button class="btn-primary" onclick="saveQuiz()">Salvar quiz</button>'
+            + '<span id="qzSaveStatus" style="font-size:12px;color:rgba(255,255,255,.55);"></span></div>'
+            + '</div>';
+
+        const o = ov();
+        o.innerHTML = h;
+        o.style.display = 'flex';
+
+        // bind: qualquer input/select com data-f atualiza o modelo na hora
+        o.querySelectorAll('[data-f]').forEach(el => {
+            el.addEventListener('change', () => applyField(el));
+            if (el.tagName === 'INPUT') el.addEventListener('input', () => applyField(el, true));
+        });
+        const nm = o.querySelector('#qzName'), sl = o.querySelector('#qzSlug');
+        nm.addEventListener('input', () => { QZ.cur.name = nm.value; });
+        sl.addEventListener('input', () => { QZ.cur.slug = sl.value; });
+    }
+
+    function applyField(el, soft) {
+        const c = QZ.cur.config;
+        const f = el.getAttribute('data-f');
+        const qi = el.getAttribute('data-q'), oi = el.getAttribute('data-o'), ri = el.getAttribute('data-r');
+        if (ri !== null && ri !== undefined && ri !== '' && f) {
+            const r = c.results[+ri]; if (!r) return;
+            if (f.startsWith('call_')) {
+                const k = +f.slice(5);
+                const ids = [0, 1, 2].map(i => i === k ? parseInt(el.value, 10) || 0 : (r.call_product_ids[i] || 0));
+                r.call_product_ids = ids.filter(Boolean);
+                return;
+            }
+            r[f] = el.value;
+            if (f === 'dest_type' && !soft) renderEditor(); // mostra/esconde bloco da chamada
+            return;
+        }
+        if (qi !== null && qi !== undefined && qi !== '') {
+            const q = c.questions[+qi]; if (!q) return;
+            if (oi !== null && oi !== undefined && oi !== '') {
+                const o2 = q.options[+oi]; if (!o2) return;
+                o2[f] = el.value;
+                return;
+            }
+            q[f] = el.value;
+            if (f === 'type' && !soft) renderEditor(); // troca foto ↔ ícone
+        }
+    }
+
+    function nextId(prefix, arr) {
+        let n = arr.length + 1;
+        while (arr.some(x => x.id === prefix + n)) n++;
+        return prefix + n;
+    }
+    window.qzAddQ = function () {
+        const c = QZ.cur.config;
+        c.questions.push({ id: nextId('q', c.questions), type: 'photos', title: '', sub: '', options: [
+            { label: '', icon: 'user', image: '', next: 'r:' + (c.results[0] ? c.results[0].id : 'res1'), var_name: '', var_value: '' },
+            { label: '', icon: 'user', image: '', next: 'r:' + (c.results[0] ? c.results[0].id : 'res1'), var_name: '', var_value: '' },
+        ] });
+        renderEditor();
+    };
+    window.qzDelQ = function (qi) { QZ.cur.config.questions.splice(qi, 1); if (!QZ.cur.config.questions.find(q => q.id === QZ.cur.config.start)) QZ.cur.config.start = QZ.cur.config.questions[0] ? QZ.cur.config.questions[0].id : ''; renderEditor(); };
+    window.qzMoveQ = function (qi, dir) {
+        const arr = QZ.cur.config.questions;
+        const t = arr[qi]; arr[qi] = arr[qi + dir]; arr[qi + dir] = t;
+        QZ.cur.config.start = arr[0].id;
+        renderEditor();
+    };
+    window.qzAddOpt = function (qi) {
+        const q = QZ.cur.config.questions[qi];
+        q.options.push({ label: '', icon: 'user', image: '', next: q.options[0] ? q.options[0].next : '', var_name: '', var_value: '' });
+        renderEditor();
+    };
+    window.qzDelOpt = function (qi, oi) { QZ.cur.config.questions[qi].options.splice(oi, 1); renderEditor(); };
+    window.qzAddR = function () {
+        const c = QZ.cur.config;
+        c.results.push({ id: nextId('res', c.results), name: 'Novo resultado', badge: 'Online agora em {cidade}',
+            title: '', sub: '', cta: 'LIBERAR MEU ACESSO GRÁTIS', dest_type: 'funnel', funnel_slug: '', call_product_ids: [], card_title: '', card_sub: '' });
+        renderEditor();
+    };
+    window.qzDelR = function (ri) { QZ.cur.config.results.splice(ri, 1); renderEditor(); };
+
+    // upload da foto da opção (mesmo upload dos produtos, preset card)
+    window.qzUpload = function (qi, oi) {
+        const fi = document.createElement('input');
+        fi.type = 'file'; fi.accept = 'image/*';
+        fi.onchange = async () => {
+            if (!fi.files || !fi.files[0]) return;
+            const fd = new FormData();
+            fd.append('file', fi.files[0]);
+            fd.append('preset', 'card-produto');
+            try {
+                const d = await fetch('/api/admin/upload', { method: 'POST', credentials: 'include', body: fd }).then(r => r.json());
+                if (d && d.url) { QZ.cur.config.questions[qi].options[oi].image = d.url; renderEditor(); }
+                else alert((d && d.error) || 'Erro no upload');
+            } catch (_) { alert('Erro no upload'); }
+        };
+        fi.click();
+    };
+
+    window.saveQuiz = async function () {
+        const st = document.getElementById('qzSaveStatus');
+        const c = QZ.cur.config;
+        c.analyzing = (document.getElementById('qzAnalyzing').value || '').split('\n').map(s => s.trim()).filter(Boolean);
+        c.city_fallback = (document.getElementById('qzCityFb').value || '').trim() || 'sua região';
+        c.start = c.questions[0] ? c.questions[0].id : '';
+        const body = { name: QZ.cur.name, slug: QZ.cur.slug, config: c };
+        st.textContent = 'Salvando...';
+        const d = QZ.curId
+            ? await jpost('/api/admin/quiz/' + QZ.curId, 'PUT', body)
+            : await jpost('/api/admin/quiz', 'POST', body);
+        if (!d.success) { st.textContent = ''; return alert(d.error || 'Erro ao salvar'); }
+        QZ.curId = d.quiz.id;
+        QZ.cur.slug = d.quiz.slug;
+        st.textContent = 'Salvo! Link: /q/' + d.quiz.slug;
+        const w = document.getElementById('qzWarnings');
+        if (d.warnings && d.warnings.length) {
+            w.innerHTML = '<div style="border:1px solid rgba(255,196,0,.4);background:rgba(255,196,0,.07);border-radius:10px;padding:10px 12px;font-size:12px;color:#ffd166;">'
+                + '<b>Atenção (o quiz salva, mas confira):</b><ul style="margin:6px 0 0 16px;">'
+                + d.warnings.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul></div>';
+        } else w.innerHTML = '';
+        loadQuizzes();
+    };
 })();
 </script>
 

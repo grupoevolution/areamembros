@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<title>Responda e libere seu acesso</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background:#0b0b12; color:#fff; overflow:hidden;
+  }
+  .stage { max-width:430px; margin:0 auto; height:100dvh; display:flex; flex-direction:column; position:relative; overflow:hidden; }
+
+  .top { padding:16px 20px 8px; flex-shrink:0; }
+  .pbar { height:6px; background:#1d1d28; border-radius:99px; overflow:hidden; }
+  .pfill { height:100%; width:0%; background:linear-gradient(90deg,#e50914,#ff5e3a); border-radius:99px; transition:width .45s cubic-bezier(.4,0,.2,1); }
+  .pcount { text-align:center; font-size:11px; color:#8a8a99; margin-top:7px; font-weight:600; }
+
+  .qwrap { flex:1; display:flex; flex-direction:column; justify-content:center; padding:10px 20px 24px; overflow:hidden auto; }
+  .screen { animation:slideIn .38s cubic-bezier(.2,.8,.3,1) both; }
+  .screen.out { animation:slideOut .28s ease both; }
+  @keyframes slideIn { from { opacity:0; transform:translateX(60px); } to { opacity:1; transform:translateX(0); } }
+  @keyframes slideOut { from { opacity:1; transform:translateX(0); } to { opacity:0; transform:translateX(-60px); } }
+
+  .qtitle { font-size:22px; font-weight:800; text-align:center; line-height:1.3; margin-bottom:6px; }
+  .qtitle span { color:#e50914; }
+  .qsub { font-size:13px; color:#9a9aa9; text-align:center; margin-bottom:20px; font-weight:500; }
+  .qsub b { color:#ffd166; }
+
+  /* pergunta discreta: lista sem foto */
+  .list { display:flex; flex-direction:column; gap:11px; }
+  .litem {
+    display:flex; align-items:center; gap:14px; padding:16px 18px;
+    background:#14141d; border:2px solid #23232f; border-radius:14px;
+    cursor:pointer; transition:transform .12s, border-color .12s;
+  }
+  .litem:active { transform:scale(.97); }
+  .litem.sel { border-color:#e50914; box-shadow:0 0 0 3px rgba(229,9,20,.25); }
+  .litem .lic { width:40px; height:40px; border-radius:11px; background:#1d1d28; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#c9c9d6; }
+  .litem .lic svg { width:20px; height:20px; }
+  .litem .ltx { font-size:15px; font-weight:700; }
+  .litem .arrow { margin-left:auto; color:#55556a; flex-shrink:0; }
+  .litem .arrow svg { width:16px; height:16px; }
+
+  /* pergunta com fotos: cartões */
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .opt { position:relative; border:2px solid #23232f; border-radius:16px; overflow:hidden; background:#14141d; cursor:pointer; transition:transform .12s, border-color .12s; }
+  .opt:active { transform:scale(.96); }
+  .opt.sel { border-color:#e50914; box-shadow:0 0 0 3px rgba(229,9,20,.25); }
+  .opt .ph { height:130px; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,.85); background:#1d1d28 center/cover no-repeat; }
+  .opt .ph svg { width:42px; height:42px; opacity:.6; }
+  .opt .lbl { padding:11px 8px; text-align:center; font-size:14px; font-weight:800; background:#101018; display:flex; align-items:center; justify-content:center; gap:7px; }
+  .opt .lbl svg { width:16px; height:16px; flex-shrink:0; }
+
+  .hint { text-align:center; font-size:12px; color:#6f6f80; margin-top:16px; font-weight:600; animation:pulseHint 1.8s infinite; }
+  @keyframes pulseHint { 0%,100% { opacity:.55; } 50% { opacity:1; } }
+
+  /* analisando */
+  .anwrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:0 32px; }
+  .spin { width:64px; height:64px; border-radius:50%; border:5px solid #23232f; border-top-color:#e50914; animation:rot 1s linear infinite; margin-bottom:26px; }
+  @keyframes rot { to { transform:rotate(360deg); } }
+  .antitle { font-size:19px; font-weight:800; margin-bottom:22px; text-align:center; }
+  .anstep { display:flex; align-items:center; gap:10px; font-size:14px; color:#55556a; font-weight:600; margin-bottom:13px; width:100%; max-width:300px; opacity:.35; transition:all .3s; }
+  .anstep.on { color:#e8e8f0; opacity:1; }
+  .anstep .chk { width:20px; height:20px; border-radius:50%; background:#1d1d28; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  .anstep.on .chk { background:#16a34a; }
+  .anstep .chk svg { width:11px; height:11px; opacity:0; }
+  .anstep.on .chk svg { opacity:1; }
+
+  /* resultado */
+  .reswrap { flex:1; display:flex; flex-direction:column; justify-content:center; padding:0 24px 28px; text-align:center; }
+  .resbadge { display:inline-flex; align-items:center; gap:6px; background:rgba(22,163,74,.15); border:1px solid rgba(22,163,74,.4); color:#4ade80; font-size:11px; font-weight:800; letter-spacing:1px; padding:6px 14px; border-radius:99px; margin:0 auto 16px; }
+  .resbadge .dot { width:8px; height:8px; border-radius:50%; background:#4ade80; animation:pulseHint 1.4s infinite; }
+  .restitle { font-size:23px; font-weight:800; line-height:1.3; margin-bottom:8px; }
+  .restitle span { color:#e50914; }
+  .ressub { font-size:14px; color:#9a9aa9; margin-bottom:20px; line-height:1.45; }
+  .ressub b { color:#fff; }
+  .avatars { display:flex; justify-content:center; margin-bottom:20px; }
+  .av { width:72px; height:72px; border-radius:50%; border:3px solid #0b0b12; margin:0 -10px; display:flex; align-items:center; justify-content:center; position:relative; background:#1d1d28 center/cover no-repeat; }
+  .av svg { width:34px; height:34px; opacity:.6; }
+  .av .blur { position:absolute; inset:0; border-radius:50%; backdrop-filter:blur(5px); background:rgba(11,11,18,.25); }
+  .av .on { position:absolute; bottom:2px; right:6px; width:14px; height:14px; border-radius:50%; background:#16a34a; border:3px solid #0b0b12; }
+  .cta { display:block; width:100%; border:none; border-radius:14px; padding:17px; font-size:16px; font-weight:800; background:linear-gradient(90deg,#e50914,#ff5e3a); color:#fff; cursor:pointer; letter-spacing:.5px; box-shadow:0 8px 28px rgba(229,9,20,.4); animation:ctaPulse 1.6s infinite; }
+  @keyframes ctaPulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.03); } }
+  .ctasub { font-size:11px; color:#6f6f80; margin-top:12px; font-weight:600; }
+
+  .callcard { background:#14141d; border:1px solid #23232f; border-radius:16px; padding:16px; margin-bottom:20px; }
+  .callcard .ic { width:48px; height:48px; border-radius:50%; background:rgba(229,9,20,.15); display:flex; align-items:center; justify-content:center; margin:0 auto 8px; }
+  .callcard .ic svg { width:24px; height:24px; }
+  .callcard .t1 { font-size:15px; font-weight:800; margin-bottom:4px; }
+  .callcard .t2 { font-size:12.5px; color:#9a9aa9; line-height:1.45; }
+  .callcard .t2 b { color:#ffd166; }
+
+  /* rodapé de compliance (some depois da pergunta 1) */
+  .foot { flex-shrink:0; padding:10px 24px 14px; text-align:center; }
+  .foot .age { display:inline-flex; align-items:center; gap:6px; font-size:10px; color:#8a8a99; font-weight:700; letter-spacing:.5px; margin-bottom:7px; }
+  .foot .age .badge { border:1.5px solid #8a8a99; border-radius:6px; padding:1px 5px; font-size:9px; font-weight:800; }
+  .foot .links { font-size:10.5px; color:#6f6f80; font-weight:600; margin-bottom:6px; }
+  .foot .links a { color:#8a8a99; text-decoration:underline; }
+  .foot .meta { font-size:9px; color:#44445a; line-height:1.5; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="top">
+    <div class="pbar"><div class="pfill" id="pfill"></div></div>
+    <div class="pcount" id="pcount"></div>
+  </div>
+  <div class="qwrap" id="qwrap"></div>
+  <div class="foot" id="foot">
+    <div class="age"><span class="badge">+18</span> CONTEÚDO PARA MAIORES DE 18 ANOS</div>
+    <div class="links">
+      <a href="/privacidade" target="_blank" rel="noopener">Política de Privacidade</a>
+      &nbsp;·&nbsp;
+      <a href="/termos" target="_blank" rel="noopener">Termos de Uso</a>
+    </div>
+    <div class="meta">Este site não faz parte do Facebook, Instagram ou Meta Platforms, Inc.,<br>nem é endossado por eles de qualquer forma.</div>
+  </div>
+</div>
+
+<script>
+var DATA = __QUIZ_DATA__;
+
+// ícones SVG (whitelist — mesma do painel)
+var IC = {
+  chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>',
+  video: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>',
+  group: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>',
+  wifi: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="19" r="1.5" fill="currentColor"/><path d="M5 12.5a10 10 0 0114 0"/><path d="M8.5 16a5 5 0 017 0"/></svg>',
+  heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 000-7.8z"/></svg>',
+  fire: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c4.4 0 8-3.6 8-8 0-5-4-8-4-11-3 2-4 5-4 7-1.5-1-2-3-2-5-2.5 2-6 5.5-6 9 0 4.4 3.6 8 8 8z"/></svg>',
+  star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>',
+  arrow: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>',
+  phone: '<svg viewBox="0 0 24 24" fill="none" stroke="#e50914" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>'
+};
+
+var CFG = DATA.config || {};
+var QUESTIONS = {};
+(CFG.questions || []).forEach(function (q) { QUESTIONS[q.id] = q; });
+var RESULTS = {};
+(CFG.results || []).forEach(function (r) { RESULTS[r.id] = r; });
+var TOTAL = (CFG.questions || []).length || 1;
+var CITY = DATA.city || null;
+var CITY_TXT = CITY || CFG.city_fallback || 'sua região';
+
+var vars = {};      // variáveis guardadas pelas opções ({perfil} etc.)
+var stepN = 0;      // quantas perguntas ele já respondeu
+var VID = null;     // id do visitante (pro rastreio casar com o app depois)
+try {
+  VID = localStorage.getItem('mv_chat_visitor');
+  if (!VID) {
+    VID = 'v' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem('mv_chat_visitor', VID);
+  }
+} catch (_) {}
+
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// Substitui {cidade} e variáveis guardadas. O texto é do DONO (painel) — os
+// valores injetados passam por esc() pra não abrir HTML.
+function tpl(s) {
+  return String(s || '').replace(/\{([a-z0-9_]+)\}/gi, function (m, k) {
+    if (k.toLowerCase() === 'cidade') return esc(CITY_TXT);
+    return vars[k] != null ? esc(vars[k]) : m;
+  });
+}
+
+// ── métricas + pixel ────────────────────────────────────────────────────────
+function track(event, extra) {
+  try {
+    var body = Object.assign({ slug: DATA.slug, event: event, vid: VID }, extra || {});
+    fetch('/api/quiz/track', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      keepalive: true, body: JSON.stringify(body)
+    }).catch(function () {});
+  } catch (_) {}
+}
+function px(name, params) {
+  try { if (window.fbq) fbq('trackCustom', name, params || {}); } catch (_) {}
+}
+
+// ── navegação ───────────────────────────────────────────────────────────────
+var qwrap = document.getElementById('qwrap');
+var pfill = document.getElementById('pfill');
+var pcount = document.getElementById('pcount');
+var foot = document.getElementById('foot');
+
+function setProgress(n, label) {
+  pfill.style.width = Math.min(100, ((n - 1) / TOTAL * 100)) + '%';
+  pcount.textContent = label || ('Pergunta ' + n + ' de ' + TOTAL);
+}
+function transition(cb) {
+  var sc = qwrap.querySelector('.screen');
+  if (sc) sc.classList.add('out');
+  setTimeout(cb, 260);
+}
+function bindOpts(cls, opts, onPick) {
+  var locked = false;
+  qwrap.querySelectorAll(cls).forEach(function (el) {
+    el.addEventListener('click', function () {
+      if (locked) return; locked = true;
+      el.classList.add('sel');
+      var o = opts[+el.getAttribute('data-i')];
+      setTimeout(function () { transition(function () { onPick(o); }); }, 380);
+    });
+  });
+}
+
+function pickOption(o) {
+  if (o.var_name && o.var_value) vars[o.var_name] = o.var_value;
+  stepN++;
+  track('step', { step: stepN });
+  px('QuizStep', { step: stepN });
+  var n = o.next || '';
+  if (n.indexOf('r:') === 0) {
+    var r = RESULTS[n.slice(2)];
+    if (r) return renderAnalyzing(r);
+  }
+  if (QUESTIONS[n]) return renderQuestion(n);
+  // roteiro quebrado (aponta pra nada): manda pro 1º resultado pra não perder o lead
+  var first = (CFG.results || [])[0];
+  if (first) return renderAnalyzing(first);
+}
+
+function renderQuestion(id) {
+  var q = QUESTIONS[id];
+  if (!q) return;
+  setProgress(stepN + 1);
+  if (foot) foot.style.display = stepN === 0 ? '' : 'none';
+  var html = '<div class="screen"><div class="qtitle">' + tpl(q.title) + '</div>';
+  if (q.sub) html += '<div class="qsub">' + tpl(q.sub) + '</div>';
+  var opts = q.options || [];
+  if (q.type === 'photos') {
+    html += '<div class="grid">';
+    opts.forEach(function (o, i) {
+      var bg = o.image ? ' style="background-image:url(\'' + esc(o.image) + '\')"' : '';
+      html += '<div class="opt" data-i="' + i + '"><div class="ph"' + bg + '>' + (o.image ? '' : IC.user) + '</div>'
+            + '<div class="lbl">' + tpl(o.label) + '</div></div>';
+    });
+    html += '</div><div class="hint">Toque em uma opção pra escolher</div></div>';
+    qwrap.innerHTML = html;
+    bindOpts('.opt', opts, pickOption);
+  } else {
+    html += '<div class="list">';
+    opts.forEach(function (o, i) {
+      html += '<div class="litem" data-i="' + i + '"><span class="lic">' + (IC[o.icon] || IC.user) + '</span>'
+            + '<span class="ltx">' + tpl(o.label) + '</span><span class="arrow">' + IC.arrow + '</span></div>';
+    });
+    html += '</div><div class="hint">Toque em uma opção</div></div>';
+    qwrap.innerHTML = html;
+    bindOpts('.litem', opts, pickOption);
+  }
+}
+
+function renderAnalyzing(result) {
+  setProgress(TOTAL + 1, 'Finalizando...');
+  pfill.style.width = '100%';
+  if (foot) foot.style.display = 'none';
+  var steps = (CFG.analyzing && CFG.analyzing.length) ? CFG.analyzing.map(tpl) : [
+    'Encontrando perfis do seu gosto',
+    'Verificando quem está online em ' + esc(CITY_TXT),
+    'Liberando seu acesso gratuito'
+  ];
+  var html = '<div class="anwrap screen"><div class="spin"></div>'
+           + '<div class="antitle">Analisando suas respostas...</div>';
+  steps.forEach(function (s, i) {
+    html += '<div class="anstep" id="an' + i + '"><span class="chk">' + IC.check + '</span>' + s + '</div>';
+  });
+  html += '</div>';
+  qwrap.innerHTML = html;
+  steps.forEach(function (s, i) {
+    setTimeout(function () { var el = document.getElementById('an' + i); if (el) el.classList.add('on'); }, 700 + i * 850);
+  });
+  track('complete');
+  px('QuizComplete', { result: result.id });
+  setTimeout(function () { renderResult(result); }, 700 + steps.length * 850 + 500);
+}
+
+// monta a URL final: funil do resultado + query string original (UTMs/fbclid)
+// + carimbo do quiz (+ flag da chamada grátis quando for o caso)
+function ctaUrl(r) {
+  var p = new URLSearchParams(location.search || '');
+  p.set('qz', DATA.slug);
+  if (r.dest_type === 'free_call') p.set('qzcall', DATA.slug + ':' + r.id);
+  return '/f/' + encodeURIComponent(r.funnel_slug) + '?' + p.toString();
+}
+
+function renderResult(r) {
+  pcount.textContent = 'Pronto!';
+  var avs = '<div class="avatars">'
+    + ['#3d1635', '#3d1010', '#2a1a3d'].map(function (c) {
+        return '<div class="av" style="background-color:' + c + '">' + IC.user + '<div class="blur"></div><span class="on"></span></div>';
+      }).join('') + '</div>';
+
+  var html = '<div class="reswrap screen">';
+  if (r.badge) html += '<span class="resbadge"><span class="dot"></span> ' + tpl(r.badge).toUpperCase() + '</span>';
+  html += '<div class="restitle">' + tpl(r.title) + '</div>';
+  if (r.sub) html += '<div class="ressub">' + tpl(r.sub) + '</div>';
+  html += avs;
+  if (r.dest_type === 'free_call') {
+    html += '<div class="callcard"><div class="ic">' + IC.phone + '</div>'
+          + '<div class="t1">' + (tpl(r.card_title) || '1 chamada de vídeo grátis') + '</div>'
+          + '<div class="t2">' + (tpl(r.card_sub) || 'Válida <b>só hoje</b>. Você escolhe qual delas vai te ligar.') + '</div></div>';
+  }
+  html += '<button class="cta" id="ctaBtn">' + esc(r.cta || 'LIBERAR MEU ACESSO GRÁTIS') + '</button>'
+        + '<div class="ctasub">Acesso anônimo · Sem cadastro · Sem cartão</div></div>';
+  qwrap.innerHTML = html;
+  document.getElementById('ctaBtn').addEventListener('click', function () {
+    track('cta', { result: r.id });
+    px('QuizCTA', { result: r.id });
+    var url = ctaUrl(r);
+    // navegação simples no mesmo navegador (breakout do webview: função
+    // futura — o dono manda quando quiser ligar)
+    setTimeout(function () { window.location.href = url; }, 120);
+  });
+}
+
+// ── PIXEL DO FACEBOOK (mesmo padrão da pressel: PageView + espelho CAPI) ────
+(function () {
+  var MP = DATA.meta_pixel;
+  if (!MP || !MP.pixel_id) return;
+  try {
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', MP.pixel_id);
+    var eid = 'pv_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    if (MP.ev_pageview !== false) fbq('track', 'PageView', {}, { eventID: eid });
+    var p = new URLSearchParams(location.search || '');
+    function ck(n) { var m = document.cookie.match(new RegExp('(?:^|; )' + n + '=([^;]*)')); return m ? decodeURIComponent(m[1]) : null; }
+    setTimeout(function () {
+      try {
+        fetch('/api/user/meta/track', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', keepalive: true,
+          body: JSON.stringify({
+            event: MP.ev_pageview !== false ? 'pageview' : null,
+            event_id: eid,
+            url: location.href.split('#')[0],
+            visitor_id: VID,
+            fbclid: p.get('fbclid') || null,
+            fbp: ck('_fbp'), fbc: ck('_fbc'),
+            utm: { source: p.get('utm_source'), medium: p.get('utm_medium'),
+                   campaign: p.get('utm_campaign'), content: p.get('utm_content'),
+                   term: p.get('utm_term') },
+            funnel_slug: null,
+          }),
+        }).catch(function () {});
+      } catch (_) {}
+    }, 1200);
+  } catch (_) {}
+})();
+
+// ── início ──────────────────────────────────────────────────────────────────
+var startId = CFG.start && QUESTIONS[CFG.start] ? CFG.start : (CFG.questions && CFG.questions[0] ? CFG.questions[0].id : null);
+if (startId) renderQuestion(startId);
+else qwrap.innerHTML = '<div class="screen" style="text-align:center;color:#8a8a99;font-size:14px;">Quiz em manutenção.</div>';
+</script>
+</body>
+</html>

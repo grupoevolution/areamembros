@@ -23291,6 +23291,189 @@ window.Roulette = (function () {
 })();
 </script>
 <script>
+// ═══════════════ CHAMADA GRÁTIS DO QUIZ ═══════════════
+// O lead escolheu "chamada de vídeo" no quiz (/q/slug) e entrou pelo funil com
+// ?qzcall=slug:resultado. Aqui: escolhe 1 das modelos configuradas no quiz →
+// pede o e-mail no clique (fluxo normal) → o servidor entrega a chamada IGUAL
+// a roleta entrega (cai em Minhas Compras pronta pra ligar). 1 por e-mail por quiz.
+window.MVQuizCall = (function () {
+    var KEY = 'mv_qzcall';
+    var S = { slug: null, result: null, options: [], sel: null, shownThisSession: false };
+
+    // captura a flag da URL AGORA (antes de qualquer limpeza de URL do funil)
+    try {
+        var p = new URLSearchParams(window.location.search);
+        var flag = (p.get('qzcall') || '').trim();
+        if (/^[a-z0-9_-]{1,80}:[a-zA-Z0-9_-]{1,30}$/.test(flag)) MV_store.set(KEY, flag);
+    } catch (_) {}
+
+    function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+    function post(url, body) {
+        return fetch(url, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            credentials: 'include', body: JSON.stringify(body || {}),
+        }).then(function (r) { return r.json(); });
+    }
+
+    function overlay(inner) {
+        var o = document.getElementById('qzCallOv');
+        if (!o) {
+            o = document.createElement('div'); o.id = 'qzCallOv';
+            o.style.cssText = 'position:fixed;inset:0;z-index:740;background:rgba(8,4,6,.9);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px);';
+            document.body.appendChild(o);
+        }
+        o.innerHTML = '<div style="background:#14141d;border:1px solid #23232f;border-radius:20px;max-width:360px;width:100%;padding:24px 20px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.6);color:#fff;">' + inner + '</div>';
+        o.style.display = 'flex';
+        return o;
+    }
+    function close() { var o = document.getElementById('qzCallOv'); if (o) o.style.display = 'none'; }
+
+    var IC_VIDEO = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e50914" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>';
+    var IC_USER = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+
+    function renderPicker() {
+        var cards = S.options.map(function (m, i) {
+            var ph = m.photo
+                ? '<div style="width:58px;height:58px;border-radius:50%;background:#1d1d28 center/cover no-repeat;background-image:url(\'' + esc(m.photo) + '\');flex-shrink:0;"></div>'
+                : '<div style="width:58px;height:58px;border-radius:50%;background:#1d1d28;display:flex;align-items:center;justify-content:center;flex-shrink:0;">' + IC_USER + '</div>';
+            return '<div class="qzc-opt" data-i="' + i + '" style="display:flex;align-items:center;gap:13px;padding:11px 13px;border:2px solid #23232f;border-radius:15px;margin-bottom:10px;cursor:pointer;text-align:left;">'
+                + ph
+                + '<div style="flex:1;min-width:0;"><div style="font-size:15px;font-weight:800;">' + esc(m.name) + '</div>'
+                + '<div style="font-size:11.5px;color:#4ade80;font-weight:700;display:flex;align-items:center;gap:5px;"><span style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;"></span>online agora</div></div>'
+                + '</div>';
+        }).join('');
+        var o = overlay(
+            '<div style="width:52px;height:52px;border-radius:50%;background:rgba(229,9,20,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">' + IC_VIDEO + '</div>'
+            + '<div style="font-size:19px;font-weight:800;margin-bottom:5px;">Sua chamada grátis<br>está liberada</div>'
+            + '<div style="font-size:13px;color:#9a9aa9;margin-bottom:16px;">Escolha quem vai te ligar:</div>'
+            + cards
+            + '<button id="qzcGo" style="width:100%;border:none;border-radius:13px;padding:15px;font-size:15px;font-weight:800;background:linear-gradient(90deg,#e50914,#ff5e3a);color:#fff;cursor:pointer;opacity:.4;letter-spacing:.5px;">ME LIGA AGORA</button>'
+            + '<div id="qzcLater" style="font-size:12px;color:#6f6f80;margin-top:12px;cursor:pointer;text-decoration:underline;">escolher depois</div>'
+        );
+        S.sel = null;
+        var btn = o.querySelector('#qzcGo');
+        o.querySelectorAll('.qzc-opt').forEach(function (el) {
+            el.addEventListener('click', function () {
+                o.querySelectorAll('.qzc-opt').forEach(function (x) { x.style.borderColor = '#23232f'; x.style.boxShadow = 'none'; });
+                el.style.borderColor = '#e50914'; el.style.boxShadow = '0 0 0 3px rgba(229,9,20,.22)';
+                S.sel = S.options[+el.getAttribute('data-i')].id;
+                btn.style.opacity = '1';
+            });
+        });
+        o.querySelector('#qzcLater').addEventListener('click', function () { S.shownThisSession = true; close(); });
+        btn.addEventListener('click', function () {
+            if (!S.sel) return;
+            var anon = !(window.currentUserEmail && window.MV_ANONYMOUS !== true);
+            if (anon) renderEmail(); else claim(btn);
+        });
+    }
+
+    // Pedido de e-mail no CLIQUE (decisão do dono) — mesmo promote do gate do chat
+    function renderEmail() {
+        var o = overlay(
+            '<div style="width:52px;height:52px;border-radius:50%;background:rgba(229,9,20,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">' + IC_VIDEO + '</div>'
+            + '<div style="font-size:18px;font-weight:800;margin-bottom:6px;">Falta só o seu e-mail</div>'
+            + '<div style="font-size:13px;color:#9a9aa9;line-height:1.5;margin-bottom:15px;">Confirma seu e-mail pra liberar sua chamada grátis agora.</div>'
+            + '<input id="qzcEmail" type="email" inputmode="email" autocapitalize="none" autocorrect="off" placeholder="seu@email.com" style="width:100%;border:1.5px solid #2c2c3a;background:#0e0e16;color:#fff;border-radius:12px;padding:13px;font-size:15px;outline:none;margin-bottom:6px;text-align:center;">'
+            + '<div id="qzcErr" style="font-size:12px;color:#e50914;min-height:15px;margin-bottom:6px;"></div>'
+            + '<button id="qzcSend" style="width:100%;border:none;border-radius:13px;padding:15px;font-size:15px;font-weight:800;background:linear-gradient(90deg,#e50914,#ff5e3a);color:#fff;cursor:pointer;letter-spacing:.5px;">LIBERAR MINHA CHAMADA</button>'
+            + '<div style="font-size:11px;color:#6f6f80;margin-top:10px;">Acesso gratuito · sem cartão</div>'
+        );
+        var inp = o.querySelector('#qzcEmail'), btn = o.querySelector('#qzcSend'), err = o.querySelector('#qzcErr');
+        setTimeout(function () { try { inp.focus(); } catch (_) {} }, 150);
+        function submit() {
+            var email = (inp.value || '').trim().toLowerCase();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { err.textContent = 'Digite um e-mail válido.'; return; }
+            btn.disabled = true; btn.textContent = 'AGUARDE...';
+            post('/api/user/login/promote', {
+                email: email, skipSuggestion: true,
+                funnel_slug: window.MV_FUNNEL_SLUG || '',
+                visitor_id: (function () { try { return localStorage.getItem('mv_chat_visitor'); } catch (_) { return null; } })(),
+            }).then(function (d) {
+                if (d && d.success) {
+                    window.currentUserEmail = d.email; window.MV_ANONYMOUS = false;
+                    try { if (window.MVMeta && d.meta_lead) MVMeta.lead(d.meta_lead); } catch (_) {}
+                    try { document.body.classList.remove('funnel-mode'); } catch (_) {}
+                    try { if (typeof window.tryTriggerCallAfterLogin === 'function') window.tryTriggerCallAfterLogin(); } catch (_) {}
+                    claim(btn);
+                } else {
+                    err.textContent = (d && d.error) || 'Erro, tente de novo.';
+                    btn.disabled = false; btn.textContent = 'LIBERAR MINHA CHAMADA';
+                }
+            }).catch(function () {
+                err.textContent = 'Erro de conexão.';
+                btn.disabled = false; btn.textContent = 'LIBERAR MINHA CHAMADA';
+            });
+        }
+        btn.addEventListener('click', submit);
+        inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+    }
+
+    function claim(btn) {
+        if (btn) { btn.disabled = true; btn.textContent = 'LIBERANDO...'; }
+        post('/api/quiz/claim-call', { slug: S.slug, result: S.result, product_id: S.sel }).then(function (d) {
+            if (d && d.success) {
+                MV_store.del(KEY);
+                try {
+                    if (typeof loadLibrary === 'function') loadLibrary().then(function () {
+                        if (typeof renderLibrary === 'function') renderLibrary();
+                    }).catch(function () {});
+                } catch (_) {}
+                renderDone(d.product_name || 'a modelo');
+            } else {
+                // "já usou" e afins: some com a flag pra não insistir
+                MV_store.del(KEY);
+                var o = overlay(
+                    '<div style="font-size:17px;font-weight:800;margin-bottom:8px;">Opa!</div>'
+                    + '<div style="font-size:13.5px;color:#9a9aa9;line-height:1.55;margin-bottom:16px;">' + esc((d && d.error) || 'Não consegui liberar agora. Tenta de novo em instantes.') + '</div>'
+                    + '<button id="qzcOk" style="width:100%;border:none;border-radius:13px;padding:14px;font-size:14px;font-weight:800;background:#23232f;color:#fff;cursor:pointer;">FECHAR</button>'
+                );
+                o.querySelector('#qzcOk').addEventListener('click', close);
+            }
+        }).catch(function () {
+            if (btn) { btn.disabled = false; btn.textContent = 'ME LIGA AGORA'; }
+            alert('Sem internet? Tenta de novo em instantes.');
+        });
+    }
+
+    function renderDone(nome) {
+        var o = overlay(
+            '<div style="width:56px;height:56px;border-radius:50%;background:rgba(22,163,74,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">'
+            + '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>'
+            + '<div style="font-size:19px;font-weight:800;margin-bottom:6px;">Chamada liberada!</div>'
+            + '<div style="font-size:13.5px;color:#9a9aa9;line-height:1.55;margin-bottom:16px;">Sua chamada com a <b style="color:#fff;">' + esc(nome) + '</b> está em <b style="color:#fff;">Minhas Compras</b>, prontinha pra você ligar.</div>'
+            + '<button id="qzcLib" style="width:100%;border:none;border-radius:13px;padding:15px;font-size:15px;font-weight:800;background:linear-gradient(90deg,#e50914,#ff5e3a);color:#fff;cursor:pointer;letter-spacing:.5px;">IR PRA MINHA CHAMADA</button>'
+        );
+        o.querySelector('#qzcLib').addEventListener('click', function () {
+            close();
+            try { if (typeof switchScreen === 'function') switchScreen('library'); } catch (_) {}
+        });
+    }
+
+    function maybeShow() {
+        if (S.shownThisSession) return;
+        var flag = MV_store.get(KEY);
+        if (!flag) return;
+        var parts = String(flag).split(':');
+        if (parts.length !== 2) { MV_store.del(KEY); return; }
+        S.slug = parts[0]; S.result = parts[1];
+        fetch('/api/quiz/call-options?slug=' + encodeURIComponent(S.slug) + '&result=' + encodeURIComponent(S.result), { credentials: 'include' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (!d || !d.success || !d.options || !d.options.length) { MV_store.del(KEY); return; }
+                S.options = d.options;
+                S.shownThisSession = true;
+                renderPicker();
+            }).catch(function () {});
+    }
+
+    // espera o app assentar (cortina do funil, login anônimo) antes de aparecer
+    if (MV_store.get(KEY)) setTimeout(maybeShow, 2800);
+
+    return { maybeShow: maybeShow };
+})();
+</script>
+<script>
 // ═══════════════ PIXEL DO FACEBOOK (Meta) — Fase 1 ═══════════════
 // O navegador dispara o evento (fbq) e o servidor ESPELHA o mesmo evento via
 // API de Conversões com o MESMO event_id — o Meta deduplica e fica com a
