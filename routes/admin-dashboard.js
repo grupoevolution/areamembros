@@ -261,4 +261,77 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
     }
 });
 
+// ═════════════════════════════════════════════════════════════════════════
+// VENDAS POR CAMPANHA (dados reais) — a régua da verdade contra o número
+// inflado do Facebook (pixel compartilhado entre contas duplica venda lá).
+//
+// Como funciona: a etiqueta do anúncio (UTMs preenchidas pelo próprio Meta
+// via {{campaign.name}} etc.) fica gravada por lead em ad_attributions desde
+// a entrada; aqui a gente casa VENDA REAL (deduplicada) com a etiqueta pelo
+// e-mail do comprador. Uma venda = uma venda, na campanha que trouxe o lead.
+//
+// GET /api/admin/sales-by-campaign?period=7&level=campaign|adset|ad
+// level: campaign → utm_campaign | adset → utm_medium | ad → utm_content
+// (é o formato do link recomendado: utm_campaign={{campaign.name}}
+//  &utm_medium={{adset.name}}&utm_content={{ad.name}})
+// ═════════════════════════════════════════════════════════════════════════
+router.get('/sales-by-campaign', requireAdmin, async (req, res) => {
+    const period = ['today', 'yesterday', '7', 'month'].includes(String(req.query.period))
+        ? String(req.query.period) : '7';
+    const COLS = { campaign: 'utm_campaign', adset: 'utm_medium', ad: 'utm_content' };
+    const col = COLS[String(req.query.level)] || 'utm_campaign';
+    try {
+        // por e-mail, a MELHOR atribuição (com fbclid > mais recente) — mesma
+        // regra do findAttribution do CAPI
+        const attrBest = `SELECT DISTINCT ON (LOWER(email))
+                LOWER(email) AS email, utm_campaign, utm_medium, utm_content, utm_source
+            FROM ad_attributions
+            WHERE email IS NOT NULL
+            ORDER BY LOWER(email), (fbclid IS NOT NULL) DESC, updated_at DESC`;
+
+        const [vendas, leads] = await Promise.all([
+            db.query(
+                `WITH v AS (${dedupSales(period)}), a AS (${attrBest})
+                 SELECT COALESCE(NULLIF(TRIM(a.${col}), ''), '(sem etiqueta)') AS label,
+                        COUNT(*)::int AS sales,
+                        COALESCE(SUM(v.sale_amount), 0)::float AS gross,
+                        COUNT(DISTINCT v.email)::int AS buyers
+                   FROM v LEFT JOIN a ON a.email = v.email
+                  GROUP BY 1 ORDER BY gross DESC LIMIT 60`
+            ),
+            // leads (e-mails) que ENTRARAM no período, por etiqueta — pra ver
+            // campanha que traz gente mas não vende
+            db.query(
+                `SELECT COALESCE(NULLIF(TRIM(${col}), ''), '(sem etiqueta)') AS label,
+                        COUNT(DISTINCT LOWER(email))::int AS leads
+                   FROM ad_attributions
+                  WHERE email IS NOT NULL AND ${windowSql(period, 'created_at')}
+                  GROUP BY 1`
+            ),
+        ]);
+        const leadMap = {};
+        for (const l of leads.rows) leadMap[l.label] = l.leads;
+        const rows = vendas.rows.map(r => ({
+            label: r.label, sales: r.sales, gross: r.gross, buyers: r.buyers,
+            leads: leadMap[r.label] || 0,
+        }));
+        // campanha que trouxe lead mas NÃO vendeu no período também aparece
+        // (zero venda é exatamente o sinal de desligar)
+        const seen = new Set(rows.map(r => r.label));
+        for (const l of leads.rows) {
+            if (!seen.has(l.label) && l.label !== '(sem etiqueta)') {
+                rows.push({ label: l.label, sales: 0, gross: 0, buyers: 0, leads: l.leads });
+            }
+        }
+        return res.json({
+            success: true,
+            period, level: String(req.query.level) || 'campaign',
+            rows,
+        });
+    } catch (err) {
+        logger.error('[sales-by-campaign] erro:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
 module.exports = router;
