@@ -3520,49 +3520,6 @@ a { color: inherit; text-decoration: none; }
                         <p class="page-subtitle">Análises profundas (frontends, LTV por cohort, recompra detalhada, funil do PWA, engajamento por lead). A decisão diária de tráfego mora na Visão Geral.</p>
                     </div>
                 </div>
-                <!-- ═══════════════ VENDAS POR CAMPANHA (dados reais — anti número inflado do FB) ═══════════════ -->
-                <div class="form-card" style="margin-top:18px; padding:20px;">
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:6px;">
-                        <div>
-                            <div class="form-card-title">Vendas por campanha (dados REAIS)</div>
-                            <div class="form-help" style="margin-top:4px; max-width:640px;">Venda de verdade (paga e deduplicada) casada com a campanha que trouxe o lead — a régua pra decidir o que desliga, sem o número inflado do Facebook. Só aparece com nome quem entrou por link etiquetado; o resto cai em <b>(sem etiqueta)</b>.</div>
-                        </div>
-                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                            <select class="form-control" id="sbcLevel" style="width:auto;" onchange="loadSalesByCampaign()">
-                                <option value="campaign">Por campanha</option>
-                                <option value="adset">Por conjunto</option>
-                                <option value="ad">Por anúncio</option>
-                            </select>
-                            <select class="form-control" id="sbcPeriod" style="width:auto;" onchange="loadSalesByCampaign()">
-                                <option value="today">Hoje</option>
-                                <option value="yesterday">Ontem</option>
-                                <option value="7" selected>7 dias</option>
-                                <option value="month">Este mês</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div style="background:rgba(96,165,250,.07); border:1px solid rgba(96,165,250,.25); border-radius:10px; padding:10px 14px; margin:10px 0 14px; font-size:12px; color:rgba(255,255,255,.7); line-height:1.6;">
-                        <b style="color:#93c5fd;">Cole isto no FINAL do link das campanhas NOVAS</b> (o Facebook preenche os nomes sozinho — o mesmo texto serve pra todas):
-                        <div style="display:flex; gap:8px; align-items:center; margin-top:6px;">
-                            <code id="sbcUtmCode" style="background:rgba(0,0,0,.35); padding:6px 10px; border-radius:6px; font-size:11.5px; overflow-x:auto; white-space:nowrap; flex:1;">?utm_source=fb&amp;utm_campaign={{campaign.name}}&amp;utm_medium={{adset.name}}&amp;utm_content={{ad.name}}</code>
-                            <button class="btn-secondary" style="padding:6px 12px; font-size:11px; flex-shrink:0;" onclick="navigator.clipboard.writeText('?utm_source=fb&utm_campaign={{campaign.name}}&utm_medium={{adset.name}}&utm_content={{ad.name}}').then(()=>{this.textContent='Copiado!';setTimeout(()=>this.textContent='Copiar',1200)})">Copiar</button>
-                        </div>
-                        Ex.: <code style="font-size:11px;">m.membrosvips.com/q/descubra?utm_source=fb&amp;utm_campaign={{campaign.name}}...</code> — funciona no /p, /q e /f. Se o link já tiver <code style="font-size:11px;">?</code>, troque o primeiro <code style="font-size:11px;">?</code> por <code style="font-size:11px;">&amp;</code>.
-                    </div>
-                    <div style="overflow-x:auto;">
-                        <table style="width:100%; border-collapse:collapse; font-size:13px;">
-                            <thead><tr style="text-align:left; color:rgba(255,255,255,.5); font-size:11px; text-transform:uppercase; letter-spacing:.5px;">
-                                <th style="padding:8px 10px;">Campanha</th>
-                                <th style="padding:8px 10px; text-align:right;">Leads (e-mails)</th>
-                                <th style="padding:8px 10px; text-align:right;">Vendas</th>
-                                <th style="padding:8px 10px; text-align:right;">Faturamento</th>
-                                <th style="padding:8px 10px; text-align:right;">Ticket médio</th>
-                            </tr></thead>
-                            <tbody id="sbcBody"><tr><td colspan="5" style="padding:16px 10px; color:rgba(255,255,255,.45);">Carregando...</td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-
                 <!-- ═══════════════ AQUISIÇÃO — PERFORMANCE FRONTENDS (Fase L13.2) ═══════════════
                      Mostra SO as vendas de tráfego pago (ofertas marcadas como aquisição).
                      Quebrado por offer_id pra ver take rate dos bumps.
@@ -10071,51 +10028,11 @@ async function loadDashboard() {
 
 // Aba Aquisição: os blocos profundos que saíram da Visão Geral
 function loadAcquisitionScreen() {
-    try { loadSalesByCampaign(); } catch (_) {}
     try { loadPwaFunnel(); } catch (_) {}
     try { loadAcquisitionPerformance(); } catch (_) {}
     try { loadLtvByCohort(); } catch (_) {}
     try { loadRepurchaseRate(); } catch (_) {}
     try { loadEngagement(); } catch (_) {}
-}
-
-// Vendas REAIS por campanha (etiqueta UTM do anúncio) — anti número inflado do FB
-async function loadSalesByCampaign() {
-    const body = document.getElementById('sbcBody');
-    if (!body) return;
-    const period = document.getElementById('sbcPeriod')?.value || '7';
-    const level = document.getElementById('sbcLevel')?.value || 'campaign';
-    body.innerHTML = '<tr><td colspan="5" style="padding:16px 10px; color:rgba(255,255,255,.45);">Carregando...</td></tr>';
-    try {
-        const d = await fetch('/api/admin/sales-by-campaign?period=' + period + '&level=' + level, { credentials: 'include' }).then(r => r.json());
-        if (!d.success) { body.innerHTML = '<tr><td colspan="5" style="padding:16px 10px; color:#f55;">' + (d.error || 'erro') + '</td></tr>'; return; }
-        const fmtR = v => 'R$ ' + (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const escS = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        if (!d.rows.length) {
-            body.innerHTML = '<tr><td colspan="5" style="padding:16px 10px; color:rgba(255,255,255,.45);">Nenhuma venda no período.</td></tr>';
-            return;
-        }
-        let tSales = 0, tGross = 0, tLeads = 0;
-        const linhas = d.rows.map(r => {
-            tSales += r.sales; tGross += r.gross; tLeads += r.leads;
-            const sem = r.label === '(sem etiqueta)';
-            return '<tr style="border-top:1px solid rgba(255,255,255,.06);' + (sem ? 'color:rgba(255,255,255,.45);' : '') + '">'
-                + '<td style="padding:9px 10px; max-width:340px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + escS(r.label) + '">' + escS(r.label) + '</td>'
-                + '<td style="padding:9px 10px; text-align:right;">' + (r.leads || '—') + '</td>'
-                + '<td style="padding:9px 10px; text-align:right; font-weight:700; color:#4ade80;">' + r.sales + '</td>'
-                + '<td style="padding:9px 10px; text-align:right; font-weight:700;">' + fmtR(r.gross) + '</td>'
-                + '<td style="padding:9px 10px; text-align:right; color:rgba(255,255,255,.6);">' + fmtR(r.sales ? r.gross / r.sales : 0) + '</td></tr>';
-        }).join('');
-        body.innerHTML = linhas
-            + '<tr style="border-top:2px solid rgba(255,255,255,.15); font-weight:800;">'
-            + '<td style="padding:10px;">TOTAL (vendas reais)</td>'
-            + '<td style="padding:10px; text-align:right;">' + tLeads + '</td>'
-            + '<td style="padding:10px; text-align:right; color:#4ade80;">' + tSales + '</td>'
-            + '<td style="padding:10px; text-align:right;">' + fmtR(tGross) + '</td>'
-            + '<td style="padding:10px; text-align:right; color:rgba(255,255,255,.6);">' + fmtR(tSales ? tGross / tSales : 0) + '</td></tr>';
-    } catch (_) {
-        body.innerHTML = '<tr><td colspan="5" style="padding:16px 10px; color:#f55;">Erro de conexão</td></tr>';
-    }
 }
 
 function setText(id, val) {
