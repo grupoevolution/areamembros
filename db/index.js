@@ -104,10 +104,42 @@ async function transaction(callback) {
 }
 
 
+// ─────────────────────────────────────────────────────────────────────────
+// Pool dos RELATÓRIOS do painel (fila separada do app do cliente).
+// As contas pesadas do dashboard usam NO MÁXIMO 3 conexões e têm tempo limite:
+// se um relatório pesar, ele espera na fila DELE — o lead nunca fica atrás.
+// ─────────────────────────────────────────────────────────────────────────
+const reportPool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 3,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 60000,   // pode esperar a vez na fila do painel
+    statement_timeout: 25000,         // conta que passar de 25s é abortada
+});
+reportPool.on('error', (err) => {
+    logger.error('Erro no pool de relatórios:', err);
+});
+
+/**
+ * Query de RELATÓRIO (dashboard/analytics do painel). Mesma assinatura do
+ * query(), mas roda na fila separada.
+ */
+async function reportQuery(text, params = []) {
+    const start = Date.now();
+    const result = await reportPool.query(text, params);
+    const duration = Date.now() - start;
+    if (duration > 2000) {
+        logger.warn(`Relatório lento (${duration}ms): ${text.replace(/\s+/g, ' ').substring(0, 100)}`);
+    }
+    return result;
+}
+
+
 /**
  * Fecha o pool de conexões (usado no shutdown graceful).
  */
 async function close() {
+    await reportPool.end().catch(() => {});
     await pool.end();
     logger.info('Pool do Postgres fechado');
 }
@@ -115,6 +147,7 @@ async function close() {
 
 module.exports = {
     query,
+    reportQuery,
     transaction,
     close,
     pool, // exportado pra casos específicos

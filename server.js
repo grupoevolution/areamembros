@@ -603,6 +603,12 @@ let server;
         logger.info('============================================');
     });
 
+    // Índices pesados do painel: em segundo plano, sem segurar o boot nem o app
+    try {
+        const { runBackgroundIndexes } = require('./lib/migrations');
+        setTimeout(() => runBackgroundIndexes().catch(() => {}), 15000);
+    } catch (_) {}
+
     // Worker de push agendado do funil (envia mesmo com o app do cliente fechado)
     try {
         const { startPushWorker } = require('./lib/push-worker');

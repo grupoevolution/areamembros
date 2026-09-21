@@ -3343,10 +3343,17 @@ a { color: inherit; text-decoration: none; }
                 .dv2-per { display:flex; gap:6px; flex-wrap:wrap; }
                 .dv2-per span { font-size:11px; font-weight:700; padding:4px 11px; border-radius:999px; background:rgba(255,255,255,.06); color:rgba(255,255,255,.5); cursor:pointer; }
                 .dv2-per span.on { background:#e50914; color:#fff; }
+                .dv2-per span svg { width:11px; height:11px; vertical-align:-1px; margin-right:4px; }
+                .dv2-range { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:10px 0 2px; font-size:11.5px; color:rgba(255,255,255,.55); }
+                .dv2-range input[type=date] { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); color:#fff; border-radius:8px; padding:5px 8px; font-size:12px; color-scheme:dark; }
+                .dv2-range button { background:#e50914; color:#fff; border:0; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; }
+                .dv2-range .lbl { color:rgba(255,255,255,.75); font-weight:700; }
+                .dv2-loading { opacity:.45; transition:opacity .15s; }
                 .dv2-bars { display:flex; gap:8px; align-items:flex-end; height:180px; margin-top:14px; }
                 .dv2-dia { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; min-width:0; }
                 .dv2-dia .bs { display:flex; gap:3px; align-items:flex-end; height:152px; width:100%; justify-content:center; }
                 .dv2-dia .b { width:22%; max-width:13px; border-radius:3px 3px 0 0; min-height:2px; }
+                .dv2-bars.dense .bs { gap:0; } .dv2-bars.dense .b { flex:1; width:auto; max-width:none; min-width:0; border-radius:0; }
                 .dv2-dia .dl { font-size:9.5px; color:rgba(255,255,255,.4); margin-top:6px; white-space:nowrap; }
                 .dv2-leg { display:flex; gap:14px; flex-wrap:wrap; margin-top:12px; font-size:11px; color:rgba(255,255,255,.6); }
                 .dv2-leg i { width:9px; height:9px; border-radius:3px; display:inline-block; margin-right:5px; vertical-align:-1px; }
@@ -3386,8 +3393,14 @@ a { color: inherit; text-decoration: none; }
                     <div class="form-card-head" style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:4px;">
                         <div class="form-card-title">📉 Funil diário</div>
                         <div class="dv2-per" id="dv2Periods">
-                            <span data-p="today">hoje</span><span data-p="yesterday">ontem</span><span data-p="7" class="on">7 dias</span><span data-p="month">este mês</span>
+                            <span data-p="today">hoje</span><span data-p="yesterday">ontem</span><span data-p="7" class="on">7 dias</span><span data-p="month">este mês</span><span data-p="custom"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>escolher datas</span>
                         </div>
+                    </div>
+                    <div class="dv2-range" id="dv2Range" hidden>
+                        <span>De</span><input type="date" id="dv2From">
+                        <span>até</span><input type="date" id="dv2To">
+                        <button type="button" onclick="dv2ApplyRange()">Aplicar</button>
+                        <span class="lbl" id="dv2RangeLbl"></span>
                     </div>
                     <div class="form-card-sub">Pessoas ÚNICAS por etapa (não conta recarregamento de página). O período vale pra tela toda.</div>
                     <div class="dv2-bars" id="dv2Funnel"></div>
@@ -9886,13 +9899,48 @@ async function deleteCategory(id, name) {
 // venda real, visitantes = PESSOAS únicas (o COUNT(*) antigo dava 20 mil/dia).
 let _dv2Period = '7';
 const _dv2R$ = v => (Number(v) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+let _dv2Range = null;   // { from, to } quando o dono escolhe datas
+let _dv2Req = 0;        // só a ÚLTIMA requisição pinta a tela (clique repetido não embola)
 function dv2SetPeriod(p, el) {
-    _dv2Period = p;
     document.querySelectorAll('#dv2Periods span').forEach(s => s.classList.toggle('on', s === el));
+    const box = document.getElementById('dv2Range');
+    if (p === 'custom') {
+        // abre o seletor; só recalcula quando clicar em Aplicar
+        box.hidden = false;
+        const hoje = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10); // dia de Brasília
+        const f = document.getElementById('dv2From'), t = document.getElementById('dv2To');
+        f.max = t.max = hoje;
+        if (!t.value) t.value = hoje;
+        if (!f.value) f.value = hoje;
+        return;
+    }
+    box.hidden = true;
+    _dv2Range = null;
+    _dv2Period = p;
+    loadDashboardV2();
+}
+function dv2ApplyRange() {
+    let from = document.getElementById('dv2From').value, to = document.getElementById('dv2To').value;
+    if (!from && !to) return;
+    if (!from) from = to;
+    if (!to) to = from;
+    if (from > to) [from, to] = [to, from];
+    const dias = Math.round((new Date(to) - new Date(from)) / 86400000) + 1;
+    const lbl = document.getElementById('dv2RangeLbl');
+    if (dias > 367) { lbl.textContent = 'Máximo de 1 ano por vez'; return; }
+    const br = d => d.split('-').reverse().join('/');
+    lbl.textContent = dias === 1 ? br(from) : `${br(from)} a ${br(to)} · ${dias} dias`;
+    _dv2Range = { from, to };
     loadDashboardV2();
 }
 async function loadDashboardV2() {
-    const { ok, data } = await API.call('/api/admin/dashboard-v2?period=' + _dv2Period);
+    const myReq = ++_dv2Req;
+    const screen = document.getElementById('dv2Funnel')?.closest('.form-card')?.parentElement;
+    if (screen) screen.classList.add('dv2-loading');
+    const qs = _dv2Range ? `from=${_dv2Range.from}&to=${_dv2Range.to}` : 'period=' + _dv2Period;
+    const { ok, data } = await API.call('/api/admin/dashboard-v2?' + qs).catch(() => ({ ok: false }));
+    if (myReq !== _dv2Req) return;          // chegou resposta velha: ignora
+    if (screen) screen.classList.remove('dv2-loading');
     if (!ok || !data.success) return;
     const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     const cmp = (agora, antes, moeda) => {
@@ -9917,10 +9965,16 @@ async function loadDashboardV2() {
     // de teste estourava a barra pra fora do gráfico)
     const max = Math.max(1, ...dias.map(d => Math.max(d.visitors, d.chatted, d.emails, d.purchases)));
     const DSEM = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-    document.getElementById('dv2Funnel').innerHTML = dias.map(d => {
+    // período longo (datas livres): aperta o espaço e só rotula 1 a cada N dias
+    const passo = dias.length > 31 ? Math.ceil(dias.length / 12) : 1;
+    document.getElementById('dv2Funnel').style.gap = dias.length > 45 ? '1px' : dias.length > 20 ? '3px' : '';
+    document.getElementById('dv2Funnel').classList.toggle('dense', dias.length > 31);
+    document.getElementById('dv2Funnel').innerHTML = dias.map((d, i) => {
         const h = v => Math.min(100, Math.max(2, Math.round(v / max * 100))) + '%';
         const dt = new Date(d.day + 'T12:00:00');
-        const lbl = dias.length <= 7 ? DSEM[dt.getDay()] + ' ' + dt.getDate() : String(dt.getDate());
+        const ddmm = dt.getDate() + '/' + String(dt.getMonth() + 1).padStart(2, '0');
+        const lbl = dias.length <= 7 ? DSEM[dt.getDay()] + ' ' + dt.getDate()
+            : passo > 1 ? (i % passo === 0 ? ddmm : '&nbsp;') : String(dt.getDate());
         return `<div class="dv2-dia" title="${d.day}: ${d.visitors} visit · ${d.chatted} conv · ${d.emails} email · ${d.purchases} compras (${_dv2R$(d.revenue)})">`
             + `<div class="bs"><div class="b" style="height:${h(d.visitors)};background:#3b82f6"></div>`
             + `<div class="b" style="height:${h(d.chatted)};background:#a78bfa"></div>`

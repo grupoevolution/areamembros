@@ -8,9 +8,11 @@
  *     (nunca webhook_logs — retry do gateway inflava);
  *   - "visitante" = PESSOA única no dia (DISTINCT email/vid do session_start),
  *     não carregamento de página (o antigo COUNT(*) dava 20 mil num dia);
- *   - períodos: today | yesterday | 7 | month (fuso Brasília).
+ *   - períodos: today | yesterday | 7 | month, OU datas livres ?from=&to=
+ *     (YYYY-MM-DD, fuso Brasília, até 366 dias).
  *
  * GET /api/admin/dashboard-v2?period=7
+ * GET /api/admin/dashboard-v2?from=2026-09-01&to=2026-09-10
  * =============================================================================
  */
 
@@ -24,19 +26,39 @@ const TZ = 'America/Sao_Paulo';
 const DAY = `(created_at AT TIME ZONE '${TZ}')::date`;
 const TODAY = `(NOW() AT TIME ZONE '${TZ}')::date`;
 
-// Janela [from, to) em SQL pro período pedido
+// Período → dia inicial e final (datas de Brasília, em SQL).
+// period = 'today' | 'yesterday' | '7' | 'month' | { from:'YYYY-MM-DD', to:'YYYY-MM-DD' }
+// (o objeto só chega aqui DEPOIS de validado por regex — seguro interpolar)
+function rangeSql(period) {
+    if (period && typeof period === 'object') {
+        return { start: `'${period.from}'::date`, end: `'${period.to}'::date` };
+    }
+    if (period === 'today') return { start: TODAY, end: TODAY };
+    if (period === 'yesterday') return { start: `${TODAY} - 1`, end: `${TODAY} - 1` };
+    if (period === 'month') return { start: `date_trunc('month', NOW() AT TIME ZONE '${TZ}')::date`, end: TODAY };
+    return { start: `${TODAY} - 6`, end: TODAY }; // default: últimos 7 dias (contando hoje)
+}
+
+// Janela [início do 1º dia, fim do último dia) em SQL pro período pedido
 function windowSql(period, col = 'created_at') {
-    const start = `((NOW() AT TIME ZONE '${TZ}')::date::timestamp AT TIME ZONE '${TZ}')`;
-    if (period === 'today') return `${col} >= ${start}`;
-    if (period === 'yesterday') {
-        return `${col} >= (((NOW() AT TIME ZONE '${TZ}')::date - 1)::timestamp AT TIME ZONE '${TZ}')
-            AND ${col} < ${start}`;
+    const r = rangeSql(period);
+    return `${col} >= ((${r.start})::timestamp AT TIME ZONE '${TZ}')
+        AND ${col} < ((${r.end} + 1)::timestamp AT TIME ZONE '${TZ}')`;
+}
+
+// Lê o período da requisição: ?from=&to= (datas) tem prioridade sobre ?period=
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+function parsePeriod(query) {
+    const from = String(query.from || ''), to = String(query.to || '');
+    if (DATE_RE.test(from) && DATE_RE.test(to)) {
+        const a = new Date(from + 'T00:00:00Z'), b = new Date(to + 'T00:00:00Z');
+        if (!isNaN(a) && !isNaN(b)) {
+            const [f, t] = a <= b ? [from, to] : [to, from];
+            const days = Math.abs(b - a) / 86400000;
+            if (days <= 366) return { from: f, to: t };
+        }
     }
-    if (period === 'month') {
-        return `${col} >= (date_trunc('month', NOW() AT TIME ZONE '${TZ}')::timestamp AT TIME ZONE '${TZ}')`;
-    }
-    // default: últimos 7 dias (contando hoje)
-    return `${col} >= (((NOW() AT TIME ZONE '${TZ}')::date - 6)::timestamp AT TIME ZONE '${TZ}')`;
+    return ['today', 'yesterday', '7', 'month'].includes(String(query.period)) ? String(query.period) : '7';
 }
 
 // identidade única de um session_start (email > vid)
@@ -73,10 +95,10 @@ function dedupSales(period) {
 }
 
 router.get('/dashboard-v2', requireAdmin, async (req, res) => {
-    const period = ['today', 'yesterday', '7', 'month'].includes(String(req.query.period))
-        ? String(req.query.period) : '7';
+    const period = parsePeriod(req.query);
     try {
-        const q = (sql, params) => db.query(sql, params).catch(err => {
+        // fila separada do painel (db.reportQuery): nunca disputa conexão com o app
+        const q = (sql, params) => db.reportQuery(sql, params).catch(err => {
             logger.warn('[dash-v2] query falhou: ' + err.message);
             return { rows: [] };
         });
@@ -112,12 +134,7 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
             // série diária do período: visitantes / conversaram / e-mails / compras
             q(`WITH dias AS (
                     SELECT d::date AS day FROM generate_series(
-                        CASE WHEN '${period}' = 'today' THEN ${TODAY}
-                             WHEN '${period}' = 'yesterday' THEN ${TODAY} - 1
-                             WHEN '${period}' = 'month' THEN date_trunc('month', NOW() AT TIME ZONE '${TZ}')::date
-                             ELSE ${TODAY} - 6 END,
-                        CASE WHEN '${period}' = 'yesterday' THEN ${TODAY} - 1 ELSE ${TODAY} END,
-                        '1 day') d
+                        (${rangeSql(period).start})::timestamp, (${rangeSql(period).end})::timestamp, '1 day') d
                ),
                v AS (SELECT ${DAY} AS day, COUNT(DISTINCT ${IDENT})::int AS n
                      FROM tracking_events WHERE event_type = 'session_start' AND ${windowSql(period)} GROUP BY 1),
