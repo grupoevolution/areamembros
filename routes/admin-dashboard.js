@@ -109,6 +109,7 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
             serie, pie, money, topProdutos, orfas,
             installs, engaj, sumidos, recompra, multiProduto,
             porHora, topVendedoras,
+            novosVsRecompra, recompraDosNovos, roleta, roletaConvite,
         ] = await Promise.all([
             // visitantes únicos HOJE e ONTEM até a mesma hora
             q(`SELECT COUNT(DISTINCT ${IDENT})::int AS n FROM tracking_events
@@ -237,6 +238,72 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
                LEFT JOIN chats ch ON src.utm_content = 'chat_' || ch.id
                LEFT JOIN groups gr ON src.utm_content = 'group_' || gr.id
                ORDER BY src.n DESC LIMIT 6`),
+
+            // ── 1ª COMPRA × RECOMPRA (pedido do dono) ──────────────────────
+            // Venda do período é "primeira" se é a 1ª venda paga daquele e-mail
+            // NA VIDA (olha o histórico todo, não só o período). Por dia + total,
+            // com ticket médio de cada lado.
+            q(`WITH primeira AS (
+                   SELECT LOWER(email) AS email, MIN(granted_at) AS first_at
+                   FROM user_access WHERE granted_by = 'webhook' AND status NOT IN ('refunded', 'chargeback')
+                   GROUP BY 1),
+               v AS (SELECT s.*, (s.granted_at <= pr.first_at) AS is_first
+                     FROM (${dedupSales(period)}) s JOIN primeira pr ON pr.email = s.email)
+               SELECT to_char((granted_at AT TIME ZONE '${TZ}')::date, 'YYYY-MM-DD') AS day,
+                      COUNT(*) FILTER (WHERE is_first)::int AS first_sales,
+                      COUNT(*) FILTER (WHERE NOT is_first)::int AS repeat_sales,
+                      COALESCE(SUM(sale_amount) FILTER (WHERE is_first), 0)::float AS first_gross,
+                      COALESCE(SUM(sale_amount) FILTER (WHERE NOT is_first), 0)::float AS repeat_gross,
+                      COUNT(DISTINCT email) FILTER (WHERE NOT is_first)::int AS repeat_people
+               FROM v GROUP BY 1 ORDER BY 1`),
+
+            // Dos que fizeram a 1ª compra NO PERÍODO: quantos já compraram de
+            // novo (em qualquer data depois), % e dias médios até a 2ª compra.
+            q(`WITH vendas AS (
+                   SELECT DISTINCT ON (gateway, COALESCE(sale_id, 'ua_' || id)) LOWER(email) AS email, granted_at
+                   FROM user_access WHERE granted_by = 'webhook' AND status NOT IN ('refunded', 'chargeback')),
+               primeira AS (SELECT email, MIN(granted_at) AS first_at FROM vendas GROUP BY 1),
+               novos AS (SELECT * FROM primeira WHERE ${windowSql(period, 'first_at')}),
+               segunda AS (
+                   SELECT n.email, n.first_at, MIN(v.granted_at) AS second_at
+                   FROM novos n JOIN vendas v ON v.email = n.email AND v.granted_at > n.first_at + INTERVAL '1 minute'
+                   GROUP BY 1, 2)
+               SELECT (SELECT COUNT(*) FROM novos)::int AS new_buyers,
+                      COUNT(*)::int AS rebought,
+                      COALESCE(AVG(EXTRACT(EPOCH FROM (second_at - first_at)) / 86400), 0)::float AS avg_days,
+                      COALESCE(percentile_cont(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (second_at - first_at)) / 86400), 0)::float AS median_days,
+                      COUNT(*) FILTER (WHERE second_at < first_at + INTERVAL '1 day')::int AS within_1d,
+                      COUNT(*) FILTER (WHERE second_at < first_at + INTERVAL '7 days')::int AS within_7d
+               FROM segunda`),
+
+            // ── ROLETA: giraram / compartilharam / compraram depois ────────
+            q(`WITH giradores AS (
+                   SELECT LOWER(email) AS email, MIN(created_at) AS first_spin, COUNT(*)::int AS spins
+                   FROM roulette_prizes WHERE ${windowSql(period)} GROUP BY 1),
+               compras AS (
+                   SELECT DISTINCT ON (ua.gateway, COALESCE(ua.sale_id, 'ua_' || ua.id)) LOWER(ua.email) AS email, ua.sale_amount, ua.granted_at
+                   FROM user_access ua WHERE ua.granted_by = 'webhook' AND ua.status NOT IN ('refunded', 'chargeback'))
+               SELECT (SELECT COUNT(*) FROM giradores)::int AS spinners,
+                      (SELECT COALESCE(SUM(spins), 0) FROM giradores)::int AS spins,
+                      (SELECT COUNT(*) FROM roulette_state rs JOIN giradores g ON LOWER(rs.email) = g.email WHERE rs.share_count > 0)::int AS sharers,
+                      (SELECT COUNT(*) FROM roulette_prizes WHERE kind = 'call' AND claimed = true AND ${windowSql(period)})::int AS calls_claimed,
+                      COUNT(DISTINCT g.email) FILTER (WHERE c.granted_at > g.first_spin)::int AS bought_after,
+                      COALESCE(SUM(c.sale_amount) FILTER (WHERE c.granted_at > g.first_spin), 0)::float AS gross_after
+               FROM giradores g LEFT JOIN compras c ON c.email = g.email`),
+
+            // Entraram pelo link de convite (visitas únicas) → cadastraram → compraram.
+            // O e-mail só existe pra visitas DEPOIS desta versão (antes ficava anônimo).
+            q(`WITH visitas AS (
+                   SELECT DISTINCT ON (visitor_id) visitor_id, LOWER(customer_email) AS email, created_at
+                   FROM roulette_ref_visits WHERE ${windowSql(period)} ORDER BY visitor_id, created_at),
+               compras AS (
+                   SELECT DISTINCT ON (ua.gateway, COALESCE(ua.sale_id, 'ua_' || ua.id)) LOWER(ua.email) AS email, ua.sale_amount, ua.granted_at
+                   FROM user_access ua WHERE ua.granted_by = 'webhook' AND ua.status NOT IN ('refunded', 'chargeback'))
+               SELECT (SELECT COUNT(*) FROM visitas)::int AS visitors,
+                      (SELECT COUNT(*) FROM visitas WHERE email IS NOT NULL)::int AS registered,
+                      COUNT(DISTINCT v.email) FILTER (WHERE c.granted_at >= v.created_at)::int AS bought,
+                      COALESCE(SUM(c.sale_amount) FILTER (WHERE c.granted_at >= v.created_at), 0)::float AS gross
+               FROM visitas v LEFT JOIN compras c ON c.email = v.email`),
         ]);
 
         const r0 = (r) => r.rows[0] || {};
@@ -271,6 +338,15 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
             },
             sales_by_hour: porHora.rows,
             top_sellers: topVendedoras.rows,
+            new_vs_repeat: {
+                days: novosVsRecompra.rows,
+                ...novosVsRecompra.rows.reduce((t, d) => ({
+                    first_sales: t.first_sales + d.first_sales, repeat_sales: t.repeat_sales + d.repeat_sales,
+                    first_gross: t.first_gross + d.first_gross, repeat_gross: t.repeat_gross + d.repeat_gross,
+                }), { first_sales: 0, repeat_sales: 0, first_gross: 0, repeat_gross: 0 }),
+                cohort: r0(recompraDosNovos),
+            },
+            roulette: { ...r0(roleta), invite: r0(roletaConvite) },
         });
     } catch (err) {
         logger.error('[dash-v2] erro:', err);

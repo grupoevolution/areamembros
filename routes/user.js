@@ -2694,6 +2694,15 @@ router.post('/login/promote', async (req, res) => {
                     [String(result.email).toLowerCase(), vid]
                 );
             } catch (_) { /* tabela de chat pode não existir em banco antigo */ }
+            // Veio pelo link de convite da roleta? Carimba o e-mail na visita —
+            // é isso que permite ao painel dizer "X entraram por convite, Y compraram".
+            try {
+                await db.query(
+                    `UPDATE roulette_ref_visits SET customer_email = $1
+                     WHERE visitor_id = $2 AND customer_email IS NULL`,
+                    [String(result.email).toLowerCase(), vid]
+                );
+            } catch (_) {}
             // Vídeos assistidos como anônimo passam pro e-mail (o contador do
             // grátis segue a pessoa, não o aparelho)
             try {

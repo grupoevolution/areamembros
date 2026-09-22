@@ -515,6 +515,20 @@ router.post('/roulette/claim-call', requireUser, async (req, res) => {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POST /api/user/roulette/share — o cliente clicou em COMPARTILHAR (só conta)
+// ─────────────────────────────────────────────────────────────────────────────
+router.post('/roulette/share', requireUser, async (req, res) => {
+    try {
+        await getOrCreateState(req.user.email);
+        await db.query(
+            `UPDATE roulette_state SET share_count = share_count + 1,
+                    first_share_at = COALESCE(first_share_at, NOW())
+              WHERE email = $1`, [req.user.email]);
+    } catch (_) {}
+    return res.json({ success: true });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 // POST /api/user/roulette/track-ref { code, visitor_id }  (SEM login)
 // Alguém abriu o app pelo link de convite → dono do código ganha +1 giro.
 // Conta 1 vez por visitante e no máximo 3 por dia.

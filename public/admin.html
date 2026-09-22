@@ -3457,6 +3457,24 @@ a { color: inherit; text-decoration: none; }
                     </div>
                 </div>
 
+                <!-- ═══ 1ª COMPRA × RECOMPRA (set/2026) ═══ -->
+                <div class="form-card" style="margin-top:16px; padding:18px;">
+                    <div class="form-card-title">🆕 Primeira compra × Recompra <span style="font-size:10.5px; font-weight:600; color:rgba(255,255,255,.4);">segue o período escolhido acima</span></div>
+                    <div class="form-card-sub">"Primeira" = a 1ª compra paga daquele cliente na vida. "Recompra" = cliente que já tinha comprado antes.</div>
+                    <div class="dv2-cards" id="dv2NewRepeat" style="margin-top:12px;"></div>
+                    <div class="dv2-bars" id="dv2NewRepeatBars" style="height:120px;"></div>
+                    <div class="dv2-leg"><span><i style="background:#4ade80"></i>Primeira compra</span><span><i style="background:#f472b6"></i>Recompra</span></div>
+                    <div class="dv2-cards" id="dv2Cohort" style="margin-top:14px;"></div>
+                </div>
+
+                <!-- ═══ ROLETA (set/2026) ═══ -->
+                <div class="form-card" style="margin-top:16px; padding:18px;">
+                    <div class="form-card-title">🎰 Roleta <span style="font-size:10.5px; font-weight:600; color:rgba(255,255,255,.4);">segue o período escolhido acima</span></div>
+                    <div class="form-card-sub">Quem girou no período e comprou DEPOIS de girar. Convite = quem entrou pelo link compartilhado.</div>
+                    <div class="dv2-cards" id="dv2Roulette" style="margin-top:12px;"></div>
+                    <div class="dv2-cards" id="dv2RouletteInvite" style="margin-top:12px;"></div>
+                </div>
+
                 <!-- ═══════════════ SAÚDE DO NEGÓCIO (Fase L6) ═══════════════
                      Métricas operacionais pra decisão de escala:
                      ativação 24h (cliente abriu o app após pagar?), LTV vitalício
@@ -10061,6 +10079,49 @@ async function loadDashboardV2() {
         `<div class="dv2-pill">Compraram DE NOVO no período: <b>&nbsp;${r.repeat} cliente(s) (${rpct}%)</b></div>`
         + `<div class="dv2-pill">Clientes com 2+ produtos diferentes: <b>&nbsp;${r.multi_product}</b></div>`
         + `<div class="dv2-pill">R$ vindo de quem já era cliente: <b>&nbsp;${_dv2R$(r.repeat_gross)}</b></div>`;
+
+    // 1ª COMPRA × RECOMPRA
+    const nr = data.new_vs_repeat || { days: [], cohort: {} };
+    const tot = nr.first_sales + nr.repeat_sales;
+    const pc = (a, b) => b > 0 ? Math.round(a / b * 100) + '%' : '—';
+    const tk = (g, n) => n > 0 ? _dv2R$(g / n) : '—';
+    const card = (lb, v, cmp, cor) => `<div class="dv2-card"><div class="lb">${lb}</div><div class="v" style="color:${cor || '#fff'}">${v}</div><div class="cmp">${cmp}</div></div>`;
+    document.getElementById('dv2NewRepeat').innerHTML =
+        card('Vendas no período', fmtN(tot), _dv2R$(nr.first_gross + nr.repeat_gross))
+        + card('Primeira compra', fmtN(nr.first_sales), `${pc(nr.first_sales, tot)} das vendas · ticket ${tk(nr.first_gross, nr.first_sales)}`, '#4ade80')
+        + card('Recompra', fmtN(nr.repeat_sales), `${pc(nr.repeat_sales, tot)} das vendas · ticket ${tk(nr.repeat_gross, nr.repeat_sales)}`, '#f472b6')
+        + card('R$ de recompra', _dv2R$(nr.repeat_gross), `${pc(nr.repeat_gross, nr.first_gross + nr.repeat_gross)} do faturamento`, '#f472b6');
+    const nd = nr.days || [];
+    const nmax = Math.max(1, ...nd.map(d => Math.max(d.first_sales, d.repeat_sales)));
+    const bars = document.getElementById('dv2NewRepeatBars');
+    bars.classList.toggle('dense', nd.length > 31);
+    bars.innerHTML = nd.length <= 1 ? '' : nd.map((d, i) => {
+        const h = v => Math.max(2, Math.round(v / nmax * 100)) + '%';
+        const dt = new Date(d.day + 'T12:00:00');
+        const lbl = nd.length <= 7 ? DSEM[dt.getDay()] + ' ' + dt.getDate() : (nd.length > 31 ? (i % Math.ceil(nd.length / 12) === 0 ? dt.getDate() + '/' + (dt.getMonth() + 1) : '&nbsp;') : String(dt.getDate()));
+        return `<div class="dv2-dia" title="${d.day}: ${d.first_sales} primeira · ${d.repeat_sales} recompra"><div class="bs" style="height:92px">`
+            + `<div class="b" style="height:${h(d.first_sales)};background:#4ade80"></div>`
+            + `<div class="b" style="height:${h(d.repeat_sales)};background:#f472b6"></div></div><div class="dl">${lbl}</div></div>`;
+    }).join('');
+    const co = nr.cohort || {};
+    const dias1 = v => (Number(v) || 0) < 1 ? ((Number(v) || 0) * 24).toFixed(0) + ' h' : (Number(v) || 0).toFixed(1) + ' dias';
+    document.getElementById('dv2Cohort').innerHTML =
+        card('Clientes novos no período', fmtN(co.new_buyers || 0), 'fizeram a 1ª compra nessas datas')
+        + card('Já compraram de novo', fmtN(co.rebought || 0), `${pc(co.rebought, co.new_buyers)} dos novos (até hoje)`, '#f472b6')
+        + card('Tempo até a 2ª compra', co.rebought ? dias1(co.median_days) : '—', co.rebought ? `mediana · média ${dias1(co.avg_days)}` : 'ninguém recomprou ainda')
+        + card('Recompram rápido', `${pc(co.within_1d, co.rebought)} / ${pc(co.within_7d, co.rebought)}`, 'em 24h / em 7 dias (dos que recompraram)');
+
+    // ROLETA
+    const ro = data.roulette || {}, inv = ro.invite || {};
+    document.getElementById('dv2Roulette').innerHTML =
+        card('Giraram a roleta', fmtN(ro.spinners || 0), `${fmtN(ro.spins || 0)} giros no total`)
+        + card('Compartilharam o link', fmtN(ro.sharers || 0), `${pc(ro.sharers, ro.spinners)} de quem girou`)
+        + card('Chamadas resgatadas', fmtN(ro.calls_claimed || 0), 'prêmio de chamada usado')
+        + card('Compraram depois de girar', fmtN(ro.bought_after || 0), `${pc(ro.bought_after, ro.spinners)} de quem girou · ${_dv2R$(ro.gross_after || 0)}`, '#4ade80');
+    document.getElementById('dv2RouletteInvite').innerHTML =
+        card('Entraram pelo convite', fmtN(inv.visitors || 0), 'visitantes únicos via link')
+        + card('Deram o e-mail', fmtN(inv.registered || 0), `${pc(inv.registered, inv.visitors)} dos que entraram`)
+        + card('Compraram', fmtN(inv.bought || 0), `${pc(inv.bought, inv.visitors)} dos que entraram · ${_dv2R$(inv.gross || 0)}`, '#4ade80');
 }
 document.addEventListener('click', e => {
     const p = e.target.closest && e.target.closest('#dv2Periods span');

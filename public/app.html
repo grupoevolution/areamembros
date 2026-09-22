@@ -23062,6 +23062,7 @@ window.Roulette = (function () {
     }
 
     function share() {
+        api('/api/user/roulette/share', {}).catch(function () {});   // só conta no painel
         var url = shareLink();
         var txt = 'Entrei nesse app e ganhei uma chamada de vídeo de graça na roleta. Entra pelo meu link:';
         if (navigator.share) {
