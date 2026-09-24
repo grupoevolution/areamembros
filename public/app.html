@@ -11423,6 +11423,8 @@ window.GroupApp = (function () {
         } else {
             ga.style.display = 'none'; ca.style.display = 'block';
             bG.classList.remove('on'); bC.classList.add('on');
+            // voltou pra Conversas → lista fresca (antes ficava a velha)
+            try { if (window.ChatApp) ChatApp.loadList(); } catch (_) {}
         }
     }
 
@@ -12633,8 +12635,15 @@ window.GroupApp = (function () {
         } catch(_) {}
     };
     setTimeout(ping, 4000);
-    setInterval(ping, 40000);
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) ping(); });
+    // 15s (era 40s): só 1 consulta leve; é o que faz a prévia "chegar ao vivo"
+    // na lista. Fora da aba Conversas continua só a bolinha.
+    setInterval(ping, 15000);
+    // Volta do segundo plano: além do visibilitychange (que em Android/webview
+    // do Instagram às vezes NÃO dispara), escuta focus e pageshow.
+    const wake = () => { if (!document.hidden) { try { mvRefreshChatList(true); } catch (_) { ping(); } } };
+    document.addEventListener('visibilitychange', wake);
+    window.addEventListener('focus', wake);
+    window.addEventListener('pageshow', wake);
 })();
 
 // ─── Notificação in-app (banner estilo notificação de celular) ───
@@ -12752,7 +12761,28 @@ if (navigator.serviceWorker) {
             icon: '💬',
             onClick: p.url ? () => mvNavigate(p.url) : null,
         });
+        // A lista de conversas NÃO se atualizava com a notificação (só no relógio
+        // de 40s) — o lead via o banner e a prévia não aparecia. Agora atualiza junto.
+        try { if (typeof mvRefreshChatList === 'function') mvRefreshChatList(); } catch (_) {}
     });
+}
+
+// Atualiza a lista de conversas se ela estiver na tela (senão só a bolinha).
+// Chamado por: push em primeiro plano, notificação do poller, volta do
+// segundo plano e troca de aba. Barato: 1 consulta leve, coalescida (não
+// dispara 2x em menos de 3s).
+let _mvListRefreshAt = 0;
+function mvRefreshChatList(force) {
+    if (!window.ChatApp) return;
+    if (!force && Date.now() - _mvListRefreshAt < 3000) return;
+    _mvListRefreshAt = Date.now();
+    try {
+        const onList = document.getElementById('chat') && document.getElementById('chat').classList.contains('active');
+        const inConv = document.getElementById('chatconv') && document.getElementById('chatconv').classList.contains('active');
+        const chatsTabOn = !document.getElementById('caTabChats') || document.getElementById('caTabChats').classList.contains('on');
+        if (onList && !inConv && chatsTabOn) ChatApp.loadList();
+        else ChatApp.refreshUnreadDot();
+    } catch (_) {}
 }
 
 // Poller global: (a) mensagens novas de chat fora da conversa aberta, (b) campanhas
@@ -12788,6 +12818,7 @@ if (navigator.serviceWorker) {
                     const id = nextState[c.id], prev = chatState[c.id] || 0;
                     const fromBot = !c.last || c.last.sender !== 'user'; // não notifica a própria msg do cliente
                     if (id > prev && c.unread > 0 && c.id !== curOpen && fromBot) {
+                        try { mvRefreshChatList(); } catch (_) {}
                         MVNotify.push({
                             title: c.name,
                             body: notifBody(c),
