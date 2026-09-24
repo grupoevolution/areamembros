@@ -109,7 +109,7 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
             serie, pie, money, topProdutos, orfas,
             installs, engaj, sumidos, recompra, multiProduto,
             porHora, topVendedoras,
-            novosVsRecompra, recompraDosNovos, roleta, roletaConvite, distNovos, pessoasPeriodo,
+            novosVsRecompra, recompraDosNovos, roleta, roletaConvite, distNovos, pessoasPeriodo, convChats,
         ] = await Promise.all([
             // visitantes únicos HOJE e ONTEM até a mesma hora
             q(`SELECT COUNT(DISTINCT ${IDENT})::int AS n FROM tracking_events
@@ -330,6 +330,36 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
                       COUNT(*) FILTER (WHERE ${windowSql(period, 'pr.first_at')})::int AS new_people,
                       COUNT(*) FILTER (WHERE NOT (${windowSql(period, 'pr.first_at')}))::int AS old_people
                FROM b JOIN primeira pr ON pr.email = b.email`),
+
+            // ── CONVERSÃO POR CHAT DO FUNIL (pedido do dono) ─────────────────
+            // Só os chats que o funil usa como oferta (entrada + visíveis dos
+            // funis ativos). Por chat: entraram (sessão criada no período) →
+            // conversaram (mandaram ≥1 msg) → compraram (venda carimbada chat_X).
+            q(`WITH fchats AS (
+                   SELECT DISTINCT id FROM (
+                       SELECT entry_chat_id AS id FROM funnels WHERE active = true AND entry_chat_id IS NOT NULL
+                       UNION ALL
+                       SELECT (jsonb_array_elements_text(COALESCE(visible_chat_ids, '[]'::jsonb)))::int FROM funnels WHERE active = true
+                   ) x WHERE id IS NOT NULL),
+               sess AS (
+                   SELECT s.chat_id, s.id, COALESCE(LOWER(s.customer_email), s.visitor_id) AS ident
+                   FROM chat_sessions s WHERE s.chat_id IN (SELECT id FROM fchats) AND ${windowSql(period, 's.created_at')}),
+               entraram AS (SELECT chat_id, COUNT(DISTINCT ident)::int AS n FROM sess GROUP BY 1),
+               falaram AS (
+                   SELECT s.chat_id, COUNT(DISTINCT s.ident)::int AS n
+                   FROM sess s WHERE EXISTS (SELECT 1 FROM chat_messages m WHERE m.session_id = s.id AND m.sender = 'user')
+                   GROUP BY 1),
+               vendas AS (
+                   SELECT SUBSTRING(utm_content FROM 6)::int AS chat_id, COUNT(*)::int AS n,
+                          COUNT(DISTINCT email)::int AS people, COALESCE(SUM(sale_amount), 0)::float AS gross
+                   FROM (${dedupSales(period)}) v WHERE utm_content ~ '^chat_[0-9]+$' GROUP BY 1)
+               SELECT c.id, c.name, c.avatar_url,
+                      COALESCE(e.n, 0) AS opened, COALESCE(f.n, 0) AS talked,
+                      COALESCE(v.people, 0) AS buyers, COALESCE(v.n, 0) AS sales, COALESCE(v.gross, 0) AS gross
+               FROM chats c JOIN fchats ON fchats.id = c.id
+               LEFT JOIN entraram e ON e.chat_id = c.id LEFT JOIN falaram f ON f.chat_id = c.id
+               LEFT JOIN vendas v ON v.chat_id = c.id
+               ORDER BY COALESCE(e.n, 0) DESC, c.id`),
         ]);
 
         const r0 = (r) => r.rows[0] || {};
@@ -374,6 +404,7 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
                 people: r0(pessoasPeriodo),
             },
             roulette: { ...r0(roleta), invite: r0(roletaConvite) },
+            funnel_chats: convChats.rows,
         });
     } catch (err) {
         logger.error('[dash-v2] erro:', err);

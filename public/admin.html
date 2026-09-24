@@ -3364,6 +3364,15 @@ a { color: inherit; text-decoration: none; }
                 .rc-dist .bar i { display:block; height:100%; background:#f472b6; border-radius:4px; }
                 .rc-dist .bar i.g { background:#4ade80; }
                 .rc-dist b { color:#fff; }
+                .cc-table { width:100%; border-collapse:collapse; margin-top:12px; font-size:12.5px; }
+                .cc-table th { text-align:left; font-size:10.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:rgba(255,255,255,.45); padding:6px 10px; border-bottom:1px solid rgba(255,255,255,.08); }
+                .cc-table td { padding:10px; border-bottom:1px solid rgba(255,255,255,.05); color:rgba(255,255,255,.75); }
+                .cc-table td:first-child { white-space:nowrap; }
+                .cc-table td b { color:#fff; }
+                .cc-table .av { width:30px; height:30px; border-radius:50%; background:#333 center/cover; display:inline-block; vertical-align:middle; margin-right:8px; }
+                .cc-table .conv { font-size:16px; font-weight:800; color:#4ade80; }
+                .cc-table .bar { height:6px; border-radius:3px; background:rgba(255,255,255,.06); margin-top:5px; min-width:120px; }
+                .cc-table .bar i { display:block; height:100%; border-radius:3px; background:#4ade80; }
                 .dv2-bars { display:flex; gap:8px; align-items:flex-end; height:180px; margin-top:14px; }
                 .dv2-dia { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; min-width:0; }
                 .dv2-dia .bs { display:flex; gap:3px; align-items:flex-end; height:152px; width:100%; justify-content:center; }
@@ -3486,6 +3495,13 @@ a { color: inherit; text-decoration: none; }
                     <div class="form-card-sub">Quem girou no período e comprou DEPOIS de girar. Convite = quem entrou pelo link compartilhado.</div>
                     <div class="dv2-cards" id="dv2Roulette" style="margin-top:12px;"></div>
                     <div class="dv2-cards" id="dv2RouletteInvite" style="margin-top:12px;"></div>
+                </div>
+
+                <!-- ═══ CONVERSÃO POR CHAT DO FUNIL (set/2026) ═══ -->
+                <div class="form-card" style="margin-top:16px; padding:18px;">
+                    <div class="form-card-title">💬 Conversão por chat do funil <span style="font-size:10.5px; font-weight:600; color:rgba(255,255,255,.4);">segue o período escolhido acima</span></div>
+                    <div class="form-card-sub">Só os chats usados como oferta nos funis ativos. Entraram = abriram a conversa · Conversaram = mandaram mensagem · Compraram = venda carimbada com esse chat.</div>
+                    <div style="overflow-x:auto;"><table class="cc-table" id="dv2FunnelChats"></table></div>
                 </div>
 
                 <!-- ═══════════════ SAÚDE DO NEGÓCIO (Fase L6) ═══════════════
@@ -10129,6 +10145,23 @@ async function loadDashboardV2() {
         + `<div class="rc-dist">`
         + linha('Só 1 compra', di.x1, 'g') + linha('2 compras', di.x2) + linha('3 compras', di.x3) + linha('4 ou mais', di.x4)
         + `</div>`;
+
+    // CONVERSÃO POR CHAT DO FUNIL
+    const fc = data.funnel_chats || [];
+    const maxConv = Math.max(0.0001, ...fc.map(c => c.opened ? c.buyers / c.opened : 0));
+    document.getElementById('dv2FunnelChats').innerHTML = !fc.length
+        ? '<tr><td style="color:rgba(255,255,255,.45)">Nenhum funil ativo com chat de entrada/visível configurado.</td></tr>'
+        : '<tr><th>Chat</th><th>Entraram</th><th>Conversaram</th><th>Compraram</th><th>Conversão</th><th>Vendas · R$</th><th>Ticket</th></tr>'
+        + fc.map(c => {
+            const conv = c.opened ? c.buyers / c.opened * 100 : 0;
+            return `<tr><td><span class="av" style="${c.avatar_url ? 'background-image:url(' + esc(c.avatar_url) + ')' : ''}"></span><b>${esc(c.name)}</b></td>`
+                + `<td><b>${fmtN(c.opened)}</b></td>`
+                + `<td><b>${fmtN(c.talked)}</b> <span style="color:rgba(255,255,255,.45)">(${pc(c.talked, c.opened)} dos que entraram)</span></td>`
+                + `<td><b>${fmtN(c.buyers)}</b> <span style="color:rgba(255,255,255,.45)">(${pc(c.buyers, c.talked)} dos que conversaram)</span></td>`
+                + `<td><span class="conv">${c.opened ? conv.toFixed(conv < 10 ? 1 : 0) + '%' : '—'}</span><div class="bar"><i style="width:${Math.round((c.opened ? c.buyers / c.opened : 0) / maxConv * 100)}%"></i></div></td>`
+                + `<td><b>${fmtN(c.sales)}</b> · ${_dv2R$(c.gross)}</td>`
+                + `<td>${tk(c.gross, c.sales)}</td></tr>`;
+        }).join('');
 
     // ROLETA
     const ro = data.roulette || {}, inv = ro.invite || {};
