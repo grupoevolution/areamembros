@@ -109,7 +109,7 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
             serie, pie, money, topProdutos, orfas,
             installs, engaj, sumidos, recompra, multiProduto,
             porHora, topVendedoras,
-            novosVsRecompra, recompraDosNovos, roleta, roletaConvite, distNovos,
+            novosVsRecompra, recompraDosNovos, roleta, roletaConvite, distNovos, pessoasPeriodo,
         ] = await Promise.all([
             // visitantes únicos HOJE e ONTEM até a mesma hora
             q(`SELECT COUNT(DISTINCT ${IDENT})::int AS n FROM tracking_events
@@ -319,6 +319,17 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
                       COUNT(*) FILTER (WHERE c = 3)::int AS x3,
                       COUNT(*) FILTER (WHERE c >= 4)::int AS x4
                FROM n`),
+
+            // PESSOAS do período: compradores únicos, quantos são novos (1ª compra
+            // na vida dentro do período) e quantos já eram clientes.
+            q(`WITH primeira AS (
+                   SELECT LOWER(email) AS email, MIN(granted_at) AS first_at
+                   FROM user_access WHERE granted_by = 'webhook' AND status NOT IN ('refunded', 'chargeback') GROUP BY 1),
+               b AS (SELECT DISTINCT s.email FROM (${dedupSales(period)}) s)
+               SELECT COUNT(*)::int AS buyers,
+                      COUNT(*) FILTER (WHERE ${windowSql(period, 'pr.first_at')})::int AS new_people,
+                      COUNT(*) FILTER (WHERE NOT (${windowSql(period, 'pr.first_at')}))::int AS old_people
+               FROM b JOIN primeira pr ON pr.email = b.email`),
         ]);
 
         const r0 = (r) => r.rows[0] || {};
@@ -360,6 +371,7 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
                     first_gross: t.first_gross + d.first_gross, repeat_gross: t.repeat_gross + d.repeat_gross,
                 }), { first_sales: 0, repeat_sales: 0, first_gross: 0, repeat_gross: 0 }),
                 cohort: { ...r0(recompraDosNovos), dist: r0(distNovos) },
+                people: r0(pessoasPeriodo),
             },
             roulette: { ...r0(roleta), invite: r0(roletaConvite) },
         });

@@ -3349,6 +3349,21 @@ a { color: inherit; text-decoration: none; }
                 .dv2-range button { background:#e50914; color:#fff; border:0; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; }
                 .dv2-range .lbl { color:rgba(255,255,255,.75); font-weight:700; }
                 .dv2-loading { opacity:.45; transition:opacity .15s; }
+                .rc-frase { font-size:15px; line-height:1.7; color:rgba(255,255,255,.7); margin:14px 0 6px; }
+                .rc-frase b { color:#fff; font-size:22px; font-weight:800; }
+                .rc-frase b.g { color:#4ade80; } .rc-frase b.p { color:#f472b6; }
+                .rc-frase .pct { font-size:12px; color:rgba(255,255,255,.45); }
+                .rc-stack { display:flex; height:26px; border-radius:8px; overflow:hidden; margin:10px 0 8px; background:rgba(255,255,255,.05); }
+                .rc-stack div { display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:800; color:#0b0b0d; min-width:0; white-space:nowrap; overflow:hidden; }
+                .rc-legs { display:flex; gap:18px; flex-wrap:wrap; font-size:12px; color:rgba(255,255,255,.6); }
+                .rc-legs i { width:9px; height:9px; border-radius:3px; display:inline-block; margin-right:6px; vertical-align:-1px; }
+                .rc-legs b { color:#fff; }
+                .rc-sub { font-size:11px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:rgba(255,255,255,.45); margin:18px 0 6px; }
+                .rc-dist { display:grid; grid-template-columns:110px 1fr 120px; gap:6px 12px; align-items:center; font-size:12.5px; color:rgba(255,255,255,.7); }
+                .rc-dist .bar { height:14px; border-radius:4px; background:rgba(255,255,255,.06); overflow:hidden; }
+                .rc-dist .bar i { display:block; height:100%; background:#f472b6; border-radius:4px; }
+                .rc-dist .bar i.g { background:#4ade80; }
+                .rc-dist b { color:#fff; }
                 .dv2-bars { display:flex; gap:8px; align-items:flex-end; height:180px; margin-top:14px; }
                 .dv2-dia { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; min-width:0; }
                 .dv2-dia .bs { display:flex; gap:3px; align-items:flex-end; height:152px; width:100%; justify-content:center; }
@@ -3459,12 +3474,10 @@ a { color: inherit; text-decoration: none; }
 
                 <!-- ═══ 1ª COMPRA × RECOMPRA (set/2026) ═══ -->
                 <div class="form-card" style="margin-top:16px; padding:18px;">
-                    <div class="form-card-title">🆕 Primeira compra × Recompra <span style="font-size:10.5px; font-weight:600; color:rgba(255,255,255,.4);">segue o período escolhido acima</span></div>
-                    <div class="form-card-sub">"Primeira" = a 1ª compra paga daquele cliente na vida. "Recompra" = cliente que já tinha comprado antes.</div>
-                    <div class="dv2-cards" id="dv2NewRepeat" style="margin-top:12px;"></div>
-                    <div class="dv2-bars" id="dv2NewRepeatBars" style="height:120px;"></div>
-                    <div class="dv2-leg"><span><i style="background:#4ade80"></i>Primeira compra</span><span><i style="background:#f472b6"></i>Recompra</span></div>
-                    <div class="dv2-cards" id="dv2Cohort" style="margin-top:14px;"></div>
+                    <div class="form-card-title">🆕 Vendas e recompra <span style="font-size:10.5px; font-weight:600; color:rgba(255,255,255,.4);">segue o período escolhido acima</span></div>
+                    <div class="form-card-sub">"1ª vez" = a primeira compra paga daquele cliente na vida. "Já era cliente" = tinha comprado antes do período.</div>
+                    <div id="dv2NewRepeat"></div>
+                    <div id="dv2Cohort"></div>
                 </div>
 
                 <!-- ═══ ROLETA (set/2026) ═══ -->
@@ -10085,44 +10098,37 @@ async function loadDashboardV2() {
         + `<div class="dv2-pill">Clientes com 2+ produtos diferentes: <b>&nbsp;${r.multi_product}</b></div>`
         + `<div class="dv2-pill">R$ vindo de quem já era cliente: <b>&nbsp;${_dv2R$(r.repeat_gross)}</b></div>`;
 
-    // 1ª COMPRA × RECOMPRA
-    const nr = data.new_vs_repeat || { days: [], cohort: {} };
+    // VENDAS E RECOMPRA — lido como frase, contado por PESSOA (pedido do dono)
+    const nr = data.new_vs_repeat || { days: [], cohort: {}, people: {} };
+    const pe = nr.people || {}, co = nr.cohort || {}, di = co.dist || {};
     const tot = nr.first_sales + nr.repeat_sales;
     const pc = (a, b) => b > 0 ? Math.round(a / b * 100) + '%' : '—';
+    const pcn = (a, b) => b > 0 ? Math.round(a / b * 100) : 0;
     const tk = (g, n) => n > 0 ? _dv2R$(g / n) : '—';
-    const card = (lb, v, cmp, cor) => `<div class="dv2-card"><div class="lb">${lb}</div><div class="v" style="color:${cor || '#fff'}">${v}</div><div class="cmp">${cmp}</div></div>`;
-    document.getElementById('dv2NewRepeat').innerHTML =
-        card('Vendas no período', fmtN(tot), _dv2R$(nr.first_gross + nr.repeat_gross))
-        + card('Primeira compra', fmtN(nr.first_sales), `${pc(nr.first_sales, tot)} das vendas · ticket ${tk(nr.first_gross, nr.first_sales)}`, '#4ade80')
-        + card('Recompra', fmtN(nr.repeat_sales), `${pc(nr.repeat_sales, tot)} das vendas · ticket ${tk(nr.repeat_gross, nr.repeat_sales)}`, '#f472b6')
-        + card('R$ de recompra', _dv2R$(nr.repeat_gross), `${pc(nr.repeat_gross, nr.first_gross + nr.repeat_gross)} do faturamento`, '#f472b6');
-    const nd = nr.days || [];
-    const nmax = Math.max(1, ...nd.map(d => Math.max(d.first_sales, d.repeat_sales)));
-    const bars = document.getElementById('dv2NewRepeatBars');
-    bars.classList.toggle('dense', nd.length > 31);
-    bars.innerHTML = nd.length <= 1 ? '' : nd.map((d, i) => {
-        const h = v => Math.max(2, Math.round(v / nmax * 100)) + '%';
-        const dt = new Date(d.day + 'T12:00:00');
-        const lbl = nd.length <= 7 ? DSEM[dt.getDay()] + ' ' + dt.getDate() : (nd.length > 31 ? (i % Math.ceil(nd.length / 12) === 0 ? dt.getDate() + '/' + (dt.getMonth() + 1) : '&nbsp;') : String(dt.getDate()));
-        return `<div class="dv2-dia" title="${d.day}: ${d.first_sales} primeira · ${d.repeat_sales} recompra"><div class="bs" style="height:92px">`
-            + `<div class="b" style="height:${h(d.first_sales)};background:#4ade80"></div>`
-            + `<div class="b" style="height:${h(d.repeat_sales)};background:#f472b6"></div></div><div class="dl">${lbl}</div></div>`;
-    }).join('');
-    const co = nr.cohort || {};
     const dias1 = v => (Number(v) || 0) < 1 ? ((Number(v) || 0) * 24).toFixed(0) + ' h' : (Number(v) || 0).toFixed(1) + ' dias';
-    // 1 dia só: sem gráfico (ficava um vazio). display direto: o atributo
-    // hidden NÃO vence o display:flex da classe.
-    bars.style.display = nd.length <= 1 ? 'none' : '';
-    document.querySelector('#dv2NewRepeatBars + .dv2-leg').style.display = nd.length <= 1 ? 'none' : '';
-    const di = co.dist || {};
+    const totalGross = nr.first_gross + nr.repeat_gross;
+    const p1 = pcn(nr.first_sales, tot), p2 = tot ? 100 - p1 : 0;
+    document.getElementById('dv2NewRepeat').innerHTML =
+        `<div class="rc-frase"><b>${fmtN(tot)}</b> vendas de <b>${fmtN(pe.buyers || 0)}</b> pessoas. `
+        + `<b class="g">${fmtN(pe.new_people || 0)}</b> compraram pela 1ª vez <span class="pct">(${pc(pe.new_people, pe.buyers)} das pessoas)</span> e `
+        + `<b class="p">${fmtN(pe.old_people || 0)}</b> já eram clientes <span class="pct">(${pc(pe.old_people, pe.buyers)})</span>.</div>`
+        + `<div class="rc-stack">`
+        + (tot ? `<div style="width:${p1}%;background:#4ade80" title="1ª vez">${p1 >= 12 ? fmtN(nr.first_sales) + ' · ' + p1 + '%' : ''}</div>`
+              + `<div style="width:${p2}%;background:#f472b6" title="recompra">${p2 >= 12 ? fmtN(nr.repeat_sales) + ' · ' + p2 + '%' : ''}</div>` : '')
+        + `</div>`
+        + `<div class="rc-legs">`
+        + `<span><i style="background:#4ade80"></i>Vendas de 1ª vez: <b>${fmtN(nr.first_sales)}</b> · ${_dv2R$(nr.first_gross)} · ticket <b>${tk(nr.first_gross, nr.first_sales)}</b></span>`
+        + `<span><i style="background:#f472b6"></i>Recompras: <b>${fmtN(nr.repeat_sales)}</b> · ${_dv2R$(nr.repeat_gross)} (${pc(nr.repeat_gross, totalGross)} do faturamento) · ticket <b>${tk(nr.repeat_gross, nr.repeat_sales)}</b></span>`
+        + `</div>`;
     const nb = co.new_buyers || 0;
-    const distTxt = `1 compra: <b>${fmtN(di.x1 || 0)}</b> · 2: <b>${fmtN(di.x2 || 0)}</b> (${pc(di.x2, nb)}) · 3: <b>${fmtN(di.x3 || 0)}</b> (${pc(di.x3, nb)}) · 4+: <b>${fmtN(di.x4 || 0)}</b> (${pc(di.x4, nb)})`;
+    const linha = (lb, n, cls) => `<span>${lb}</span><div class="bar"><i class="${cls || ''}" style="width:${pcn(n, nb)}%"></i></div><span><b>${fmtN(n || 0)}</b> <span style="color:rgba(255,255,255,.45)">(${pc(n, nb)})</span></span>`;
     document.getElementById('dv2Cohort').innerHTML =
-        card('Clientes novos no período', fmtN(nb), 'pessoas que fizeram a 1ª compra nessas datas')
-        + card('Compraram mais de 1 vez', fmtN(co.rebought || 0), `<b>${pc(co.rebought, nb)} dos novos</b> voltaram e compraram de novo (até hoje)`, '#f472b6')
-        + card('Tempo até a 2ª compra', co.rebought ? dias1(co.median_days) : '—', co.rebought ? `metade recompra em até isso · média ${dias1(co.avg_days)}` : 'ninguém recomprou ainda')
-        + card('Recompram rápido', `${pc(co.within_1d, co.rebought)} / ${pc(co.within_7d, co.rebought)}`, 'em 24h / em 7 dias (dos que recompraram)')
-        + `<div class="dv2-card" style="grid-column:1 / -1;"><div class="lb">Quantas vezes cada cliente novo comprou (na vida, até hoje)</div><div class="cmp" style="font-size:12.5px;margin-top:6px;color:rgba(255,255,255,.75);">${distTxt}</div></div>`;
+        `<div class="rc-sub">O que acontece depois da 1ª compra</div>`
+        + `<div class="rc-frase" style="margin-top:0;">Dos <b>${fmtN(nb)}</b> que compraram pela 1ª vez no período, <b class="p">${fmtN(co.rebought || 0)}</b> voltaram e compraram de novo <span class="pct">(${pc(co.rebought, nb)} dos novos, até hoje)</span>`
+        + (co.rebought ? ` — metade em até <b style="font-size:16px">${dias1(co.median_days)}</b> <span class="pct">(${pc(co.within_1d, co.rebought)} em 24h · ${pc(co.within_7d, co.rebought)} em 7 dias)</span>` : '') + `.</div>`
+        + `<div class="rc-dist">`
+        + linha('Só 1 compra', di.x1, 'g') + linha('2 compras', di.x2) + linha('3 compras', di.x3) + linha('4 ou mais', di.x4)
+        + `</div>`;
 
     // ROLETA
     const ro = data.roulette || {}, inv = ro.invite || {};
