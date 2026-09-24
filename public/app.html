@@ -23095,9 +23095,11 @@ window.Roulette = (function () {
     function share() {
         api('/api/user/roulette/share', {}).catch(function () {});   // só conta no painel
         var url = shareLink();
-        var txt = 'Entrei nesse app e ganhei uma chamada de vídeo de graça na roleta. Entra pelo meu link:';
+        var txt = S.shareText || 'Acabei de ganhar uma chamada de vídeo GRÁTIS nessa roleta 🎰🔥 Entra pelo meu link e gira a sua também:';
         if (navigator.share) {
-            navigator.share({ title: 'Roleta VIP', text: txt, url: url }).catch(function () {});
+            // texto e link JUNTOS num campo só: com `url` separado o WhatsApp
+            // (principalmente no iPhone) descartava o texto e mandava só o link.
+            navigator.share({ text: txt + ' ' + url }).catch(function () {});
             return;
         }
         var ok = false;
@@ -23136,6 +23138,7 @@ window.Roulette = (function () {
             S.enabled = (d.success === true && d.enabled === true);
             S.spins = d.spins || 0;
             S.ref = d.ref_code || S.ref;
+            if (d.share_text) S.shareText = d.share_text;
             S.pending = d.pending_call || null;
             if (cb) cb(d);
         }).catch(function () {
@@ -23222,6 +23225,7 @@ window.Roulette = (function () {
             S.enabled = true;
             S.spins = d.spins || 0;
             S.ref = d.ref_code || null;
+            if (d.share_text) S.shareText = d.share_text;
             S.pending = d.pending_call || null;
             try { banner(); } catch (_) {}
             // Prêmio ganho e não resgatado SEMPRE volta (não conta como popup

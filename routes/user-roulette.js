@@ -51,8 +51,10 @@ const TODAY_BR = `(NOW() AT TIME ZONE 'America/Sao_Paulo')::date`;
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIG (gamification_config → key 'roulette')
 // ─────────────────────────────────────────────────────────────────────────────
+const DEFAULT_SHARE_TEXT = 'Acabei de ganhar uma chamada de vídeo GRÁTIS nessa roleta 🎰🔥 Entra pelo meu link e gira a sua também:';
 async function loadConfig() {
     const fallback = {
+        share_text: DEFAULT_SHARE_TEXT,
         enabled: false, popup_enabled: true, popup_delay_sec: 5, call_product_ids: [],
         content_product_id: null, no_spins_reminder_days: 3,
     };
@@ -75,6 +77,8 @@ async function loadConfig() {
                 .map(n => parseInt(n, 10)).filter(Boolean).slice(0, 3),
             content_product_id: parseInt(v.content_product_id, 10) || null,
             no_spins_reminder_days: Math.max(0, Math.min(60, isNaN(rem) ? 3 : rem)),
+            // Texto que vai JUNTO com o link no compartilhar (editável no painel)
+            share_text: String(v.share_text || DEFAULT_SHARE_TEXT).slice(0, 300),
         };
     } catch (err) {
         logger.warn('[roleta] falha lendo config:', err.message);
@@ -237,6 +241,7 @@ router.get('/roulette/state', requireUser, async (req, res) => {
             popup_enabled: popupOn,
             popup_delay_sec: cfg.popup_delay_sec,
             ref_code: st.ref_code,
+            share_text: cfg.share_text,
             pending_call: pendingCall,
         });
     } catch (err) {
@@ -533,7 +538,8 @@ router.post('/roulette/share', requireUser, async (req, res) => {
 // Alguém abriu o app pelo link de convite → dono do código ganha +1 giro.
 // Conta 1 vez por visitante e no máximo 3 por dia.
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/roulette/track-ref', async (req, res) => {
+const { optionalUser } = require('../lib/user-auth');
+router.post('/roulette/track-ref', optionalUser, async (req, res) => {
     try {
         const code = String(req.body?.code || '').trim().toUpperCase().slice(0, 16);
         const visitorId = String(req.body?.visitor_id || '').trim().slice(0, 80);
@@ -548,12 +554,19 @@ router.post('/roulette/track-ref', async (req, res) => {
         if (!owner) return res.json({ success: true, credited: false });
 
         // Visitante novo? (dedupe)
+        // Já logado (cliente antigo, ou o próprio dono testando o link) nunca
+        // passa pelo cadastro → carimba o e-mail AQUI, senão fica anônimo no painel.
+        const knownEmail = (req.user && req.user.email && !req.user.anonymous) ? String(req.user.email).toLowerCase() : null;
+        if (knownEmail && knownEmail === String(owner.email || '').toLowerCase()) {
+            return res.json({ success: true, credited: false }); // abriu o próprio link
+        }
         const { rows: visit } = await db.query(
-            `INSERT INTO roulette_ref_visits (ref_code, visitor_id) VALUES ($1, $2)
-             ON CONFLICT (ref_code, visitor_id) DO NOTHING
-             RETURNING ref_code`,
-            [code, visitorId]
+            `INSERT INTO roulette_ref_visits (ref_code, visitor_id, customer_email) VALUES ($1, $2, $3)
+             ON CONFLICT (ref_code, visitor_id) DO UPDATE SET customer_email = COALESCE(roulette_ref_visits.customer_email, EXCLUDED.customer_email)
+             RETURNING ref_code, (xmax = 0) AS inserted`,
+            [code, visitorId, knownEmail]
         );
+        if (visit.length && !visit[0].inserted) visit.length = 0; // visita repetida: só atualizou o e-mail
         if (!visit.length) return res.json({ success: true, credited: false });
 
         // Credita respeitando o teto do dia (zera o contador quando vira o dia)

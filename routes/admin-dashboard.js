@@ -109,7 +109,7 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
             serie, pie, money, topProdutos, orfas,
             installs, engaj, sumidos, recompra, multiProduto,
             porHora, topVendedoras,
-            novosVsRecompra, recompraDosNovos, roleta, roletaConvite,
+            novosVsRecompra, recompraDosNovos, roleta, roletaConvite, distNovos,
         ] = await Promise.all([
             // visitantes únicos HOJE e ONTEM até a mesma hora
             q(`SELECT COUNT(DISTINCT ${IDENT})::int AS n FROM tracking_events
@@ -304,6 +304,21 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
                       COUNT(DISTINCT v.email) FILTER (WHERE c.granted_at >= v.created_at)::int AS bought,
                       COALESCE(SUM(c.sale_amount) FILTER (WHERE c.granted_at >= v.created_at), 0)::float AS gross
                FROM visitas v LEFT JOIN compras c ON c.email = v.email`),
+
+            // Dos clientes NOVOS do período: quantas compras cada um tem NA VIDA
+            // (até hoje) → 1 / 2 / 3 / 4+ (pedido do dono: "de 100 novos, 10
+            // compraram 2x, 3 compraram 3x...").
+            q(`WITH vendas AS (
+                   SELECT DISTINCT ON (gateway, COALESCE(sale_id, 'ua_' || id)) LOWER(email) AS email, granted_at
+                   FROM user_access WHERE granted_by = 'webhook' AND status NOT IN ('refunded', 'chargeback')),
+               primeira AS (SELECT email, MIN(granted_at) AS first_at FROM vendas GROUP BY 1),
+               novos AS (SELECT email FROM primeira WHERE ${windowSql(period, 'first_at')}),
+               n AS (SELECT v.email, COUNT(*) AS c FROM vendas v JOIN novos ON novos.email = v.email GROUP BY 1)
+               SELECT COUNT(*) FILTER (WHERE c = 1)::int AS x1,
+                      COUNT(*) FILTER (WHERE c = 2)::int AS x2,
+                      COUNT(*) FILTER (WHERE c = 3)::int AS x3,
+                      COUNT(*) FILTER (WHERE c >= 4)::int AS x4
+               FROM n`),
         ]);
 
         const r0 = (r) => r.rows[0] || {};
@@ -344,7 +359,7 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
                     first_sales: t.first_sales + d.first_sales, repeat_sales: t.repeat_sales + d.repeat_sales,
                     first_gross: t.first_gross + d.first_gross, repeat_gross: t.repeat_gross + d.repeat_gross,
                 }), { first_sales: 0, repeat_sales: 0, first_gross: 0, repeat_gross: 0 }),
-                cohort: r0(recompraDosNovos),
+                cohort: { ...r0(recompraDosNovos), dist: r0(distNovos) },
             },
             roulette: { ...r0(roleta), invite: r0(roletaConvite) },
         });

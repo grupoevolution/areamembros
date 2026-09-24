@@ -10105,11 +10105,17 @@ async function loadDashboardV2() {
     }).join('');
     const co = nr.cohort || {};
     const dias1 = v => (Number(v) || 0) < 1 ? ((Number(v) || 0) * 24).toFixed(0) + ' h' : (Number(v) || 0).toFixed(1) + ' dias';
+    bars.hidden = nd.length <= 1; // 1 dia só: sem gráfico (ficava um vazio)
+    document.querySelector('#dv2NewRepeatBars + .dv2-leg').hidden = nd.length <= 1;
+    const di = co.dist || {};
+    const nb = co.new_buyers || 0;
+    const distTxt = `1 compra: <b>${fmtN(di.x1 || 0)}</b> · 2: <b>${fmtN(di.x2 || 0)}</b> (${pc(di.x2, nb)}) · 3: <b>${fmtN(di.x3 || 0)}</b> (${pc(di.x3, nb)}) · 4+: <b>${fmtN(di.x4 || 0)}</b> (${pc(di.x4, nb)})`;
     document.getElementById('dv2Cohort').innerHTML =
-        card('Clientes novos no período', fmtN(co.new_buyers || 0), 'fizeram a 1ª compra nessas datas')
-        + card('Já compraram de novo', fmtN(co.rebought || 0), `${pc(co.rebought, co.new_buyers)} dos novos (até hoje)`, '#f472b6')
-        + card('Tempo até a 2ª compra', co.rebought ? dias1(co.median_days) : '—', co.rebought ? `mediana · média ${dias1(co.avg_days)}` : 'ninguém recomprou ainda')
-        + card('Recompram rápido', `${pc(co.within_1d, co.rebought)} / ${pc(co.within_7d, co.rebought)}`, 'em 24h / em 7 dias (dos que recompraram)');
+        card('Clientes novos no período', fmtN(nb), 'pessoas que fizeram a 1ª compra nessas datas')
+        + card('Compraram mais de 1 vez', fmtN(co.rebought || 0), `<b>${pc(co.rebought, nb)} dos novos</b> voltaram e compraram de novo (até hoje)`, '#f472b6')
+        + card('Tempo até a 2ª compra', co.rebought ? dias1(co.median_days) : '—', co.rebought ? `metade recompra em até isso · média ${dias1(co.avg_days)}` : 'ninguém recomprou ainda')
+        + card('Recompram rápido', `${pc(co.within_1d, co.rebought)} / ${pc(co.within_7d, co.rebought)}`, 'em 24h / em 7 dias (dos que recompraram)')
+        + `<div class="dv2-card" style="grid-column:1 / -1;"><div class="lb">Quantas vezes cada cliente novo comprou (na vida, até hoje)</div><div class="cmp" style="font-size:12.5px;margin-top:6px;color:rgba(255,255,255,.75);">${distTxt}</div></div>`;
 
     // ROLETA
     const ro = data.roulette || {}, inv = ro.invite || {};
@@ -12072,6 +12078,7 @@ async function loadRouletteConfig(cfgValue) {
         if (pop) pop.checked = cfg.popup_enabled !== false;
         document.getElementById('rlDelay').value = (cfg.popup_delay_sec != null ? cfg.popup_delay_sec : 5);
         document.getElementById('rlRemind').value = (cfg.no_spins_reminder_days != null ? cfg.no_spins_reminder_days : 3);
+        document.getElementById('rlShareText').value = cfg.share_text || '';
         if (!calls.length) {
             const st = document.getElementById('rlStatus');
             if (st) st.textContent = 'Cadastre um produto do tipo CHAMADA antes de ligar a roleta.';
@@ -12136,6 +12143,7 @@ async function saveRouletteConfig() {
         call_product_ids: ids,
         content_product_id: parseInt(document.getElementById('rlContent').value, 10) || null,
         no_spins_reminder_days: remind,
+        share_text: (document.getElementById('rlShareText').value || '').trim().slice(0, 300),
     };
     const result = await _saveGamification('roulette', value);
     if (st) {
@@ -19378,4 +19386,9 @@ async function importProductsJSON(ev) {
 </script>
 
 </body>
-</html>
+</html><div class="form-group">
+                        <label class="form-label">Mensagem do convite (vai junto com o link)</label>
+                        <textarea class="form-input" id="rlShareText" rows="3" maxlength="300" placeholder="Acabei de ganhar uma chamada de vídeo GRÁTIS nessa roleta 🎰🔥 Entra pelo meu link e gira a sua também:"></textarea>
+                        <div class="form-help">É o texto que o cliente manda no WhatsApp quando toca em COMPARTILHAR (o link entra sozinho no final). Chame atenção: é o que faz o amigo clicar.</div>
+                    </div>
+                    
