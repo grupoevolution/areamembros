@@ -7821,6 +7821,11 @@ a { color: inherit; text-decoration: none; }
                         <select class="form-select" id="rlContent"></select>
                         <div class="form-help">Sem produto escolhido aqui, esse prêmio não sai (a roda continua girando normal).</div>
                     </div>
+<div class="form-row" style="margin-bottom:14px;">
+                        <label class="form-label">Mensagem do convite (vai junto com o link)</label>
+                        <textarea class="form-input" id="rlShareText" rows="3" maxlength="300" placeholder="Acabei de ganhar uma chamada de vídeo GRÁTIS nessa roleta 🎰🔥 Entra pelo meu link e gira a sua também:"></textarea>
+                        <div class="form-help">É o texto que o cliente manda no WhatsApp quando toca em COMPARTILHAR (o link entra sozinho no final). Chame atenção: é o que faz o amigo clicar.</div>
+                    </div>
                     <div class="form-row" style="margin-bottom:14px;max-width:280px;">
                         <label class="form-label">Lembrete sem giros (dias)</label>
                         <input type="number" class="form-input" id="rlRemind" min="0" max="60" placeholder="3">
@@ -10105,8 +10110,10 @@ async function loadDashboardV2() {
     }).join('');
     const co = nr.cohort || {};
     const dias1 = v => (Number(v) || 0) < 1 ? ((Number(v) || 0) * 24).toFixed(0) + ' h' : (Number(v) || 0).toFixed(1) + ' dias';
-    bars.hidden = nd.length <= 1; // 1 dia só: sem gráfico (ficava um vazio)
-    document.querySelector('#dv2NewRepeatBars + .dv2-leg').hidden = nd.length <= 1;
+    // 1 dia só: sem gráfico (ficava um vazio). display direto: o atributo
+    // hidden NÃO vence o display:flex da classe.
+    bars.style.display = nd.length <= 1 ? 'none' : '';
+    document.querySelector('#dv2NewRepeatBars + .dv2-leg').style.display = nd.length <= 1 ? 'none' : '';
     const di = co.dist || {};
     const nb = co.new_buyers || 0;
     const distTxt = `1 compra: <b>${fmtN(di.x1 || 0)}</b> · 2: <b>${fmtN(di.x2 || 0)}</b> (${pc(di.x2, nb)}) · 3: <b>${fmtN(di.x3 || 0)}</b> (${pc(di.x3, nb)}) · 4+: <b>${fmtN(di.x4 || 0)}</b> (${pc(di.x4, nb)})`;
@@ -19386,9 +19393,4 @@ async function importProductsJSON(ev) {
 </script>
 
 </body>
-</html><div class="form-group">
-                        <label class="form-label">Mensagem do convite (vai junto com o link)</label>
-                        <textarea class="form-input" id="rlShareText" rows="3" maxlength="300" placeholder="Acabei de ganhar uma chamada de vídeo GRÁTIS nessa roleta 🎰🔥 Entra pelo meu link e gira a sua também:"></textarea>
-                        <div class="form-help">É o texto que o cliente manda no WhatsApp quando toca em COMPARTILHAR (o link entra sozinho no final). Chame atenção: é o que faz o amigo clicar.</div>
-                    </div>
-                    
+</html>
