@@ -10164,6 +10164,7 @@ async function loadDashboardV2() {
         }).join('');
 
     // ROLETA
+    const card = (lb, v, cmp, cor) => `<div class="dv2-card"><div class="lb">${lb}</div><div class="v" style="color:${cor || '#fff'}">${v}</div><div class="cmp">${cmp}</div></div>`;
     const ro = data.roulette || {}, inv = ro.invite || {};
     document.getElementById('dv2Roulette').innerHTML =
         card('Giraram a roleta', fmtN(ro.spinners || 0), `${fmtN(ro.spins || 0)} giros no total`)
