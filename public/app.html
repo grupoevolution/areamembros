@@ -8974,6 +8974,13 @@ body.is-slowconn .prod-cta-fixed {
   .rl-bmid { flex:1; min-width:0; }
   .rl-bt { font-size:15px; font-weight:800; letter-spacing:1.5px; color:#fff6d8; text-shadow:0 1px 2px rgba(90,60,10,.5); }
   .rl-bs { font-size:11.5px; color:#f2e2b0; margin-top:1px; }
+  .rl-prog { margin:10px 0 2px; }
+  .rl-prog-top { display:flex; justify-content:space-between; font-size:11.5px; color:#f2e2b0; margin-bottom:5px; }
+  .rl-prog-top b { color:#ffd75e; }
+  .rl-prog-bar { display:flex; gap:4px; }
+  .rl-prog-bar i { flex:1; height:8px; border-radius:4px; background:rgba(255,255,255,.14); }
+  .rl-prog-bar i.on { background:linear-gradient(90deg,#ffe9a8,#f5c542); }
+  .rl-prog-note { font-size:11px; color:rgba(255,255,255,.6); margin-top:6px; }
   .rl-barr { width:34px; height:34px; border-radius:50%; background:linear-gradient(180deg,#ffe9a8,#f5c542); color:#4a3204;
       display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,.25); }
 </style>
@@ -8985,9 +8992,9 @@ body.is-slowconn .prod-cta-fixed {
     <div class="rl-gift">
       <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
     </div>
-    <div class="rl-eyebrow">SÓ HOJE · PRA VOCÊ</div>
-    <div class="rl-title">VOCÊ GANHOU<br><b>1 GIRO ESPECIAL</b></div>
-    <div class="rl-sub">A casa liberou um giro na <b>Roleta VIP</b> pra você. Tem chamada de vídeo, conteúdo secreto e até <b style="color:#ffd75e">R$ 1.000 no Pix</b> esperando.</div>
+    <div class="rl-eyebrow" id="rlS1Eye">SÓ HOJE · PRA VOCÊ</div>
+    <div class="rl-title" id="rlS1Title">VOCÊ GANHOU<br><b>1 GIRO ESPECIAL</b></div>
+    <div class="rl-sub" id="rlS1Sub">A casa liberou um giro na <b>Roleta VIP</b> pra você. Tem chamada de vídeo, conteúdo secreto e até <b style="color:#ffd75e">R$ 1.000 no Pix</b> esperando.</div>
     <button class="rl-btn rl-red" onclick="Roulette.go(2)">GIRAR AGORA</button>
     <button class="rl-later" onclick="Roulette.close()">deixar pra depois</button>
   </div>
@@ -9003,13 +9010,14 @@ body.is-slowconn .prod-cta-fixed {
     </div>
     <div class="rl-eyebrow">ROLETA VIP</div>
     <div class="rl-title">SEUS GIROS<br><b>ACABARAM</b></div>
-    <div class="rl-sub">Você já usou seu giro grátis. Pra girar de novo, chame gente pelo seu link.</div>
+    <div class="rl-sub">Você já usou seu giro. Pra girar de novo, chame seus amigos pelo seu link.</div>
     <div class="rl-share">
       <div class="rl-st">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd75e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         GANHE MAIS 1 GIRO
       </div>
-      <div class="rl-sd">Manda o link do app pra um amigo ou num grupo. Quando alguém entrar pelo seu link, <b style="color:#ffd75e">um giro novo libera na hora</b> — e pode cair o de R$ 1.000.</div>
+      <div class="rl-sd" data-rl-rule></div>
+      <div data-rl-prog></div>
       <button class="rl-btn rl-goldbtn" style="margin-top:10px;" onclick="Roulette.share()">COMPARTILHAR MEU LINK</button>
       <button class="rl-btn rl-greenbtn" style="margin-top:8px;" onclick="Roulette.copy(this)">COPIAR O LINK</button>
     </div>
@@ -9066,6 +9074,12 @@ body.is-slowconn .prod-cta-fixed {
     <div class="rl-title" style="font-size:23px" id="rlDoneTitle">SEU PRÊMIO ESTÁ<br><b>LIBERADO</b></div>
     <div class="rl-sub" id="rlDoneSub"></div>
     <button class="rl-btn rl-goldbtn" onclick="Roulette.redeem()">RESGATAR AGORA</button>
+    <div class="rl-share" id="rlS5Share" style="margin-top:12px;">
+      <div class="rl-st">QUER GIRAR DE NOVO?</div>
+      <div class="rl-sd" data-rl-rule></div>
+      <div data-rl-prog></div>
+      <button class="rl-btn rl-greenbtn" style="margin-top:10px;" onclick="Roulette.share()">CHAMAR MEUS AMIGOS</button>
+    </div>
     <button class="rl-later" onclick="Roulette.dismiss()">fechar</button>
   </div>
 </div>
@@ -22879,8 +22893,34 @@ window.Roulette = (function () {
             if (b) { b.textContent = S.spins > 0 ? 'GIRAR A ROLETA' : 'GANHAR GIROS'; b.style.opacity = 1; }
             renderSpins();
         }
+        if (n === 5 || n === 6) { try { renderRef(); } catch (_) {} }
+        if (n === 5) { try { readState(function () { renderRef(); }); } catch (_) {} }   // progresso fresco
         if (n === 1 || n === 3 || n === 5) confettiBurst();
         try { document.body.style.overflow = n ? 'hidden' : ''; } catch (_) {}
+    }
+    // Convite: regra + barrinha "1 de 2 amigos" (telas 5 e 6)
+    function renderRef() {
+        var need = S.refNeeded || 2, have = Math.min(S.refPending || 0, need);
+        var rule = 'Manda seu link pros amigos. Quando <b style="color:#ffd75e">' + need + ' amigo' + (need === 1 ? '' : 's')
+            + ' entrar' + (need === 1 ? '' : 'em') + '</b> pelo seu link, você ganha <b style="color:#ffd75e">+1 giro</b>. Eles também ganham 1 giro grátis.';
+        var segs = '';
+        for (var i = 0; i < need; i++) segs += '<i' + (i < have ? ' class="on"' : '') + '></i>';
+        var prog = '<div class="rl-prog"><div class="rl-prog-top"><span>Amigos que entraram</span><span><b>' + have + '</b> de ' + need + '</span></div>'
+            + '<div class="rl-prog-bar">' + segs + '</div>'
+            + (S.refCap ? '<div class="rl-prog-note">Seu giro por convite de hoje já saiu. Amigos que entrarem agora contam pro de amanhã.</div>' : '')
+            + '</div>';
+        var show = S.refEnabled !== false;
+        var rs = document.querySelectorAll('[data-rl-rule]'), ps = document.querySelectorAll('[data-rl-prog]');
+        for (var a = 0; a < rs.length; a++) rs[a].innerHTML = rule;
+        for (var b = 0; b < ps.length; b++) ps[b].innerHTML = prog;
+        var s5 = $('rlS5Share'); if (s5) s5.style.display = show ? '' : 'none';
+    }
+    function readRef(d) {
+        S.refPending = d.ref_pending || 0;
+        S.refNeeded = d.ref_needed || 2;
+        S.refCap = d.ref_cap_today === true;
+        S.refEnabled = d.ref_enabled !== false;
+        S.invited = d.invited === true;
     }
     function renderSpins() {
         var el = $('rlSpins');
@@ -23095,7 +23135,7 @@ window.Roulette = (function () {
     function share() {
         api('/api/user/roulette/share', {}).catch(function () {});   // só conta no painel
         var url = shareLink();
-        var txt = S.shareText || 'Acabei de ganhar uma chamada de vídeo GRÁTIS nessa roleta 🎰🔥 Entra pelo meu link e gira a sua também:';
+        var txt = S.shareText || 'Te dei 1 giro grátis nessa roleta 🎰 Eu acabei de ganhar uma chamada de vídeo. Entra pelo meu link e resgata seu giro grátis:';
         if (navigator.share) {
             // texto e link JUNTOS num campo só: com `url` separado o WhatsApp
             // (principalmente no iPhone) descartava o texto e mandava só o link.
@@ -23139,6 +23179,7 @@ window.Roulette = (function () {
             S.spins = d.spins || 0;
             S.ref = d.ref_code || S.ref;
             if (d.share_text) S.shareText = d.share_text;
+            readRef(d);
             S.pending = d.pending_call || null;
             if (cb) cb(d);
         }).catch(function () {
@@ -23217,7 +23258,9 @@ window.Roulette = (function () {
         if (armed || isOpen()) return;
         if (!isIdentified()) return;
         try { shownDay = localStorage.getItem('rl_popup_day'); } catch (_) { shownDay = null; }
-        if (shownDay === todayKey()) return;
+        var veioConvite = false;
+        try { veioConvite = localStorage.getItem('rl_from_invite') === '1' && !localStorage.getItem('rl_invited_shown'); } catch (_) {}
+        if (shownDay === todayKey() && !veioConvite) return;
         armed = true;
         api('/api/user/roulette/state').then(function (d) {
             if (!d || !d.success || !d.enabled) return;
@@ -23226,6 +23269,7 @@ window.Roulette = (function () {
             S.spins = d.spins || 0;
             S.ref = d.ref_code || null;
             if (d.share_text) S.shareText = d.share_text;
+            readRef(d);
             S.pending = d.pending_call || null;
             try { banner(); } catch (_) {}
             // Prêmio ganho e não resgatado SEMPRE volta (não conta como popup
@@ -23234,6 +23278,21 @@ window.Roulette = (function () {
                 var dp = Math.max(0, Number(d.popup_delay_sec != null ? d.popup_delay_sec : 5)) * 1000;
                 setTimeout(function () { if (!isOpen()) resumePending(); }, dp);
                 return;
+            }
+            // CONVIDADO (entrou pelo link de um amigo e ainda não girou): abre a
+            // roleta com "seu amigo te deu 1 giro" — 1 vez, mesmo com o popup
+            // automático desligado (ele veio PELA roleta).
+            if (S.invited && S.spins > 0) {
+                var ja = null; try { ja = localStorage.getItem('rl_invited_shown'); } catch (_) {}
+                if (!ja) {
+                    try { localStorage.setItem('rl_invited_shown', '1'); } catch (_) {}
+                    var e1 = $('rlS1Eye'), t1 = $('rlS1Title'), s1 = $('rlS1Sub');
+                    if (e1) e1.textContent = 'PRESENTE DE UM AMIGO';
+                    if (t1) t1.innerHTML = 'SEU AMIGO TE DEU<br><b>1 GIRO GRÁTIS</b>';
+                    if (s1) s1.innerHTML = 'Ele te convidou pra <b>Roleta VIP</b>. Gira agora: tem chamada de vídeo, conteúdo secreto e até <b style="color:#ffd75e">R$ 1.000 no Pix</b>.';
+                    setTimeout(function () { if (!isOpen()) go(1); }, 1200);
+                    return;
+                }
             }
             if (d.popup_enabled !== true) return;   // dono não quer que abra sozinha
             if (!d.show_popup) return;
@@ -23312,6 +23371,7 @@ window.Roulette = (function () {
             p.delete('convite');
             var q = p.toString();
             window.history.replaceState({}, '', window.location.pathname + (q ? '?' + q : '') + window.location.hash);
+            try { localStorage.setItem('rl_from_invite', '1'); } catch (_) {}
             var vid = window.VID;
             if (!vid) { try { vid = localStorage.getItem('mv_chat_visitor'); } catch (_) {} }
             if (!vid) return;

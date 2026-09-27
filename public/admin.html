@@ -7852,8 +7852,19 @@ a { color: inherit; text-decoration: none; }
                     </div>
 <div class="form-row" style="margin-bottom:14px;">
                         <label class="form-label">Mensagem do convite (vai junto com o link)</label>
-                        <textarea class="form-input" id="rlShareText" rows="3" maxlength="300" placeholder="Acabei de ganhar uma chamada de vídeo GRÁTIS nessa roleta 🎰🔥 Entra pelo meu link e gira a sua também:"></textarea>
+                        <textarea class="form-input" id="rlShareText" rows="3" maxlength="300" placeholder="Te dei 1 giro grátis nessa roleta 🎰 Eu acabei de ganhar uma chamada de vídeo. Entra pelo meu link e resgata seu giro grátis:"></textarea>
                         <div class="form-help">É o texto que o cliente manda no WhatsApp quando toca em COMPARTILHAR (o link entra sozinho no final). Chame atenção: é o que faz o amigo clicar.</div>
+                    </div>
+                    <div class="form-row" style="margin-bottom:14px;display:flex;gap:14px;flex-wrap:wrap;">
+                        <div style="max-width:220px;">
+                            <label class="form-label">Amigos pra ganhar 1 giro</label>
+                            <input type="number" class="form-input" id="rlRefPer" min="1" max="10" placeholder="2">
+                        </div>
+                        <div style="max-width:220px;">
+                            <label class="form-label">Máx. de giros por convite ao dia</label>
+                            <input type="number" class="form-input" id="rlRefMax" min="0" max="10" placeholder="1">
+                        </div>
+                        <div class="form-help" style="flex-basis:100%;">Ex.: 2 e 1 = o cliente ganha 1 giro quando 2 amigos entram pelo link dele, no máximo 1 giro desses por dia. Amigos que entrarem depois do limite ficam guardados e contam pro dia seguinte. Coloque 0 no máximo pra desligar o giro por convite.</div>
                     </div>
                     <div class="form-row" style="margin-bottom:14px;max-width:280px;">
                         <label class="form-label">Lembrete sem giros (dias)</label>
@@ -12126,6 +12137,8 @@ async function loadRouletteConfig(cfgValue) {
         document.getElementById('rlDelay').value = (cfg.popup_delay_sec != null ? cfg.popup_delay_sec : 5);
         document.getElementById('rlRemind').value = (cfg.no_spins_reminder_days != null ? cfg.no_spins_reminder_days : 3);
         document.getElementById('rlShareText').value = cfg.share_text || '';
+        document.getElementById('rlRefPer').value = (cfg.ref_friends_per_spin != null ? cfg.ref_friends_per_spin : 2);
+        document.getElementById('rlRefMax').value = (cfg.ref_max_spins_per_day != null ? cfg.ref_max_spins_per_day : 1);
         if (!calls.length) {
             const st = document.getElementById('rlStatus');
             if (st) st.textContent = 'Cadastre um produto do tipo CHAMADA antes de ligar a roleta.';
@@ -12191,6 +12204,8 @@ async function saveRouletteConfig() {
         content_product_id: parseInt(document.getElementById('rlContent').value, 10) || null,
         no_spins_reminder_days: remind,
         share_text: (document.getElementById('rlShareText').value || '').trim().slice(0, 300),
+        ref_friends_per_spin: Math.max(1, Math.min(10, parseInt(document.getElementById('rlRefPer').value, 10) || 2)),
+        ref_max_spins_per_day: (function () { var n = parseInt(document.getElementById('rlRefMax').value, 10); return isNaN(n) ? 1 : Math.max(0, Math.min(10, n)); })(),
     };
     const result = await _saveGamification('roulette', value);
     if (st) {

@@ -41,8 +41,8 @@ const WEIGHTS = { call: 45, content: 30, spin: 25 };
 // Sem isso, uma sequência de sorte vira giro infinito.
 const MAX_SPIN_PRIZES_PER_DAY = 5;
 
-// Teto de giros creditados por convite, por dia
-const MAX_REF_CREDITS_PER_DAY = 3;
+// Convite (config do painel): quantos AMIGOS valem 1 giro e o teto de giros
+// por convite ao dia. Padrão combinado com o dono: 2 amigos = 1 giro, 1/dia.
 
 // "Hoje" sempre no fuso de Brasília (igual ao resto do sistema)
 const TODAY_BR = `(NOW() AT TIME ZONE 'America/Sao_Paulo')::date`;
@@ -51,10 +51,10 @@ const TODAY_BR = `(NOW() AT TIME ZONE 'America/Sao_Paulo')::date`;
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIG (gamification_config → key 'roulette')
 // ─────────────────────────────────────────────────────────────────────────────
-const DEFAULT_SHARE_TEXT = 'Acabei de ganhar uma chamada de vídeo GRÁTIS nessa roleta 🎰🔥 Entra pelo meu link e gira a sua também:';
+const DEFAULT_SHARE_TEXT = 'Te dei 1 giro grátis nessa roleta 🎰 Eu acabei de ganhar uma chamada de vídeo. Entra pelo meu link e resgata seu giro grátis:';
 async function loadConfig() {
     const fallback = {
-        share_text: DEFAULT_SHARE_TEXT,
+        share_text: DEFAULT_SHARE_TEXT, ref_friends_per_spin: 2, ref_max_spins_per_day: 1,
         enabled: false, popup_enabled: true, popup_delay_sec: 5, call_product_ids: [],
         content_product_id: null, no_spins_reminder_days: 3,
     };
@@ -79,6 +79,8 @@ async function loadConfig() {
             no_spins_reminder_days: Math.max(0, Math.min(60, isNaN(rem) ? 3 : rem)),
             // Texto que vai JUNTO com o link no compartilhar (editável no painel)
             share_text: String(v.share_text || DEFAULT_SHARE_TEXT).slice(0, 300),
+            ref_friends_per_spin: Math.max(1, Math.min(10, parseInt(v.ref_friends_per_spin, 10) || 2)),
+            ref_max_spins_per_day: Math.max(0, Math.min(10, (v.ref_max_spins_per_day === 0 || v.ref_max_spins_per_day === '0') ? 0 : (parseInt(v.ref_max_spins_per_day, 10) || 1))),
         };
     } catch (err) {
         logger.warn('[roleta] falha lendo config:', err.message);
@@ -123,7 +125,7 @@ async function getOrCreateState(email) {
             if (rows[0]) return rows[0];
         } catch (_) { /* código de convite colidiu — tenta outro na volta seguinte */ }
 
-        const { rows: found } = await db.query(`SELECT * FROM roulette_state WHERE email = $1`, [email]);
+        const { rows: found } = await db.query(`SELECT *, (credit_date = ${TODAY_BR}) AS credit_date_br_today FROM roulette_state WHERE email = $1`, [email]);
         if (found[0]) {
             // Estado antigo sem código de convite (banco de antes): gera agora
             if (!found[0].ref_code) {
@@ -142,6 +144,39 @@ async function getOrCreateState(email) {
     throw new Error('não consegui criar o estado da roleta');
 }
 
+
+// Converte amigos pendentes em giro: a cada N amigos (config) → +1 giro,
+// respeitando o teto de giros por convite do dia. Atômico (1 UPDATE por giro).
+// O que passa do teto NÃO se perde: fica em ref_pending e vira giro amanhã.
+// Retorna quantos giros foram liberados agora.
+async function settleRef(email, cfg) {
+    const per = cfg.ref_friends_per_spin, max = cfg.ref_max_spins_per_day;
+    if (!email || max <= 0) return 0;
+    let granted = 0;
+    for (let i = 0; i < max; i++) {
+        const { rows } = await db.query(
+            `UPDATE roulette_state
+                SET spins = spins + 1,
+                    ref_pending = ref_pending - $2,
+                    credited_today = CASE WHEN credit_date = ${TODAY_BR} THEN credited_today + 1 ELSE 1 END,
+                    credit_date = ${TODAY_BR}
+              WHERE email = $1 AND ref_pending >= $2
+                AND (credit_date IS NULL OR credit_date < ${TODAY_BR} OR credited_today < $3)
+              RETURNING ref_code`,
+            [email, per, max]
+        );
+        if (!rows.length) break;
+        granted++;
+        // painel ("giros ganhos por convite") conta visitas credited: marca 1 por giro
+        await db.query(
+            `UPDATE roulette_ref_visits SET credited = true
+              WHERE ctid = (SELECT ctid FROM roulette_ref_visits
+                             WHERE ref_code = $1 AND credited = false ORDER BY created_at DESC LIMIT 1)`,
+            [rows[0].ref_code]
+        ).catch(() => {});
+    }
+    return granted;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/user/roulette/state
@@ -172,8 +207,26 @@ router.get('/roulette/state', requireUser, async (req, res) => {
         }
 
         const email = req.user.email;
-        const st = await getOrCreateState(email);
+        let st = await getOrCreateState(email);
         const peek = req.query.peek === '1';
+        // amigos guardados de ontem (teto estourado) viram giro hoje
+        try {
+            if ((st.ref_pending || 0) >= cfg.ref_friends_per_spin && await settleRef(email, cfg) > 0) {
+                st = await getOrCreateState(email);
+            }
+        } catch (_) {}
+        // CONVIDADO: entrou pelo link de um amigo e ainda não girou → o app
+        // mostra "seu amigo te deu 1 giro grátis".
+        let invited = false;
+        try {
+            if (st.first_spin_done !== true && st.spins > 0) {
+                const { rows: iv } = await db.query(
+                    `SELECT 1 FROM roulette_ref_visits WHERE LOWER(customer_email) = $1 LIMIT 1`, [String(email).toLowerCase()]);
+                invited = iv.length > 0;
+            }
+        } catch (_) {}
+        const capToday = cfg.ref_max_spins_per_day <= 0
+            || (st.credit_date && String(st.credit_date_br_today) === 'true' && st.credited_today >= cfg.ref_max_spins_per_day);
 
         // DOIS popups, duas janelas (o app usa o `mode` pra escolher a tela):
         //   'spin'  → tem giro na conta: convite pra girar. No máximo 1x por dia.
@@ -242,6 +295,12 @@ router.get('/roulette/state', requireUser, async (req, res) => {
             popup_delay_sec: cfg.popup_delay_sec,
             ref_code: st.ref_code,
             share_text: cfg.share_text,
+            // convite: progresso da meta (barrinha no app)
+            ref_pending: Math.min(st.ref_pending || 0, cfg.ref_friends_per_spin),
+            ref_needed: cfg.ref_friends_per_spin,
+            ref_cap_today: capToday === true,
+            ref_enabled: cfg.ref_max_spins_per_day > 0,
+            invited,
             pending_call: pendingCall,
         });
     } catch (err) {
@@ -569,26 +628,12 @@ router.post('/roulette/track-ref', optionalUser, async (req, res) => {
         if (visit.length && !visit[0].inserted) visit.length = 0; // visita repetida: só atualizou o e-mail
         if (!visit.length) return res.json({ success: true, credited: false });
 
-        // Credita respeitando o teto do dia (zera o contador quando vira o dia)
-        const { rows: credited } = await db.query(
-            `UPDATE roulette_state
-                SET spins = spins + 1,
-                    credited_today = CASE WHEN credit_date = ${TODAY_BR} THEN credited_today + 1 ELSE 1 END,
-                    credit_date = ${TODAY_BR}
-              WHERE ref_code = $1
-                AND (credit_date IS NULL OR credit_date < ${TODAY_BR} OR credited_today < $2)
-              RETURNING spins`,
-            [code, MAX_REF_CREDITS_PER_DAY]
-        );
-        // Marca a visita que virou giro de verdade — o painel conta CREDITADOS,
-        // não visitas (visita com o teto do dia estourado não vira giro).
-        if (credited.length) {
-            await db.query(
-                `UPDATE roulette_ref_visits SET credited = true WHERE ref_code = $1 AND visitor_id = $2`,
-                [code, visitorId]
-            ).catch(() => {});
-        }
-        return res.json({ success: true, credited: credited.length > 0 });
+        // +1 amigo na conta do dono do link; vira giro quando fechar a meta
+        // (N amigos = 1 giro) e couber no teto do dia — senão fica guardado.
+        await db.query(`UPDATE roulette_state SET ref_pending = ref_pending + 1 WHERE ref_code = $1`, [code]);
+        const cfg = await loadConfig();
+        const granted = await settleRef(owner.email, cfg);
+        return res.json({ success: true, credited: granted > 0 });
     } catch (err) {
         logger.error('[roleta] track-ref:', err);
         return res.json({ success: true, credited: false });
