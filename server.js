@@ -249,6 +249,7 @@ app.use('/api/user', require('./routes/user'));
 app.use('/api/user', require('./routes/user-lives'));
 app.use('/api/user', require('./routes/user-roulette'));
 app.use('/api/user', require('./routes/user-meta'));
+app.use('/api/user', require('./routes/user-discount'));
 
 
 // ----------------------------------------------------------------------------

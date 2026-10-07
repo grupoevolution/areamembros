@@ -8985,6 +8985,144 @@ body.is-slowconn .prod-cta-fixed {
       display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,.25); }
 </style>
 
+<!-- ═══ DESCONTO AO DESISTIR (out/2026) ═══ -->
+<div class="rl-ov" id="mvdOv">
+  <div class="rl-card" style="max-width:360px; border-color:rgba(34,197,94,.45);">
+    <button class="rl-x" onclick="MVDiscount.close()">✕</button>
+    <div style="display:inline-flex;align-items:center;gap:6px;background:#22c55e;color:#06220f;border-radius:999px;padding:5px 12px;font-size:11px;font-weight:800;letter-spacing:.5px;margin:0 auto 10px;" id="mvdBadge">SÓ PRA VOCÊ</div>
+    <div class="rl-title" style="font-size:22px;" id="mvdTitle"></div>
+    <div class="rl-sub" id="mvdSub"></div>
+    <div id="mvdBody"></div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:#ffd75e;margin-top:10px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffd75e" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>desconto some em <b id="mvdTimer">10:00</b></span></div>
+    <button class="rl-btn" id="mvdGo" style="margin-top:12px;background:#22c55e;color:#06220f;" onclick="MVDiscount.go()">QUERO O DESCONTO</button>
+    <button class="rl-later" onclick="MVDiscount.close()">deixar pra lá</button>
+  </div>
+</div>
+<script>
+// ═══════════════ DESCONTO AO DESISTIR ═══════════════
+// Regra (dono): lead recusou a oferta N vezes (padrão 2) OU foi pro checkout e
+// voltou sem pagar → depois de X segundos aparece UM desconto, UMA vez na vida,
+// só no tipo onde ele desistiu (acesso OU grupo). Quem decide se pode é o
+// SERVIDOR (/discount/state); o app só conta as desistências.
+window.MVDiscount = (function () {
+    var $ = function (id) { return document.getElementById(id); };
+    var S = { timer: null, armed: false, state: null, kind: null, ref: null, sel: 0, deadline: 0 };
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+    function vid() { try { return localStorage.getItem('mv_chat_visitor') || window.VID || ''; } catch (_) { return window.VID || ''; } }
+    function count(kind, inc) {
+        var k = 'mvd_dismiss_' + kind, n = 0;
+        try { n = parseInt(localStorage.getItem(k), 10) || 0; if (inc) { n++; localStorage.setItem(k, String(n)); } } catch (_) {}
+        return n;
+    }
+    function done() { try { return localStorage.getItem('mvd_done') === '1'; } catch (_) { return false; } }
+
+    // lead fechou um popup de oferta ("agora não")
+    function dismissed(kind, ref) {
+        if (done()) return;
+        var n = count(kind, true);   // SEMPRE conta (mesmo se já houver consulta em andamento)
+        if (ref) { try { localStorage.setItem('mvd_ref_' + kind, String(ref)); } catch (_) {} }
+        if (S.armed) return;
+        arm(kind, ref, n, false);
+    }
+    // voltou do checkout sem pagar (até 30 min)
+    function checkReturn() {
+        if (done() || S.armed) return;
+        var t = 0, src = '';
+        // chave PRÓPRIA (mvd_checkout_at): a roleta apaga a mv_checkout_at quando lê
+        try { t = parseInt(localStorage.getItem('mvd_checkout_at'), 10) || 0; src = localStorage.getItem('mv_checkout_src') || ''; } catch (_) {}
+        if (!t || Date.now() - t > 30 * 60 * 1000) return;
+        try { localStorage.removeItem('mvd_checkout_at'); } catch (_) {}
+        var m = /^group_(\d+)$/.exec(src);
+        if (m) arm('group', parseInt(m[1], 10), 99, true);
+        else if (/^(chat_|upgrade|desc_|story|plan)/.test(src)) arm('access', null, 99, true);
+    }
+    function arm(kind, ref, n, fromCheckout) {
+        if (!ref) { try { ref = parseInt(localStorage.getItem('mvd_ref_' + kind), 10) || null; } catch (_) {} }
+        S.armed = true;
+        fetch('/api/user/discount/state?kind=' + kind + (ref ? '&ref=' + ref : '') + '&visitor_id=' + encodeURIComponent(vid()), { credentials: 'include' })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (!d || !d.eligible) { S.armed = false; return; }
+                if (!fromCheckout && n < (d.min_dismissals || 2)) { S.armed = false; return; }   // ainda não desistiu o bastante
+                S.state = d; S.kind = kind; S.ref = ref;
+                setTimeout(show, Math.max(0, (d.delay_sec || 25) * 1000));
+            }).catch(function () { S.armed = false; });
+    }
+    function money(v) { return 'R$ ' + String(v || '').replace('R$', '').trim(); }
+    function show() {
+        var d = S.state; if (!d || done()) return;
+        // não atropela a roleta nem uma conversa de chamada aberta
+        try { if (window.Roulette && Roulette.isOpen && Roulette.isOpen()) { setTimeout(show, 15000); return; } } catch (_) {}
+        try { localStorage.setItem('mvd_done', '1'); } catch (_) {}
+        fetch('/api/user/discount/shown', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+            body: JSON.stringify({ kind: S.kind, ref: S.ref, visitor_id: vid() }) }).catch(function () {});
+        try { window.TRACK && TRACK.event('discount_shown', { kind: S.kind, ref: S.ref }); } catch (_) {}
+        $('mvdBadge').textContent = 'SÓ PRA VOCÊ' + (d.city ? ' · ' + String(d.city).toUpperCase() : '');
+        $('mvdTitle').textContent = d.headline || '';
+        $('mvdSub').textContent = d.sub || '';
+        var body = '';
+        if (S.kind === 'group') {
+            var o = d.offer || {};
+            body = '<div style="display:flex;align-items:baseline;justify-content:center;gap:12px;margin-top:6px;">'
+                + '<div style="font-size:18px;color:#8d8792;text-decoration:line-through;">' + esc(money(o.orig)) + '</div>'
+                + '<div style="font-size:40px;font-weight:800;color:#22c55e;">' + esc(money(o.price)) + '</div></div>'
+                + '<div style="font-size:13px;color:#d6d6de;margin-top:2px;">Grupo <b>' + esc(o.name || '') + '</b> · acesso completo</div>';
+            $('mvdGo').textContent = 'QUERO POR ' + money(o.price);
+        } else {
+            var plans = (d.offer && d.offer.plans) || [];
+            S.sel = 0;
+            body = '<div id="mvdPlans" style="display:flex;flex-direction:column;gap:9px;margin-top:8px;text-align:left;">' + plans.map(function (p, i) {
+                return '<div data-i="' + i + '" style="border:2px solid ' + (i === 0 ? '#f5c542' : '#2c2c38') + ';border-radius:14px;padding:12px;background:' + (i === 0 ? '#1b1a14' : '#1d1d26') + ';position:relative;cursor:pointer;">'
+                    + (p.recommended ? '<div style="position:absolute;top:-10px;left:12px;background:#f5c542;color:#2a1c00;font-size:9.5px;font-weight:800;border-radius:999px;padding:2px 8px;letter-spacing:.5px;">MAIS ESCOLHIDO</div>' : '')
+                    + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+                    + '<div><div style="font-size:15px;font-weight:800;color:' + (p.recommended ? '#ffd75e' : '#fff') + ';">' + esc(p.name) + '</div><div style="font-size:11.5px;color:#9a9aa8;margin-top:2px;">' + esc(p.desc || '') + '</div></div>'
+                    + '<div style="text-align:right;white-space:nowrap;"><div style="font-size:11px;color:#8d8792;text-decoration:line-through;">' + esc(money(p.orig)) + '</div><div style="font-size:21px;font-weight:800;color:#22c55e;">' + esc(money(p.price)) + '</div></div>'
+                    + '</div></div>';
+            }).join('') + '</div>';
+            $('mvdGo').textContent = 'QUERO O DESCONTO';
+        }
+        $('mvdBody').innerHTML = body;
+        var pl = $('mvdPlans');
+        if (pl) pl.addEventListener('click', function (e) {
+            var el = e.target.closest('[data-i]'); if (!el) return;
+            S.sel = parseInt(el.dataset.i, 10) || 0;
+            Array.prototype.forEach.call(pl.children, function (c, i) { c.style.borderColor = i === S.sel ? '#f5c542' : '#2c2c38'; c.style.background = i === S.sel ? '#1b1a14' : '#1d1d26'; });
+        });
+        // relógio de verdade: acabou, fechou (e não volta — já foi marcado como usado)
+        S.deadline = Date.now() + (d.minutes_valid || 10) * 60000;
+        clearInterval(S.timer);
+        S.timer = setInterval(function () {
+            var left = Math.max(0, S.deadline - Date.now());
+            var m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000);
+            var t = $('mvdTimer'); if (t) t.textContent = m + ':' + (sec < 10 ? '0' : '') + sec;
+            if (left <= 0) close();
+        }, 500);
+        $('mvdOv').classList.add('rl-on');
+        try { document.body.style.overflow = 'hidden'; } catch (_) {}
+    }
+    function go() {
+        var d = S.state; if (!d) return;
+        var url, src, plan;
+        if (S.kind === 'group') { url = d.offer.url; src = d.offer.src; plan = 'group'; }
+        else { var p = (d.offer.plans || [])[S.sel] || d.offer.plans[0]; url = p.url; src = p.src; plan = p.key; }
+        fetch('/api/user/discount/click', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+            body: JSON.stringify({ plan: plan, visitor_id: vid() }) }).catch(function () {});
+        try { window.TRACK && TRACK.event('discount_click', { kind: S.kind, plan: plan }); } catch (_) {}
+        close();
+        if (window.MV_buy) window.MV_buy(url, src);
+    }
+    function close() {
+        clearInterval(S.timer);
+        var ov = $('mvdOv'); if (ov) ov.classList.remove('rl-on');
+        try { document.body.style.overflow = ''; } catch (_) {}
+    }
+    // volta do checkout: ao abrir/voltar pro app
+    setTimeout(checkReturn, 2500);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(checkReturn, 1200); });
+    return { dismissed: dismissed, go: go, close: close, checkReturn: checkReturn };
+})();
+</script>
+
 <!-- TELA 1: você ganhou 1 giro -->
 <div class="rl-ov" id="rlS1">
   <div class="rl-card">
@@ -12086,7 +12224,7 @@ window.GroupApp = (function () {
                 try { window.TRACK && TRACK.event('group_paywall_click', { group_id: CUR && CUR.id, plan: chosen.name, pass: selPass }); } catch (_) {}
                 window.MV_buy(chosen.checkout_url, CUR && CUR.id ? 'group_' + CUR.id : null);
             });
-            ov.querySelector('#gaPlansNo').addEventListener('click', () => { ov.style.display = 'none'; });
+            ov.querySelector('#gaPlansNo').addEventListener('click', () => { ov.style.display = 'none'; try { window.MVDiscount && MVDiscount.dismissed('group', CUR && CUR.id); } catch (_) {} });
             ov.onclick = (e) => { if (e.target === ov) ov.style.display = 'none'; };
         }
         paint();
@@ -12138,7 +12276,7 @@ window.GroupApp = (function () {
             try { window.TRACK && TRACK.event('group_paywall_click', { ctx: 'pass_banner', pass: true }); } catch (_) {}
             window.MV_buy(p.checkout_url, 'group_pass');
         });
-        ov.querySelector('#gaPassNo').addEventListener('click', () => { ov.style.display = 'none'; });
+        ov.querySelector('#gaPassNo').addEventListener('click', () => { ov.style.display = 'none'; try { window.MVDiscount && MVDiscount.dismissed('group', CUR && CUR.id); } catch (_) {} });
         ov.onclick = (e) => { if (e.target === ov) ov.style.display = 'none'; };
         ov.style.display = 'flex';
     }
@@ -20070,7 +20208,7 @@ window.MV_intent = function (url, src) {
     if (!/^https?:\/\//i.test(url || '')) return;
     // marca a ida pro checkout (a roleta usa isso pra aparecer quando ele
     // volta sem comprar — carrinho abandonado)
-    try { localStorage.setItem('mv_checkout_at', String(Date.now())); } catch (_) {}
+    try { localStorage.setItem('mv_checkout_at', String(Date.now())); localStorage.setItem('mvd_checkout_at', String(Date.now())); localStorage.setItem('mv_checkout_src', String(src || '')); } catch (_) {}
     const payload = JSON.stringify({ url, src: src || null });
     try {
         if (navigator.sendBeacon
@@ -21564,7 +21702,11 @@ window.MVPaywall = (function () {
             checkout(unlock, b.dataset.url || '');
         }));
         const c = root.querySelector('[data-mv-close]');
-        if (c) c.addEventListener('click', () => { if (opts && typeof opts.onClose === 'function') opts.onClose(); else close(); });
+        if (c) c.addEventListener('click', () => {
+            // desistiu da oferta de ACESSO → conta pro desconto ao desistir
+            try { if (window.MVDiscount && /^(chat_|upgrade|desc_|story|plan)/.test(String((opts && opts.src) || 'chat_'))) MVDiscount.dismissed('access'); } catch (_) {}
+            if (opts && typeof opts.onClose === 'function') opts.onClose(); else close();
+        });
     }
 
     // O popup só existe se tiver PRA ONDE levar: planos com checkout, oferta

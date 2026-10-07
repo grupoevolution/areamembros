@@ -7812,6 +7812,51 @@ a { color: inherit; text-decoration: none; }
                 </div>
 
                 <!-- ═══════════════ ROLETA VIP ═══════════════ -->
+                <div class="form-card" style="margin-bottom:16px;border-color:rgba(34,197,94,.35);">
+                    <div class="form-card-head">
+                        <div class="form-card-title" style="color:#4ade80;">Desconto ao desistir</div>
+                        <div class="form-card-sub">O lead recusou a oferta (fechou o popup de planos N vezes, ou foi pro checkout e voltou sem pagar) → depois de X segundos aparece UM desconto, UMA vez na vida, só no tipo onde ele desistiu (acesso OU grupo). Nunca nos dois. Deixe DESLIGADO até os links estarem prontos.</div>
+                    </div>
+                    <div class="form-row" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
+                        <div style="max-width:200px;"><label class="form-label">Esperar (segundos)</label><input type="number" class="form-input" id="edDelay" min="0" max="300" placeholder="25"></div>
+                        <div style="max-width:200px;"><label class="form-label">Recusas antes de mostrar</label><input type="number" class="form-input" id="edMin" min="1" max="10" placeholder="2"></div>
+                        <div style="max-width:200px;"><label class="form-label">Oferta vale (minutos)</label><input type="number" class="form-input" id="edMinutes" min="1" max="120" placeholder="10"></div>
+                        <div class="form-help" style="flex-basis:100%;">Voltar do checkout sem pagar mostra direto (não conta recusas). O relógio é de verdade: acabou, some e não volta.</div>
+                    </div>
+                    <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Título do popup</label><input class="form-input" id="edHeadline" maxlength="300" placeholder="As meninas da sua região liberaram um desconto pra você entrar agora"></div>
+                    <div class="form-row" style="margin-bottom:16px;"><label class="form-label">Subtítulo</label><input class="form-input" id="edSub" maxlength="300" placeholder="Só uma vez, só agora. Fechou, voltou pro preço normal."><div class="form-help">A cidade do lead entra sozinha no selo "SÓ PRA VOCÊ · CIDADE".</div></div>
+
+                    <div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;margin-bottom:12px;">
+                        <label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;margin-bottom:12px;"><input type="checkbox" id="edAccessOn" style="width:16px;height:16px;"> Desconto no ACESSO (VIP / Premium)</label>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+                            <div><label class="form-label">VIP — link de checkout (desconto)</label><input class="form-input" id="edVipUrl" placeholder="https://pay.kirvano.com/..."></div>
+                            <div><label class="form-label">VIP — ID da oferta na Kirvano</label><input class="form-input" id="edVipOffer" placeholder="igual ao cadastro de ofertas"></div>
+                            <div><label class="form-label">VIP — preço com desconto</label><input class="form-input" id="edVipPrice" placeholder="14,90"></div>
+                            <div><label class="form-label">VIP — preço normal (riscado)</label><input class="form-input" id="edVipOrig" placeholder="24,90"></div>
+                            <div><label class="form-label">PREMIUM — link de checkout (desconto)</label><input class="form-input" id="edPremUrl" placeholder="https://pay.kirvano.com/..."></div>
+                            <div><label class="form-label">PREMIUM — ID da oferta na Kirvano</label><input class="form-input" id="edPremOffer" placeholder="igual ao cadastro de ofertas"></div>
+                            <div><label class="form-label">PREMIUM — preço com desconto</label><input class="form-input" id="edPremPrice" placeholder="29,90"></div>
+                            <div><label class="form-label">PREMIUM — preço normal (riscado)</label><input class="form-input" id="edPremOrig" placeholder="49,90"></div>
+                        </div>
+                        <div class="form-help">Pode preencher só um dos dois (ex.: só VIP). A venda cai no plano de chat (VIP = normal, Premium = com selo e extras) e sai marcada como "desconto" no painel.</div>
+                    </div>
+
+                    <div style="border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;margin-bottom:14px;">
+                        <label style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;margin-bottom:12px;"><input type="checkbox" id="edGroupOn" style="width:16px;height:16px;"> Desconto nos GRUPOS (link universal)</label>
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
+                            <div><label class="form-label">Link de checkout (um só, vale pra todos os grupos)</label><input class="form-input" id="edGroupUrl" placeholder="https://pay.kirvano.com/..."></div>
+                            <div><label class="form-label">ID da oferta na Kirvano</label><input class="form-input" id="edGroupOffer" placeholder="igual ao cadastro de ofertas"></div>
+                            <div><label class="form-label">Preço com desconto</label><input class="form-input" id="edGroupPrice" placeholder="9,90"></div>
+                            <div><label class="form-label">Preço normal (riscado)</label><input class="form-input" id="edGroupOrig" placeholder="19,90"></div>
+                        </div>
+                        <div class="form-help">UM produto na Kirvano serve pra todos os grupos: o sistema sabe qual grupo o lead estava tentando comprar e libera exatamente aquele.</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <button class="btn-primary" onclick="saveExitDiscount()">Salvar desconto</button>
+                        <span id="edStatus" style="font-size:12px;color:rgba(255,255,255,.55);"></span>
+                    </div>
+                </div>
+
                 <div class="form-card" style="padding:20px;margin-bottom:18px;border-color:rgba(212,175,55,.35);">
                     <div class="form-card-head" style="margin-bottom:12px;">
                         <div class="form-card-title" style="color:#f5d67b;">Roleta VIP</div>
@@ -12051,6 +12096,8 @@ async function loadAppConfig() {
     try { loadUpgradeRules(configs.upgrade_rules?.value); } catch (_) {}
     // Roleta VIP
     try { loadRouletteConfig(configs.roulette?.value); } catch (_) {}
+    // Desconto ao desistir
+    try { loadExitDiscount(configs.exit_discount?.value); } catch (_) {}
     // Pixel do Facebook
     try { loadMetaPixelConfig(configs.meta_pixel?.value); } catch (_) {}
 }
@@ -12179,6 +12226,37 @@ async function loadRouletteStats() {
     }
 }
 window.loadRouletteStats = loadRouletteStats;
+function loadExitDiscount(cfg) {
+    cfg = cfg || {}; const ac = cfg.access || {}, gr = cfg.group || {};
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+    set('edDelay', cfg.delay_sec != null ? cfg.delay_sec : 25);
+    set('edMin', cfg.min_dismissals != null ? cfg.min_dismissals : 2);
+    set('edMinutes', cfg.minutes_valid != null ? cfg.minutes_valid : 10);
+    set('edHeadline', cfg.headline || ''); set('edSub', cfg.sub || '');
+    document.getElementById('edAccessOn').checked = ac.enabled === true;
+    set('edVipUrl', ac.vip_url); set('edVipOffer', ac.vip_offer_id); set('edVipPrice', ac.vip_price || '14,90'); set('edVipOrig', ac.vip_orig || '24,90');
+    set('edPremUrl', ac.premium_url); set('edPremOffer', ac.premium_offer_id); set('edPremPrice', ac.premium_price || '29,90'); set('edPremOrig', ac.premium_orig || '49,90');
+    document.getElementById('edGroupOn').checked = gr.enabled === true;
+    set('edGroupUrl', gr.url); set('edGroupOffer', gr.offer_id); set('edGroupPrice', gr.price || '9,90'); set('edGroupOrig', gr.orig || '19,90');
+}
+async function saveExitDiscount() {
+    const v = id => (document.getElementById(id).value || '').trim();
+    const st = document.getElementById('edStatus');
+    const accessOn = document.getElementById('edAccessOn').checked, groupOn = document.getElementById('edGroupOn').checked;
+    if (accessOn && !v('edVipUrl') && !v('edPremUrl')) { st.textContent = 'Pra ligar o desconto no acesso, preencha o link do VIP ou do Premium.'; return; }
+    if (accessOn && ((v('edVipUrl') && !v('edVipOffer')) || (v('edPremUrl') && !v('edPremOffer')))) { st.textContent = 'Cada link precisa do ID da oferta (senão a venda não é reconhecida).'; return; }
+    if (groupOn && (!v('edGroupUrl') || !v('edGroupOffer'))) { st.textContent = 'Pra ligar o desconto nos grupos, preencha o link e o ID da oferta.'; return; }
+    const value = {
+        delay_sec: parseInt(v('edDelay'), 10) || 25, min_dismissals: parseInt(v('edMin'), 10) || 2, minutes_valid: parseInt(v('edMinutes'), 10) || 10,
+        headline: v('edHeadline'), sub: v('edSub'),
+        access: { enabled: accessOn, vip_url: v('edVipUrl'), vip_offer_id: v('edVipOffer'), vip_price: v('edVipPrice'), vip_orig: v('edVipOrig'),
+                  premium_url: v('edPremUrl'), premium_offer_id: v('edPremOffer'), premium_price: v('edPremPrice'), premium_orig: v('edPremOrig') },
+        group: { enabled: groupOn, url: v('edGroupUrl'), offer_id: v('edGroupOffer'), price: v('edGroupPrice'), orig: v('edGroupOrig') },
+    };
+    const result = await _saveGamification('exit_discount', value);
+    st.textContent = result.ok ? 'Salvo' : ('Erro: ' + (result.error || ''));
+    setTimeout(() => { st.textContent = ''; }, 3500);
+}
 async function saveRouletteConfig() {
     const st = document.getElementById('rlStatus');
     const ids = [];
