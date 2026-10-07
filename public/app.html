@@ -9018,8 +9018,8 @@ body.is-slowconn .prod-cta-fixed {
       </div>
       <div class="rl-sd" data-rl-rule></div>
       <div data-rl-prog></div>
-      <button class="rl-btn rl-goldbtn" style="margin-top:10px;" onclick="Roulette.share()">COMPARTILHAR MEU LINK</button>
-      <button class="rl-btn rl-greenbtn" style="margin-top:8px;" onclick="Roulette.copy(this)">COPIAR O LINK</button>
+      <button class="rl-btn rl-greenbtn" style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="Roulette.share()"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.1.6 2.8.5a2.4 2.4 0 0 0 1.6-1.1c.2-.6.2-1 .1-1.1l-.4-.3z"/></svg>MANDAR NO WHATSAPP</button>
+      <button class="rl-btn rl-goldbtn" style="margin-top:8px;" onclick="Roulette.copy(this)">COPIAR MENSAGEM + LINK</button>
     </div>
     <button class="rl-later" onclick="Roulette.close()">agora não</button>
   </div>
@@ -9078,7 +9078,7 @@ body.is-slowconn .prod-cta-fixed {
       <div class="rl-st">QUER GIRAR DE NOVO?</div>
       <div class="rl-sd" data-rl-rule></div>
       <div data-rl-prog></div>
-      <button class="rl-btn rl-greenbtn" style="margin-top:10px;" onclick="Roulette.share()">CHAMAR MEUS AMIGOS</button>
+      <button class="rl-btn rl-greenbtn" style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="Roulette.share()"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.1.6 2.8.5a2.4 2.4 0 0 0 1.6-1.1c.2-.6.2-1 .1-1.1l-.4-.3z"/></svg>CHAMAR NO WHATSAPP</button>
     </div>
     <button class="rl-later" onclick="Roulette.dismiss()">fechar</button>
   </div>
@@ -23103,11 +23103,11 @@ window.Roulette = (function () {
     // COPIAR O LINK (botão verde): alguns clientes preferem colar na mão no
     // WhatsApp em vez de usar o compartilhar do celular.
     function copy(btn) {
-        var url = shareLink();
+        var url = shareText() + ' ' + shareLink();   // mensagem + link juntos
         var done = function () {
             if (!btn) return;
             var antes = btn.textContent;
-            btn.textContent = 'LINK COPIADO';
+            btn.textContent = 'COPIADO!';
             setTimeout(function () { btn.textContent = antes; }, 2200);
         };
         try {
@@ -23132,34 +23132,20 @@ window.Roulette = (function () {
         }
     }
 
+    function shareText() {
+        return S.shareText || 'Te dei 1 giro grátis nessa roleta 🎰 Eu acabei de ganhar uma chamada de vídeo. Entra pelo meu link e resgata seu giro grátis:';
+    }
     function share() {
         api('/api/user/roulette/share', {}).catch(function () {});   // só conta no painel
-        var url = shareLink();
-        var txt = S.shareText || 'Te dei 1 giro grátis nessa roleta 🎰 Eu acabei de ganhar uma chamada de vídeo. Entra pelo meu link e resgata seu giro grátis:';
-        if (navigator.share) {
-            // texto e link JUNTOS num campo só: com `url` separado o WhatsApp
-            // (principalmente no iPhone) descartava o texto e mandava só o link.
-            navigator.share({ text: txt + ' ' + url }).catch(function () {});
-            return;
-        }
-        var ok = false;
+        // WhatsApp DIRETO com a mensagem pronta (texto + link). O compartilhar
+        // nativo (navigator.share) descartava o texto no iPhone e mandava só o
+        // link pelado — no WhatsApp via wa.me chega inteiro nos dois sistemas.
+        var msg = shareText() + ' ' + shareLink();
+        var wa = 'https://wa.me/?text=' + encodeURIComponent(msg);
         try {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(txt + ' ' + url);
-                ok = true;
-            }
-        } catch (_) {}
-        if (!ok) {
-            try {
-                var ta = document.createElement('textarea');
-                ta.value = txt + ' ' + url;
-                ta.style.position = 'fixed'; ta.style.opacity = '0';
-                document.body.appendChild(ta); ta.select();
-                ok = document.execCommand('copy');
-                document.body.removeChild(ta);
-            } catch (_) {}
-        }
-        alert(ok ? 'Link copiado! Agora é só colar no WhatsApp.' : 'Copie seu link: ' + url);
+            var w = window.open(wa, '_blank');
+            if (!w) window.location.href = wa;   // popup bloqueado: navega na mesma aba
+        } catch (_) { window.location.href = wa; }
     }
 
     // ── ESTADO + BANNER + ABRIR NO TOQUE ────────────────────────────────

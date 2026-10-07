@@ -76,8 +76,8 @@ const PIE_CASE = `CASE
     WHEN COALESCE(p.is_chat_plan, false) = true THEN 'chat_vip'
     WHEN p.product_type = 'video_call' OR p.video_call_id IS NOT NULL
          OR NULLIF(TRIM(COALESCE(p.direct_call_video_url, '')), '') IS NOT NULL THEN 'chamadas'
-    WHEN COALESCE(p.is_group_pass, false) = true
-         OR ua.product_id IN (SELECT product_id FROM groups WHERE product_id IS NOT NULL)
+    WHEN COALESCE(p.is_group_pass, false) = true OR ua.utm_content = 'group_pass' THEN 'passe'
+    WHEN ua.product_id IN (SELECT product_id FROM groups WHERE product_id IS NOT NULL)
          OR ua.utm_content LIKE 'group%' THEN 'grupos'
     WHEN ($EXPLORE_PID > 0 AND ua.product_id = $EXPLORE_PID)
          OR ua.utm_content = 'explore_premium' THEN 'videos_lives'
