@@ -486,6 +486,11 @@ router.put('/:id', requireAdmin, async (req, res) => {
         if (b.tag !== undefined) set('tag', (b.tag || '').trim().slice(0, 30) || null);
         if (b.auto_start_minutes !== undefined) set('auto_start_minutes', Math.max(0, Math.min(10080, parseInt(b.auto_start_minutes, 10) || 0)));
         if (b.listed !== undefined) set('listed', !!b.listed);
+        // Encontros
+        if (b.enc_enabled !== undefined) set('enc_enabled', !!b.enc_enabled);
+        if (b.enc_age !== undefined) set('enc_age', b.enc_age ? Math.max(18, Math.min(99, parseInt(b.enc_age, 10) || 0)) || null : null);
+        if (b.enc_tag !== undefined) set('enc_tag', (b.enc_tag || '').trim().slice(0, 80) || null);
+        if (b.enc_order !== undefined) set('enc_order', parseInt(b.enc_order, 10) || 0);
         if (b.is_support !== undefined) set('is_support', !!b.is_support);
         if (b.story_vip_product_id !== undefined) set('story_vip_product_id', b.story_vip_product_id ? parseInt(b.story_vip_product_id, 10) : null);
         if (b.story_vip_checkout_url !== undefined) set('story_vip_checkout_url', (b.story_vip_checkout_url || '').trim().slice(0, 1000) || null);

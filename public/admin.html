@@ -3504,6 +3504,14 @@ a { color: inherit; text-decoration: none; }
                     <div class="dv2-cards" id="dv2Discount" style="margin-top:12px;"></div>
                 </div>
 
+                <!-- ═══ ENCONTROS (out/2026) ═══ -->
+                <div class="form-card" style="margin-top:16px; padding:18px;">
+                    <div class="form-card-title">❤️ Encontros <span style="font-size:10.5px; font-weight:600; color:rgba(255,255,255,.4);">segue o período escolhido acima</span></div>
+                    <div class="form-card-sub">Quem entrou na aba → deslizou → fez perfil → recebeu curtida / match → abriu conversa → viu a oferta → comprou. A venda sai carimbada com o gatilho que vendeu.</div>
+                    <div class="dv2-cards" id="dv2Enc" style="margin-top:12px;"></div>
+                    <div class="dv2-cards" id="dv2EncSales" style="margin-top:12px;"></div>
+                </div>
+
                 <!-- ═══ CONVERSÃO POR CHAT DO FUNIL (set/2026) ═══ -->
                 <div class="form-card" style="margin-top:16px; padding:18px;">
                     <div class="form-card-title">💬 Conversão por chat do funil <span style="font-size:10.5px; font-weight:600; color:rgba(255,255,255,.4);">segue o período escolhido acima</span></div>
@@ -6599,6 +6607,16 @@ a { color: inherit; text-decoration: none; }
                                 <div class="form-help" style="margin-top:6px;">A cada venda aprovada, este chat manda a "Mensagem de pós-compra" do produto comprado (configurada no produto). Só um chat pode ser o Suporte.</div>
                             </div>
 
+                            <!-- ENCONTROS (estilo Tinder) -->
+                            <div style="background:rgba(229,9,20,.06); border:1px solid rgba(229,9,20,.25); border-radius:10px; padding:12px;">
+                                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#fff; cursor:pointer; font-weight:700;"><input type="checkbox" id="cpEncEnabled" style="width:16px; height:16px;"> ❤️ Aparece no ENCONTROS (card pra curtir)</label>
+                                <div style="display:grid; grid-template-columns:120px 1fr 110px; gap:10px; margin-top:10px;">
+                                    <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Idade no card</label><input class="form-control" type="number" id="cpEncAge" min="18" max="99" placeholder="28"/></div>
+                                    <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Etiqueta (dia | noite)</label><input class="form-control" id="cpEncTag" maxlength="80" placeholder="quer conversar | sozinha hoje 🙈"/></div>
+                                    <div><label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Ordem</label><input class="form-control" type="number" id="cpEncOrder" value="0"/></div>
+                                </div>
+                                <div class="form-help" style="margin-top:6px;">A foto do card é a foto desta conversa. Etiqueta: um texto só, ou "dia | noite" separados por barra (de 18h às 6h usa o da noite). Ordem menor aparece primeiro; os chats do funil ficam bem no começo.</div>
+                            </div>
                             <!-- Motor de conversas: auto-start -->
                             <div style="background:rgba(37,211,102,.06); border:1px solid rgba(37,211,102,.2); border-radius:10px; padding:12px;">
                                 <label style="display:block; font-size:12px; color:#fff; font-weight:700; margin-bottom:4px;">⏱ Mandar a 1ª mensagem sozinha depois que o cliente entra (min)</label>
@@ -6899,6 +6917,7 @@ a { color: inherit; text-decoration: none; }
                                     <option value="group">👥 Direto num grupo</option>
                                     <option value="group_list">👥 Aba de grupos</option>
                                     <option value="videos">📹 Aba de Vídeos (feed)</option>
+                                    <option value="encounters">❤️ Aba Encontros (deslizar)</option>
                                 </select>
                                 <div id="funnelEntryGroupWrap" style="display:none; margin-top:10px;">
                                     <label style="display:block; font-size:12px; color:rgba(255,255,255,.7); margin-bottom:4px;">Grupo de destino</label>
@@ -7819,6 +7838,37 @@ a { color: inherit; text-decoration: none; }
                 </div>
 
                 <!-- ═══════════════ ROLETA VIP ═══════════════ -->
+                <div class="form-card" style="margin-bottom:16px;border-color:rgba(229,9,20,.35);">
+                    <div class="form-card-head">
+                        <div class="form-card-title" style="color:#ff4d57;">Encontros (estilo Tinder)</div>
+                        <div class="form-card-sub">O lead desliza os cards das modelos (as conversas marcadas em Chats → "Aparece no Encontros"). Curtidas grátis são limitadas; as modelos curtem de volta no tempo; ver quem curtiu e mandar mensagem direta é Premium. Match abre a conversa daquela modelo.</div>
+                    </div>
+                    <label style="display:flex; align-items:center; gap:10px; font-size:14px; font-weight:700; color:#fff; cursor:pointer; margin-bottom:14px;"><input type="checkbox" id="encEnabled" style="width:16px;height:16px;"> Encontros LIGADO (aba aparece no rodapé do app)</label>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
+                        <div><label class="form-label">Curtidas grátis antes de travar</label><input type="number" class="form-input" id="encFreeLikes" min="1" max="500" placeholder="25"></div>
+                        <div><label class="form-label">Espera da 1ª trava (horas)</label><input type="number" class="form-input" id="encLockHours" min="0.1" max="168" step="0.5" placeholder="3"></div>
+                        <div><label class="form-label">Cada trava seguinte multiplica por</label><input type="number" class="form-input" id="encLockMult" min="1" max="10" step="0.5" placeholder="2"></div>
+                        <div><label class="form-label">Pedir perfil depois de N cards</label><input type="number" class="form-input" id="encProfileAfter" min="1" max="50" placeholder="3"></div>
+                        <div><label class="form-label">1ª curtida de volta em (minutos)</label><input type="number" class="form-input" id="encFirstLike" min="0" max="1440" placeholder="3"></div>
+                        <div><label class="form-label">Próximas curtidas a cada (minutos)</label><input type="number" class="form-input" id="encNextLike" min="1" max="1440" placeholder="25"></div>
+                        <div><label class="form-label">% das curtidas que viram MATCH (sem plano)</label><input type="number" class="form-input" id="encMatchPct" min="0" max="100" placeholder="30"></div>
+                        <div><label class="form-label">Mensagens grátis no match (chat VIP)</label><input type="number" class="form-input" id="encFreeMsgs" min="0" max="20" placeholder="2"></div>
+                        <div><label class="form-label">Distância mínima (km)</label><input type="number" class="form-input" id="encDistMin" min="0" max="500" placeholder="1"></div>
+                        <div><label class="form-label">Distância máxima (km)</label><input type="number" class="form-input" id="encDistMax" min="1" max="500" placeholder="15"></div>
+                        <div><label class="form-label">Sem curtida de volta das (hora)</label><input type="number" class="form-input" id="encQuietStart" min="0" max="23" placeholder="1"></div>
+                        <div><label class="form-label">até as (hora)</label><input type="number" class="form-input" id="encQuietEnd" min="0" max="23" placeholder="8"></div>
+                        <div><label class="form-label">"Online perto de você": mínimo</label><input type="number" class="form-input" id="encOnlineMin" min="1" max="999" placeholder="28"></div>
+                        <div><label class="form-label">máximo</label><input type="number" class="form-input" id="encOnlineMax" min="1" max="999" placeholder="46"></div>
+                    </div>
+                    <div class="form-row" style="margin-top:12px;"><label class="form-label">Título da tela de início</label><input class="form-input" id="encIntroTitle" maxlength="120" placeholder="Elas estão perto de você agora"></div>
+                    <div class="form-row" style="margin-top:10px;"><label class="form-label">Texto da tela de início (depois do número de online)</label><input class="form-input" id="encIntroText" maxlength="300" placeholder="mulheres online na sua região querem conversar. Curte quem você gostar — se ela curtir de volta, dá match."></div>
+                    <div class="form-help" style="margin-top:8px;">Premium: curtidas ilimitadas, vê quem curtiu, botão verde de mensagem direta, volta o card. VIP: curtidas ilimitadas, mas segue as regras do chat. Grátis: limite de curtidas, match abre a conversa com N mensagens grátis. A distância é sorteada uma vez por lead × modelo e não muda.</div>
+                    <div style="display:flex;align-items:center;gap:12px;margin-top:12px;">
+                        <button class="btn-primary" onclick="saveEncounters()">Salvar Encontros</button>
+                        <span id="encStatus" style="font-size:12px;color:rgba(255,255,255,.55);"></span>
+                    </div>
+                </div>
+
                 <div class="form-card" style="margin-bottom:16px;border-color:rgba(34,197,94,.35);">
                     <div class="form-card-head">
                         <div class="form-card-title" style="color:#4ade80;">Desconto ao desistir</div>
@@ -10113,7 +10163,7 @@ async function loadDashboardV2() {
     const AREAS = {
         chat_premium: ['Chat — Premium', '#f5c542'], chat_vip: ['Chat — VIP', '#25D366'],
         upgrade: ['Upgrade (VIP → Premium)', '#3b82f6'], grupos: ['Grupos', '#e50914'],
-        passe: ['Passe — Todos os Grupos', '#38bdf8'],
+        passe: ['Passe — Todos os Grupos', '#38bdf8'], encontros: ['Encontros', '#f472b6'],
         chamadas: ['Chamadas de vídeo', '#a78bfa'], videos_lives: ['Vídeos e Lives', '#fb923c'],
         catalogo: ['Produtos do catálogo', '#22d3ee'], outros: ['Outros', '#6b7280'],
     };
@@ -10222,6 +10272,24 @@ async function loadDashboardV2() {
         + card('Clicaram', fmtN(ed.clicked || 0), `${pc(ed.clicked, ed.shown)} dos que viram`)
         + card('Compraram com desconto', fmtN(edTot.n), `${pc(edTot.n, ed.shown)} dos que viram · ${_dv2R$(edTot.gross)}`, '#4ade80')
         + card('Por tipo', `${fmtN(edBy('vip').n)} / ${fmtN(edBy('premium').n)} / ${fmtN(edBy('group').n)}`, `VIP ${_dv2R$(edBy('vip').gross)} · Premium ${_dv2R$(edBy('premium').gross)} · Grupo ${_dv2R$(edBy('group').gross)}`);
+
+    // ENCONTROS
+    const en = data.encounters || {};
+    const enSales = Array.isArray(en.sales) ? en.sales : [];
+    const enTot = enSales.reduce((t, x) => ({ n: t.n + (x.n || 0), gross: t.gross + (x.gross || 0) }), { n: 0, gross: 0 });
+    const SRC_LBL = { enc_msg: 'Botão verde (mensagem direta)', enc_match: 'Match', enc_lock: 'Trava de curtidas', enc_likes: 'Quem curtiu você', enc_undo: 'Voltar card', enc_chat: 'Conversa (msgs grátis acabaram)', enc_profile: 'Perfil / Minhas Compras' };
+    document.getElementById('dv2Enc').innerHTML =
+        card('Entraram na aba', fmtN(en.entered || 0), 'pessoas únicas')
+        + card('Deslizaram', fmtN(en.swiped || 0), `${pc(en.swiped, en.entered)} dos que entraram · ${fmtN(en.likes || 0)} curtidas`)
+        + card('Fizeram perfil', fmtN(en.profiles || 0), `${pc(en.profiles, en.swiped)} dos que deslizaram`)
+        + card('Curtidas recebidas', fmtN(en.likes_received || 0), `${fmtN(en.matches || 0)} viraram match`)
+        + card('Bateram na trava', fmtN(en.locked || 0), 'pessoas que esgotaram as curtidas')
+        + card('Abriram conversa', fmtN(en.opened_chat || 0), 'via match ou mensagem direta')
+        + card('Viram a oferta', fmtN(en.saw_offer || 0), 'popup Premium/VIP do Encontros')
+        + card('Compraram', fmtN(enTot.n), `${pc(enTot.n, en.entered)} dos que entraram · ${_dv2R$(enTot.gross)}`, '#4ade80');
+    document.getElementById('dv2EncSales').innerHTML = enSales.length
+        ? enSales.sort((a, b) => b.n - a.n).map(x => card(SRC_LBL[x.src] || x.src, fmtN(x.n), _dv2R$(x.gross), '#f472b6')).join('')
+        : '<div class="dv2-pill">Nenhuma venda carimbada pelo Encontros no período.</div>';
 
     // CONVERSÃO POR CHAT DO FUNIL
     const fc = data.funnel_chats || [];
@@ -12117,6 +12185,8 @@ async function loadAppConfig() {
     try { loadRouletteConfig(configs.roulette?.value); } catch (_) {}
     // Desconto ao desistir
     try { loadExitDiscount(configs.exit_discount?.value); } catch (_) {}
+    // Encontros
+    try { loadEncounters(configs.encounters?.value); } catch (_) {}
     // Pixel do Facebook
     try { loadMetaPixelConfig(configs.meta_pixel?.value); } catch (_) {}
 }
@@ -12245,6 +12315,26 @@ async function loadRouletteStats() {
     }
 }
 window.loadRouletteStats = loadRouletteStats;
+const ENC_FIELDS = { encFreeLikes: ['free_likes', 25], encLockHours: ['lock_hours', 3], encLockMult: ['lock_mult', 2], encProfileAfter: ['profile_after', 3],
+    encFirstLike: ['first_like_min', 3], encNextLike: ['next_like_min', 25], encMatchPct: ['match_pct', 30], encFreeMsgs: ['free_msgs', 2],
+    encDistMin: ['dist_min', 1], encDistMax: ['dist_max', 15], encQuietStart: ['quiet_start', 1], encQuietEnd: ['quiet_end', 8],
+    encOnlineMin: ['online_min', 28], encOnlineMax: ['online_max', 46] };
+function loadEncounters(cfg) {
+    cfg = cfg || {};
+    document.getElementById('encEnabled').checked = cfg.enabled === true;
+    for (const id in ENC_FIELDS) { const [k, d] = ENC_FIELDS[id]; document.getElementById(id).value = cfg[k] != null ? cfg[k] : d; }
+    document.getElementById('encIntroTitle').value = cfg.intro_title || '';
+    document.getElementById('encIntroText').value = cfg.intro_text || '';
+}
+async function saveEncounters() {
+    const value = { enabled: document.getElementById('encEnabled').checked,
+        intro_title: document.getElementById('encIntroTitle').value.trim(), intro_text: document.getElementById('encIntroText').value.trim() };
+    for (const id in ENC_FIELDS) { const [k, d] = ENC_FIELDS[id]; const n = parseFloat(document.getElementById(id).value); value[k] = isNaN(n) ? d : n; }
+    const st = document.getElementById('encStatus');
+    const result = await _saveGamification('encounters', value);
+    st.textContent = result.ok ? 'Salvo' : ('Erro: ' + (result.error || ''));
+    setTimeout(() => { st.textContent = ''; }, 3500);
+}
 function loadExitDiscount(cfg) {
     cfg = cfg || {}; const ac = cfg.access || {}, gr = cfg.group || {};
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
@@ -15400,7 +15490,7 @@ async function loadFunnels() {
                 + '<div style="padding:14px 16px;border-bottom:1px solid var(--border,rgba(255,255,255,.08));display:flex;justify-content:space-between;align-items:flex-start;gap:12px">'
                 +   '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px;color:#fff">'+escHtmlAdmin(f.name)+'</div>'
                 +     '<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:4px">'
-                +       (f.entry_type === 'product' ? '🎯 Direto no produto' : f.entry_type === 'category' ? '🎯 Direto na categoria' : (f.entry_type === 'chat' || f.entry_type === 'chat_list') ? '🎯 Direto na conversa' : f.entry_type === 'videos' ? '🎯 Aba de Vídeos' : '🎯 Home')
+                +       (f.entry_type === 'product' ? '🎯 Direto no produto' : f.entry_type === 'category' ? '🎯 Direto na categoria' : (f.entry_type === 'chat' || f.entry_type === 'chat_list') ? '🎯 Direto na conversa' : f.entry_type === 'videos' ? '🎯 Aba de Vídeos' : f.entry_type === 'encounters' ? '🎯 Aba Encontros' : '🎯 Home')
                 +       (f.featured_product_name ? ' · 📦 '+escHtmlAdmin(f.featured_product_name) : '')+(f.video_call_model_name ? ' · 📞 '+escHtmlAdmin(f.video_call_model_name) : '')+'</div>'
                 +   '</div>'+status
                 + '</div>'
@@ -17326,6 +17416,10 @@ function editChatPersona(c) {
     document.getElementById('cpStoryVipCheckout').value = c.story_vip_checkout_url || '';
     document.getElementById('cpReply').value = c.reply_mode || 'vip';
     document.getElementById('cpAutoStart').value = c.auto_start_minutes || 0;
+    document.getElementById('cpEncEnabled').checked = c.enc_enabled === true;
+    document.getElementById('cpEncAge').value = c.enc_age || '';
+    document.getElementById('cpEncTag').value = c.enc_tag || '';
+    document.getElementById('cpEncOrder').value = c.enc_order || 0;
     document.getElementById('cpInputMode').value = c.input_mode === 'gated' ? 'gated' : 'always';
     document.getElementById('cpCallGoto').value = c.call_goto_key || '';
     document.getElementById('cpPhoto').checked = c.allow_photo === true;
@@ -17383,6 +17477,10 @@ async function saveChatPersona(e) {
         hide_when_member: document.getElementById('cpHideWhenMember').checked,
         teaser_locked: document.getElementById('cpTeaserLocked').checked,
         in_rotation: document.getElementById('cpInRotation').checked,
+        enc_enabled: document.getElementById('cpEncEnabled').checked,
+        enc_age: document.getElementById('cpEncAge').value || null,
+        enc_tag: document.getElementById('cpEncTag').value.trim() || null,
+        enc_order: parseInt(document.getElementById('cpEncOrder').value, 10) || 0,
         greeting_enabled: document.getElementById('cpGreeting').checked,
         is_support: document.getElementById('cpSupport').checked,
         city_fallback: document.getElementById('cpCityFallback').value.trim() || 'sua região',

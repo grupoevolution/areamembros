@@ -475,8 +475,23 @@ async function deliverPendingGreeting(session) {
 
 async function fillVars(text, ctx) {
     if (!text || text.indexOf('{') === -1) return text;
-    let nome = 'amor';
-    if (ctx && ctx.email) {
+    let nome = 'amor', idade = '';
+    // Perfil do ENCONTROS (apelido + idade que o lead digitou) tem prioridade;
+    // senão o nome do cadastro.
+    try {
+        const keys = [];
+        if (ctx && ctx.email) keys.push(ctx.email);
+        if (ctx && ctx.visitor) keys.push('v:' + ctx.visitor);
+        if (keys.length) {
+            const { rows } = await db.query(`SELECT name, age FROM encounter_profiles WHERE identity = ANY($1::text[]) ORDER BY updated_at DESC LIMIT 1`, [keys]);
+            if (rows[0]) {
+                const n = (rows[0].name || '').trim().split(/\s+/)[0];
+                if (n) nome = n.charAt(0).toUpperCase() + n.slice(1).toLowerCase();
+                if (rows[0].age) idade = String(rows[0].age);
+            }
+        }
+    } catch (_) {}
+    if (nome === 'amor' && ctx && ctx.email) {
         try {
             const { rows } = await db.query(`SELECT name FROM customers WHERE LOWER(email) = $1 LIMIT 1`, [ctx.email]);
             const n = (rows[0]?.name || '').trim().split(/\s+/)[0];
@@ -486,8 +501,40 @@ async function fillVars(text, ctx) {
     const cidade = (ctx && ctx.city) || (ctx && ctx.cityFallback) || 'sua região';
     return text
         .replace(/\{nome\}/gi, nome)
+        .replace(/\{idade\}/gi, idade)
         .replace(/\{saudacao\}/gi, saudacaoBrasilia())
         .replace(/\{cidade\}/gi, cidade);
+}
+
+// ── ENCONTROS: passe de mensagens grátis num chat VIP ──────────────────────
+// Deu MATCH num chat travado → o lead pode mandar N mensagens (config) antes
+// do paywall. Enquanto tiver saldo, a conversa se comporta como liberada.
+async function encFreeLeft(ident, chatId) {
+    try {
+        const keys = [];
+        if (ident.email) keys.push(ident.email);
+        if (ident.visitor) keys.push('v:' + ident.visitor);
+        if (!keys.length) return 0;
+        const { rows } = await db.query(
+            `SELECT COALESCE(MAX(free_msgs_left), 0)::int AS n FROM encounter_likes
+              WHERE identity = ANY($1::text[]) AND chat_id = $2 AND is_match = true AND delivered_at IS NOT NULL`, [keys, chatId]);
+        return rows[0] ? rows[0].n : 0;
+    } catch (_) { return 0; }
+}
+async function encFreeUse(ident, chatId) {
+    try {
+        const keys = [];
+        if (ident.email) keys.push(ident.email);
+        if (ident.visitor) keys.push('v:' + ident.visitor);
+        await db.query(`UPDATE encounter_likes SET free_msgs_left = GREATEST(0, free_msgs_left - 1) WHERE identity = ANY($1::text[]) AND chat_id = $2`, [keys, chatId]);
+    } catch (_) {}
+}
+// Aplica o passe no objeto de permissões (destrava enquanto houver saldo)
+async function applyEncPass(perm, ident, chatId) {
+    if (!perm.locked) return perm;
+    const left = await encFreeLeft(ident, chatId);
+    if (left > 0) { perm.locked = false; perm.can_reply = true; perm.enc_free = left; }
+    return perm;
 }
 
 // Resolve IP→cidade UMA vez por sessão e guarda (alimenta {cidade})
@@ -794,6 +841,7 @@ router.get('/chats', optionalUser, async (req, res) => {
             // (VIP daquela conversa OU Premium) — some mesmo se já conversou.
             if (c.hide_when_member && (owns || isPremium)) continue;
             const perm = permissions(c, owns, ident);
+            await applyEncPass(perm, ident, c.id);
             // ISCA "só prévia": pro não-VIP, trava a conversa (tocar → popup, não
             // abre) MAS deixa a prévia da mensagem VISÍVEL na lista (o `teaser`
             // avisa o app pra não borrar). Pro VIP, abre normal.
@@ -888,6 +936,7 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         const perm = permissions(chat, owns, ident);
         // ISCA "só prévia": trava também no /open (defesa se chamarem a API direto)
         if (chat.teaser_locked === true && !perm.is_vip) perm.locked = true;
+        await applyEncPass(perm, ident, chatId);   // match do Encontros: N msgs grátis
         // enriquece o desbloqueio com produto + planos (banner VIP rico)
         if (perm.locked) {
             perm.unlock = await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url);
@@ -1155,11 +1204,17 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
         const chat = cr[0];
         const owns = await ownsChatVip(ident.email, chat);
         const perm = permissions(chat, owns, ident);
+        await applyEncPass(perm, ident, chatId);   // match do Encontros: N msgs grátis
         if (perm.locked) {
             return res.status(403).json({
                 success: false, error: 'vip_required',
                 unlock: await loadUnlock(await chatUnlockProductId(chat), chat.checkout_url),
             });
+        }
+        // gastou 1 mensagem grátis do match (só quando ele de fato mandou algo)
+        if (perm.enc_free && ((req.body && req.body.text) || (req.body && req.body.choice != null))) {
+            await encFreeUse(ident, chatId);
+            perm.enc_free = Math.max(0, perm.enc_free - 1);
         }
 
         const session = await findOrCreateSession(chatId, ident, true);

@@ -69,6 +69,7 @@ const IDENT = `COALESCE(LOWER(customer_email), metadata->>'vid', metadata->>'vis
 // cai na categoria certa. Ordem importa (upgrade antes do plano de chat).
 // $EXPLORE_PID = produto de Vídeos/Lives (config do Explorar), injetado.
 const PIE_CASE = `CASE
+    WHEN ua.utm_content LIKE 'enc_%' THEN 'encontros'
     WHEN LOWER(COALESCE(po.offer_name, '')) = 'upgrade premium'
          OR ua.utm_content = 'upgrade_offer' THEN 'upgrade'
     WHEN COALESCE(p.is_chat_plan, false) = true
@@ -109,7 +110,7 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
             serie, pie, money, topProdutos, orfas,
             installs, engaj, sumidos, recompra, multiProduto,
             porHora, topVendedoras,
-            novosVsRecompra, recompraDosNovos, roleta, roletaConvite, distNovos, pessoasPeriodo, convChats, desconto,
+            novosVsRecompra, recompraDosNovos, roleta, roletaConvite, distNovos, pessoasPeriodo, convChats, desconto, encontros,
         ] = await Promise.all([
             // visitantes únicos HOJE e ONTEM até a mesma hora
             q(`SELECT COUNT(DISTINCT ${IDENT})::int AS n FROM tracking_events
@@ -374,6 +375,25 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
                        FROM user_access WHERE granted_by = 'webhook' AND status NOT IN ('refunded', 'chargeback')
                          AND metadata->>'discount' IS NOT NULL AND ${windowSql(period, 'granted_at')}) s
                  GROUP BY 1) t`),
+
+            // ── ENCONTROS: funil + origem da venda ─────────────────────────
+            q(`WITH ev AS (
+                   SELECT event_type, COALESCE(LOWER(customer_email), metadata->>'vid') AS ident, metadata
+                   FROM tracking_events WHERE event_type LIKE 'enc_%' AND ${windowSql(period)}),
+               vendas AS (
+                   SELECT utm_content, COUNT(*)::int AS n, COALESCE(SUM(sale_amount), 0)::float AS gross
+                   FROM (${dedupSales(period)}) v WHERE utm_content LIKE 'enc_%' GROUP BY 1)
+               SELECT
+                 (SELECT COUNT(DISTINCT ident) FROM ev WHERE event_type = 'enc_start')::int AS entered,
+                 (SELECT COUNT(DISTINCT ident) FROM ev WHERE event_type IN ('enc_like','enc_pass'))::int AS swiped,
+                 (SELECT COUNT(*) FROM ev WHERE event_type = 'enc_like')::int AS likes,
+                 (SELECT COUNT(DISTINCT ident) FROM ev WHERE event_type = 'enc_profile')::int AS profiles,
+                 (SELECT COUNT(DISTINCT ident) FROM ev WHERE event_type = 'enc_locked')::int AS locked,
+                 (SELECT COUNT(DISTINCT ident) FROM ev WHERE event_type = 'enc_paywall')::int AS saw_offer,
+                 (SELECT COUNT(*) FROM encounter_likes WHERE ${windowSql(period, 'delivered_at')})::int AS likes_received,
+                 (SELECT COUNT(*) FROM encounter_likes WHERE is_match AND ${windowSql(period, 'delivered_at')})::int AS matches,
+                 (SELECT COUNT(DISTINCT ident) FROM ev WHERE event_type = 'enc_open_chat')::int AS opened_chat,
+                 COALESCE((SELECT json_agg(json_build_object('src', utm_content, 'n', n, 'gross', gross)) FROM vendas), '[]'::json) AS sales`),
         ]);
 
         const r0 = (r) => r.rows[0] || {};
@@ -420,6 +440,7 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
             roulette: { ...r0(roleta), invite: r0(roletaConvite) },
             funnel_chats: convChats.rows,
             exit_discount: r0(desconto),
+            encounters: r0(encontros),
         });
     } catch (err) {
         logger.error('[dash-v2] erro:', err);

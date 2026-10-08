@@ -1470,6 +1470,118 @@ body.is-slowconn .prod-cta-fixed {
     border: 3px solid #0b0b0c;
 }
 .nav-fab .nav-icon { width: 25px; height: 25px; color: #fff; }
+.nav-fab-enc { position: relative; }
+.enc-pill { position:absolute; top:-4px; right:-4px; background:#22c55e; color:#06220f; font-size:10px; font-weight:800; border-radius:999px; min-width:18px; height:18px; display:flex; align-items:center; justify-content:center; padding:0 4px; border:2px solid #0b0b0c; }
+/* Minhas Compras — moldura vermelha (destaque pedido pelo dono) */
+.nav-item-mc { padding-top: 2px; }
+.nav-mc { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; width:72px; height:50px; border-radius:14px; border:2px solid #e50914; background:rgba(229,9,20,.14); color:#fff; box-shadow:0 0 0 3px rgba(229,9,20,.18), 0 6px 18px rgba(229,9,20,.35); }
+.nav-mc .nav-icon { width:18px; height:18px; color:#ff4d57; }
+.nav-mc-lbl { font-size:8px; font-weight:800; letter-spacing:.04em; line-height:1.05; text-align:center; }
+.nav-item-mc:active .nav-mc { transform: scale(.94); }
+
+/* ═══ ENCONTROS ═══ */
+#encounters { background:#0b0b0f; }
+.enc-wrap { position:absolute; inset:0; display:flex; flex-direction:column; padding-bottom:72px; }
+.enc-top { position:absolute; top:0; left:0; right:0; z-index:7; height:calc(54px + env(safe-area-inset-top,0px)); padding-top:env(safe-area-inset-top,0px); display:flex; align-items:center; justify-content:space-between; padding-left:16px; padding-right:16px; background:linear-gradient(180deg,rgba(0,0,0,.85),rgba(0,0,0,0)); text-shadow:0 1px 4px rgba(0,0,0,.8); pointer-events:none; }
+.enc-top > * { pointer-events:auto; }
+.enc-online { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:#fff; background:rgba(0,0,0,.45); border-radius:999px; padding:6px 12px; white-space:nowrap; }
+.enc-dot { width:9px; height:9px; border-radius:50%; background:#22c55e; display:inline-block; }
+.enc-tabs { display:flex; gap:6px; }
+.enc-tab { background:rgba(0,0,0,.45); border:1px solid rgba(255,255,255,.14); color:#d6d6de; border-radius:999px; padding:6px 10px; font-size:11px; font-weight:800; font-family:inherit; position:relative; }
+.enc-tab.on { background:#e50914; border-color:#e50914; color:#fff; }
+.enc-tab b { position:absolute; top:-6px; right:-6px; background:#22c55e; color:#06220f; font-size:9px; border-radius:999px; min-width:16px; height:16px; display:flex; align-items:center; justify-content:center; padding:0 3px; }
+.enc-stage { flex:1; position:relative; min-height:0; }
+.enc-card { position:absolute; inset:0; width:100%; height:100%; overflow:hidden; background:#1d1d26; display:flex; flex-direction:column; justify-content:flex-end; padding:18px 18px 122px; user-select:none; touch-action:none; will-change:transform; }
+.enc-card img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none; }
+.enc-card .sh { position:absolute; left:0; right:0; bottom:0; height:55%; background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.85)); }
+.enc-card .st { position:relative; display:inline-flex; align-items:center; gap:6px; background:rgba(0,0,0,.55); border-radius:999px; padding:5px 10px; font-size:12px; width:max-content; }
+.enc-card .nm { position:relative; font-size:34px; font-weight:800; margin-top:8px; text-shadow:0 2px 8px rgba(0,0,0,.6); font-family:'DM Sans',inherit; }
+.enc-card .nm span { font-weight:500; font-size:24px; color:#d6d6de; }
+.enc-card .row { position:relative; display:flex; align-items:center; justify-content:space-between; margin-top:4px; gap:8px; }
+.enc-card .dist { font-size:13px; color:#d6d6de; display:flex; align-items:center; gap:5px; }
+.enc-card .tag { background:#e50914; border-radius:999px; padding:5px 10px; font-size:12px; font-weight:700; white-space:nowrap; }
+.enc-stamp { position:absolute; top:calc(72px + env(safe-area-inset-top,0px)); border:3px solid; border-radius:10px; padding:4px 12px; font-size:22px; font-weight:800; letter-spacing:1px; opacity:0; }
+.enc-stamp.like { right:22px; color:#22c55e; border-color:#22c55e; transform:rotate(14deg); }
+.enc-stamp.nope { left:22px; color:#f05252; border-color:#f05252; transform:rotate(-14deg); }
+.enc-actions { position:absolute; left:0; right:0; bottom:86px; z-index:6; display:flex; align-items:center; justify-content:center; gap:22px; }
+.enc-act { border-radius:50%; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.18); background:rgba(10,10,14,.7); backdrop-filter:blur(6px); position:relative; box-shadow:0 8px 24px rgba(0,0,0,.5); cursor:pointer; }
+.enc-act:active { transform:scale(.92); }
+.enc-act.undo { width:54px; height:54px; } .enc-act.nope { width:64px; height:64px; }
+.enc-act.like { width:74px; height:74px; background:#e50914; border:0; box-shadow:0 10px 28px rgba(229,9,20,.5); }
+.enc-act.msg { width:54px; height:54px; background:#25D366; border:0; box-shadow:0 8px 24px rgba(37,211,102,.45); }
+.enc-badge { position:absolute; top:-6px; right:-10px; background:#f5c542; color:#2a1c00; font-size:8.5px; font-weight:800; border-radius:999px; padding:2px 6px; white-space:nowrap; }
+.enc-badge.g { background:#25D366; color:#06220f; right:auto; left:50%; transform:translateX(-50%); top:-14px; font-size:9px; padding:3px 8px; }
+.enc-empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; color:#9a9aa8; padding:30px; font-size:15px; line-height:1.5; }
+/* intro */
+.enc-intro { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding:0 22px 14px; z-index:5; background:#0b0b0f; }
+.enc-fan { position:absolute; left:0; right:0; top:40px; bottom:190px; display:flex; align-items:center; justify-content:center; }
+.enc-fc { position:absolute; width:min(62vw,240px); height:min(42vh,340px); border-radius:20px; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,.6); display:flex; flex-direction:column; justify-content:flex-end; padding:14px; background:#1d1d26; }
+.enc-fc img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.enc-fc .sh { position:absolute; left:0; right:0; bottom:0; height:60%; background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.8)); }
+.enc-fc .nm { position:relative; font-size:22px; font-weight:800; } .enc-fc .nm span { font-weight:500; font-size:17px; color:#d6d6de; }
+.enc-fc .d { position:relative; font-size:12px; color:#d6d6de; display:flex; align-items:center; gap:5px; }
+.enc-fc.l { transform:rotate(-12deg) translateX(-62%) translateY(14px); animation:encfl 4s ease-in-out infinite; }
+.enc-fc.r { transform:rotate(12deg) translateX(62%) translateY(14px); animation:encfr 4s ease-in-out infinite; }
+.enc-fc.m { animation:encfm 4s ease-in-out infinite; z-index:2; }
+@keyframes encfm{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes encfl{0%,100%{transform:rotate(-12deg) translateX(-62%) translateY(14px)}50%{transform:rotate(-14deg) translateX(-64%) translateY(4px)}}
+@keyframes encfr{0%,100%{transform:rotate(12deg) translateX(62%) translateY(14px)}50%{transform:rotate(14deg) translateX(64%) translateY(4px)}}
+.enc-cta { position:relative; width:100%; max-width:360px; text-align:center; }
+.enc-cta .h { font-size:26px; font-weight:800; line-height:1.1; }
+.enc-cta .s { font-size:14px; color:#9a9aa8; margin:8px 0 14px; line-height:1.4; }
+.enc-faces { display:flex; justify-content:center; margin-bottom:12px; }
+.enc-faces img { width:30px; height:30px; border-radius:50%; object-fit:cover; border:2px solid #0b0b0f; margin-left:-8px; }
+.enc-btn { width:100%; background:#e50914; color:#fff; border:0; border-radius:14px; padding:16px; font-size:16px; font-weight:800; letter-spacing:.3px; font-family:inherit; cursor:pointer; }
+.enc-btn.green { background:#22c55e; color:#06220f; }
+.enc-pulse { animation:encpulse 1.6s ease-in-out infinite; }
+@keyframes encpulse{0%,100%{box-shadow:0 0 0 0 rgba(229,9,20,.55)}50%{box-shadow:0 0 0 12px rgba(229,9,20,0)}}
+.enc-ghost { background:none; border:0; color:#9a9aa8; text-decoration:underline; font-size:13px; text-align:center; font-family:inherit; cursor:pointer; }
+/* folhas */
+.enc-ov { position:fixed; inset:0; background:rgba(0,0,0,.7); display:none; align-items:flex-end; justify-content:center; z-index:99990; }
+.enc-ov.on { display:flex; }
+.enc-sheet { width:100%; max-width:480px; background:#14141a; border-radius:28px 28px 0 0; padding:14px 22px calc(26px + env(safe-area-inset-bottom,0px)); display:flex; flex-direction:column; gap:14px; max-height:92vh; overflow:auto; color:#fff; }
+.enc-grab { width:44px; height:4px; border-radius:2px; background:#3a3a46; align-self:center; }
+.enc-h1 { font-size:24px; font-weight:800; line-height:1.15; }
+.enc-sub { font-size:14px; color:#9a9aa8; margin-top:6px; line-height:1.4; }
+.enc-lbl { display:block; font-size:11px; font-weight:700; letter-spacing:.5px; color:#9a9aa8; text-transform:uppercase; margin-bottom:5px; }
+.enc-inp { width:100%; background:#1d1d26; border:1px solid #2c2c38; border-radius:12px; padding:12px 14px; color:#fff; font-size:15px; font-family:inherit; box-sizing:border-box; }
+.enc-photo { width:84px; height:84px; border-radius:50%; background:#1d1d26; border:2px dashed #e50914; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; color:#d6d6de; font-size:10.5px; font-weight:700; flex-shrink:0; overflow:hidden; cursor:pointer; }
+.enc-photo img { width:100%; height:100%; object-fit:cover; }
+.enc-range { position:relative; height:34px; }
+.enc-range .track { position:absolute; left:0; right:0; top:15px; height:6px; border-radius:3px; background:#2c2c38; }
+.enc-range .fill { position:absolute; top:15px; height:6px; border-radius:3px; background:#e50914; }
+.enc-range input { position:absolute; left:0; right:0; top:0; width:100%; height:34px; margin:0; -webkit-appearance:none; appearance:none; background:none; pointer-events:none; }
+.enc-range input::-webkit-slider-thumb { -webkit-appearance:none; width:24px; height:24px; border-radius:50%; background:#fff; border:3px solid #e50914; pointer-events:auto; cursor:pointer; }
+.enc-range input::-moz-range-thumb { width:24px; height:24px; border-radius:50%; background:#fff; border:3px solid #e50914; pointer-events:auto; cursor:pointer; }
+.enc-lock { text-align:center; padding:26px 22px; }
+.enc-lock .big { font-size:44px; font-weight:800; color:#fff; margin:4px 0; letter-spacing:1px; font-variant-numeric:tabular-nums; }
+/* curtidas */
+.enc-likes { position:absolute; inset:0; overflow:auto; padding:calc(62px + env(safe-area-inset-top,0px)) 16px 90px; display:none; }
+.enc-likes.on { display:block; }
+.enc-likes .hd { display:flex; align-items:center; justify-content:space-between; margin:6px 0 12px; }
+.enc-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.enc-lk { position:relative; height:210px; border-radius:18px; overflow:hidden; background:#2a2a35; display:flex; flex-direction:column; justify-content:flex-end; padding:12px; cursor:pointer; }
+.enc-lk img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+.enc-lk.blur img { filter:blur(14px) brightness(.7); transform:scale(1.1); }
+.enc-lk .sh { position:absolute; left:0; right:0; bottom:0; height:60%; background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.8)); }
+.enc-lk .lk { position:absolute; top:12px; left:12px; display:flex; align-items:center; gap:5px; background:rgba(0,0,0,.6); border-radius:999px; padding:4px 9px; font-size:11px; }
+.enc-lk .nm { position:relative; font-size:18px; font-weight:800; } .enc-lk .nm span { font-weight:500; font-size:15px; color:#d6d6de; }
+.enc-lk .d { position:relative; font-size:12px; color:#d6d6de; }
+.enc-see { height:210px; border-radius:18px; border:2px dashed #e50914; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; text-align:center; padding:14px; background:none; color:#fff; font-family:inherit; cursor:pointer; }
+/* match */
+.enc-match { position:fixed; inset:0; background:rgba(0,0,0,.9); display:none; align-items:center; justify-content:center; flex-direction:column; gap:16px; z-index:99995; text-align:center; padding:24px; color:#fff; }
+.enc-match.on { display:flex; }
+.enc-match .ph { display:flex; align-items:center; }
+.enc-match img { width:110px; height:110px; border-radius:50%; object-fit:cover; border:4px solid #e50914; }
+.enc-match .me { width:110px; height:110px; border-radius:50%; background:#2a2a35; border:4px solid #22c55e; display:flex; align-items:center; justify-content:center; font-size:36px; font-weight:800; margin-left:-14px; overflow:hidden; }
+.enc-match .me img { width:100%; height:100%; border:0; border-radius:0; }
+/* Minhas Compras: linha fina do perfil */
+.lib-prof { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:14px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); cursor:pointer; margin:0 0 14px; }
+.lib-prof .av { width:40px; height:40px; border-radius:50%; border:2px solid #e50914; background:#1d1d26 center/cover; display:flex; align-items:center; justify-content:center; font-weight:800; color:#fff; flex-shrink:0; }
+.lib-prof .nm { font-size:14px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lib-prof .tier { font-size:9.5px; font-weight:800; letter-spacing:.5px; color:#9a9aa8; border:1px solid rgba(255,255,255,.14); border-radius:999px; padding:2px 7px; }
+.lib-prof .sub { font-size:11.5px; color:#9a9aa8; margin-top:2px; display:flex; align-items:center; gap:6px; }
+.lib-prof .up { background:none; border:1px solid #e50914; color:#ff4d57; border-radius:999px; padding:6px 10px; font-size:11px; font-weight:800; white-space:nowrap; font-family:inherit; cursor:pointer; }
 .nav-item-hi:active .nav-fab { transform: scale(.94); }
 .nav-icon { width: 20px; height: 20px; }
 .nav-label { font-size: 9px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
@@ -7220,6 +7332,16 @@ body.is-slowconn .prod-cta-fixed {
         <div class="topbar-simple">
             <div class="topbar-title">Minhas <em>compras</em></div>
         </div>
+        <!-- PERFIL (linha fina): foto, apelido, nível, upgrade discreto, curtidas do Encontros. Toque abre o Perfil completo. -->
+        <div class="lib-prof" id="libProf" onclick="switchScreen('profile')">
+            <div class="av" id="libProfAv">?</div>
+            <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:8px;"><div class="nm" id="libProfNm">Seu perfil</div><span class="tier" id="libProfTier">FREE</span></div>
+                <div class="sub" id="libProfSub">toque pra ver seu plano e seu perfil</div>
+            </div>
+            <button class="up" id="libProfUp" onclick="event.stopPropagation(); if (typeof renderProfilePlan === 'function') { switchScreen('profile'); }">Upgrade</button>
+            <div style="color:rgba(255,255,255,.4);font-size:20px;">›</div>
+        </div>
         <div class="acervo-stat">
             <div class="acervo-stat-icon">
                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
@@ -7408,6 +7530,12 @@ body.is-slowconn .prod-cta-fixed {
                 </div>
             </div>
 
+            <!-- ENCONTROS: curtidas, matches, faixa de idade (some se desligado) -->
+            <div id="profileEncBox" style="display:none;margin:0 0 14px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:12px 14px;align-items:center;gap:12px;">
+                <div style="width:38px;height:38px;border-radius:50%;background:#e50914;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7.5-4.8-9.5-9.3C1 8 3.2 4.5 6.6 4.5c2 0 3.6 1.1 4.4 2.4.8-1.3 2.4-2.4 4.4-2.4 3.4 0 5.6 3.5 4.1 7.2C19.5 16.2 12 21 12 21z"/></svg></div>
+                <div style="flex:1;min-width:0;"><div style="font-size:13.5px;font-weight:800;">Encontros</div><div style="font-size:12px;color:rgba(255,255,255,.55);" id="profileEncSub">—</div></div>
+                <button class="enc-ghost" style="color:#ff4d57;text-decoration:none;font-weight:800;" onclick="Enc.openProfile(true)">editar</button>
+            </div>
             <!-- SEU PLANO — status VIP/Premium + upgrade (renderProfilePlan) -->
             <div id="profilePlanBox" style="margin:0 0 18px;"></div>
 
@@ -8985,6 +9113,361 @@ body.is-slowconn .prod-cta-fixed {
       display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,.25); }
 </style>
 
+<script>
+// ═══════════════════ ENCONTROS (estilo Tinder) ═══════════════════
+// Cards = chats marcados no painel. Tudo que importa é decidido no SERVIDOR
+// (/api/user/encounters/*): limite de curtidas, trava, curtidas de volta,
+// match, Premium. Aqui é só tela + gestos.
+window.Enc = (function () {
+    var $ = function (id) { return document.getElementById(id); };
+    var S = { st: null, started: false, view: 'deck', shownStart: false, lockT: null, pending: [], busy: false, polling: null, lastUnseen: 0 };
+    var ICON_PIN = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e50914" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+    function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+    function vid() { try { return localStorage.getItem('mv_chat_visitor') || window.VID || ''; } catch (_) { return window.VID || ''; } }
+    function api(path, body) {
+        var opt = { credentials: 'include' };
+        if (body !== undefined) { opt.method = 'POST'; opt.headers = { 'Content-Type': 'application/json' }; opt.body = JSON.stringify(Object.assign({ visitor_id: vid() }, body || {})); }
+        var url = path + (path.indexOf('?') === -1 ? '?' : '&') + 'visitor_id=' + encodeURIComponent(vid());
+        return fetch(url, opt).then(function (r) { return r.json(); });
+    }
+    function track(type, meta) { api('/api/user/encounters/event', { type: type, meta: meta || {} }).catch(function () {}); }
+    function isPremium() { return !!(S.st && S.st.plan && S.st.plan.premium); }
+    function isVip() { return !!(S.st && S.st.plan && S.st.plan.vip); }
+    function fmtLeft(ms) { var x = Math.max(0, Math.floor(ms / 1000)); var h = Math.floor(x / 3600), m = Math.floor((x % 3600) / 60), sec = x % 60; return (h ? h + ':' : '') + (m < 10 && h ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec; }
+
+    // ── estado ──
+    function load() {
+        return api('/api/user/encounters/state').then(function (d) {
+            S.st = d && d.success ? d : null;
+            var nav = $('navEnc');
+            if (nav) nav.style.display = (S.st && S.st.enabled) ? '' : 'none';
+            paintBadges();
+            return S.st;
+        }).catch(function () { return null; });
+    }
+    function paintBadges() {
+        var n = (S.st && S.st.unseen) || 0;
+        var p = $('encNavPill'); if (p) { p.style.display = n > 0 ? 'flex' : 'none'; p.textContent = n > 9 ? '9+' : n; }
+        var b = $('encTabBadge'); if (b) { b.style.display = n > 0 ? 'flex' : 'none'; b.textContent = n; }
+        paintLibraryRow();
+    }
+    // linha fina em Minhas Compras + bloco no Perfil
+    function paintLibraryRow() {
+        var st = S.st || {};
+        var prof = st.profile || null;
+        var nm = $('libProfNm'), av = $('libProfAv'), sub = $('libProfSub'), tier = $('libProfTier'), up = $('libProfUp');
+        var apelido = null;
+        try { apelido = localStorage.getItem('mv_apelido_' + (window.currentUserEmail || 'anon')); } catch (_) {}
+        var name = (prof && prof.name) || apelido || null;
+        var premium = !!(st.plan && st.plan.premium), vip = !!(st.plan && st.plan.vip);
+        if (nm) nm.textContent = name ? (name + (prof && prof.age ? ', ' + prof.age : '')) : 'Seu perfil';
+        if (tier) { tier.textContent = premium ? 'PREMIUM' : vip ? 'VIP' : 'FREE'; tier.style.color = premium ? '#ffd75e' : vip ? '#fff' : '#9a9aa8'; tier.style.borderColor = premium ? '#f5c542' : 'rgba(255,255,255,.14)'; }
+        if (up) { up.style.display = premium ? 'none' : ''; up.textContent = vip ? 'Premium' : 'Upgrade'; }
+        if (av) {
+            var photo = (prof && prof.photo_url) || null;
+            if (!photo) { try { photo = localStorage.getItem('mv_avatar_' + (window.currentUserEmail || 'anon')); } catch (_) {} }
+            if (photo) { av.style.backgroundImage = 'url(' + photo + ')'; av.textContent = ''; }
+            else av.textContent = name ? name.charAt(0).toUpperCase() : '?';
+        }
+        if (sub) {
+            if (st.enabled) {
+                var rec = (st.received || []).length, mt = (st.received || []).filter(function (r) { return r.is_match; }).length;
+                sub.innerHTML = '<svg width="11" height="11" viewBox="0 0 24 24" fill="#e50914"><path d="M12 21s-7.5-4.8-9.5-9.3C1 8 3.2 4.5 6.6 4.5c2 0 3.6 1.1 4.4 2.4.8-1.3 2.4-2.4 4.4-2.4 3.4 0 5.6 3.5 4.1 7.2C19.5 16.2 12 21 12 21z"/></svg> ' + rec + ' curtida' + (rec === 1 ? '' : 's') + ' · ' + mt + (mt === 1 ? ' match' : ' matches');
+            } else sub.textContent = 'toque pra ver seu plano e seu perfil';
+        }
+        var box = $('profileEncBox');
+        if (box) {
+            box.style.display = st.enabled ? 'flex' : 'none';
+            var es = $('profileEncSub');
+            if (es) {
+                var rec2 = (st.received || []).length, mt2 = (st.received || []).filter(function (r) { return r.is_match; }).length;
+                es.textContent = rec2 + ' curtidas · ' + mt2 + ' matches · vendo de ' + (prof ? prof.age_min + ' a ' + prof.age_max : '18 a 45') + ' anos';
+            }
+        }
+    }
+
+    // ── abrir a aba ──
+    function show() {
+        if (typeof switchScreen === 'function') switchScreen('encounters');
+        load().then(function (st) {
+            if (!st || !st.enabled) { $('encStage').innerHTML = '<div class="enc-empty">Encontros em breve.</div>'; return; }
+            if (!S.shownStart) { S.shownStart = true; track('enc_start'); }
+            S.started = st.swipes > 0 || S.started;
+            render();
+        });
+    }
+    function tab(which) {
+        S.view = which;
+        $('encTabDeck').classList.toggle('on', which === 'deck'); $('encTabLikes').classList.toggle('on', which === 'likes');
+        $('encLikes').classList.toggle('on', which === 'likes');
+        $('encStage').style.visibility = which === 'likes' ? 'hidden' : '';
+        $('encIntro').style.display = (which === 'likes' || S.started) ? 'none' : '';
+        $('encActions').style.visibility = (which === 'deck' && S.started && S.st && S.st.deck && S.st.deck.length) ? 'visible' : 'hidden';
+        if (which === 'likes') renderLikes();
+    }
+    function start() { S.started = true; render(); }
+
+    // ── deck ──
+    function render() {
+        var st = S.st; if (!st) return;
+        $('encOnlineN').textContent = st.online || '—';
+        var deck = st.deck || [];
+        var stage = $('encStage'); stage.innerHTML = '';
+        $('encActions').style.visibility = (S.started && deck.length && S.view === 'deck') ? 'visible' : 'hidden';
+        var intro = $('encIntro');
+        if (!S.started) {
+            intro.style.display = S.view === 'deck' ? '' : 'none';
+            var cfg = st.cfg || {};
+            $('encIntroTitle').textContent = cfg.intro_title || 'Elas estão perto de você agora';
+            $('encIntroN').textContent = st.online || '';
+            $('encIntroText').textContent = cfg.intro_text || 'mulheres online na sua região querem conversar.';
+            var top3 = deck.slice(0, 3);
+            $('encFan').innerHTML = ['l', 'm', 'r'].map(function (pos, i) {
+                var m = top3[(i + 1) % Math.max(1, top3.length)]; if (!m) return '';
+                return '<div class="enc-fc ' + pos + '"><img src="' + esc(m.avatar_url || '') + '" alt=""><div class="sh"></div><div class="nm">' + esc(m.name) + (m.age ? ' <span>' + m.age + '</span>' : '') + '</div><div class="d"><span class="enc-dot"></span>a ' + m.dist_km + ' km de você</div></div>';
+            }).join('');
+            $('encFaces').innerHTML = deck.slice(3, 9).map(function (m) { return '<img src="' + esc(m.avatar_url || '') + '" alt="">'; }).join('');
+            return;
+        }
+        intro.style.display = 'none';
+        if (!deck.length) { stage.innerHTML = '<div class="enc-empty">Você já viu todas as mulheres perto de você por hoje.<br><br>Novas aparecem amanhã — e as que curtiram você estão em <b>Curtidas</b>.</div>'; return; }
+        var show = deck.slice(0, 2).reverse();
+        show.forEach(function (m, i) {
+            var top = i === show.length - 1;
+            var el = document.createElement('div');
+            el.className = 'enc-card'; el.dataset.chat = m.chat_id;
+            el.innerHTML = '<img src="' + esc(m.avatar_url || '') + '" alt=""><div class="sh"></div>'
+                + '<div class="enc-stamp like">CURTI</div><div class="enc-stamp nope">PASSO</div>'
+                + '<div class="st"><span class="enc-dot"></span>online agora</div>'
+                + '<div class="nm">' + esc(m.name) + (m.age ? ' <span>' + m.age + '</span>' : '') + '</div>'
+                + '<div class="row"><div class="dist">' + ICON_PIN + 'a ' + m.dist_km + ' km de você</div>' + (m.tag ? '<div class="tag">' + esc(m.tag) + '</div>' : '') + '</div>';
+            if (top) { el.id = 'encTopCard'; bind(el); }
+            stage.appendChild(el);
+        });
+    }
+    function bind(el) {
+        var sx = 0, dx = 0, dy = 0, moving = false;
+        el.addEventListener('pointerdown', function (e) { moving = true; sx = e.clientX; var sy = e.clientY; el.setPointerCapture(e.pointerId); el.style.transition = 'none'; el._sy = sy; });
+        el.addEventListener('pointermove', function (e) {
+            if (!moving) return; dx = e.clientX - sx; dy = e.clientY - (el._sy || 0);
+            el.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx / 18) + 'deg)';
+            el.querySelector('.enc-stamp.like').style.opacity = Math.min(1, Math.max(0, dx / 80));
+            el.querySelector('.enc-stamp.nope').style.opacity = Math.min(1, Math.max(0, -dx / 80));
+        });
+        function up() {
+            if (!moving) return; moving = false;
+            if (Math.abs(dx) > 100) swipe(dx > 0 ? 1 : -1, el);
+            else { el.style.transition = 'transform .25s'; el.style.transform = ''; el.querySelector('.enc-stamp.like').style.opacity = 0; el.querySelector('.enc-stamp.nope').style.opacity = 0; }
+            dx = dy = 0;
+        }
+        el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    }
+    function swipe(dir, el) {
+        if (S.busy || !S.st || !S.st.deck || !S.st.deck.length || !S.started) return;
+        var m = S.st.deck[0];
+        if (dir > 0 && !isVip() && S.st.lock_until && new Date(S.st.lock_until) > new Date()) { openLock(S.st.lock_until); if (el) { el.style.transition = 'transform .25s'; el.style.transform = ''; } return; }
+        S.busy = true;
+        el = el || $('encTopCard');
+        if (el) {
+            el.style.transition = 'transform .35s ease-in';
+            el.style.transform = 'translate(' + (dir * 600) + 'px,-40px) rotate(' + (dir * 25) + 'deg)';
+            el.querySelector('.enc-stamp.' + (dir > 0 ? 'like' : 'nope')).style.opacity = 1;
+        }
+        api('/api/user/encounters/swipe', { chat_id: m.chat_id, action: dir > 0 ? 'like' : 'pass' }).then(function (d) {
+            S.busy = false;
+            if (d && d.locked) { S.st.lock_until = d.lock_until; if (el) { el.style.transition = 'transform .25s'; el.style.transform = ''; } openLock(d.lock_until); return; }
+            S.st.deck.shift(); S.st.swipes = (S.st.swipes || 0) + 1;
+            if (d && d.likes_left != null) S.st.likes_left = d.likes_left;
+            setTimeout(function () {
+                render();
+                var cfg = S.st.cfg || {};
+                if (!S.st.profile && !S.askedProfile && S.st.swipes >= (cfg.profile_after || 3)) { S.askedProfile = true; setTimeout(function () { openProfile(false); }, 350); }
+            }, 250);
+        }).catch(function () { S.busy = false; render(); });
+    }
+    function undo() {
+        if (!isPremium()) { offer('enc_undo', 'Voltar o card é Premium', 'Deixou passar alguém? Premium volta quantas vezes quiser — e vê quem curtiu você.'); return; }
+        api('/api/user/encounters/undo', {}).then(function () { return load(); }).then(function () { S.started = true; render(); });
+    }
+    function message() {
+        if (!S.st || !S.st.deck || !S.st.deck.length) return;
+        var m = S.st.deck[0];
+        if (!isPremium()) { offer('enc_msg', 'Falar direto com a ' + m.name + ' é Premium', 'Pula a espera do match: manda mensagem agora pra quem você quiser. Ela responde na hora.'); return; }
+        openChat(m.chat_id, 'msg');
+    }
+
+    // ── oferta (popup de planos do chat, carimbo enc_*) ──
+    function ensureUnlock() {
+        if (window.MV_PAY_UNLOCK) return Promise.resolve(window.MV_PAY_UNLOCK);
+        return fetch('/api/user/chats?visitor_id=' + encodeURIComponent(vid()), { credentials: 'include' }).then(function (r) { return r.json(); })
+            .then(function (d) { if (d && d.paywall_unlock) window.MV_PAY_UNLOCK = d.paywall_unlock; return window.MV_PAY_UNLOCK || null; }).catch(function () { return null; });
+    }
+    function offer(src, title, subtitle) {
+        track('enc_paywall', { src: src });
+        var n = (S.st && S.st.received || []).length;
+        ensureUnlock().then(function (unlock) {
+            if (!unlock || !window.MVPaywall) { try { showToast && showToast('encounters', '🔒', 'Recurso Premium'); } catch (_) {} return; }
+            MVPaywall.openModal(unlock, {
+                icon: 'lock', eyebrow: 'ENCONTROS · PREMIUM',
+                title: title || (n ? (n === 1 ? '1 mulher curtiu você' : n + ' mulheres curtiram você') : 'Libere o Encontros'),
+                subtitle: subtitle || 'Elas estão online agora. Libera pra ver quem são e responder na conversa.',
+                ctaText: 'LIBERAR AGORA', src: src,
+                track: { type: 'enc_paywall_click', meta: { src: src } },
+            });
+        });
+    }
+
+    // ── trava ──
+    function openLock(until) {
+        var end = new Date(until).getTime();
+        function paint() { var left = end - Date.now(); $('encLockLeft').textContent = fmtLeft(left); if (left <= 0) { closeLock(); if (S.st) S.st.lock_until = null; } }
+        paint(); clearInterval(S.lockT); S.lockT = setInterval(paint, 1000);
+        $('encOvLock').classList.add('on');
+    }
+    function closeLock() { clearInterval(S.lockT); $('encOvLock').classList.remove('on'); }
+
+    // ── perfil ──
+    var photoData = null;
+    function openProfile(edit) {
+        var st = S.st || {};
+        var liked = (st.received || []).slice(0, 1);
+        var first = (st.deck && st.deck[0]) || null;
+        $('encPfHint').src = (liked[0] && liked[0].avatar_url) || (first && first.avatar_url) || '';
+        $('encPfHintT').textContent = liked.length ? liked[0].name : 'As meninas';
+        $('encPfEmailWrap').style.display = st.identified ? 'none' : '';
+        var p = st.profile;
+        if (p) { $('encPfName').value = p.name || ''; $('encPfAge').value = p.age || ''; $('encAgeMin').value = p.age_min || 18; $('encAgeMax').value = p.age_max || 45; if (p.photo_url) $('encPfPhoto').innerHTML = '<img src="' + esc(p.photo_url) + '" alt="">'; }
+        else {
+            var ap = null; try { ap = localStorage.getItem('mv_apelido_' + (window.currentUserEmail || 'anon')); } catch (_) {}
+            if (ap) $('encPfName').value = ap;
+            var av = null; try { av = localStorage.getItem('mv_avatar_' + (window.currentUserEmail || 'anon')); } catch (_) {}
+            if (av) { photoData = av; $('encPfPhoto').innerHTML = '<img src="' + av + '" alt="">'; }
+        }
+        range(); $('encPfErr').style.display = 'none';
+        $('encOvProfile').classList.add('on');
+    }
+    function photo(inp) {
+        var f = inp.files && inp.files[0]; if (!f) return;
+        var r = new FileReader();
+        r.onload = function () {
+            // reduz pra caber (máx ~300KB): desenha num canvas 400px
+            var img = new Image();
+            img.onload = function () {
+                try {
+                    var c = document.createElement('canvas'); var sc = Math.min(1, 400 / Math.max(img.width, img.height));
+                    c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+                    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                    photoData = c.toDataURL('image/jpeg', 0.8);
+                } catch (_) { photoData = r.result; }
+                $('encPfPhoto').innerHTML = '<img src="' + photoData + '" alt="">';
+                try { localStorage.setItem('mv_avatar_' + (window.currentUserEmail || 'anon'), photoData); } catch (_) {}
+            };
+            img.src = r.result;
+        };
+        r.readAsDataURL(f);
+    }
+    function range(src) {
+        var mn = $('encAgeMin'), mx = $('encAgeMax');
+        var a = parseInt(mn.value, 10), b = parseInt(mx.value, 10);
+        if (a > b - 1) { if (src === mn) { b = Math.min(60, a + 1); mx.value = b; } else { a = Math.max(18, b - 1); mn.value = a; } }
+        $('encAgeMinL').textContent = a; $('encAgeMaxL').textContent = b;
+        var lo = (a - 18) / 42 * 100, hi = (b - 18) / 42 * 100;
+        $('encAgeFill').style.left = lo + '%'; $('encAgeFill').style.width = (hi - lo) + '%';
+    }
+    function saveProfile() {
+        var name = ($('encPfName').value || '').trim(), age = parseInt($('encPfAge').value, 10);
+        var err = $('encPfErr'); err.style.display = 'none';
+        var body = { name: name, age: age, age_min: parseInt($('encAgeMinL').textContent, 10), age_max: parseInt($('encAgeMaxL').textContent, 10), photo_url: photoData || null };
+        if ($('encPfEmailWrap').style.display !== 'none') body.email = ($('encPfEmail').value || '').trim();
+        var btn = $('encPfSave'); btn.disabled = true; btn.textContent = 'SALVANDO...';
+        api('/api/user/encounters/profile', body).then(function (d) {
+            btn.disabled = false; btn.textContent = 'ENTRAR NO JOGO';
+            if (!d || !d.success) { err.textContent = (d && d.error) || 'Não deu. Tenta de novo.'; err.style.display = ''; return; }
+            try { localStorage.setItem('mv_apelido_' + (d.email || window.currentUserEmail || 'anon'), name); } catch (_) {}
+            if (d.logged_now && d.email) {
+                // virou lead identificado agora (e-mail do perfil) — igual ao login normal
+                window.currentUserEmail = d.email; window.MV_ANONYMOUS = false;
+                try { document.body.classList.remove('funnel-mode'); } catch (_) {}
+                try { if (window.PUSH && Notification.permission === 'granted') PUSH.subscribe(); } catch (_) {}
+                try { if (typeof window.tryTriggerCallAfterLogin === 'function') window.tryTriggerCallAfterLogin(); } catch (_) {}
+            }
+            $('encOvProfile').classList.remove('on');
+            load().then(function () { render(); });
+        }).catch(function () { btn.disabled = false; btn.textContent = 'ENTRAR NO JOGO'; err.textContent = 'Sem internet? Tenta de novo.'; err.style.display = ''; });
+    }
+    function skipProfile() { $('encOvProfile').classList.remove('on'); }
+
+    // ── curtidas recebidas ──
+    function renderLikes() {
+        var st = S.st || {}; var list = st.received || [];
+        $('encLikesNew').textContent = (st.unseen || 0) + (st.unseen === 1 ? ' nova' : ' novas');
+        var g = $('encLikesGrid');
+        if (!list.length) { g.innerHTML = '<div class="enc-empty" style="position:static;grid-column:1/-1;">Ninguém curtiu você ainda.<br>Continue curtindo — elas respondem no tempo delas.</div>'; }
+        else {
+            g.innerHTML = list.map(function (m) {
+                var open = m.can_open;
+                return '<div class="enc-lk' + (open ? '' : ' blur') + '" onclick="' + (open ? 'Enc.openChat(' + m.chat_id + ',\'' + (m.is_match ? 'match' : 'likes') + '\')' : 'Enc.offer(\'enc_likes\')') + '">'
+                    + '<img src="' + esc(m.avatar_url || '') + '" alt=""><div class="sh"></div>'
+                    + (open ? (m.is_match ? '<div class="lk" style="background:#22c55e;color:#06220f;font-weight:800;">MATCH</div>' : '') : '<div class="lk"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Premium</div>')
+                    + '<div class="nm">' + esc(m.name) + (m.age ? ' <span>' + m.age + '</span>' : '') + '</div><div class="d">a ' + m.dist_km + ' km de você</div></div>';
+            }).join('') + (isPremium() ? '' : '<button class="enc-see" onclick="Enc.offer(\'enc_likes\')"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#e50914" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg><div style="font-size:14px;font-weight:800;line-height:1.25;">Ver quem curtiu você</div><div style="font-size:11.5px;color:#9a9aa8;">e responder agora</div></button>');
+        }
+        if (st.unseen) { api('/api/user/encounters/seen', {}).catch(function () {}); st.unseen = 0; paintBadges(); }
+    }
+
+    // ── match → conversa ──
+    function showMatch(m) {
+        Enc.matchId = m.chat_id;
+        $('encMatchT').textContent = m.name + ' também curtiu você';
+        $('encMatchImg').src = m.avatar_url || '';
+        var me = $('encMatchMe'); var prof = S.st && S.st.profile;
+        var photo = (prof && prof.photo_url) || null; if (!photo) { try { photo = localStorage.getItem('mv_avatar_' + (window.currentUserEmail || 'anon')); } catch (_) {} }
+        me.innerHTML = photo ? '<img src="' + photo + '" alt="">' : esc((prof && prof.name || 'V').charAt(0).toUpperCase());
+        $('encMatch').classList.add('on');
+    }
+    function closeMatch() { $('encMatch').classList.remove('on'); }
+    function openChat(chatId, src) {
+        closeMatch();
+        api('/api/user/encounters/open', { chat_id: chatId, src: src || 'match' }).then(function (d) {
+            if (!d || !d.success) { offer(src === 'msg' ? 'enc_msg' : 'enc_likes'); return; }
+            if (window.ChatApp) { ChatApp.open(chatId); }
+        }).catch(function () {});
+    }
+
+    // ── curtidas chegando ao vivo (toast) ──
+    function pollLikes() {
+        if (document.hidden) return;
+        if (!window.currentUserEmail && !vid()) return;
+        api('/api/user/encounters/state').then(function (d) {
+            if (!d || !d.success || !d.enabled) return;
+            var before = S.st ? (S.st.received || []).map(function (r) { return r.chat_id; }) : null;
+            S.st = d; paintBadges();
+            if (before) {
+                (d.received || []).forEach(function (m) {
+                    if (before.indexOf(m.chat_id) !== -1 || m.seen) return;
+                    if (window.MVNotify) MVNotify.push({
+                        title: m.name + (m.is_match ? ' deu match com você 💚' : ' curtiu você'),
+                        body: 'a ' + m.dist_km + ' km · ' + (m.is_match ? 'toque pra conversar' : 'quer conversar agora'),
+                        avatar: m.avatar_url || null, icon: '❤️',
+                        onClick: function () { if (m.is_match) { show(); showMatch(m); } else { show(); tab('likes'); } },
+                    });
+                });
+            }
+            if (document.getElementById('encounters') && document.getElementById('encounters').classList.contains('active')) {
+                if (S.view === 'likes') renderLikes();
+            }
+        }).catch(function () {});
+    }
+    setTimeout(function () { load().then(function () { paintLibraryRow(); }); }, 3500);
+    setInterval(pollLikes, 45000);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(pollLikes, 1500); });
+
+    return { show: show, tab: tab, start: start, swipe: swipe, undo: undo, message: message, offer: offer, openLock: openLock, closeLock: closeLock,
+             openProfile: openProfile, photo: photo, range: range, saveProfile: saveProfile, skipProfile: skipProfile,
+             showMatch: showMatch, closeMatch: closeMatch, openChat: openChat, load: load, paint: paintLibraryRow, matchId: null };
+})();
+</script>
+
 <!-- ═══ DESCONTO AO DESISTIR (out/2026) ═══ -->
 <div class="rl-ov" id="mvdOv">
   <div class="rl-card" style="max-width:360px; border-color:rgba(34,197,94,.45);">
@@ -9240,31 +9723,114 @@ window.MVDiscount = (function () {
 
 <canvas id="rlConfetti"></canvas>
 
+<!-- ═══════════════ ENCONTROS (estilo Tinder) ═══════════════ -->
+<div class="screen with-nav" id="encounters">
+  <div class="enc-wrap">
+    <div class="enc-top">
+      <div class="enc-online"><span class="enc-dot"></span><b id="encOnlineN">—</b>&nbsp;online perto de você</div>
+      <div class="enc-tabs">
+        <button class="enc-tab on" id="encTabDeck" onclick="Enc.tab('deck')">Descobrir</button>
+        <button class="enc-tab" id="encTabLikes" onclick="Enc.tab('likes')">Curtidas<b id="encTabBadge" style="display:none;">0</b></button>
+      </div>
+    </div>
+    <div class="enc-stage" id="encStage"></div>
+    <div class="enc-intro" id="encIntro" style="display:none;">
+      <div class="enc-fan" id="encFan"></div>
+      <div class="enc-cta">
+        <div class="enc-faces" id="encFaces"></div>
+        <div class="h" id="encIntroTitle">Elas estão perto de você agora</div>
+        <div class="s"><b style="color:#fff;" id="encIntroN">—</b> <span id="encIntroText">mulheres online na sua região querem conversar.</span></div>
+        <button class="enc-btn enc-pulse" onclick="Enc.start()">TOQUE PRA COMEÇAR</button>
+      </div>
+    </div>
+    <div class="enc-actions" id="encActions" style="visibility:hidden;">
+      <button class="enc-act undo" aria-label="Voltar (Premium)" onclick="Enc.undo()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f5c542" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span class="enc-badge">PREMIUM</span></button>
+      <button class="enc-act nope" aria-label="Passar" onclick="Enc.swipe(-1)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f05252" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <button class="enc-act like" aria-label="Curtir" onclick="Enc.swipe(1)"><svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7.5-4.8-9.5-9.3C1 8 3.2 4.5 6.6 4.5c2 0 3.6 1.1 4.4 2.4.8-1.3 2.4-2.4 4.4-2.4 3.4 0 5.6 3.5 4.1 7.2C19.5 16.2 12 21 12 21z"/></svg></button>
+      <button class="enc-act msg" aria-label="Enviar mensagem (Premium)" onclick="Enc.message()"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.1.6 2.8.5a2.4 2.4 0 0 0 1.6-1.1c.2-.6.2-1 .1-1.1l-.4-.3z"/></svg><span class="enc-badge g">ENVIAR MENSAGEM</span></button>
+    </div>
+    <div class="enc-likes" id="encLikes">
+      <div class="hd"><div style="font-size:16px;font-weight:800;">Quem curtiu você</div><div id="encLikesNew" style="background:#e50914;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:800;">0</div></div>
+      <div class="enc-grid" id="encLikesGrid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- folha: completar perfil -->
+<div class="enc-ov" id="encOvProfile"><div class="enc-sheet">
+  <div class="enc-grab"></div>
+  <div style="display:flex;align-items:center;gap:10px;background:#1d1d26;border-radius:12px;padding:10px 12px;"><img id="encPfHint" style="width:36px;height:36px;border-radius:50%;object-fit:cover;background:#2a2a35;" alt=""><div style="font-size:13px;color:#d6d6de;line-height:1.35;"><b style="color:#fff;" id="encPfHintT">As meninas</b> querem saber quem é você</div></div>
+  <div><div class="enc-h1">Monta seu perfil pra elas te verem</div><div class="enc-sub">Leva 10 segundos. Quem tem perfil recebe curtida de volta.</div></div>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <label class="enc-photo" for="encPfFile" id="encPfPhoto"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>sua foto</label>
+    <input type="file" id="encPfFile" accept="image/*" style="display:none;" onchange="Enc.photo(this)">
+    <div style="flex:1;display:flex;flex-direction:column;gap:10px;">
+      <div><label class="enc-lbl" for="encPfName">Seu nome ou apelido</label><input class="enc-inp" id="encPfName" maxlength="40" placeholder="Pode ser só o apelido"></div>
+      <div><label class="enc-lbl" for="encPfAge">Idade</label><input class="enc-inp" id="encPfAge" placeholder="28" inputmode="numeric" style="width:110px;"></div>
+    </div>
+  </div>
+  <div id="encPfEmailWrap" style="display:none;"><label class="enc-lbl" for="encPfEmail">Seu e-mail</label><input class="enc-inp" id="encPfEmail" type="email" inputmode="email" autocomplete="email" placeholder="pra avisar quando alguém te curtir"></div>
+  <div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:#d6d6de;margin-bottom:8px;"><span>Quero ver mulheres de</span><b><span id="encAgeMinL">18</span> a <span id="encAgeMaxL">45</span> anos</b></div>
+    <div class="enc-range"><div class="track"></div><div class="fill" id="encAgeFill"></div><input type="range" id="encAgeMin" min="18" max="60" value="18" oninput="Enc.range(this)"><input type="range" id="encAgeMax" min="18" max="60" value="45" oninput="Enc.range(this)"></div>
+  </div>
+  <div id="encPfErr" style="color:#ff4d57;font-size:13px;display:none;"></div>
+  <button class="enc-btn" id="encPfSave" onclick="Enc.saveProfile()">ENTRAR NO JOGO</button>
+  <button class="enc-ghost" onclick="Enc.skipProfile()">pular por agora</button>
+</div></div>
+
+<!-- folha: trava de curtidas -->
+<div class="enc-ov" id="encOvLock"><div class="enc-sheet enc-lock">
+  <div class="enc-grab"></div>
+  <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#ffd75e;">ELAS ESTÃO OLHANDO SEU PERFIL 👀</div>
+  <div class="enc-h1">Suas curtidas voltam em</div>
+  <div class="big" id="encLockLeft">—</div>
+  <div class="enc-sub">Enquanto isso, as meninas que você curtiu estão decidindo. Com o Premium você não espera: curte sem limite e vê quem já te curtiu.</div>
+  <button class="enc-btn" style="margin-top:8px;" onclick="Enc.closeLock();Enc.offer('enc_lock')">CURTIR SEM LIMITE AGORA</button>
+  <button class="enc-ghost" onclick="Enc.closeLock()">esperar</button>
+</div></div>
+
+<!-- tela de match -->
+<div class="enc-match" id="encMatch">
+  <div style="font-size:12px;font-weight:800;letter-spacing:1px;color:#22c55e;">DEU MATCH</div>
+  <div style="font-size:30px;font-weight:800;line-height:1.1;" id="encMatchT"></div>
+  <div class="ph"><img id="encMatchImg" alt=""><div class="me" id="encMatchMe">?</div></div>
+  <div class="enc-sub" style="max-width:300px;">Ela está online. Manda a primeira mensagem antes que ela saia.</div>
+  <button class="enc-btn green" style="max-width:320px;" onclick="Enc.openChat(Enc.matchId, 'match')">MANDAR MENSAGEM</button>
+  <button class="enc-ghost" onclick="Enc.closeMatch()">depois</button>
+</div>
+
 <div class="bottom-nav" id="bottomNav">
     <button class="nav-item active" data-nav="home">
         <svg class="nav-icon" fill="currentColor" viewBox="0 0 24 24"><path d="M3 12l9-9 9 9v9a2 2 0 01-2 2h-4v-6H9v6H5a2 2 0 01-2-2v-9z"/></svg>
         <div class="nav-label">Início</div>
     </button>
     <button class="nav-item" data-nav="chat">
-        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-5A8 8 0 1 1 21 12z"/></svg>
         <div class="nav-label">Conversas</div>
         <span class="nav-dot" id="chatNavDot" style="display:none;"></span>
     </button>
-    <button class="nav-item nav-item-hi" onclick="switchScreen('library')" aria-label="Minhas compras">
-        <span class="nav-fab">
-            <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v13a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path stroke-linecap="round" d="M3 6h18"/><path stroke-linecap="round" d="M16 10a4 4 0 01-8 0"/></svg>
+    <!-- ENCONTROS (estilo Tinder) — centro. Some se estiver desligado no painel. -->
+    <button class="nav-item nav-item-hi" data-nav="encounters" id="navEnc" aria-label="Encontros" style="display:none;">
+        <span class="nav-fab nav-fab-enc">
+            <svg class="nav-icon" fill="#fff" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.8-9.5-9.3C1 8 3.2 4.5 6.6 4.5c2 0 3.6 1.1 4.4 2.4.8-1.3 2.4-2.4 4.4-2.4 3.4 0 5.6 3.5 4.1 7.2C19.5 16.2 12 21 12 21z"/></svg>
+            <span class="enc-pill" id="encNavPill" style="display:none;">0</span>
         </span>
-        <div class="nav-label">Minhas Compras</div>
+        <div class="nav-label">Encontros</div>
     </button>
     <button class="nav-item" id="navSoon" style="opacity:.45;" onclick="openExploreTab()">
-        <svg class="nav-icon" id="navSoonIcon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l1.9 5.8H20l-4.9 3.6 1.9 5.8-5-3.6-5 3.6 1.9-5.8L4 8.8h6.1L12 3z"/></svg>
+        <svg class="nav-icon" id="navSoonIcon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
         <div class="nav-label" id="navSoonLabel">Surpresa</div>
-        <span id="navSoonBadge" style="position:absolute; top:-3px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.12); color:rgba(255,255,255,.7); font-size:6.5px; font-weight:800; letter-spacing:.5px; padding:1px 6px; border-radius:999px; white-space:nowrap;">EM BREVE</span>
+        <span id="navSoonBadge" style="position:absolute; top:-3px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.12); color:rgba(255,255,255,.6); font-size:8px; font-weight:700; padding:2px 6px; border-radius:999px; letter-spacing:.3px;">em breve</span>
     </button>
-    <button class="nav-item" data-nav="profile">
-        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zm-9 13a5 5 0 0110 0v1H7v-1z"/></svg>
-        <div class="nav-label">Perfil</div>
+    <!-- MINHAS COMPRAS — destaque vermelho (o Perfil mora dentro dela) -->
+    <button class="nav-item nav-item-mc" id="navLibrary" onclick="switchScreen('library')" aria-label="Minhas compras">
+        <span class="nav-mc">
+            <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 2l1 4h10l1-4M4 6h16l-1.5 14h-13z"/></svg>
+            <span class="nav-mc-lbl">MINHAS<br>COMPRAS</span>
+        </span>
     </button>
+</div>
 </div>
 
 <script>
@@ -9465,7 +10031,7 @@ document.addEventListener('gestureend', e => e.preventDefault());
 
         // Se tá em screen secundária (product, checkout, success), volta pra home
         const activeScreen = document.querySelector('.screen.active');
-        if (activeScreen && ['product', 'checkout', 'success', 'brindes', 'explore', 'favorites', 'library', 'profile'].includes(activeScreen.id)) {
+        if (activeScreen && ['product', 'checkout', 'success', 'brindes', 'explore', 'favorites', 'library', 'profile', 'encounters'].includes(activeScreen.id)) {
             if (typeof switchScreen === 'function') switchScreen('home');
             return;
         }
@@ -9656,6 +10222,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
         if (target) switchScreen(target);
         if (target === 'chat' && window.ChatApp) ChatApp.loadList();
         if (target === 'chat' && window.GroupApp) GroupApp.checkTabs(); // mostra a aba Grupos se houver grupo
+        if (target === 'encounters' && window.Enc) Enc.show();
     });
 });
 
@@ -10468,6 +11035,13 @@ window.ChatApp = (function() {
         const ch = document.getElementById('caChoices');
         if (!bar) return;
         if (!CUR || (CUR.perm && CUR.perm.locked)) { bar.style.display = 'none'; if (sb) sb.style.display = 'none'; return; }
+        // MATCH do Encontros num chat VIP: mostra quantas mensagens grátis restam
+        try {
+            const inp = bar.querySelector('input, textarea');
+            if (inp && CUR.perm && CUR.perm.enc_free != null) {
+                inp.placeholder = CUR.perm.enc_free > 0 ? ('Mensagem · ' + CUR.perm.enc_free + ' grátis pelo match') : 'Mensagem';
+            }
+        } catch (_) {}
         // 10+ envios "não entregues" no paywall: some a barra de digitar e fica
         // o aviso fixo — tocar nele reabre o popup de assinar.
         if (CUR.payLock) {
@@ -12768,7 +13342,7 @@ window.GroupApp = (function () {
         let tries = 0;
         const t = setInterval(() => {
             tries++;
-            const ready = typeof switchScreen === 'function' && window.ChatApp && window.GroupApp;
+            const ready = typeof switchScreen === 'function' && window.ChatApp && window.GroupApp && (go !== 'encontros' || window.Enc);
             // vídeos/lives: espera a config carregar (senão cai no toast "em breve")
             const videosPending = go === 'videos' && !(window.MV_EXPLORE && window.MV_EXPLORE.enabled === true);
             const livesPending = go === 'lives' && !(window.MV_LIVES && window.MV_LIVES.enabled === true);
@@ -12778,6 +13352,7 @@ window.GroupApp = (function () {
             try {
                 if (mg) GroupApp.open(parseInt(mg[1], 10));
                 else if (go === 'chats') { switchScreen('chat'); ChatApp.loadList(); }
+                else if (go === 'encontros' && window.Enc) { Enc.show(); }
                 else if (go === 'groups') { switchScreen('chat'); GroupApp.tab('groups'); }
                 else if (go === 'lives' && typeof openExploreTab === 'function') openExploreTab('lives');
                 else if (go === 'videos' && typeof openExploreTab === 'function') openExploreTab();
@@ -20295,6 +20870,9 @@ window.MV_buy = function (url, src) {
                 }, 300);
             } else if (entry.type === 'videos') {
                 if (typeof openExploreTab === 'function') openExploreTab();
+            } else if (entry.type === 'encounters' && window.Enc) {
+                // cai DIRETO na aba Encontros (deslizar)
+                Enc.show();
             } else if (entry.type === 'chat_list' && window.ChatApp) {
                 // cai na LISTA de conversas. Conversa de destino é OPCIONAL:
                 // com ela, a mensagem aparece como não-lida; SEM ela, ninguém
