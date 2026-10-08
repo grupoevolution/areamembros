@@ -109,7 +109,7 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
             serie, pie, money, topProdutos, orfas,
             installs, engaj, sumidos, recompra, multiProduto,
             porHora, topVendedoras,
-            novosVsRecompra, recompraDosNovos, roleta, roletaConvite, distNovos, pessoasPeriodo, convChats,
+            novosVsRecompra, recompraDosNovos, roleta, roletaConvite, distNovos, pessoasPeriodo, convChats, desconto,
         ] = await Promise.all([
             // visitantes únicos HOJE e ONTEM até a mesma hora
             q(`SELECT COUNT(DISTINCT ${IDENT})::int AS n FROM tracking_events
@@ -360,6 +360,20 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
                LEFT JOIN entraram e ON e.chat_id = c.id LEFT JOIN falaram f ON f.chat_id = c.id
                LEFT JOIN vendas v ON v.chat_id = c.id
                ORDER BY COALESCE(e.n, 0) DESC, c.id`),
+
+            // ── DESCONTO AO DESISTIR: viram → clicaram → compraram (por tipo) ──
+            q(`SELECT
+                 (SELECT COUNT(*)::int FROM exit_discounts WHERE ${windowSql(period, 'shown_at')}) AS shown,
+                 (SELECT COUNT(*)::int FROM exit_discounts WHERE ${windowSql(period, 'shown_at')} AND clicked_at IS NOT NULL) AS clicked,
+                 (SELECT COUNT(*)::int FROM exit_discounts WHERE ${windowSql(period, 'shown_at')} AND kind = 'group') AS shown_group,
+                 (SELECT COUNT(*)::int FROM exit_discounts WHERE ${windowSql(period, 'shown_at')} AND kind = 'access') AS shown_access,
+                 COALESCE(json_agg(json_build_object('kind', k, 'n', n, 'gross', gross)) FILTER (WHERE k IS NOT NULL), '[]'::json) AS sales
+               FROM (
+                 SELECT s.kind AS k, COUNT(*)::int AS n, COALESCE(SUM(s.sale_amount), 0)::float AS gross
+                 FROM (SELECT DISTINCT ON (gateway, COALESCE(sale_id, 'ua_' || id)) metadata->>'discount' AS kind, sale_amount
+                       FROM user_access WHERE granted_by = 'webhook' AND status NOT IN ('refunded', 'chargeback')
+                         AND metadata->>'discount' IS NOT NULL AND ${windowSql(period, 'granted_at')}) s
+                 GROUP BY 1) t`),
         ]);
 
         const r0 = (r) => r.rows[0] || {};
@@ -405,6 +419,7 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
             },
             roulette: { ...r0(roleta), invite: r0(roletaConvite) },
             funnel_chats: convChats.rows,
+            exit_discount: r0(desconto),
         });
     } catch (err) {
         logger.error('[dash-v2] erro:', err);

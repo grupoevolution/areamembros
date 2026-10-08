@@ -3497,6 +3497,13 @@ a { color: inherit; text-decoration: none; }
                     <div class="dv2-cards" id="dv2RouletteInvite" style="margin-top:12px;"></div>
                 </div>
 
+                <!-- ═══ DESCONTO AO DESISTIR (out/2026) ═══ -->
+                <div class="form-card" style="margin-top:16px; padding:18px;">
+                    <div class="form-card-title">🏷 Desconto ao desistir <span style="font-size:10.5px; font-weight:600; color:rgba(255,255,255,.4);">segue o período escolhido acima</span></div>
+                    <div class="form-card-sub">Quem viu o popup de desconto → clicou → comprou com o preço de desconto. Vendas pelos links de desconto (VIP, Premium, grupo).</div>
+                    <div class="dv2-cards" id="dv2Discount" style="margin-top:12px;"></div>
+                </div>
+
                 <!-- ═══ CONVERSÃO POR CHAT DO FUNIL (set/2026) ═══ -->
                 <div class="form-card" style="margin-top:16px; padding:18px;">
                     <div class="form-card-title">💬 Conversão por chat do funil <span style="font-size:10.5px; font-weight:600; color:rgba(255,255,255,.4);">segue o período escolhido acima</span></div>
@@ -10204,6 +10211,18 @@ async function loadDashboardV2() {
         + linha('Só 1 compra', di.x1, 'g') + linha('2 compras', di.x2) + linha('3 compras', di.x3) + linha('4 ou mais', di.x4)
         + `</div>`;
 
+    // DESCONTO AO DESISTIR
+    const card = (lb, v, cmp, cor) => `<div class="dv2-card"><div class="lb">${lb}</div><div class="v" style="color:${cor || '#fff'}">${v}</div><div class="cmp">${cmp}</div></div>`;
+    const ed = data.exit_discount || {};
+    const edSales = Array.isArray(ed.sales) ? ed.sales : [];
+    const edBy = k => edSales.find(x => x.kind === k) || { n: 0, gross: 0 };
+    const edTot = edSales.reduce((t, x) => ({ n: t.n + (x.n || 0), gross: t.gross + (x.gross || 0) }), { n: 0, gross: 0 });
+    document.getElementById('dv2Discount').innerHTML =
+        card('Viram o desconto', fmtN(ed.shown || 0), `${fmtN(ed.shown_access || 0)} acesso · ${fmtN(ed.shown_group || 0)} grupo`)
+        + card('Clicaram', fmtN(ed.clicked || 0), `${pc(ed.clicked, ed.shown)} dos que viram`)
+        + card('Compraram com desconto', fmtN(edTot.n), `${pc(edTot.n, ed.shown)} dos que viram · ${_dv2R$(edTot.gross)}`, '#4ade80')
+        + card('Por tipo', `${fmtN(edBy('vip').n)} / ${fmtN(edBy('premium').n)} / ${fmtN(edBy('group').n)}`, `VIP ${_dv2R$(edBy('vip').gross)} · Premium ${_dv2R$(edBy('premium').gross)} · Grupo ${_dv2R$(edBy('group').gross)}`);
+
     // CONVERSÃO POR CHAT DO FUNIL
     const fc = data.funnel_chats || [];
     const maxConv = Math.max(0.0001, ...fc.map(c => c.opened ? c.buyers / c.opened : 0));
@@ -10222,7 +10241,6 @@ async function loadDashboardV2() {
         }).join('');
 
     // ROLETA
-    const card = (lb, v, cmp, cor) => `<div class="dv2-card"><div class="lb">${lb}</div><div class="v" style="color:${cor || '#fff'}">${v}</div><div class="cmp">${cmp}</div></div>`;
     const ro = data.roulette || {}, inv = ro.invite || {};
     document.getElementById('dv2Roulette').innerHTML =
         card('Giraram a roleta', fmtN(ro.spinners || 0), `${fmtN(ro.spins || 0)} giros no total`)
