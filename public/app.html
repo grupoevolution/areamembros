@@ -9045,7 +9045,10 @@ window.MVDiscount = (function () {
                 if (!d || !d.eligible) { S.armed = false; return; }
                 if (!fromCheckout && n < (d.min_dismissals || 2)) { S.armed = false; return; }   // ainda não desistiu o bastante
                 S.state = d; S.kind = kind; S.ref = ref;
-                setTimeout(show, Math.max(0, (d.delay_sec || 25) * 1000));
+                // Pix gerado e ainda não pago: espera o resto dos N minutos (quem ia
+                // pagar o preço cheio, paga); senão a espera normal de X segundos.
+                var waitMs = Math.max((d.delay_sec || 25) * 1000, (d.wait_sec || 0) * 1000);
+                setTimeout(show, waitMs);
             }).catch(function () { S.armed = false; });
     }
     function money(v) { return 'R$ ' + String(v || '').replace('R$', '').trim(); }
@@ -9053,6 +9056,19 @@ window.MVDiscount = (function () {
         var d = S.state; if (!d || done()) return;
         // não atropela a roleta nem uma conversa de chamada aberta
         try { if (window.Roulette && Roulette.isOpen && Roulette.isOpen()) { setTimeout(show, 15000); return; } } catch (_) {}
+        // RECONFERE no servidor na hora de abrir: se ele PAGOU nesse meio tempo
+        // (ou o Pix ainda está "quente"), não oferece desconto em cima da compra.
+        if (!S.rechecked) {
+            S.rechecked = true;
+            fetch('/api/user/discount/state?kind=' + S.kind + (S.ref ? '&ref=' + S.ref : '') + '&visitor_id=' + encodeURIComponent(vid()), { credentials: 'include' })
+                .then(function (r) { return r.json(); })
+                .then(function (d2) {
+                    if (!d2 || !d2.eligible) { S.armed = false; return; }
+                    if (d2.wait_sec > 0) { S.rechecked = false; setTimeout(show, d2.wait_sec * 1000); return; }
+                    S.state = d2; show();
+                }).catch(function () { S.armed = false; });
+            return;
+        }
         try { localStorage.setItem('mvd_done', '1'); } catch (_) {}
         fetch('/api/user/discount/shown', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
             body: JSON.stringify({ kind: S.kind, ref: S.ref, visitor_id: vid() }) }).catch(function () {});

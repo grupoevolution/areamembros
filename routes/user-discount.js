@@ -53,12 +53,17 @@ router.get('/discount/state', optionalUser, async (req, res) => {
         if (await discount.alreadyGot(id.key)) return res.json(none);
         if (id.email && id.vid && await discount.alreadyGot('v:' + id.vid)) return res.json(none);
 
+        // voltou do checkout: pagou → nada; Pix gerado → o app espera o resto dos N minutos
+        const cs = await discount.checkoutStatus(id.email, cfg.pix_wait_min);
+        if (cs.paid) return res.json({ success: true, eligible: false, paid: true });
+
         let city = null;
         try { city = resolveCity(cleanIp(req.headers['x-forwarded-for'] || req.ip)); } catch (_) {}
 
         return res.json({
             success: true, eligible: true, kind,
             delay_sec: cfg.delay_sec, min_dismissals: cfg.min_dismissals, minutes_valid: cfg.minutes_valid,
+            wait_sec: cs.wait_sec || 0,   // >0 = tem Pix pendente recente: só mostrar depois disso
             headline: cfg.headline, sub: cfg.sub, city, offer,
         });
     } catch (err) {

@@ -7821,7 +7821,8 @@ a { color: inherit; text-decoration: none; }
                         <div style="max-width:200px;"><label class="form-label">Esperar (segundos)</label><input type="number" class="form-input" id="edDelay" min="0" max="300" placeholder="25"></div>
                         <div style="max-width:200px;"><label class="form-label">Recusas antes de mostrar</label><input type="number" class="form-input" id="edMin" min="1" max="10" placeholder="2"></div>
                         <div style="max-width:200px;"><label class="form-label">Oferta vale (minutos)</label><input type="number" class="form-input" id="edMinutes" min="1" max="120" placeholder="10"></div>
-                        <div class="form-help" style="flex-basis:100%;">Voltar do checkout sem pagar mostra direto (não conta recusas). O relógio é de verdade: acabou, some e não volta.</div>
+                        <div style="max-width:220px;"><label class="form-label">Pix gerado: esperar (minutos)</label><input type="number" class="form-input" id="edPixWait" min="0" max="180" placeholder="10"></div>
+                        <div class="form-help" style="flex-basis:100%;">Voltar do checkout sem pagar mostra direto (não conta recusas). Se ele GEROU o Pix, espera esses minutos antes (quem ia pagar o preço cheio, paga). Se a compra entrar, não mostra. O relógio da oferta é de verdade: acabou, some e não volta.</div>
                     </div>
                     <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Título do popup</label><input class="form-input" id="edHeadline" maxlength="300" placeholder="As meninas da sua região liberaram um desconto pra você entrar agora"></div>
                     <div class="form-row" style="margin-bottom:16px;"><label class="form-label">Subtítulo</label><input class="form-input" id="edSub" maxlength="300" placeholder="Só uma vez, só agora. Fechou, voltou pro preço normal."><div class="form-help">A cidade do lead entra sozinha no selo "SÓ PRA VOCÊ · CIDADE".</div></div>
@@ -12232,6 +12233,7 @@ function loadExitDiscount(cfg) {
     set('edDelay', cfg.delay_sec != null ? cfg.delay_sec : 25);
     set('edMin', cfg.min_dismissals != null ? cfg.min_dismissals : 2);
     set('edMinutes', cfg.minutes_valid != null ? cfg.minutes_valid : 10);
+    set('edPixWait', cfg.pix_wait_min != null ? cfg.pix_wait_min : 10);
     set('edHeadline', cfg.headline || ''); set('edSub', cfg.sub || '');
     document.getElementById('edAccessOn').checked = ac.enabled === true;
     set('edVipUrl', ac.vip_url); set('edVipOffer', ac.vip_offer_id); set('edVipPrice', ac.vip_price || '14,90'); set('edVipOrig', ac.vip_orig || '24,90');
@@ -12248,6 +12250,7 @@ async function saveExitDiscount() {
     if (groupOn && (!v('edGroupUrl') || !v('edGroupOffer'))) { st.textContent = 'Pra ligar o desconto nos grupos, preencha o link e o ID da oferta.'; return; }
     const value = {
         delay_sec: parseInt(v('edDelay'), 10) || 25, min_dismissals: parseInt(v('edMin'), 10) || 2, minutes_valid: parseInt(v('edMinutes'), 10) || 10,
+        pix_wait_min: (function () { var n = parseInt(v('edPixWait'), 10); return isNaN(n) ? 10 : n; })(),
         headline: v('edHeadline'), sub: v('edSub'),
         access: { enabled: accessOn, vip_url: v('edVipUrl'), vip_offer_id: v('edVipOffer'), vip_price: v('edVipPrice'), vip_orig: v('edVipOrig'),
                   premium_url: v('edPremUrl'), premium_offer_id: v('edPremOffer'), premium_price: v('edPremPrice'), premium_orig: v('edPremOrig') },
