@@ -243,6 +243,16 @@ repetir: botão escondido atrás do rodapé porque testei em viewport fixo.
   Encontros". Com a chave ligada o rodapé muda: Encontros no centro, Minhas
   Compras à direita (Perfil dentro dela).
 
+**Incidente 26/10 (corrigido):** o popup de DESCONTO travava a tela de quem
+ainda não tinha dado e-mail (lead do funil): o "interceptor do modo anônimo"
+(app.html, `document.addEventListener('click', …, true)`) sequestrava todo
+toque e abria o modal de e-mail ATRÁS do desconto (z-index menor). Regra:
+TODO popup/tela nova que o lead anônimo usa precisa entrar na lista de
+exceções desse interceptor (hoje: #mvPaywall, #mvdOv, #encounters, .enc-ov,
+#encMatch…) e ser testado com TOQUE REAL como anônimo. Roleta: botão virou
+"CONVIDAR AMIGOS" com a folha de compartilhar do celular (texto+link num
+campo só); sem suporte → api.whatsapp.com na mesma aba.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
