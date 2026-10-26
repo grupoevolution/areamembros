@@ -201,3 +201,49 @@ ela seria vários personagens — fase futura, mais complexa).
 - Painel da IA: DESIGN caprichado, estilo SaaS futurista/tech (ÍCONES SVG, nunca emoji).
 
 Detalhes completos e histórico: memória `projeto-ia-chat.md`.
+
+---
+
+## ESTADO ATUAL (atualizado em 26/10/2026) — leia antes de mexer
+
+**Números (set/2026):** ~R$93k faturamento/mês, ~R$50k lucro, ROI ~1,56–1,58,
+conversão ~2%, ticket médio ~R$22–23, ~10 mil visitantes/dia, 98% Pix.
+**Meta:** ROI ≥ 1,8–2 com ~R$5k/dia de tráfego; conversão 3%; ticket 28–30
+(via RECOMPRA, não só preço). Foco = lucro constante, base recorrente.
+
+**Fluxo de trabalho que o dono exige:** nada entra sem ele pedir → mudança
+visual vira PRÉVIA primeiro (página separada / mockup) → OK dele → código no
+app → TESTE LOCAL em tamanho de celular (390×844 e 375×812) → push → ele
+deploya FORA do pico (pico = 19h–01h). Erro que já aconteceu e não pode
+repetir: botão escondido atrás do rodapé porque testei em viewport fixo.
+
+**No ar (GitHub + produção):**
+- Painel: filtro de datas livres na Visão Geral; fila de banco separada pra
+  relatórios (`db.reportQuery`); índices criados em 2º plano no boot; blocos
+  "Vendas e recompra" (por PESSOA), Roleta (c/ convite), Conversão por chat
+  do funil, Desconto ao desistir, Encontros; Passe separado dos Grupos na
+  pizza; fatia "Encontros" (utm `enc_*`).
+- Roleta turbinada: 2 amigos = 1 giro, teto/dia (config no painel), convite
+  pelo WhatsApp (`wa.me`) com texto editável, convidado ganha giro.
+- Desconto ao desistir (`lib/exit-discount.js`, `routes/user-discount.js`):
+  1 desconto por lead NA VIDA, acesso (VIP/Premium) OU grupo (link universal
+  — libera o grupo do carimbo `group_<id>`), liga/desliga por tipo no
+  painel; Pix gerado espera N min; quem pagou não vê.
+- Preços atuais: VIP 24,90 (desc. 14,90), Premium 49,90 (desc. 29,90),
+  grupos 19,90 (desc. 9,90), passe 67,90.
+- ENCONTROS (estilo Tinder) — `lib/encounters.js`, `routes/user-encounters.js`,
+  módulo `window.Enc` no app. Chave geral em Configurações do App →
+  Encontros (DESLIGADA por padrão: app fica idêntico ao antigo). "E-mails de
+  teste" (`lib/testers.js`) veem recursos desligados. Perfis = chats com
+  `enc_enabled` (idade, etiqueta "dia | noite", ordem). Regras: 25 curtidas
+  grátis → trava 3h dobrando; perfil após 3 cards (e-mail obrigatório se não
+  logou); curtida de volta 3 min / 25 min, nunca de madrugada, 30% match;
+  match abre o chat (2 msgs grátis em chat VIP); botão verde "enviar
+  mensagem" = só Premium; voltar card = Premium; funil com entrada "Aba
+  Encontros". Com a chave ligada o rodapé muda: Encontros no centro, Minhas
+  Compras à direita (Perfil dentro dela).
+
+**Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
+STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
+(Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
+depois app duplicado pra Europa (idiomas, Stripe).
