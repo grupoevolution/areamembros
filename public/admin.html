@@ -7838,6 +7838,18 @@ a { color: inherit; text-decoration: none; }
                 </div>
 
                 <!-- ═══════════════ ROLETA VIP ═══════════════ -->
+                <div class="form-card" style="margin-bottom:16px;">
+                    <div class="form-card-head">
+                        <div class="form-card-title">E-mails de teste</div>
+                        <div class="form-card-sub">Quem entrar no app com um destes e-mails vê os recursos que ainda estão DESLIGADOS pra todo mundo (ex.: Encontros). Serve pra você testar em produção antes de ligar a chave geral. Um por linha ou separados por vírgula.</div>
+                    </div>
+                    <textarea class="form-input" id="testerEmails" rows="3" placeholder="seu-email@gmail.com&#10;socio@gmail.com"></textarea>
+                    <div style="display:flex;align-items:center;gap:12px;margin-top:10px;">
+                        <button class="btn-primary" onclick="saveTesters()">Salvar e-mails de teste</button>
+                        <span id="testerStatus" style="font-size:12px;color:rgba(255,255,255,.55);"></span>
+                    </div>
+                </div>
+
                 <div class="form-card" style="margin-bottom:16px;border-color:rgba(229,9,20,.35);">
                     <div class="form-card-head">
                         <div class="form-card-title" style="color:#ff4d57;">Encontros (estilo Tinder)</div>
@@ -12187,6 +12199,8 @@ async function loadAppConfig() {
     try { loadExitDiscount(configs.exit_discount?.value); } catch (_) {}
     // Encontros
     try { loadEncounters(configs.encounters?.value); } catch (_) {}
+    // E-mails de teste
+    try { const t = configs.testers?.value || {}; document.getElementById('testerEmails').value = Array.isArray(t.emails) ? t.emails.join('\n') : (t.emails || ''); } catch (_) {}
     // Pixel do Facebook
     try { loadMetaPixelConfig(configs.meta_pixel?.value); } catch (_) {}
 }
@@ -12319,6 +12333,13 @@ const ENC_FIELDS = { encFreeLikes: ['free_likes', 25], encLockHours: ['lock_hour
     encFirstLike: ['first_like_min', 3], encNextLike: ['next_like_min', 25], encMatchPct: ['match_pct', 30], encFreeMsgs: ['free_msgs', 2],
     encDistMin: ['dist_min', 1], encDistMax: ['dist_max', 15], encQuietStart: ['quiet_start', 1], encQuietEnd: ['quiet_end', 8],
     encOnlineMin: ['online_min', 28], encOnlineMax: ['online_max', 46] };
+async function saveTesters() {
+    const emails = (document.getElementById('testerEmails').value || '').split(/[\s,;]+/).map(e => e.trim().toLowerCase()).filter(Boolean);
+    const st = document.getElementById('testerStatus');
+    const result = await _saveGamification('testers', { emails });
+    st.textContent = result.ok ? 'Salvo (' + emails.length + ')' : ('Erro: ' + (result.error || ''));
+    setTimeout(() => { st.textContent = ''; }, 3500);
+}
 function loadEncounters(cfg) {
     cfg = cfg || {};
     document.getElementById('encEnabled').checked = cfg.enabled === true;

@@ -40,6 +40,7 @@ const VALID_KEYS = [
     'chat_call_premium',
     'exit_discount',
     'encounters',
+    'testers',
 ];
 
 // =============================================================================
@@ -135,6 +136,7 @@ router.put('/:key', requireAdmin, async (req, res) => {
         `, [key, JSON.stringify(value), adminUser]);
         if (key === 'exit_discount') { try { require('../lib/exit-discount').clearCache(); } catch (_) {} }
         if (key === 'encounters') { try { require('../lib/encounters').clearCache(); } catch (_) {} }
+        if (key === 'testers') { try { require('../lib/testers').clearCache(); } catch (_) {} }
 
         // O lib do pixel cacheia a config por 60s — salvar aplica na hora
         if (key === 'meta_pixel') {

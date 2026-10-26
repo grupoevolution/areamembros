@@ -1471,6 +1471,9 @@ body.is-slowconn .prod-cta-fixed {
 }
 .nav-fab .nav-icon { width: 25px; height: 25px; color: #fff; }
 .nav-fab-enc { position: relative; }
+body:not(.enc-on) .enc-on-only { display: none !important; }
+body.enc-on .enc-off-only { display: none !important; }
+body:not(.enc-on) #libProf { display: none !important; }
 .enc-pill { position:absolute; top:-4px; right:-4px; background:#22c55e; color:#06220f; font-size:10px; font-weight:800; border-radius:999px; min-width:18px; height:18px; display:flex; align-items:center; justify-content:center; padding:0 4px; border:2px solid #0b0b0c; }
 /* Minhas Compras — moldura vermelha (destaque pedido pelo dono) */
 .nav-item-mc { padding-top: 2px; }
@@ -9139,8 +9142,8 @@ window.Enc = (function () {
     function load() {
         return api('/api/user/encounters/state').then(function (d) {
             S.st = d && d.success ? d : null;
-            var nav = $('navEnc');
-            if (nav) nav.style.display = (S.st && S.st.enabled) ? '' : 'none';
+            // chave ligada (ou e-mail de teste) → rodapé novo; senão, rodapé de sempre
+            document.body.classList.toggle('enc-on', !!(S.st && S.st.enabled));
             paintBadges();
             return S.st;
         }).catch(function () { return null; });
@@ -9810,8 +9813,15 @@ window.MVDiscount = (function () {
         <div class="nav-label">Conversas</div>
         <span class="nav-dot" id="chatNavDot" style="display:none;"></span>
     </button>
-    <!-- ENCONTROS (estilo Tinder) — centro. Some se estiver desligado no painel. -->
-    <button class="nav-item nav-item-hi" data-nav="encounters" id="navEnc" aria-label="Encontros" style="display:none;">
+    <!-- Layout ANTIGO (Encontros desligado): Minhas Compras no centro -->
+    <button class="nav-item nav-item-hi enc-off-only" onclick="switchScreen('library')" aria-label="Minhas compras">
+        <span class="nav-fab">
+            <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v13a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path stroke-linecap="round" d="M3 6h18"/><path stroke-linecap="round" d="M16 10a4 4 0 01-8 0"/></svg>
+        </span>
+        <div class="nav-label">Minhas Compras</div>
+    </button>
+    <!-- ENCONTROS (estilo Tinder) — centro, só com a chave ligada (ou e-mail de teste) -->
+    <button class="nav-item nav-item-hi enc-on-only" data-nav="encounters" id="navEnc" aria-label="Encontros">
         <span class="nav-fab nav-fab-enc">
             <svg class="nav-icon" fill="#fff" viewBox="0 0 24 24"><path d="M12 21s-7.5-4.8-9.5-9.3C1 8 3.2 4.5 6.6 4.5c2 0 3.6 1.1 4.4 2.4.8-1.3 2.4-2.4 4.4-2.4 3.4 0 5.6 3.5 4.1 7.2C19.5 16.2 12 21 12 21z"/></svg>
             <span class="enc-pill" id="encNavPill" style="display:none;">0</span>
@@ -9823,8 +9833,13 @@ window.MVDiscount = (function () {
         <div class="nav-label" id="navSoonLabel">Surpresa</div>
         <span id="navSoonBadge" style="position:absolute; top:-3px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.12); color:rgba(255,255,255,.6); font-size:8px; font-weight:700; padding:2px 6px; border-radius:999px; letter-spacing:.3px;">em breve</span>
     </button>
-    <!-- MINHAS COMPRAS — destaque vermelho (o Perfil mora dentro dela) -->
-    <button class="nav-item nav-item-mc" id="navLibrary" onclick="switchScreen('library')" aria-label="Minhas compras">
+    <!-- Layout ANTIGO: Perfil à direita -->
+    <button class="nav-item enc-off-only" data-nav="profile">
+        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zm-9 13a5 5 0 0110 0v1H7v-1z"/></svg>
+        <div class="nav-label">Perfil</div>
+    </button>
+    <!-- Layout NOVO: MINHAS COMPRAS à direita com destaque (o Perfil mora dentro dela) -->
+    <button class="nav-item nav-item-mc enc-on-only" id="navLibrary" onclick="switchScreen('library')" aria-label="Minhas compras">
         <span class="nav-mc">
             <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 2l1 4h10l1-4M4 6h16l-1.5 14h-13z"/></svg>
             <span class="nav-mc-lbl">MINHAS<br>COMPRAS</span>

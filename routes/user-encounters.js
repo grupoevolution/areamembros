@@ -58,7 +58,10 @@ router.get('/encounters/state', optionalUser, async (req, res) => {
     try {
         const cfg = await E.loadConfig();
         const id = E.identityOf(req);
-        if (!cfg.enabled) return res.json({ success: true, enabled: false });
+        // chave geral desligada: só e-mail de TESTE (painel) enxerga o Encontros
+        let on = cfg.enabled;
+        if (!on && id.email) { try { on = await require('../lib/testers').isTester(id.email); } catch (_) {} }
+        if (!on) return res.json({ success: true, enabled: false });
         if (!id.key) return res.json({ success: true, enabled: true, needs_identity: true });
 
         const plan = await planOf(id.email);
@@ -122,7 +125,9 @@ router.post('/encounters/swipe', optionalUser, async (req, res) => {
     try {
         const cfg = await E.loadConfig();
         const id = E.identityOf(req);
-        if (!cfg.enabled || !id.key) return res.status(400).json({ success: false, error: 'indisponível' });
+        let on = cfg.enabled;
+        if (!on && id.email) { try { on = await require('../lib/testers').isTester(id.email); } catch (_) {} }
+        if (!on || !id.key) return res.status(400).json({ success: false, error: 'indisponível' });
         const chatId = parseInt(req.body && req.body.chat_id, 10);
         const action = req.body && req.body.action === 'like' ? 'like' : 'pass';
         if (!chatId) return res.status(400).json({ success: false, error: 'chat_id' });
