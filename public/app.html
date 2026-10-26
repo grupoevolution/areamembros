@@ -1516,9 +1516,9 @@ body:not(.enc-on) #libProf { display: none !important; }
 .enc-badge.g { background:#25D366; color:#06220f; right:auto; left:50%; transform:translateX(-50%); top:-14px; font-size:9px; padding:3px 8px; }
 .enc-empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; text-align:center; color:#9a9aa8; padding:30px; font-size:15px; line-height:1.5; }
 /* intro */
-.enc-intro { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding:0 22px 14px; z-index:5; background:#0b0b0f; }
-.enc-fan { position:absolute; left:0; right:0; top:40px; bottom:190px; display:flex; align-items:center; justify-content:center; }
-.enc-fc { position:absolute; width:min(62vw,240px); height:min(42vh,340px); border-radius:20px; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,.6); display:flex; flex-direction:column; justify-content:flex-end; padding:14px; background:#1d1d26; }
+.enc-intro { position:absolute; left:0; right:0; top:0; bottom:72px; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; padding:0 22px 14px; z-index:5; background:#0b0b0f; cursor:pointer; }
+.enc-fan { position:absolute; left:0; right:0; top:40px; bottom:200px; display:flex; align-items:center; justify-content:center; }
+.enc-fc { position:absolute; width:min(62vw,240px); height:min(36vh,340px); border-radius:20px; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,.6); display:flex; flex-direction:column; justify-content:flex-end; padding:14px; background:#1d1d26; }
 .enc-fc img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
 .enc-fc .sh { position:absolute; left:0; right:0; bottom:0; height:60%; background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.8)); }
 .enc-fc .nm { position:relative; font-size:22px; font-weight:800; } .enc-fc .nm span { font-weight:500; font-size:17px; color:#d6d6de; }
@@ -1559,7 +1559,7 @@ body:not(.enc-on) #libProf { display: none !important; }
 .enc-lock { text-align:center; padding:26px 22px; }
 .enc-lock .big { font-size:44px; font-weight:800; color:#fff; margin:4px 0; letter-spacing:1px; font-variant-numeric:tabular-nums; }
 /* curtidas */
-.enc-likes { position:absolute; inset:0; overflow:auto; padding:calc(62px + env(safe-area-inset-top,0px)) 16px 90px; display:none; }
+.enc-likes { position:absolute; left:0; right:0; top:0; bottom:72px; overflow:auto; padding:calc(62px + env(safe-area-inset-top,0px)) 16px 24px; display:none; }
 .enc-likes.on { display:block; }
 .enc-likes .hd { display:flex; align-items:center; justify-content:space-between; margin:6px 0 12px; }
 .enc-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
@@ -9737,7 +9737,7 @@ window.MVDiscount = (function () {
       </div>
     </div>
     <div class="enc-stage" id="encStage"></div>
-    <div class="enc-intro" id="encIntro" style="display:none;">
+    <div class="enc-intro" id="encIntro" style="display:none;" onclick="Enc.start()">
       <div class="enc-fan" id="encFan"></div>
       <div class="enc-cta">
         <div class="enc-faces" id="encFaces"></div>
