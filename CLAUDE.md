@@ -365,6 +365,13 @@ campo só); sem suporte → api.whatsapp.com na mesma aba.
 trocados por migração (só se o dono não tinha editado). Tipos de push hoje:
 boas-vindas (1x, após ativar) · rotina diária 4x com foto (frases do banco)
 · pagamento confirmado · lembrete do Pix · mensagens de chat/curtidas.
+Produção (27/10 01:20, pelo painel, a pedido do dono): os 3 passos da
+boas-vindas tinham textos editados pelo dono + ícone fixo (que impedia a
+foto). Trocados por: 3min "{nome}" / "Oi, vi que você chegou… tá aí?" →
+chat dela; 60min "{nome} te chamou no grupo" → /?go=groups; 180min "{nome}
+postou um vídeo novo" → /?go=videos; ícone fixo removido. Antigos: "Mulheres
+online agora!" (/?go=chats), "VEJA O GRUPO", "Vídeos novos agora! 🔥", ícone
+https://a.arquivosvip.site/m/SOrnlxz.png.
 
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
