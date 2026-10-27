@@ -1069,6 +1069,35 @@ router.get('/groups', optionalUser, async (req, res) => {
 });
 
 // POST /api/user/groups/:id/open
+// GET /groups/:id/offer — vitrine LEVE do grupo (nome, foto, membros, plano
+// em destaque) pra tela de fim da prévia de vídeo. Só leitura: não abre
+// sessão nem gasta tempo grátis. Quem já é membro recebe owned=true.
+router.get('/groups/:id/offer', optionalUser, async (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(400).json({ success: false });
+    try {
+        const { rows } = await db.query(
+            `SELECT id, name, avatar_url, members_count, online_count, product_id, is_free
+             FROM groups WHERE id = $1 AND active = true`, [id]);
+        if (!rows.length) return res.status(404).json({ success: false });
+        const g = rows[0];
+        const ident = getIdentity(req);
+        let owned = false;
+        try { owned = !!(ident.email && g.product_id && await ownsGroup(ident.email, g)); } catch (_) {}
+        const unlock = await groupUnlock(g);
+        const plans = (unlock.plans || []).filter(p => p.checkout_url && String(p.badge || '').toUpperCase() !== 'VITALÍCIO');
+        const main = plans.find(p => p.is_recommended) || plans[0] || null;
+        return res.json({
+            success: true, owned,
+            group: { id: g.id, name: g.name, avatar_url: g.avatar_url, members_count: g.members_count, online_count: g.online_count, is_free: g.is_free },
+            plan: main ? { name: main.name, price: main.price, original_price: main.original_price, checkout_url: main.checkout_url } : null,
+        });
+    } catch (err) {
+        logger.warn('groups offer: ' + err.message);
+        return res.status(500).json({ success: false });
+    }
+});
+
 router.post('/groups/:id/open', optionalUser, async (req, res) => {
     const groupId = parseInt(req.params.id, 10);
     if (!groupId) return res.status(400).json({ success: false, error: 'ID inválido' });

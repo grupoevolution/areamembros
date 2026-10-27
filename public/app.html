@@ -12484,15 +12484,62 @@ window.GroupApp = (function () {
         const bar = ov.querySelector('.tzBar');
         bar.style.transition = 'width ' + secs + 's linear';
         requestAnimationFrame(() => { bar.style.width = '100%'; });
-        // acabou a prévia → trava no convite
+        // Vitrine do grupo de DESTINO (busca em paralelo durante a prévia):
+        // destino '/?group=ID' → esse grupo; senão o grupo atual. Sem plano
+        // (ou já membro) → tela simples antiga que só leva ao destino.
+        const dm = String(tz.dest || '').match(/[?&]group=(\d+)/);
+        const targetId = dm ? parseInt(dm[1], 10) : (CUR && CUR.id);
+        let offer = null;
+        if (targetId) {
+            fetch('/api/user/groups/' + targetId + '/offer?visitor_id=' + encodeURIComponent(VID || ''), { credentials: 'include' })
+                .then(r => r.json()).then(d => { if (d && d.success && !d.owned && d.plan && d.plan.checkout_url) offer = d; })
+                .catch(() => {});
+        }
+        const lockSvg = (sz, col) => '<svg width="' + sz + '" height="' + sz + '" fill="none" stroke="' + col + '" stroke-width="2.2" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>';
+        // acabou a prévia → tela de venda
         setTimeout(() => {
             const body = ov.querySelector('.tzBody');
             if (!body) return;
+            const vid = body.querySelector('video');
+            try { if (vid) vid.pause(); } catch (_) {}
+            if (offer) {
+                const g = offer.group, pl = offer.plan;
+                const fmt = (v) => 'R$ ' + Number(v).toFixed(2).replace('.', ',');
+                const old = pl.original_price && Number(pl.original_price) > Number(pl.price) ? '<s style="font-size:11px;color:#9a9a9a;display:block;">' + fmt(pl.original_price) + '</s>' : '';
+                const av = g.avatar_url ? 'background:#333 url(\'' + esc(g.avatar_url) + '\') center/cover;' : 'background:#333;';
+                // fundo: o próprio quadro do vídeo (pausado) desfocado; embed/sem vídeo → foto do grupo
+                if (vid) { vid.style.cssText = 'position:absolute;inset:-20px;width:calc(100% + 40px);height:calc(100% + 40px);object-fit:cover;filter:blur(14px) brightness(.55);'; }
+                else { body.innerHTML = '<div style="position:absolute;inset:-20px;' + av + 'filter:blur(14px) brightness(.55);"></div>'; }
+                const panel = document.createElement('div');
+                panel.style.cssText = 'position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;justify-content:flex-end;padding:0 20px calc(26px + env(safe-area-inset-bottom,0px));text-align:center;color:#fff;background:linear-gradient(180deg,rgba(0,0,0,.15) 0%,rgba(0,0,0,.55) 45%,rgba(0,0,0,.92) 100%);';
+                panel.innerHTML = '<style>@keyframes tzP{0%,100%{box-shadow:0 0 0 0 rgba(255,71,87,.45)}50%{box-shadow:0 0 0 12px rgba(255,71,87,0)}}@keyframes tzB{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}</style>'
+                    + '<div style="width:62px;height:62px;border-radius:50%;margin:0 auto 12px;background:rgba(229,9,20,.18);border:1.5px solid rgba(255,71,87,.6);display:flex;align-items:center;justify-content:center;animation:tzP 1.8s infinite;">' + lockSvg(26, '#ff4757') + '</div>'
+                    + '<div style="font-size:21px;font-weight:900;line-height:1.2;margin-bottom:6px;">Ela continua no vídeo completo…</div>'
+                    + '<div style="font-size:13.5px;color:#e4dce0;line-height:1.45;margin-bottom:14px;">' + esc(tz.dtext || 'O resto tá liberado só pra quem tá no grupo. Entra agora e assiste inteiro.') + '</div>'
+                    + '<div style="display:flex;align-items:center;gap:11px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px 12px;margin-bottom:14px;text-align:left;">'
+                    +   '<div style="width:44px;height:44px;border-radius:50%;flex:none;position:relative;' + av + '"><i style="position:absolute;right:0;bottom:0;width:12px;height:12px;border-radius:50%;background:#25D366;border:2px solid #1a1a1a;"></i></div>'
+                    +   '<div style="min-width:0;"><div style="font-size:14.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(g.name || 'Grupo VIP') + '</div>'
+                    +   (g.members_count ? '<div style="font-size:11.5px;color:#25D366;font-weight:700;margin-top:2px;">' + g.members_count + ' membros' + (g.online_count ? ' · ' + g.online_count + ' online' : '') + '</div>' : '') + '</div>'
+                    +   '<div style="margin-left:auto;text-align:right;flex:none;">' + old + '<b style="font-size:18px;font-weight:900;">' + fmt(pl.price) + '</b></div>'
+                    + '</div>'
+                    + '<button class="tzGo" style="width:100%;border:none;border-radius:14px;padding:16px;font-size:15.5px;font-weight:900;color:#fff;letter-spacing:.3px;background:linear-gradient(90deg,#ff1f3d,#e50914);box-shadow:0 10px 28px rgba(229,9,20,.5);display:flex;align-items:center;justify-content:center;gap:8px;animation:tzB 1.6s infinite;cursor:pointer;font-family:inherit;">' + lockSvg(17, '#fff') + 'LIBERAR O GRUPO AGORA</button>'
+                    + '<div style="font-size:11px;color:#9fd9b4;margin-top:9px;">Pix · acesso na hora</div>'
+                    + '<button class="tzNo" style="display:block;margin:10px auto 0;background:none;border:none;color:#9a939c;font-size:12.5px;cursor:pointer;font-family:inherit;padding:6px;">agora não</button>';
+                ov.appendChild(panel);
+                try { window.TRACK && TRACK.event('group_teaser_offer', { group_id: g.id }); } catch (_) {}
+                panel.querySelector('.tzGo').addEventListener('click', () => {
+                    try { window.TRACK && TRACK.event('group_teaser_buy', { group_id: g.id }); } catch (_) {}
+                    close();
+                    window.MV_buy(pl.checkout_url, 'group_' + g.id);
+                });
+                panel.querySelector('.tzNo').addEventListener('click', close);
+                return;
+            }
             body.innerHTML = '<div style="max-width:280px;text-align:center;color:#fff;padding:20px;">'
-                + '<div style="font-size:40px;margin-bottom:8px;">🔒</div>'
+                + '<div style="width:58px;height:58px;border-radius:50%;margin:0 auto 10px;background:rgba(229,9,20,.18);display:flex;align-items:center;justify-content:center;">' + lockSvg(26, '#ff4757') + '</div>'
                 + '<div style="font-size:17px;font-weight:800;margin-bottom:6px;">A prévia acabou...</div>'
                 + '<div style="font-size:13px;color:#cfc7cc;line-height:1.45;margin-bottom:16px;">' + esc(tz.dtext || 'O vídeo COMPLETO está no GRUPO VIP — junto com muito mais.') + '</div>'
-                + '<button class="tzGo" style="width:100%;background:linear-gradient(90deg,#ff1f3d,#e50914);border:none;border-radius:12px;padding:14px;font-size:14px;font-weight:800;color:#fff;cursor:pointer;font-family:inherit;box-shadow:0 8px 24px rgba(229,9,20,.4);">' + esc(tz.dlabel || 'VER COMPLETO AGORA 🔥') + '</button>'
+                + '<button class="tzGo" style="width:100%;background:linear-gradient(90deg,#ff1f3d,#e50914);border:none;border-radius:12px;padding:14px;font-size:14px;font-weight:800;color:#fff;cursor:pointer;font-family:inherit;box-shadow:0 8px 24px rgba(229,9,20,.4);">' + esc(tz.dlabel || 'VER COMPLETO AGORA') + '</button>'
                 + '<button class="tzNo" style="display:block;margin:10px auto 0;background:none;border:none;color:#8d8792;font-size:12.5px;text-decoration:underline;cursor:pointer;font-family:inherit;">agora não</button>'
                 + '</div>';
             body.querySelector('.tzGo').addEventListener('click', () => { close(); goDest(); });
@@ -13387,7 +13434,7 @@ window.GroupApp = (function () {
     try {
         const qs = window.location.search;
         const mg = qs.match(/[?&]group=(\d+)/);
-        const go = (qs.match(/[?&]go=(chats|groups|videos|lives)/) || [])[1] || null;
+        const go = (qs.match(/[?&]go=(chats|groups|videos|lives|encontros|compras)/) || [])[1] || null; // encontros/compras: antes caíam fora da regex (push de curtida abria a home)
         if (!mg && !go) return;
         let tries = 0;
         const t = setInterval(() => {
@@ -13403,6 +13450,7 @@ window.GroupApp = (function () {
                 if (mg) GroupApp.open(parseInt(mg[1], 10));
                 else if (go === 'chats') { switchScreen('chat'); ChatApp.loadList(); }
                 else if (go === 'encontros' && window.Enc) { Enc.show(); }
+                else if (go === 'compras') { switchScreen('library'); }
                 else if (go === 'groups') { switchScreen('chat'); GroupApp.tab('groups'); }
                 else if (go === 'lives' && typeof openExploreTab === 'function') openExploreTab('lives');
                 else if (go === 'videos' && typeof openExploreTab === 'function') openExploreTab();
@@ -13531,6 +13579,8 @@ function mvNavigate(url) {
         if (mg && window.GroupApp) { GroupApp.open(parseInt(mg[1], 10)); return; }
         if (/[?&]go=chats/.test(String(url)) && window.ChatApp) { switchScreen('chat'); try { ChatApp.loadList(); } catch (_) {} return; }
         if (/[?&]go=groups/.test(String(url)) && window.GroupApp) { switchScreen('chat'); try { GroupApp.tab('groups'); } catch (_) {} return; }
+        if (/[?&]go=encontros/.test(String(url)) && window.Enc) { Enc.show(); return; }
+        if (/[?&]go=compras/.test(String(url)) && typeof switchScreen === 'function') { switchScreen('library'); return; }
         const mp = String(url).match(/[?&]p=(\d+)/);
         if (mp && typeof openProductPage === 'function') { openProductPage(parseInt(mp[1], 10)); return; }
         if (/^https?:\/\//i.test(url)) { window.open(url, '_blank'); return; }

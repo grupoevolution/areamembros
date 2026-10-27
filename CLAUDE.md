@@ -304,6 +304,21 @@ campo só); sem suporte → api.whatsapp.com na mesma aba.
   (bfcache) — desconto/roleta dependem do recarregar; faixa "instalar" da
   home segue escondida (nunca apareceu; religar = decisão do dono).
 
+**27/10 (noite) — aprovado e pronto pra deploy:**
+- Push "Pagamento confirmado" na hora da venda NOVA (abre Minhas Compras,
+  `/?go=compras`) — `sendUserPush` em lib/chat-worker.js.
+- Lembrete do Pix: 1x, ~15 min depois de gerar, se não pagou (janela
+  15–40 min; `pix_pending_notices.reminded_at`); abre o chat de suporte.
+- Fim da prévia de VÍDEO do grupo virou tela de venda (aprovada em prévia):
+  quadro do vídeo desfocado + cartão do grupo (membros/preço) + "LIBERAR O
+  GRUPO AGORA" → `MV_buy` direto no plano em destaque do grupo de destino
+  (`GET /api/user/groups/:id/offer`, só leitura). Sem plano/já membro →
+  tela antiga.
+- Notificações com foto sorteiam só modelos ONLINE no rodízio.
+- Corrigido: `?go=encontros` era ignorado (push de curtida abria a home).
+- Dono decidiu MANTER: login do painel como está (já exige código),
+  chamada x prêmio da roleta, recarregar ao voltar do checkout.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
