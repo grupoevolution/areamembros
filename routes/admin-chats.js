@@ -1111,4 +1111,21 @@ router.post('/vip-reception/test', requireAdmin, async (req, res) => {
     }
 });
 
+// GET /api/admin/chats/bunny-folder?path=Tinder/20%20a%2035
+// Lista as FOTOS de uma pasta do Bunny Storage (só leitura) — usado pra
+// montar perfis (foto de perfil do chat/Encontros) a partir das pastas.
+router.get('/bunny-folder', requireAdmin, async (req, res) => {
+    try {
+        const path = String(req.query.path || '').trim().slice(0, 300);
+        if (!path) return res.status(400).json({ success: false, error: 'path obrigatório' });
+        const { listStorageMedia, listStorageSubfolders } = require('../lib/bunny');
+        const media = await listStorageMedia(path);
+        const dirs = await listStorageSubfolders(path);
+        return res.json({ success: true, path, dirs, images: media.filter(m => m.kind === 'image').map(m => m.url) });
+    } catch (err) {
+        logger.warn('bunny-folder: ' + err.message);
+        return res.status(500).json({ success: false });
+    }
+});
+
 module.exports = router;

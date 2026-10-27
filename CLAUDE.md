@@ -373,6 +373,17 @@ postou um vídeo novo" → /?go=videos; ícone fixo removido. Antigos: "Mulheres
 online agora!" (/?go=chats), "VEJA O GRUPO", "Vídeos novos agora! 🔥", ícone
 https://a.arquivosvip.site/m/SOrnlxz.png.
 
+**Encontros: ordem aleatória (27/10):** o baralho é embaralhado POR LEAD
+(hash md5 identidade+chat — fixo pra mesma pessoa). `enc_order ≠ 0` = "fixar
+no começo" (ex.: chats do funil), 0 = sorteado. Novo endpoint só-leitura
+`GET /api/admin/chats/bunny-folder?path=` lista fotos de pasta do Bunny
+(usado pra montar perfis). Tarefa em andamento: criar 80–100 chats Tinder
+copiando o chat padrão "Laiane" (só VIP conversa, produto Assinatura do Chat,
+lista + rodízio online + saudação automática), fotos de Bunny "Tinder/20 a 35"
+e "Tinder/36 a 55" (idade casando com a pasta), idade/etiqueta aleatórias;
+ligar Encontros em todos os chats existentes MENOS o Suporte VIP. Dono
+confere 5 primeiro.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);

@@ -84,7 +84,15 @@ router.get('/encounters/state', optionalUser, async (req, res) => {
                 AND NOT EXISTS (SELECT 1 FROM encounter_swipes s WHERE s.identity = $1 AND s.chat_id = c.id
                                   AND (s.action = 'like' OR s.created_at > NOW() - INTERVAL '24 hours'))
               ORDER BY c.enc_order, c.display_order, c.id`, [id.key]);
-        const deck = chats.map(c => cardOf(c, id.key, cfg));
+        // ORDEM: chat com "fixar no começo" (enc_order ≠ 0) vem primeiro, na
+        // ordem dada; o RESTO é embaralhado POR LEAD (sorteio fixo por pessoa:
+        // fechar e abrir não reembaralha; cada lead vê uma 1ª modelo diferente;
+        // chat novo entra sozinho no meio, sem ninguém configurar ordem).
+        const crypto = require('crypto');
+        const rnd = (cid) => parseInt(crypto.createHash('md5').update(id.key + ':' + cid).digest('hex').slice(0, 8), 16);
+        const pinned = chats.filter(c => (c.enc_order | 0) !== 0);
+        const rest = chats.filter(c => (c.enc_order | 0) === 0).sort((a, b) => rnd(a.id) - rnd(b.id));
+        const deck = pinned.concat(rest).map(c => cardOf(c, id.key, cfg));
 
         // curtidas recebidas (entregues) + matches
         const { rows: likes } = await db.query(
