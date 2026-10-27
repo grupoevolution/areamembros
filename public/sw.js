@@ -102,7 +102,9 @@ self.addEventListener('fetch', (event) => {
     // Só usa cache se a rede falhar completamente (offline).
     if (req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html')) {
         event.respondWith(
-            fetch(req, { cache: 'no-store' })
+            // 'no-cache' = sempre confere com o servidor (app sempre atualizado),
+            // mas reaproveita a cópia quando o servidor responde "não mudou".
+            fetch(req, { cache: 'no-cache' })
                 .then((res) => res)
                 .catch(() => caches.match(req).then((r) => r || caches.match('/')))
         );
@@ -196,23 +198,24 @@ self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     const url = event.notification.data?.url || '/';
     const pid = event.notification.data?.pid || null;
-    event.waitUntil((async () => {
-        // beacon do RELATÓRIO: notificação ABERTA (push_log.opened)
-        if (pid) {
-            try {
-                await fetch('/api/user/push/ack', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ pid: pid, kind: 'opened' }), keepalive: true,
-                });
-            } catch (_) {}
-        }
+    // Relatório (aberta) em PARALELO: antes o app só abria DEPOIS desse envio
+    // terminar — em 3G fraco o toque parecia morto por segundos.
+    const ack = pid ? fetch('/api/user/push/ack', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pid: pid, kind: 'opened' }), keepalive: true,
+    }).catch(() => {}) : Promise.resolve();
+    event.waitUntil(Promise.all([ack, (async () => {
         const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
         for (const w of wins) {
             if (w.url.includes(self.location.origin) && 'focus' in w) {
-                w.navigate(url);
-                return w.focus();
+                // foca PRIMEIRO (o toque autoriza) e depois leva pra tela certa;
+                // janela que o SW não controla recusa o navigate → abre a URL.
+                try { await w.focus(); } catch (_) {}
+                try { await w.navigate(url); return; } catch (_) {}
+                if (self.clients.openWindow) return self.clients.openWindow(url);
+                return;
             }
         }
         if (self.clients.openWindow) return self.clients.openWindow(url);
-    })());
+    })()]));
 });

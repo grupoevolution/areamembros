@@ -99,7 +99,12 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
     const period = parsePeriod(req.query);
     try {
         // fila separada do painel (db.reportQuery): nunca disputa conexão com o app
+        // Consulta que falha (banco ocupado/tempo esgotado) vira vazio — mas
+        // CONTA a falha: o painel avisa "alguns números não carregaram" em vez
+        // de mostrar 0 como se fosse real.
+        let failedQueries = 0;
         const q = (sql, params) => db.reportQuery(sql, params).catch(err => {
+            failedQueries++;
             logger.warn('[dash-v2] query falhou: ' + err.message);
             return { rows: [] };
         });
@@ -188,7 +193,7 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
             q(`SELECT COUNT(DISTINCT (gateway, COALESCE(sale_id, id::text)))::int AS n
                FROM webhook_logs
                WHERE processed = false AND processing_error LIKE '%cadastre%'
-                 AND created_at > NOW() - INTERVAL '30 days'`),
+                 AND received_at > NOW() - INTERVAL '30 days'`), // webhook_logs não tem created_at (antes: sempre 0)
 
             // instalação (números REAIS): pessoa que abriu pelo ícone + cliques
             q(`SELECT
@@ -400,6 +405,7 @@ router.get('/dashboard-v2', requireAdmin, async (req, res) => {
         return res.json({
             success: true,
             period,
+            failed_queries: failedQueries,
             today: {
                 visitors: r0(hoje).n || 0,
                 visitors_prev: r0(ontemParcial).n || 0,

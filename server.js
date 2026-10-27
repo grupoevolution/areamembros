@@ -389,7 +389,10 @@ app.get('/build.json', (req, res) => {
 
 // App cliente (tela principal — login email-only, catálogo, acervo)
 app.get('/', async (req, res) => {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    // no-cache (SEM no-store): o celular SEMPRE confere com o servidor se o
+    // app mudou, mas quando não mudou recebe só um "igual" (304) em vez de
+    // baixar ~1 MB de novo a cada abertura. Deploy novo = arquivo novo na hora.
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     // Link de convite aberto por gente (ou pela folha de compartilhar do
     // celular, que busca a prévia com cara de navegador): mesmo app, com as
     // etiquetas do cartão com foto no <head>.
@@ -576,7 +579,7 @@ app.get('/termos', (req, res) => {
 
 // /app mantido como alias (compatibilidade com links antigos)
 app.get('/app', (req, res) => {
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     res.sendFile(path.join(__dirname, 'public/app.html'));
 });
 

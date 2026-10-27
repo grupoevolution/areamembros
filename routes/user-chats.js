@@ -834,12 +834,15 @@ router.get('/chats', optionalUser, async (req, res) => {
             }
         } catch (_) {}
         const { lastSeenLabel } = require('../lib/chat-rotation');
-        const out = [];
-        for (const c of chats) {
+        // Cada conversa é independente: processa em LOTES de 5 em paralelo
+        // (antes era 1 por 1 → ~150 consultas em fila por abertura da lista).
+        // A ordem final é a mesma (cada uma grava na sua posição).
+        const slots = new Array(chats.length).fill(null);
+        const buildOne = async (c, idx) => {
             const owns = await ownsChatVip(ident.email, c);
             // conversa marcada pra sumir depois que o cliente vira membro
             // (VIP daquela conversa OU Premium) — some mesmo se já conversou.
-            if (c.hide_when_member && (owns || isPremium)) continue;
+            if (c.hide_when_member && (owns || isPremium)) return;
             const perm = permissions(c, owns, ident);
             await applyEncPass(perm, ident, c.id);
             // ISCA "só prévia": pro não-VIP, trava a conversa (tocar → popup, não
@@ -863,9 +866,14 @@ router.get('/chats', optionalUser, async (req, res) => {
             let unread = 0;
             const session = await findOrCreateSession(c.id, ident, false);
             if (session) {
+                // última mensagem + não-lidas numa consulta só
                 const { rows: lm } = await db.query(
-                    `SELECT id, sender, type, content, created_at FROM chat_messages WHERE session_id = $1 ORDER BY id DESC LIMIT 1`,
-                    [session.id]
+                    `SELECT m.id, m.sender, m.type, m.content, m.created_at,
+                            (SELECT COUNT(*)::int FROM chat_messages u
+                              WHERE u.session_id = $1 AND u.sender = 'bot'
+                                AND ($2::timestamptz IS NULL OR u.created_at > $2)) AS unread_n
+                     FROM chat_messages m WHERE m.session_id = $1 ORDER BY m.id DESC LIMIT 1`,
+                    [session.id, session.last_seen_at]
                 );
                 if (lm[0]) {
                     const t = lm[0].type;
@@ -883,15 +891,9 @@ router.get('/chats', optionalUser, async (req, res) => {
                         sender: lm[0].sender,
                     };
                 }
-                const { rows: ur } = await db.query(
-                    `SELECT COUNT(*)::int AS n FROM chat_messages
-                     WHERE session_id = $1 AND sender = 'bot'
-                       AND ($2::timestamptz IS NULL OR created_at > $2)`,
-                    [session.id, session.last_seen_at]
-                );
-                unread = ur[0]?.n || 0;
+                unread = (lm[0] && lm[0].unread_n) || 0;
             }
-            out.push({
+            slots[idx] = {
                 id: c.id,
                 name: c.name,
                 avatar_url: c.avatar_url,
@@ -905,8 +907,12 @@ router.get('/chats', optionalUser, async (req, res) => {
                 unlock: perm.unlock,
                 last,
                 unread,
-            });
+            };
+        };
+        for (let i = 0; i < chats.length; i += 5) {
+            await Promise.all(chats.slice(i, i + 5).map((c, k) => buildOne(c, i + k)));
         }
+        const out = slots.filter(Boolean);
         // Plano do lead: alimenta o selo FREE/VIP do topo e o card do Perfil.
         // paywall_unlock = planos do produto único (pro botão "Virar VIP").
         const globalPlanId = await chatPlanProductId();

@@ -274,6 +274,36 @@ campo só); sem suporte → api.whatsapp.com na mesma aba.
   o topo); bloqueado → instrução de como liberar, no máx. 1x/dia.
   Está na lista de exceções do interceptor anônimo (#mvPushBar).
 
+**Auditoria 27/10 — corrigido (vai no mesmo deploy):**
+- Lead anônimo não trava mais em: prévia de vídeo do grupo, ver-uma-vez,
+  status das modelos, popup da amostra, planos, quiz. REGRA NOVA: toda tela/
+  popup nova leva o atributo `data-mv-own-flow` (o interceptor ignora). O
+  modal de e-mail fica SEMPRE no topo (z-index máximo) e tem tempo máximo de
+  12s; 2ª falha de conexão no modo compra → vai pro checkout assim mesmo.
+- Página do produto: "COMPRAR AGORA" agora passa pelo `MV_buy` (pede e-mail,
+  carimba `product_<id>`, mesma guia). Antes abria aba nova SEM e-mail.
+- Salvar produto atualiza as ofertas NO LUGAR (antes apagava/recriava e
+  quem já pagou perdia o vínculo da oferta).
+- Vendas: tabela `processed_sales` (gateway, venda, produto) — reenvio,
+  reprocesso e 2 cópias simultâneas do webhook não contam como compra nova;
+  Pix pendente que chega depois do aprovado é ignorado; renovação do Premium
+  renova os bônus; desconto "já pagou" olha qualquer venda (sale_id).
+- Carimbo `group_`/`desc_` sobrescreve utm_content do link (grupo com
+  desconto não chega mais sem grupo); PerfectPay passa a ler utm_content.
+- Peso: lista de conversas em lotes paralelos + 1 consulta a menos por chat;
+  índices novos em 2º plano; polls de chat/grupo param com o app em 2º plano;
+  Encontros desligado para de consultar; app.html com no-cache + ETag (304).
+- Push: worker não empilha rodadas, timeout de 10s por envio, resgate de
+  push preso roda todo minuto (claimed_at); toque na notificação abre na hora.
+- Painel: aviso "alguns números não carregaram" em vez de 0 falso; bloco de
+  vendas órfãs usava coluna inexistente (sempre 0) — corrigido.
+- NÃO mexido de propósito (explicado ao dono): IP real p/ limites/bloqueio
+  do login admin (depende do proxy EasyPanel/Cloudflare — errar bloquearia
+  clientes reais); compra de chamada apagando prêmio da roleta não usado
+  (exige mudar a contagem de chamadas); volta instantânea do checkout
+  (bfcache) — desconto/roleta dependem do recarregar; faixa "instalar" da
+  home segue escondida (nunca apareceu; religar = decisão do dono).
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);

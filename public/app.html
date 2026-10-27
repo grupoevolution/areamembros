@@ -9458,10 +9458,14 @@ window.Enc = (function () {
     }
 
     // ── curtidas chegando ao vivo (toast) ──
+    var likesOff = false, likesT = null;
     function pollLikes() {
-        if (document.hidden) return;
+        if (document.hidden || likesOff) return;
         if (!window.currentUserEmail && !vid()) return;
         api('/api/user/encounters/state').then(function (d) {
+            // Encontros DESLIGADO pra este lead: para de perguntar (antes era 1
+            // consulta a cada 45s por visitante, à toa). Ligar = vale na próxima abertura.
+            if (d && d.success && d.enabled === false) { likesOff = true; if (likesT) clearInterval(likesT); return; }
             if (!d || !d.success || !d.enabled) return;
             var before = S.st ? (S.st.received || []).map(function (r) { return r.chat_id; }) : null;
             S.st = d; paintBadges();
@@ -9482,7 +9486,7 @@ window.Enc = (function () {
         }).catch(function () {});
     }
     setTimeout(function () { load().then(function () { paintLibraryRow(); }); }, 3500);
-    setInterval(pollLikes, 45000);
+    likesT = setInterval(pollLikes, 45000);
     document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(pollLikes, 1500); });
 
     return { show: show, tab: tab, start: start, swipe: swipe, undo: undo, message: message, offer: offer, openLock: openLock, closeLock: closeLock,
@@ -10879,6 +10883,9 @@ window.ChatApp = (function() {
         stopPoll();
         POLL_TIMER = setInterval(async () => {
             if (!CUR) { stopPoll(); return; }
+            // App em segundo plano: não consulta (a notificação avisa; ao voltar,
+            // o visibilitychange abaixo consulta na hora).
+            if (document.hidden) return;
             const data = await pollOnce();
             // mantém o poll vivo enquanto houver delay pendente; senão, espaça
             // pra um "heartbeat" leve (capta auto-start/continuações server-side).
@@ -13064,7 +13071,7 @@ window.GroupApp = (function () {
         if (CUR.pollTimer) clearInterval(CUR.pollTimer);
         startReactTick();
         CUR.pollTimer = setInterval(async () => {
-            if (!CUR) return;
+            if (!CUR || document.hidden) return; // segundo plano: não consulta
             try {
                 const r = await fetch('/api/user/groups/' + CUR.id + '/poll?after=' + encodeURIComponent(CUR.lastTs || '') + '&visitor_id=' + VID, { credentials: 'include' });
                 const data = await r.json();
@@ -16781,7 +16788,11 @@ function populateProductScreen(p) {
                 const url = (plan && plan.checkout_url) || p.checkout?.checkout_url || null;
                 if (typeof TRACK !== 'undefined') TRACK.event('cta_buy_click', plan ? { product_id: p.id, plan_id: plan.id, plan_name: plan.name } : { product_id: p.id });
                 if (url) {
-                    window.open(url, '_blank', 'noopener,noreferrer');
+                    // MV_buy = caminho único de compra: pede o e-mail se o lead
+                    // ainda é anônimo (sem isso ele pagava e o app não mostrava
+                    // a compra), carimba a origem e abre na MESMA guia (o
+                    // "voltar" devolve pro app — aba nova perdia o lead leigo).
+                    window.MV_buy(url, 'product_' + p.id);
                 } else {
                     showToast('product', '⚠️', 'Checkout indisponível. Tente em instantes.');
                 }

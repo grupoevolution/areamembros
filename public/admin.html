@@ -10141,6 +10141,23 @@ async function loadDashboardV2() {
     if (myReq !== _dv2Req) return;          // chegou resposta velha: ignora
     if (screen) screen.classList.remove('dv2-loading');
     if (!ok || !data.success) return;
+    // Aviso quando parte dos números não carregou (banco ocupado): zero
+    // falso não pode parecer "não vendeu nada".
+    (function () {
+        const anchor = document.getElementById('dv2Today');
+        if (!anchor) return;
+        let w = document.getElementById('dv2Partial');
+        if (!w) {
+            w = document.createElement('div');
+            w.id = 'dv2Partial';
+            w.style.cssText = 'margin:0 0 12px;padding:10px 14px;border-radius:10px;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.45);color:#f5b400;font-size:13px;font-weight:600;';
+            anchor.parentNode.insertBefore(w, anchor);
+        }
+        if (data.failed_queries > 0) {
+            w.textContent = 'Alguns números não carregaram agora (banco ocupado) e podem aparecer como 0. Toque em atualizar em alguns segundos.';
+            w.style.display = '';
+        } else w.style.display = 'none';
+    })();
     const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     const cmp = (agora, antes, moeda) => {
         if (!antes && !agora) return '<span class="cmp">sem dado ontem</span>';
