@@ -18769,6 +18769,11 @@ const PUSH = {
         try {
             if (document.getElementById('mvPushBar')) return;
             const denied = Notification.permission === 'denied';
+            // Bloqueado: a dica aparece no máximo 1x por dia (só tem o X)
+            if (denied) {
+                const k = 'mv_pushbar_denied_day', today = new Date().toDateString();
+                try { if (localStorage.getItem(k) === today) return; localStorage.setItem(k, today); } catch (_) {}
+            }
             const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
             let face = '';
             try {
@@ -18801,6 +18806,15 @@ const PUSH = {
                 else if (Notification.permission === 'denied') PUSH._topBar();
             });
             document.getElementById('mvPushBarNo').addEventListener('click', () => bar.remove());
+            // A barra fica por cima do topo (logo, voltar, nome da modelo).
+            // Qualquer toque FORA dela a recolhe (o toque segue normal) — volta
+            // na próxima abertura do app até ele ativar.
+            const away = (e) => {
+                if (e.target.closest && e.target.closest('#mvPushBar')) return;
+                document.removeEventListener('pointerdown', away, true);
+                bar.remove();
+            };
+            document.addEventListener('pointerdown', away, true);
         } catch (_) {}
     },
     // Banner de 1 toque pro iOS standalone: "🔔 Ativar notificações"

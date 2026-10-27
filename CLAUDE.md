@@ -270,7 +270,8 @@ campo só); sem suporte → api.whatsapp.com na mesma aba.
   listados, não-suporte, com foto. Foto só aparece no Android (iOS = ícone).
 - Barra fixa no TOPO pedindo "Ative as notificações" para TODO app instalado
   (Android + iPhone) — o pedido automático de 90s era ignorado pelo Chrome.
-  Volta a cada abertura até ativar; bloqueado → instrução de como liberar.
+  Volta a cada abertura até ativar; some ao tocar fora dela (não fica tampando
+  o topo); bloqueado → instrução de como liberar, no máx. 1x/dia.
   Está na lista de exceções do interceptor anônimo (#mvPushBar).
 
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de

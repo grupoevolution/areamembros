@@ -231,6 +231,15 @@ function inviteOgTags(cfg, url) {
         + `<meta property="og:image:secure_url" content="${i}">`
         + `<meta name="twitter:card" content="summary_large_image">`;
 }
+// app.html em memória (relido só se o arquivo mudar) — o link de convite
+// pode viralizar no pico; ler 1,2 MB do disco a cada visita travaria o servidor.
+let _appHtml = { mtime: 0, html: '' };
+function appHtmlCached() {
+    const f = path.join(__dirname, 'public/app.html');
+    const m = fsLocal.statSync(f).mtimeMs;
+    if (m !== _appHtml.mtime) _appHtml = { mtime: m, html: fsLocal.readFileSync(f, 'utf8') };
+    return _appHtml.html;
+}
 app.get('/', async (req, res, next) => {
     if (!req.query.convite || !PREVIEW_BOT_RE.test(req.headers['user-agent'] || '')) return next();
     try {
@@ -388,8 +397,7 @@ app.get('/', async (req, res) => {
         try {
             const cfg = await inviteCardCfg();
             const url = 'https://' + req.get('host') + '/?convite=' + encodeURIComponent(String(req.query.convite).slice(0, 40));
-            const html = fsLocal.readFileSync(path.join(__dirname, 'public/app.html'), 'utf8')
-                .replace(/<meta charset="UTF-8">/i, (m) => m + inviteOgTags(cfg, url));
+            const html = appHtmlCached().replace(/<meta charset="UTF-8">/i, (m) => m + inviteOgTags(cfg, url));
             return res.type('html').send(html);
         } catch (err) {
             logger.warn('[convite] og no app falhou:', err.message);
