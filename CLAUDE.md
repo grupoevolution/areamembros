@@ -359,6 +359,13 @@ campo só); sem suporte → api.whatsapp.com na mesma aba.
   gamification_config `push_bar.winner`). Barra empurra as telas
   (`body.pb-on .screen{top:--pbh}`), sem X; bloqueado = instrução c/ X 1x/dia.
 
+**Boas-vindas com foto (27/10):** a sequência pós-instalação (+5min/+1h/+3h,
+`install_push_steps`) sorteia UMA modelo pra sequência inteira: foto no
+ícone, `{nome}` no texto, destino "/" vira o chat dela. Textos de fábrica
+trocados por migração (só se o dono não tinha editado). Tipos de push hoje:
+boas-vindas (1x, após ativar) · rotina diária 4x com foto (frases do banco)
+· pagamento confirmado · lembrete do Pix · mensagens de chat/curtidas.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);

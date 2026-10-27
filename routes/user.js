@@ -2554,11 +2554,24 @@ async function scheduleInstallSequence(email) {
         const { rows: steps } = await db.query(
             `SELECT * FROM install_push_steps WHERE active = true ORDER BY delay_minutes, id`
         );
+        // UMA modelo pra sequência inteira (a mesma "chamando" nas 3): foto no
+        // lugar do ícone, {nome} no texto e o toque abre o chat dela.
+        let model = null;
+        try {
+            const { rows: ms } = await db.query(
+                `SELECT id, name, avatar_url FROM chats
+                 WHERE active = true AND listed = true AND is_support = false
+                   AND avatar_url IS NOT NULL AND avatar_url <> ''`);
+            if (ms.length) model = ms[Math.floor(Math.random() * ms.length)];
+        } catch (_) {}
+        const nome = model ? (String(model.name || '').split(' ')[0] || 'Ela') : 'Ela';
+        const fill = (t) => String(t || '').replace(/\{nome\}/gi, nome);
         for (const s of steps) {
+            const url = (model && (!s.url || s.url === '/')) ? '/?chat=' + model.id : (s.url || '/');
             await db.query(
                 `INSERT INTO funnel_scheduled_pushes (customer_email, title, message, url, icon_url, send_at, install_step_id)
                  VALUES ($1, $2, $3, $4, $5, NOW() + make_interval(mins => $6), $7)`,
-                [e, s.title, s.body || '', s.url || '/', s.icon_url || null, Math.max(1, s.delay_minutes | 0), s.id]
+                [e, fill(s.title), fill(s.body || ''), url, s.icon_url || (model && model.avatar_url) || null, Math.max(1, s.delay_minutes | 0), s.id]
             );
         }
     } catch (err) { logger.warn('sequência pós-instalação falhou: ' + err.message); }
