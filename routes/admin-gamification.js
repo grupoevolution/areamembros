@@ -41,6 +41,7 @@ const VALID_KEYS = [
     'exit_discount',
     'encounters',
     'testers',
+    'push_bar',
 ];
 
 // =============================================================================

@@ -294,6 +294,41 @@ router.put('/phrases/:period', requireAdmin, async (req, res) => {
     }
 });
 
+// ── Teste da barra de notificação (A/B/C) ─────────────────────────────────
+// Compara só a PRIMEIRA barra de cada pessoa (sorteada = justo). Quem ativou
+// numa barra seguinte aparece à parte, por versão que viu primeiro.
+router.get('/bar-stats', requireAdmin, async (req, res) => {
+    const days = Math.max(1, Math.min(90, parseInt(req.query.days, 10) || 30));
+    const IDENT = `COALESCE(LOWER(customer_email), metadata->>'vid')`;
+    try {
+        const { rows } = await db.reportQuery(`
+            WITH s AS (
+                SELECT DISTINCT ${IDENT} AS who, metadata->>'variant' AS v
+                FROM tracking_events
+                WHERE event_type = 'push_bar_shown' AND metadata->>'attempt' = '1'
+                  AND created_at > NOW() - make_interval(days => $1)),
+            e AS (
+                SELECT DISTINCT ${IDENT} AS who, metadata->>'first_variant' AS fv,
+                       (metadata->>'attempt') = '1' AS at_first
+                FROM tracking_events
+                WHERE event_type = 'push_bar_enabled'
+                  AND created_at > NOW() - make_interval(days => $1))
+            SELECT s.v AS variant, COUNT(DISTINCT s.who)::int AS shown,
+                   COUNT(DISTINCT e1.who)::int AS enabled_first,
+                   COUNT(DISTINCT e2.who)::int AS enabled_later
+            FROM s
+            LEFT JOIN e e1 ON e1.who = s.who AND e1.fv = s.v AND e1.at_first
+            LEFT JOIN e e2 ON e2.who = s.who AND e2.fv = s.v AND NOT e2.at_first
+            WHERE s.who IS NOT NULL AND s.v IN ('A','B','C')
+            GROUP BY s.v ORDER BY s.v`, [days]);
+        const { rows: cfg } = await db.query(`SELECT value FROM gamification_config WHERE key = 'push_bar'`);
+        return res.json({ success: true, days, rows, winner: (cfg[0] && cfg[0].value && cfg[0].value.winner) || null });
+    } catch (err) {
+        logger.warn('bar-stats: ' + err.message);
+        return res.status(500).json({ success: false });
+    }
+});
+
 router.get('/install-steps', requireAdmin, async (req, res) => {
     try {
         const { rows } = await db.query(`SELECT * FROM install_push_steps ORDER BY delay_minutes, id`);

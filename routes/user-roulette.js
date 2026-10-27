@@ -650,5 +650,51 @@ router.post('/roulette/track-ref', optionalUser, async (req, res) => {
 });
 
 
+// ─────────────────────────────────────────────────────────────────────────────
+// BARRA DE NOTIFICAÇÃO (teste A/B/C). GET diz ao app se a versão C (giro de
+// brinde) pode entrar no sorteio e se o dono já fixou uma vencedora no painel.
+// POST dá o giro de brinde: 1x por pessoa NA VIDA, só com aparelho inscrito.
+// ─────────────────────────────────────────────────────────────────────────────
+router.get('/push-bar', optionalUser, async (req, res) => {
+    let winner = null, cOk = false;
+    try {
+        const { rows } = await db.query(`SELECT value FROM gamification_config WHERE key = 'push_bar'`);
+        const w = rows[0] && rows[0].value && rows[0].value.winner;
+        if (['A', 'B', 'C'].includes(w)) winner = w;
+    } catch (_) {}
+    try {
+        const email = req.user && !req.user.anonymous ? req.user.email : null;
+        if (email) {
+            const cfg = await loadConfig();
+            if (configUsable(cfg)) {
+                const { rows } = await db.query(`SELECT push_bonus_at FROM roulette_state WHERE email = $1`, [email]);
+                cOk = !(rows[0] && rows[0].push_bonus_at);
+            }
+        }
+    } catch (_) {}
+    return res.json({ success: true, winner, c_ok: cOk });
+});
+
+router.post('/push-bar/bonus', requireUser, async (req, res) => {
+    try {
+        if (req.user.anonymous) return res.json({ success: false });
+        const email = req.user.email;
+        const cfg = await loadConfig();
+        if (!configUsable(cfg)) return res.json({ success: false });
+        // precisa ter ativado de verdade (aparelho inscrito no push)
+        const { rows: sub } = await db.query(
+            `SELECT 1 FROM push_subscriptions WHERE LOWER(customer_email) = LOWER($1) LIMIT 1`, [email]);
+        if (!sub.length) return res.json({ success: false, error: 'sem inscrição' });
+        await getOrCreateState(email);
+        const { rows } = await db.query(
+            `UPDATE roulette_state SET spins = spins + 1, push_bonus_at = NOW()
+             WHERE email = $1 AND push_bonus_at IS NULL RETURNING spins`, [email]);
+        return res.json({ success: true, granted: rows.length > 0, spins: rows[0] ? rows[0].spins : null });
+    } catch (err) {
+        logger.warn('[roleta] brinde do push: ' + err.message);
+        return res.status(500).json({ success: false });
+    }
+});
+
 module.exports = router;
 module.exports.loadConfig = loadConfig;

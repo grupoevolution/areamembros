@@ -18861,17 +18861,83 @@ const PUSH = {
             }
         }, PUSH.PROMPT_DELAY_MS);
     },
-    // Barra fixa no topo (app instalado) — foto de uma modelo + ATIVAR.
-    _topBar() {
+    // ── BARRA FIXA DE NOTIFICAÇÕES (app instalado) — TESTE A/B/C ─────────
+    // A = preta c/ foto da modelo · B = vermelha · C = preta c/ brinde (1 giro;
+    // só p/ quem tem e-mail e roleta ligada). A 1ª barra de cada pessoa é
+    // SORTEADA (é ela que o painel compara); se não ativar, as próximas
+    // aberturas mostram as versões que ela ainda não viu. Painel pode fixar
+    // uma vencedora. A barra EMPURRA as telas pra baixo (não tampa nada).
+    _barCss() {
+        if (document.getElementById('mvPbCss')) return;
+        const st = document.createElement('style');
+        st.id = 'mvPbCss';
+        st.textContent = 'body.pb-on .screen{top:var(--pbh,64px)!important}'
+            + '#mvPushBar{position:fixed;left:0;right:0;top:0;z-index:950;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 10px;font-family:inherit;animation:mvPbIn .3s ease-out}'
+            + '#mvPushBar .t{flex:1;min-width:0}#mvPushBar .t b{display:block;font-size:13.5px;font-weight:900;line-height:1.2}'
+            + '#mvPushBar .t span{display:block;font-size:11.5px;line-height:1.3;margin-top:2px}'
+            + '#mvPushBar .go{border:none;border-radius:10px;padding:10px 13px;font-size:12.5px;font-weight:900;flex:none;cursor:pointer;font-family:inherit;animation:mvPbP 1.8s infinite}'
+            + '#mvPushBar .ic{width:40px;height:40px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background-size:cover;background-position:center;position:relative}'
+            + '#mvPushBar .ic i{position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;border-radius:50%;background:#25D366;border:2px solid #000}'
+            + '#mvPushBar.vA{background:#000;border-bottom:1px solid #e50914;color:#fff}#mvPushBar.vA .t span{color:#bbb}#mvPushBar.vA .go{background:#e50914;color:#fff}#mvPushBar.vA .ic{background-color:rgba(229,9,20,.15)}'
+            + '#mvPushBar.vB{background:linear-gradient(90deg,#c0000d,#e50914);color:#fff}#mvPushBar.vB .t span{color:#ffd9dc}#mvPushBar.vB .go{background:#fff;color:#e50914}#mvPushBar.vB .ic{background-color:rgba(255,255,255,.18)}'
+            + '#mvPushBar.vC{background:#000;border-bottom:1px solid #d4af37;color:#fff}#mvPushBar.vC .t b{color:#f5d67b}#mvPushBar.vC .t span{color:#bbb}#mvPushBar.vC .go{background:linear-gradient(90deg,#d4af37,#f5d67b);color:#241a05}#mvPushBar.vC .ic{background-color:rgba(212,175,55,.15)}'
+            + '#mvPushBar.vX{background:#141414;border-bottom:1px solid #333;color:#fff}#mvPushBar.vX .t span{color:#bbb}#mvPushBar .x{background:none;border:none;color:rgba(255,255,255,.5);padding:6px;cursor:pointer;line-height:0;flex:none}'
+            + '@keyframes mvPbIn{from{transform:translateY(-100%)}to{transform:none}}@keyframes mvPbP{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}';
+        document.head.appendChild(st);
+    },
+    _barOn(bar) {
+        document.body.appendChild(bar);
+        const fit = () => { try { document.body.style.setProperty('--pbh', bar.offsetHeight + 'px'); } catch (_) {} };
+        fit(); document.body.classList.add('pb-on');
+        bar._fit = fit; window.addEventListener('resize', fit);
+    },
+    _barOff() {
+        const bar = document.getElementById('mvPushBar');
+        if (bar) { try { window.removeEventListener('resize', bar._fit); } catch (_) {} bar.remove(); }
+        document.body.classList.remove('pb-on');
+    },
+    async _topBar() {
         try {
             if (document.getElementById('mvPushBar')) return;
-            const denied = Notification.permission === 'denied';
-            // Bloqueado: a dica aparece no máximo 1x por dia (só tem o X)
-            if (denied) {
+            PUSH._barCss();
+            const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            const bell = (c) => '<svg width="20" height="20" fill="none" stroke="' + c + '" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>';
+            // BLOQUEADO: instrução de como liberar (com X), no máx. 1x por dia
+            if (Notification.permission === 'denied') {
                 const k = 'mv_pushbar_denied_day', today = new Date().toDateString();
                 try { if (localStorage.getItem(k) === today) return; localStorage.setItem(k, today); } catch (_) {}
+                const bar = document.createElement('div');
+                bar.id = 'mvPushBar'; bar.className = 'vX';
+                bar.innerHTML = '<div class="ic" style="background-color:rgba(255,255,255,.08)">' + bell('#bbb') + '</div>'
+                    + '<div class="t"><b>Notificações bloqueadas</b><span>' + (isIOS ? 'Ajustes do iPhone &gt; Notificações &gt; MVIP &gt; Permitir' : 'Segure o ícone do app &gt; Informações do app &gt; Notificações &gt; Permitir') + '</span></div>'
+                    + '<button class="x" aria-label="Fechar"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
+                PUSH._barOn(bar);
+                bar.querySelector('.x').addEventListener('click', () => PUSH._barOff());
+                return;
             }
-            const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            // config: vencedora fixada no painel + se a C (brinde) vale p/ esta pessoa
+            let cfg = {};
+            try {
+                const ctl = ('AbortController' in window) ? new AbortController() : null;
+                const tm = ctl ? setTimeout(() => ctl.abort(), 4000) : null;
+                cfg = await fetch('/api/user/push-bar', { credentials: 'include', signal: ctl ? ctl.signal : undefined }).then(r => r.json());
+                if (tm) clearTimeout(tm);
+            } catch (_) { cfg = {}; }
+            if (Notification.permission === 'granted' || document.getElementById('mvPushBar')) return;
+            const elig = ['A', 'B'].concat(cfg && cfg.c_ok ? ['C'] : []);
+            const get = (k) => { try { return localStorage.getItem(k); } catch (_) { return null; } };
+            const put = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
+            let first = get('mv_pb_first');
+            if (!first || elig.indexOf(first) < 0 && !(first === 'C')) { first = elig[Math.floor(Math.random() * elig.length)]; put('mv_pb_first', first); }
+            const n = (parseInt(get('mv_pb_n'), 10) || 0) + 1; // nº desta tentativa (1 = a sorteada)
+            put('mv_pb_n', String(n));
+            let v;
+            if (cfg && ['A', 'B', 'C'].indexOf(cfg.winner) >= 0 && elig.indexOf(cfg.winner) >= 0) v = cfg.winner;
+            else {
+                const order = [first].concat(['B', 'A', 'C'].filter(x => x !== first && elig.indexOf(x) >= 0));
+                if (elig.indexOf(first) < 0) order.shift(); // C sorteada mas brinde já usado
+                v = order[(n - 1) % order.length] || 'B';
+            }
             let face = '';
             try {
                 const els = document.querySelectorAll('.ca-sec-block .av[style*="background-image"]');
@@ -18879,39 +18945,39 @@ const PUSH = {
                 const m = el && /url\(["']?([^"')]+)/.exec(el.getAttribute('style') || '');
                 face = m ? m[1] : '';
             } catch (_) {}
+            const COPY = {
+                A: ['Ela quer te mandar mensagem', 'Ative pra saber na hora quando ela te chamar', 'ATIVAR'],
+                B: ['Não perca as mensagens delas', 'Ative as notificações e receba fotos e vídeos na hora', 'ATIVAR'],
+                C: ['Ganhe 1 giro grátis na roleta', 'Ative as notificações e o giro cai na hora', 'ATIVAR'],
+            }[v];
+            const icon = v === 'A'
+                ? (face ? '<div class="ic" style="background-image:url(\'' + face.replace(/'/g, '') + '\')"><i></i></div>' : '<div class="ic">' + bell('#ff4757') + '</div>')
+                : v === 'B' ? '<div class="ic">' + bell('#fff') + '</div>'
+                : '<div class="ic"><svg width="20" height="20" fill="none" stroke="#f5d67b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18M7.5 8a2.5 2.5 0 110-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 110 5"/></svg></div>';
             const bar = document.createElement('div');
-            bar.id = 'mvPushBar';
-            bar.style.cssText = 'position:fixed;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top,0px));z-index:99991;background:linear-gradient(135deg,#1f2a22,#121614);border:1px solid rgba(37,211,102,.45);border-radius:14px;padding:9px 10px;display:flex;align-items:center;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.55);animation:mvPbIn .35s ease-out;';
-            const bell = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>';
-            const pic = face
-                ? '<div style="position:relative;flex-shrink:0;width:38px;height:38px;"><div style="width:38px;height:38px;border-radius:50%;background:#333 center/cover no-repeat;background-image:url(\'' + face.replace(/'/g, '') + '\');"></div><span style="position:absolute;right:-2px;bottom:-2px;width:13px;height:13px;border-radius:50%;background:#25D366;border:2px solid #121614;"></span></div>'
-                : '<div style="flex-shrink:0;width:38px;height:38px;border-radius:50%;background:rgba(37,211,102,.12);display:flex;align-items:center;justify-content:center;">' + bell + '</div>';
-            const txt = denied
-                ? '<div style="font-size:13px;font-weight:800;color:#fff;">Notificações bloqueadas</div><div style="font-size:11.5px;color:rgba(255,255,255,.65);line-height:1.35;">' + (isIOS ? 'Ajustes do iPhone &gt; Notificações &gt; MVIP &gt; Permitir' : 'Segure o ícone do app &gt; Informações do app &gt; Notificações &gt; Permitir') + '</div>'
-                : '<div style="font-size:13px;font-weight:800;color:#fff;">Ative as notificações</div><div style="font-size:11.5px;color:rgba(255,255,255,.65);line-height:1.35;">Saiba na hora quando ela te responder</div>';
-            bar.innerHTML = '<style>@keyframes mvPbIn{from{transform:translateY(-20px);opacity:0}to{transform:none;opacity:1}}@keyframes mvPbPulse{0%,100%{box-shadow:0 0 0 0 rgba(37,211,102,.55)}50%{box-shadow:0 0 0 7px rgba(37,211,102,0)}}</style>'
-                + pic + '<div style="flex:1;min-width:0;">' + txt + '</div>'
-                + (denied ? '' : '<button id="mvPushBarGo" style="background:#25D366;border:none;color:#fff;font-size:12.5px;font-weight:800;padding:9px 13px;border-radius:10px;cursor:pointer;flex-shrink:0;animation:mvPbPulse 1.8s infinite;">ATIVAR</button>')
-                + '<button id="mvPushBarNo" aria-label="Fechar" style="background:none;border:none;color:rgba(255,255,255,.45);padding:6px;cursor:pointer;flex-shrink:0;line-height:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
-            document.body.appendChild(bar);
-            const go = document.getElementById('mvPushBarGo');
-            if (go) go.addEventListener('click', async () => {
+            bar.id = 'mvPushBar'; bar.className = 'v' + v;
+            bar.innerHTML = icon + '<div class="t"><b>' + COPY[0] + '</b><span>' + COPY[1] + '</span></div><button class="go">' + COPY[2] + '</button>';
+            PUSH._barOn(bar);
+            const meta = { variant: v, attempt: n, first_variant: first, vid: window.VID || null, winner: !!(cfg && cfg.winner) };
+            try { TRACK.event('push_bar_shown', meta); } catch (_) {}
+            bar.querySelector('.go').addEventListener('click', async () => {
                 // o pedido PRECISA nascer deste toque (regra do Android/iOS)
                 const ok = await PUSH.askPermission();
-                bar.remove();
-                if (ok) { await PUSH.subscribe(); try { TRACK.event('push_enabled', { via: 'top_bar' }); } catch (_) {} }
-                else if (Notification.permission === 'denied') PUSH._topBar();
+                PUSH._barOff();
+                if (ok) {
+                    await PUSH.subscribe();
+                    try { TRACK.event('push_bar_enabled', meta); } catch (_) {}
+                    if (v === 'C') {
+                        try {
+                            const r = await fetch('/api/user/push-bar/bonus', { method: 'POST', credentials: 'include' }).then(x => x.json());
+                            if (r && r.granted && typeof showToast === 'function') {
+                                const scr = (document.querySelector('.screen.active') || {}).id || 'home';
+                                showToast(scr, '<svg width="18" height="18" fill="none" stroke="#f5d67b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13M3 12h18"/></svg>', '1 giro grátis liberado na Roleta VIP');
+                            }
+                        } catch (_) {}
+                    }
+                } else if (Notification.permission === 'denied') PUSH._topBar();
             });
-            document.getElementById('mvPushBarNo').addEventListener('click', () => bar.remove());
-            // A barra fica por cima do topo (logo, voltar, nome da modelo).
-            // Qualquer toque FORA dela a recolhe (o toque segue normal) — volta
-            // na próxima abertura do app até ele ativar.
-            const away = (e) => {
-                if (e.target.closest && e.target.closest('#mvPushBar')) return;
-                document.removeEventListener('pointerdown', away, true);
-                bar.remove();
-            };
-            document.addEventListener('pointerdown', away, true);
         } catch (_) {}
     },
     // Banner de 1 toque pro iOS standalone: "🔔 Ativar notificações"

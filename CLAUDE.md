@@ -348,8 +348,16 @@ campo só); sem suporte → api.whatsapp.com na mesma aba.
 - Reinstalação: `beforeinstallprompt` (só dispara se NÃO instalado) apaga a
   marca `mv_pwa_installed` antiga (+ soneca) — quem desinstalou volta a ver o
   pedido de instalar.
-- Barra de notificação: dono quer barra FIXA (preta/vermelha, sem X, com
-  motivo/brinde). Prévia com 3 versões aguardando escolha.
+- Barra de notificação FIXA (app instalado), TESTE A/B/C (decisão do dono):
+  A = preta c/ foto da modelo, B = vermelha, C = preta c/ 1 giro grátis
+  (só quem tem e-mail + roleta ligada; giro 1x na vida via
+  `POST /api/user/push-bar/bonus`, exige aparelho inscrito,
+  `roulette_state.push_bonus_at`). 1ª barra SORTEADA (`mv_pb_first`) é a que
+  o painel compara; sem ativar, próximas aberturas mostram as outras.
+  Eventos `push_bar_shown`/`push_bar_enabled` (attempt, first_variant).
+  Painel Growth → "Teste da barra" (tabela + fixar vencedora,
+  gamification_config `push_bar.winner`). Barra empurra as telas
+  (`body.pb-on .screen{top:--pbh}`), sem X; bloqueado = instrução c/ X 1x/dia.
 
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
