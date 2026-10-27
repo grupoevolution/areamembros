@@ -319,6 +319,27 @@ campo só); sem suporte → api.whatsapp.com na mesma aba.
 - Dono decidiu MANTER: login do painel como está (já exige código),
   chamada x prêmio da roleta, recarregar ao voltar do checkout.
 
+**Revisão final 27/10 (Fable) — corrigido antes do deploy:**
+- `processed_sales.done`: reivindicação que não terminou (processo caiu no
+  meio) há +2 min é retomada no reenvio do gateway — cliente não fica sem
+  acesso. Reivindicação recente (cópia simultânea) continua sendo duplicata.
+- Lembrete do Pix roda ANTES da rotina geral de push (que pode levar minutos)
+  e a janela virou 15–60 min.
+- Prévia de vídeo do grupo com destino = link externo passa pelo `MV_buy`
+  (e-mail do anônimo + carimbo + mesma guia).
+- Roleta: tela "Quem atende você?" ganhou "escolher depois" (antes não tinha
+  saída e bloqueava o app inteiro a cada abertura).
+- Limite de 300 req/min por IP NÃO conta mais as consultas automáticas
+  (poll do chat/grupo, lista, batimento, feed) — operadoras compartilham IP
+  (CGNAT). Login/compra/roleta continuam limitados.
+- Webhook responde à Kirvano sem esperar os pushes (pagamento confirmado,
+  pós-compra, pix pendente): envio continua em paralelo.
+- Pedido de e-mail: só falha REAL de rede conta pra mandar ao checkout sem
+  e-mail (502 de deploy não conta); contador zera ao abrir o popup.
+- FICA PRA DEPOIS (quando dobrar tráfego): lista de conversas em paralelo
+  ocupa até 5 das 20 conexões por pedido → endpoint leve pra bolinha de
+  não-lidas + aumentar pool; boot chama a lista ~5x seguidas.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);

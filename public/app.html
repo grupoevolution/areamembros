@@ -9726,6 +9726,7 @@ window.MVDiscount = (function () {
     <div class="rl-title" style="font-size:21px">Quem atende <b>você</b>?</div>
     <div class="rl-models" id="rlModels"></div>
     <button class="rl-btn rl-red" id="rlCallBtn" style="opacity:.4" onclick="Roulette.claimCall()">LIGAR AGORA</button>
+    <button class="rl-later" onclick="Roulette.close()">escolher depois</button>
   </div>
 </div>
 
@@ -12739,6 +12740,9 @@ window.GroupApp = (function () {
                 const dst = tz.dest || '';
                 if (!dst) return;
                 if (dst.charAt(0) === '/') { if (typeof mvNavigate === 'function') mvNavigate(dst); else window.location.href = dst; }
+                // link externo (checkout): caminho oficial de compra — pede e-mail
+                // do anônimo, carimba a origem e abre na MESMA guia
+                else if (/^https?:\/\//i.test(dst) && window.MV_buy) window.MV_buy(dst, 'group_' + (CUR && CUR.id));
                 else window.open(dst, '_blank', 'noopener');
             };
             const wrap = d.querySelector('.ga-teaser');
@@ -21456,6 +21460,7 @@ document.addEventListener('keydown', function(e) {
     function openModal() {
         if (!window.MV_ANONYMOUS) return; // já logado, não precisa
         if (window.MV_emailFree && window.MV_emailFree()) return; // funil pede e-mail só na compra
+        netFails = 0;
         modal.classList.add('is-open');
         setTimeout(() => emailInput && emailInput.focus(), 200);
     }
@@ -21508,6 +21513,7 @@ document.addEventListener('keydown', function(e) {
         }
         pendingCheckout = url;
         pendingCheckoutSrc = src || null;
+        netFails = 0;
         setCheckoutCopy(true);
         modal.classList.add('is-open');
         setTimeout(() => emailInput && emailInput.focus(), 200);
@@ -21622,8 +21628,12 @@ document.addEventListener('keydown', function(e) {
     // Falha de CONEXÃO no modo compra: na 2ª falha seguida manda pro checkout
     // mesmo assim (o checkout do gateway já pede o e-mail) — venda não se perde.
     let netFails = 0;
-    function onNetFail() {
-        netFails++;
+    function onNetFail(err) {
+        // só falha REAL de rede conta (tempo esgotado / sem conexão). Resposta
+        // estranha do servidor (ex.: 502 no meio de um deploy) não manda pro
+        // checkout sem e-mail — só pede pra tentar de novo.
+        const isNet = !!(err && (err.name === 'AbortError' || err.name === 'TypeError'));
+        netFails = isNet ? netFails + 1 : 0;
         if (pendingCheckout && netFails >= 2) {
             const pc = pendingCheckout;
             try { TRACK.event('email_gate_bypass_offline', {}); } catch (_) {}
@@ -21676,7 +21686,7 @@ document.addEventListener('keydown', function(e) {
                     let d2;
                     try {
                         d2 = await promoteFetch({ email, skipSuggestion: true, funnel_slug: window.MV_FUNNEL_SLUG, campanha: pendingCampaign, visitor_id: mvVisitorId() });
-                    } catch (_) { onNetFail(); return; }
+                    } catch (e) { onNetFail(e); return; }
                     if (d2.success) {
                         promoteSuccess(d2);
                     } else {
@@ -21693,7 +21703,7 @@ document.addEventListener('keydown', function(e) {
             submitBtn.disabled = false;
             submitBtn.textContent = pendingCheckout ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
         } catch (err) {
-            onNetFail();
+            onNetFail(err);
         }
     });
 })();
