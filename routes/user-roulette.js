@@ -51,10 +51,16 @@ const TODAY_BR = `(NOW() AT TIME ZONE 'America/Sao_Paulo')::date`;
 // ─────────────────────────────────────────────────────────────────────────────
 // CONFIG (gamification_config → key 'roulette')
 // ─────────────────────────────────────────────────────────────────────────────
-const DEFAULT_SHARE_TEXT = 'Te dei 1 giro grátis nessa roleta 🎰 Eu acabei de ganhar uma chamada de vídeo. Entra pelo meu link e resgata seu giro grátis:';
+const DEFAULT_SHARE_TEXT = 'Acabei de fazer uma chamada grátis com uma gostosa nesse app 🔥 Só clicar no link e fazer a sua 👇🏻';
+// Cartão com FOTO que o WhatsApp monta quando o link do convite é colado
+// (etiquetas og:* servidas em /?convite=...). Editável no painel.
+const DEFAULT_SHARE_IMAGE = 'https://midia.b-cdn.net/IMG_1968.jpg';
+const DEFAULT_SHARE_TITLE = 'Ela tá online agora 🔥';
+const DEFAULT_SHARE_DESC = 'Chamada de vídeo grátis. Toca pra entrar.';
 async function loadConfig() {
     const fallback = {
-        share_text: DEFAULT_SHARE_TEXT, ref_friends_per_spin: 2, ref_max_spins_per_day: 1,
+        share_text: DEFAULT_SHARE_TEXT, share_image: DEFAULT_SHARE_IMAGE, share_title: DEFAULT_SHARE_TITLE, share_desc: DEFAULT_SHARE_DESC,
+        ref_friends_per_spin: 2, ref_max_spins_per_day: 1,
         enabled: false, popup_enabled: true, popup_delay_sec: 5, call_product_ids: [],
         content_product_id: null, no_spins_reminder_days: 3,
     };
@@ -79,6 +85,9 @@ async function loadConfig() {
             no_spins_reminder_days: Math.max(0, Math.min(60, isNaN(rem) ? 3 : rem)),
             // Texto que vai JUNTO com o link no compartilhar (editável no painel)
             share_text: String(v.share_text || DEFAULT_SHARE_TEXT).slice(0, 300),
+            share_image: /^https:\/\//.test(String(v.share_image || '')) ? String(v.share_image).slice(0, 500) : DEFAULT_SHARE_IMAGE,
+            share_title: String(v.share_title || DEFAULT_SHARE_TITLE).slice(0, 80),
+            share_desc: String(v.share_desc || DEFAULT_SHARE_DESC).slice(0, 160),
             ref_friends_per_spin: Math.max(1, Math.min(10, parseInt(v.ref_friends_per_spin, 10) || 2)),
             ref_max_spins_per_day: Math.max(0, Math.min(10, (v.ref_max_spins_per_day === 0 || v.ref_max_spins_per_day === '0') ? 0 : (parseInt(v.ref_max_spins_per_day, 10) || 1))),
         };
@@ -642,3 +651,4 @@ router.post('/roulette/track-ref', optionalUser, async (req, res) => {
 
 
 module.exports = router;
+module.exports.loadConfig = loadConfig;

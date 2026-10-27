@@ -202,6 +202,48 @@ app.use((req, res, next) => {
 // Device check (bloqueia desktop em produção)
 // ----------------------------------------------------------------------------
 
+// ----------------------------------------------------------------------------
+// Cartão com FOTO do convite da roleta (/?convite=CODIGO).
+// O robô do WhatsApp/Facebook/Telegram que busca a prévia do link parece um
+// computador → a trava anti-desktop daria o 503 falso e o cartão sairia sem
+// foto. Para ESSES robôs, e só em /?convite=, entregamos uma página mínima com
+// as etiquetas og:* (foto/título/texto do painel) — sem nada do app.
+// Pessoas de verdade seguem o fluxo normal (app.html com as etiquetas também).
+// ----------------------------------------------------------------------------
+const PREVIEW_BOT_RE = /WhatsApp|facebookexternalhit|facebookcatalog|Facebot|TelegramBot|Twitterbot|Slackbot|Discordbot|LinkedInBot|SkypeUriPreview|Applebot|redditbot|Google-PageRenderer/i;
+let _inviteCfgCache = { at: 0, cfg: null };
+async function inviteCardCfg() {
+    if (_inviteCfgCache.cfg && Date.now() - _inviteCfgCache.at < 60000) return _inviteCfgCache.cfg;
+    const cfg = await require('./routes/user-roulette').loadConfig();
+    _inviteCfgCache = { at: Date.now(), cfg };
+    return cfg;
+}
+function escAttr(v) {
+    return String(v || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function inviteOgTags(cfg, url) {
+    const t = escAttr(cfg.share_title), d = escAttr(cfg.share_desc), i = escAttr(cfg.share_image), u = escAttr(url);
+    return `<meta property="og:type" content="website">`
+        + `<meta property="og:url" content="${u}">`
+        + `<meta property="og:title" content="${t}">`
+        + `<meta property="og:description" content="${d}">`
+        + `<meta property="og:image" content="${i}">`
+        + `<meta property="og:image:secure_url" content="${i}">`
+        + `<meta name="twitter:card" content="summary_large_image">`;
+}
+app.get('/', async (req, res, next) => {
+    if (!req.query.convite || !PREVIEW_BOT_RE.test(req.headers['user-agent'] || '')) return next();
+    try {
+        const cfg = await inviteCardCfg();
+        const url = 'https://' + req.get('host') + '/?convite=' + encodeURIComponent(String(req.query.convite).slice(0, 40));
+        res.setHeader('Cache-Control', 'public, max-age=300');
+        return res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${escAttr(cfg.share_title)}</title><meta name="robots" content="noindex,nofollow">${inviteOgTags(cfg, url)}</head><body></body></html>`);
+    } catch (err) {
+        logger.warn('[convite] cartão falhou:', err.message);
+        return next();
+    }
+});
+
 app.use(deviceCheckMiddleware);
 
 
@@ -337,8 +379,22 @@ app.get('/build.json', (req, res) => {
 // ----------------------------------------------------------------------------
 
 // App cliente (tela principal — login email-only, catálogo, acervo)
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    // Link de convite aberto por gente (ou pela folha de compartilhar do
+    // celular, que busca a prévia com cara de navegador): mesmo app, com as
+    // etiquetas do cartão com foto no <head>.
+    if (req.query.convite) {
+        try {
+            const cfg = await inviteCardCfg();
+            const url = 'https://' + req.get('host') + '/?convite=' + encodeURIComponent(String(req.query.convite).slice(0, 40));
+            const html = fsLocal.readFileSync(path.join(__dirname, 'public/app.html'), 'utf8')
+                .replace(/<meta charset="UTF-8">/i, (m) => m + inviteOgTags(cfg, url));
+            return res.type('html').send(html);
+        } catch (err) {
+            logger.warn('[convite] og no app falhou:', err.message);
+        }
+    }
     res.sendFile(path.join(__dirname, 'public/app.html'));
 });
 
@@ -508,29 +564,6 @@ app.get('/privacidade', (req, res) => {
 });
 app.get('/termos', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/termos.html'));
-});
-
-// TESTE do cartão com foto no WhatsApp (convite da roleta). Temporário:
-// o dono compartilha este link pra ver o cartão antes de ir pro convite real.
-app.get('/convite-teste', (req, res) => {
-    const img = 'https://midia.b-cdn.net/IMG_1968.jpg';
-    const title = 'Ela tá online agora 🔥';
-    const desc = 'Chamada de vídeo grátis. Toca pra entrar.';
-    const url = 'https://' + req.get('host') + '/convite-teste';
-    res.setHeader('Cache-Control', 'no-cache');
-    res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-<title>${title}</title>
-<meta name="robots" content="noindex,nofollow">
-<meta property="og:type" content="website">
-<meta property="og:url" content="${url}">
-<meta property="og:title" content="${title}">
-<meta property="og:description" content="${desc}">
-<meta property="og:image" content="${img}">
-<meta property="og:image:secure_url" content="${img}">
-<meta property="og:image:type" content="image/jpeg">
-<meta name="twitter:card" content="summary_large_image">
-<meta http-equiv="refresh" content="0;url=/">
-</head><body></body></html>`);
 });
 
 // /app mantido como alias (compatibilidade com links antigos)

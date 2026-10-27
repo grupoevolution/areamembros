@@ -18737,23 +18737,23 @@ const PUSH = {
     SKIP_KEY: 'mv_push_skip_until',
     SKIP_HOURS: 72,
     async init() {
-        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-        if (Notification.permission === 'denied') return;
-        const skipUntil = parseInt(localStorage.getItem(PUSH.SKIP_KEY) || '0');
-        if (skipUntil && Date.now() < skipUntil) return;
-
+        if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
         // Se já permitiu, garante subscription atualizada no servidor
         if (Notification.permission === 'granted') {
             await PUSH.subscribe();
             return;
         }
-        // iPHONE (PWA instalado): o iOS SÓ aceita o pedido de permissão vindo
-        // de um TOQUE do usuário — o pedido automático de 90s é recusado em
-        // silêncio e NENHUM iPhone entrava na máquina de push. Aqui aparece um
-        // banner de 1 toque; o resto (Android) segue no fluxo automático.
-        const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        // APP INSTALADO (Android E iPhone): barra fixa no topo pedindo pra
+        // ativar. O Chrome do Android e o iOS ignoram/escondem o pedido de
+        // permissão que não nasce de um TOQUE — por isso o pedido automático
+        // de 90s quase nunca aparecia. A barra volta a cada abertura do app
+        // até ativar (o X só esconde nesta abertura). Bloqueado = barra vira
+        // instrução de como liberar nas configurações.
         const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
-        if (isIOS && standalone) { PUSH._iosBanner(); return; }
+        if (standalone) { PUSH._topBar(); return; }
+        if (Notification.permission === 'denied') return;
+        const skipUntil = parseInt(localStorage.getItem(PUSH.SKIP_KEY) || '0');
+        if (skipUntil && Date.now() < skipUntil) return;
         setTimeout(async () => {
             // Pede só se cliente está em foco há um tempo
             if (document.visibilityState !== 'visible') return;
@@ -18763,6 +18763,45 @@ const PUSH = {
                 localStorage.setItem(PUSH.SKIP_KEY, String(Date.now() + PUSH.SKIP_HOURS * 3600 * 1000));
             }
         }, PUSH.PROMPT_DELAY_MS);
+    },
+    // Barra fixa no topo (app instalado) — foto de uma modelo + ATIVAR.
+    _topBar() {
+        try {
+            if (document.getElementById('mvPushBar')) return;
+            const denied = Notification.permission === 'denied';
+            const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+            let face = '';
+            try {
+                const els = document.querySelectorAll('.ca-sec-block .av[style*="background-image"]');
+                const el = els.length ? els[Math.floor(Math.random() * els.length)] : null;
+                const m = el && /url\(["']?([^"')]+)/.exec(el.getAttribute('style') || '');
+                face = m ? m[1] : '';
+            } catch (_) {}
+            const bar = document.createElement('div');
+            bar.id = 'mvPushBar';
+            bar.style.cssText = 'position:fixed;left:10px;right:10px;top:calc(8px + env(safe-area-inset-top,0px));z-index:99991;background:linear-gradient(135deg,#1f2a22,#121614);border:1px solid rgba(37,211,102,.45);border-radius:14px;padding:9px 10px;display:flex;align-items:center;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.55);animation:mvPbIn .35s ease-out;';
+            const bell = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>';
+            const pic = face
+                ? '<div style="position:relative;flex-shrink:0;width:38px;height:38px;"><div style="width:38px;height:38px;border-radius:50%;background:#333 center/cover no-repeat;background-image:url(\'' + face.replace(/'/g, '') + '\');"></div><span style="position:absolute;right:-2px;bottom:-2px;width:13px;height:13px;border-radius:50%;background:#25D366;border:2px solid #121614;"></span></div>'
+                : '<div style="flex-shrink:0;width:38px;height:38px;border-radius:50%;background:rgba(37,211,102,.12);display:flex;align-items:center;justify-content:center;">' + bell + '</div>';
+            const txt = denied
+                ? '<div style="font-size:13px;font-weight:800;color:#fff;">Notificações bloqueadas</div><div style="font-size:11.5px;color:rgba(255,255,255,.65);line-height:1.35;">' + (isIOS ? 'Ajustes do iPhone &gt; Notificações &gt; MVIP &gt; Permitir' : 'Segure o ícone do app &gt; Informações do app &gt; Notificações &gt; Permitir') + '</div>'
+                : '<div style="font-size:13px;font-weight:800;color:#fff;">Ative as notificações</div><div style="font-size:11.5px;color:rgba(255,255,255,.65);line-height:1.35;">Saiba na hora quando ela te responder</div>';
+            bar.innerHTML = '<style>@keyframes mvPbIn{from{transform:translateY(-20px);opacity:0}to{transform:none;opacity:1}}@keyframes mvPbPulse{0%,100%{box-shadow:0 0 0 0 rgba(37,211,102,.55)}50%{box-shadow:0 0 0 7px rgba(37,211,102,0)}}</style>'
+                + pic + '<div style="flex:1;min-width:0;">' + txt + '</div>'
+                + (denied ? '' : '<button id="mvPushBarGo" style="background:#25D366;border:none;color:#fff;font-size:12.5px;font-weight:800;padding:9px 13px;border-radius:10px;cursor:pointer;flex-shrink:0;animation:mvPbPulse 1.8s infinite;">ATIVAR</button>')
+                + '<button id="mvPushBarNo" aria-label="Fechar" style="background:none;border:none;color:rgba(255,255,255,.45);padding:6px;cursor:pointer;flex-shrink:0;line-height:0;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
+            document.body.appendChild(bar);
+            const go = document.getElementById('mvPushBarGo');
+            if (go) go.addEventListener('click', async () => {
+                // o pedido PRECISA nascer deste toque (regra do Android/iOS)
+                const ok = await PUSH.askPermission();
+                bar.remove();
+                if (ok) { await PUSH.subscribe(); try { TRACK.event('push_enabled', { via: 'top_bar' }); } catch (_) {} }
+                else if (Notification.permission === 'denied') PUSH._topBar();
+            });
+            document.getElementById('mvPushBarNo').addEventListener('click', () => bar.remove());
+        } catch (_) {}
     },
     // Banner de 1 toque pro iOS standalone: "🔔 Ativar notificações"
     _iosBanner() {
@@ -21407,7 +21446,7 @@ document.addEventListener('keydown', function(e) {
         // Popup de DESCONTO e telas do ENCONTROS: têm o próprio fluxo de e-mail.
         // Sem esta linha o toque abria o modal de e-mail ATRÁS do desconto (z-index
         // menor) — o lead via o popup "congelado" e só saía recarregando.
-        if (t.closest('#mvdOv') || t.closest('#encounters') || t.closest('.enc-ov') || t.closest('#encMatch')) return;
+        if (t.closest('#mvdOv') || t.closest('#encounters') || t.closest('.enc-ov') || t.closest('#encMatch') || t.closest('#mvPushBar')) return;
         // Não intercepta controles próprios (audio/video do navegador)
         if (t.matches('audio, video, audio *, video *')) return;
         // Pra TUDO o resto, bloqueia e abre login

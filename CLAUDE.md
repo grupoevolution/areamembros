@@ -253,6 +253,26 @@ exceções desse interceptor (hoje: #mvPaywall, #mvdOv, #encounters, .enc-ov,
 "CONVIDAR AMIGOS" com a folha de compartilhar do celular (texto+link num
 campo só); sem suporte → api.whatsapp.com na mesma aba.
 
+**Pronto pra deploy (27/10):**
+- Convite da roleta com CARTÃO DE FOTO no WhatsApp: `/?convite=` entrega
+  etiquetas og:* (foto/título/texto em Configurações → Roleta → "Cartão com
+  foto"). Robôs de prévia (WhatsApp/Facebook/Telegram…) recebem uma página
+  mínima ANTES da trava anti-desktop (server.js) — senão levavam o 503 falso.
+  Foto atual: sensual SEM nudez (decisão do dono; nudez pode marcar o domínio
+  na Meta se alguém colar o link no Face/Insta). Texto padrão do convite
+  trocado pelo do dono.
+- Notificações com FOTO DA MODELO: banco `push_phrases` (64 frases, manhã/
+  tarde/noite/madrugada; tipos chat/midia/encontros), editável no painel
+  (Growth → "Frases das notificações com foto", 1 por linha "tipo | título |
+  texto", `{nome}`). Rotina: 4 horários com `bank_period` (09:30, 14:30,
+  20:30, 23:30); a migração PAUSOU os horários antigos de texto fixo (1 vez).
+  Frase do dia gira em ciclo; modelo sorteada POR APARELHO entre chats ativos,
+  listados, não-suporte, com foto. Foto só aparece no Android (iOS = ícone).
+- Barra fixa no TOPO pedindo "Ative as notificações" para TODO app instalado
+  (Android + iPhone) — o pedido automático de 90s era ignorado pelo Chrome.
+  Volta a cada abertura até ativar; bloqueado → instrução de como liberar.
+  Está na lista de exceções do interceptor anônimo (#mvPushBar).
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);

@@ -250,6 +250,50 @@ function cleanStep(body) {
     };
 }
 
+// ── Banco de frases das notificações com foto (push_phrases) ──────────────
+// O painel edita em texto: uma frase por linha, "tipo | título | texto".
+const PHRASE_PERIODS = ['manha', 'tarde', 'noite', 'madrugada'];
+const PHRASE_KINDS = ['chat', 'midia', 'encontros'];
+router.get('/phrases', requireAdmin, async (req, res) => {
+    try {
+        const { rows } = await db.query(`SELECT period, kind, title, body FROM push_phrases WHERE active = true ORDER BY period, sort_order, id`);
+        return res.json({ success: true, phrases: rows });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+router.put('/phrases/:period', requireAdmin, async (req, res) => {
+    const period = String(req.params.period || '');
+    if (!PHRASE_PERIODS.includes(period)) return res.status(400).json({ success: false, error: 'Período inválido' });
+    const list = (Array.isArray(req.body && req.body.phrases) ? req.body.phrases : [])
+        .map(p => ({
+            kind: PHRASE_KINDS.includes(String(p.kind || '').toLowerCase()) ? String(p.kind).toLowerCase() : 'chat',
+            title: String(p.title || '').trim().slice(0, 100),
+            body: String(p.body || '').trim().slice(0, 200),
+        }))
+        .filter(p => p.title && p.body)
+        .slice(0, 200);
+    if (!list.length) return res.status(400).json({ success: false, error: 'Coloque pelo menos 1 frase' });
+    const client = await db.pool.connect();
+    try {
+        await client.query('BEGIN');
+        await client.query(`DELETE FROM push_phrases WHERE period = $1`, [period]);
+        for (let i = 0; i < list.length; i++) {
+            await client.query(
+                `INSERT INTO push_phrases (period, kind, title, body, sort_order) VALUES ($1,$2,$3,$4,$5)`,
+                [period, list[i].kind, list[i].title, list[i].body, i + 1]);
+        }
+        await client.query('COMMIT');
+        return res.json({ success: true, count: list.length });
+    } catch (err) {
+        await client.query('ROLLBACK').catch(() => {});
+        logger.error('frases push: salvar falhou:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    } finally {
+        client.release();
+    }
+});
+
 router.get('/install-steps', requireAdmin, async (req, res) => {
     try {
         const { rows } = await db.query(`SELECT * FROM install_push_steps ORDER BY delay_minutes, id`);

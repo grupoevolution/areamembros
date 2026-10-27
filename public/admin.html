@@ -5143,6 +5143,15 @@ a { color: inherit; text-decoration: none; }
                     <div style="font-size:11.5px; color:rgba(255,255,255,.45); margin-top:8px;">"Broadcast" ignora os e-mails específicos e manda pra <b>todos os celulares com o app instalado</b>. "Disparar push" respeita os e-mails (vazio = todos também).</div>
                 </div>
 
+                <!-- ===== FRASES DAS NOTIFICAÇÕES COM FOTO ===== -->
+                <div class="form-card" style="padding:20px;margin-bottom:18px;">
+                    <div class="form-card-head" style="margin-bottom:6px;">
+                        <div class="form-card-title">Frases das notificações com foto</div>
+                        <div class="form-card-sub">Os horários da rotina marcados como "foto da modelo" usam estas frases. Cada dia sai a próxima frase da lista do período, e cada aparelho recebe uma modelo sorteada: a FOTO dela vai no lugar do ícone (Android) e <b>{nome}</b> vira o nome dela. Uma frase por linha: <b>tipo | título | texto</b>. Tipos: <b>chat</b> (abre o chat dela), <b>midia</b> (abre o chat dela), <b>encontros</b> (abre o Encontros; com ele desligado, a frase é pulada).</div>
+                    </div>
+                    <div id="phrasesBox" style="display:grid;gap:14px;margin-top:12px;">Carregando…</div>
+                </div>
+
                 <!-- ===== ROTINA DIÁRIA DE NOTIFICAÇÕES ===== -->
                 <div class="form-card" style="padding:20px;margin-bottom:18px;">
                     <div class="form-card-head" style="margin-bottom:6px;">
@@ -7969,6 +7978,18 @@ a { color: inherit; text-decoration: none; }
                         <label class="form-label">Mensagem do convite (vai junto com o link)</label>
                         <textarea class="form-input" id="rlShareText" rows="3" maxlength="300" placeholder="Te dei 1 giro grátis nessa roleta 🎰 Eu acabei de ganhar uma chamada de vídeo. Entra pelo meu link e resgata seu giro grátis:"></textarea>
                         <div class="form-help">É o texto que o cliente manda no WhatsApp quando toca em COMPARTILHAR (o link entra sozinho no final). Chame atenção: é o que faz o amigo clicar.</div>
+                    </div>
+                    <div class="form-row" style="margin-bottom:14px;">
+                        <label class="form-label">Cartão com foto no WhatsApp</label>
+                        <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start;">
+                            <img id="rlCardPrev" alt="" style="width:96px;height:96px;object-fit:cover;border-radius:10px;background:#222;flex:none;">
+                            <div style="flex:1;min-width:220px;display:flex;flex-direction:column;gap:8px;">
+                                <input type="url" class="form-input" id="rlShareImage" maxlength="500" placeholder="Link da foto (ex.: https://midia.b-cdn.net/foto.jpg)">
+                                <input type="text" class="form-input" id="rlShareTitle" maxlength="80" placeholder="Ela tá online agora 🔥">
+                                <input type="text" class="form-input" id="rlShareDesc" maxlength="160" placeholder="Chamada de vídeo grátis. Toca pra entrar.">
+                            </div>
+                        </div>
+                        <div class="form-help">Foto, título e texto que aparecem no cartão quando o link do convite é mandado no WhatsApp. Cole o link da foto do Bunny. O WhatsApp guarda o cartão por alguns dias: quem já recebeu o link pode ver a foto antiga por um tempo.</div>
                     </div>
                     <div class="form-row" style="margin-bottom:14px;display:flex;gap:14px;flex-wrap:wrap;">
                         <div style="max-width:220px;">
@@ -12288,6 +12309,14 @@ async function loadRouletteConfig(cfgValue) {
         document.getElementById('rlDelay').value = (cfg.popup_delay_sec != null ? cfg.popup_delay_sec : 5);
         document.getElementById('rlRemind').value = (cfg.no_spins_reminder_days != null ? cfg.no_spins_reminder_days : 3);
         document.getElementById('rlShareText').value = cfg.share_text || '';
+        document.getElementById('rlShareImage').value = cfg.share_image || '';
+        document.getElementById('rlShareTitle').value = cfg.share_title || '';
+        document.getElementById('rlShareDesc').value = cfg.share_desc || '';
+        (function () {
+            var inp = document.getElementById('rlShareImage'), img = document.getElementById('rlCardPrev');
+            var upd = function () { img.src = inp.value.trim() || 'https://midia.b-cdn.net/IMG_1968.jpg'; };
+            inp.oninput = upd; upd();
+        })();
         document.getElementById('rlRefPer').value = (cfg.ref_friends_per_spin != null ? cfg.ref_friends_per_spin : 2);
         document.getElementById('rlRefMax').value = (cfg.ref_max_spins_per_day != null ? cfg.ref_max_spins_per_day : 1);
         if (!calls.length) {
@@ -12415,6 +12444,9 @@ async function saveRouletteConfig() {
         content_product_id: parseInt(document.getElementById('rlContent').value, 10) || null,
         no_spins_reminder_days: remind,
         share_text: (document.getElementById('rlShareText').value || '').trim().slice(0, 300),
+        share_image: (document.getElementById('rlShareImage').value || '').trim().slice(0, 500),
+        share_title: (document.getElementById('rlShareTitle').value || '').trim().slice(0, 80),
+        share_desc: (document.getElementById('rlShareDesc').value || '').trim().slice(0, 160),
         ref_friends_per_spin: Math.max(1, Math.min(10, parseInt(document.getElementById('rlRefPer').value, 10) || 2)),
         ref_max_spins_per_day: (function () { var n = parseInt(document.getElementById('rlRefMax').value, 10); return isNaN(n) ? 1 : Math.max(0, Math.min(10, n)); })(),
     };
@@ -12631,6 +12663,7 @@ async function loadGrowth() {
 
     // Rotina diária + sequência pós-instalação (cards abaixo do push manual)
     try { loadPushRoutine(); } catch (_) {}
+    try { loadPushPhrases(); } catch (_) {}
     try { loadInstallSteps(); } catch (_) {}
     try { loadPushReport(); } catch (_) {}
 }
@@ -12892,6 +12925,47 @@ function destLabel(url) {
 }
 
 // ============================================================================
+// FRASES DAS NOTIFICAÇÕES COM FOTO (push_phrases)
+// ============================================================================
+const PHRASE_PERIODS = [['manha','Manhã'],['tarde','Tarde'],['noite','Noite'],['madrugada','Tarde da noite']];
+async function loadPushPhrases() {
+    const box = document.getElementById('phrasesBox');
+    if (!box) return;
+    try {
+        const r = await fetch('/api/admin/push/phrases', { credentials: 'include' }).then(r => r.json());
+        if (!r.success) { box.textContent = 'Erro ao carregar.'; return; }
+        box.innerHTML = PHRASE_PERIODS.map(([key, label]) => {
+            const lines = r.phrases.filter(p => p.period === key).map(p => p.kind + ' | ' + p.title + ' | ' + p.body).join('\n');
+            const n = r.phrases.filter(p => p.period === key).length;
+            return `<div>
+                <label class="form-label">${label} <span style="color:var(--text-dim);font-weight:400;">(${n} frases)</span></label>
+                <textarea class="form-input" id="phr_${key}" rows="7" style="font-size:12.5px;line-height:1.5;">${escapeHtml(lines)}</textarea>
+                <div style="display:flex;gap:10px;align-items:center;margin-top:6px;">
+                    <button class="btn-primary" style="padding:7px 14px;font-size:12px;" onclick="savePushPhrases('${key}')">Salvar ${label.toLowerCase()}</button>
+                    <span id="phrSt_${key}" style="font-size:12px;color:var(--text-dim);"></span>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (_) { box.textContent = 'Erro de rede.'; }
+}
+async function savePushPhrases(key) {
+    const st = document.getElementById('phrSt_' + key);
+    const phrases = (document.getElementById('phr_' + key).value || '').split('\n').map(l => {
+        const parts = l.split('|').map(x => x.trim());
+        if (parts.length < 3) return null;
+        return { kind: parts[0].toLowerCase().replace('í', 'i'), title: parts[1], body: parts.slice(2).join(' | ') };
+    }).filter(Boolean);
+    try {
+        const r = await fetch('/api/admin/push/phrases/' + key, {
+            method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phrases }),
+        }).then(r => r.json());
+        st.textContent = r.success ? ('Salvo: ' + r.count + ' frases') : ('Erro: ' + (r.error || ''));
+        if (r.success) setTimeout(loadPushPhrases, 1200);
+    } catch (_) { st.textContent = 'Erro de rede.'; }
+}
+
+// ============================================================================
 // ROTINA DIÁRIA DE NOTIFICAÇÕES (engagement_push_slots)
 // ============================================================================
 let _routineEditId = null;
@@ -12912,7 +12986,7 @@ async function loadPushRoutine() {
             return `<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);${s.active ? '' : 'opacity:.45;'}">
                 <span style="font-weight:800;font-size:14px;min-width:52px;">${time}</span>
                 <span style="flex:1;min-width:0;">
-                    <span style="display:block;font-weight:600;color:var(--text);">${escapeHtml(s.title)}</span>
+                    <span style="display:block;font-weight:600;color:var(--text);">${escapeHtml(s.title)}${s.bank_period ? ' <span style="font-size:10.5px;font-weight:700;color:#22c55e;">· FOTO DA MODELO</span>' : ''}</span>
                     <span style="display:block;font-size:11.5px;color:var(--text-dim);">${escapeHtml(s.body || '')} · ${ROUTINE_AUD[s.audience] || s.audience} · ${escapeHtml(destLabel(s.url))} · ${(Array.isArray(s.weekdays) && s.weekdays.length) ? s.weekdays.map(n => ['dom','seg','ter','qua','qui','sex','sáb'][n]).join('/') : 'todo dia'}${s.last_sent_date ? ' · último: ' + String(s.last_sent_date).slice(0, 10) : ''}</span>
                 </span>
                 <button class="btn-secondary" style="padding:5px 10px;font-size:11px;" onclick="toggleRoutineSlot(${s.id})">${s.active ? 'Pausar' : 'Ativar'}</button>
