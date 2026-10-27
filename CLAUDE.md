@@ -389,7 +389,10 @@ mulheres/<faixa>" (preferência do dono; escolhidas olhando, só rosto
 visível, sem repetir), idade dentro da faixa da pasta, etiqueta sorteada.
 Encontros ligado em 64 chats existentes listados (menos Suporte VIP; os 22
 escondidos do funil ficaram FORA, decisão do dono). Total no Encontros: 165.
-Chave geral do Encontros continua DESLIGADA — dono liga de manhã.
++50 chats (mesma madrugada) com fotos da pasta "Tinder/20 a 35" (30) e
+"Tinder/36 a 55" (20), escolhidas olhando (rostos bem diferentes; os nomes
+dos arquivos NÃO separam mulheres). Total no Encontros: 215 perfis, sem foto
+repetida. Chave geral do Encontros continua DESLIGADA — dono liga de manhã.
 
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
