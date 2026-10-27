@@ -392,7 +392,11 @@ escondidos do funil ficaram FORA, decisão do dono). Total no Encontros: 165.
 +50 chats (mesma madrugada) com fotos da pasta "Tinder/20 a 35" (30) e
 "Tinder/36 a 55" (20), escolhidas olhando (rostos bem diferentes; os nomes
 dos arquivos NÃO separam mulheres). Total no Encontros: 215 perfis, sem foto
-repetida. Chave geral do Encontros continua DESLIGADA — dono liga de manhã.
+repetida. +100 chats (27/10): 32 da pasta "IAGO GRUPOS/GRUPO VIP/sexy" (só as
+ousadas SEM nudez explícita — avatar aparece na lista, no card e na FOTO DA
+NOTIFICAÇÃO na tela de bloqueio; as 71 explícitas ficaram de fora até o dono
+decidir) + 68 de corpo/biquíni da pasta de apresentação. Total no Encontros:
+315 perfis, sem foto repetida. Dono vai ligar o Encontros.
 
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
