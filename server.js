@@ -510,6 +510,29 @@ app.get('/termos', (req, res) => {
     res.sendFile(path.join(__dirname, 'public/termos.html'));
 });
 
+// TESTE do cartão com foto no WhatsApp (convite da roleta). Temporário:
+// o dono compartilha este link pra ver o cartão antes de ir pro convite real.
+app.get('/convite-teste', (req, res) => {
+    const img = 'https://midia.b-cdn.net/IMG_1968.jpg';
+    const title = 'Ela tá online agora 🔥';
+    const desc = 'Chamada de vídeo grátis. Toca pra entrar.';
+    const url = 'https://' + req.get('host') + '/convite-teste';
+    res.setHeader('Cache-Control', 'no-cache');
+    res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<title>${title}</title>
+<meta name="robots" content="noindex,nofollow">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${url}">
+<meta property="og:title" content="${title}">
+<meta property="og:description" content="${desc}">
+<meta property="og:image" content="${img}">
+<meta property="og:image:secure_url" content="${img}">
+<meta property="og:image:type" content="image/jpeg">
+<meta name="twitter:card" content="summary_large_image">
+<meta http-equiv="refresh" content="0;url=/">
+</head><body></body></html>`);
+});
+
 // /app mantido como alias (compatibilidade com links antigos)
 app.get('/app', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
