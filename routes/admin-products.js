@@ -609,9 +609,15 @@ router.put('/:id', requireAdmin, async (req, res) => {
                 throw new Error('NOT_FOUND');
             }
             
-            // Atualiza ofertas: deleta todas e recria (mais simples que sincronizar)
+            // Atualiza ofertas NO LUGAR (casando gateway+código). ⚠️ NÃO apagar e
+            // recriar: cada venda aponta pro id da oferta (user_access.offer_id,
+            // ON DELETE SET NULL) — recriar zerava esse vínculo e quem já pagou
+            // perdia o que é liberado "por código de oferta" (vídeos/Premium).
             if (Array.isArray(offers)) {
-                await client.query('DELETE FROM product_offers WHERE product_id = $1', [productId]);
+                const keep = offers.filter(o => o.gateway && o.offer_id).map(o => o.gateway + '|' + o.offer_id);
+                await client.query(
+                    `DELETE FROM product_offers WHERE product_id = $1 AND NOT (gateway || '|' || offer_id = ANY($2::text[]))`,
+                    [productId, keep]);
                 for (const offer of offers) {
                     if (!offer.gateway || !offer.offer_id) continue;
                     const isAcq = !!offer.is_acquisition;
@@ -621,6 +627,12 @@ router.put('/:id', requireAdmin, async (req, res) => {
                         INSERT INTO product_offers
                         (product_id, gateway, offer_id, offer_name, checkout_url, price, is_acquisition, acquisition_role, duration_days, is_premium)
                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                        ON CONFLICT (gateway, offer_id) DO UPDATE SET
+                            product_id = EXCLUDED.product_id, offer_name = EXCLUDED.offer_name,
+                            checkout_url = EXCLUDED.checkout_url, price = EXCLUDED.price,
+                            is_acquisition = EXCLUDED.is_acquisition, acquisition_role = EXCLUDED.acquisition_role,
+                            duration_days = EXCLUDED.duration_days, is_premium = EXCLUDED.is_premium,
+                            is_active = true, updated_at = NOW()
                     `, [
                         productId, offer.gateway, offer.offer_id,
                         offer.offer_name || null, offer.checkout_url || null,
@@ -887,7 +899,12 @@ router.post('/import', requireAdmin, async (req, res) => {
 
                     // Ofertas
                     if (Array.isArray(p.offers)) {
-                        await client.query('DELETE FROM product_offers WHERE product_id = $1', [pid]);
+                        // No lugar (ver comentário do salvar produto): não zera o
+                        // vínculo das vendas antigas com a oferta.
+                        const keep = p.offers.filter(o => o.gateway && o.offer_id).map(o => o.gateway + '|' + o.offer_id);
+                        await client.query(
+                            `DELETE FROM product_offers WHERE product_id = $1 AND NOT (gateway || '|' || offer_id = ANY($2::text[]))`,
+                            [pid, keep]);
                         for (const o of p.offers) {
                             if (!o.gateway || !o.offer_id) continue;
                             const isAcq = !!o.is_acquisition;
@@ -896,6 +913,12 @@ router.post('/import', requireAdmin, async (req, res) => {
                             await client.query(`
                                 INSERT INTO product_offers (product_id, gateway, offer_id, offer_name, checkout_url, price, is_active, is_acquisition, acquisition_role, duration_days, is_premium)
                                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+                                ON CONFLICT (gateway, offer_id) DO UPDATE SET
+                                    product_id = EXCLUDED.product_id, offer_name = EXCLUDED.offer_name,
+                                    checkout_url = EXCLUDED.checkout_url, price = EXCLUDED.price,
+                                    is_active = EXCLUDED.is_active, is_acquisition = EXCLUDED.is_acquisition,
+                                    acquisition_role = EXCLUDED.acquisition_role, duration_days = EXCLUDED.duration_days,
+                                    is_premium = EXCLUDED.is_premium, updated_at = NOW()
                             `, [pid, o.gateway, o.offer_id, o.offer_name || null, o.checkout_url || null, parseFloat(o.price) || null, o.is_active !== false, isAcq, acqRole, durDays > 0 ? durDays : null, o.is_premium === true]);
                         }
                     }

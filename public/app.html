@@ -12415,6 +12415,7 @@ window.GroupApp = (function () {
     function openVonce(m, teaser) {
         const kindFoto = ((m.meta && m.meta.kind) === 'foto');
         const ov = document.createElement('div');
+        ov.id = 'gaVonceOv'; ov.setAttribute('data-mv-own-flow', '1');
         ov.style.cssText = 'position:fixed;inset:0;background:#000;z-index:99997;display:flex;align-items:center;justify-content:center;';
         ov.innerHTML = '<div style="position:absolute;top:10px;left:12px;right:12px;height:3px;border-radius:99px;background:rgba(255,255,255,.25);overflow:hidden;"><i class="gaVBar" style="display:block;height:100%;width:0;background:#fff;"></i></div>'
             + '<button class="gaVX" style="position:absolute;top:16px;right:14px;background:none;border:none;color:#fff;font-size:26px;line-height:1;cursor:pointer;z-index:2;font-family:inherit;">×</button>'
@@ -12461,6 +12462,7 @@ window.GroupApp = (function () {
         const tz = m.meta || {};
         const secs = Math.max(3, Math.min(30, tz.preview_s || 5));
         const ov = document.createElement('div');
+        ov.id = 'gaTeaserOv'; ov.setAttribute('data-mv-own-flow', '1');
         ov.style.cssText = 'position:fixed;inset:0;background:#000;z-index:99997;display:flex;align-items:center;justify-content:center;';
         const player = tz.embed
             ? '<iframe src="' + esc(tz.embed + (tz.embed.indexOf('?') >= 0 ? '&' : '?') + 'autoplay=true') + '" allow="autoplay; encrypted-media" style="width:100%;height:100%;border:none;"></iframe>'
@@ -20875,7 +20877,15 @@ window.MV_hlsAttach = function (videoEl, hlsUrl, onFail) {
 window.MV_stampUtm = function (url, src) {
     if (!url || !src) return url;
     try {
-        if (/[?&]utm_content=/.test(url)) return url;
+        // Desconto/grupo: o carimbo É o que diz qual grupo/produto liberar
+        // (link universal). Se o link já tiver utm_content do dono, TROCA
+        // (senão a venda chegava sem grupo e o cliente pagava sem receber).
+        const must = /^(group_|desc_)/.test(String(src));
+        if (/[?&]utm_content=/.test(url)) {
+            if (!must) return url;
+            url = url.replace(/([?&])utm_content=[^&#]*/, '$1utm_content=' + encodeURIComponent(src));
+            return url;
+        }
         let hash = '';
         const hi = url.indexOf('#');
         if (hi >= 0) { hash = url.slice(hi); url = url.slice(0, hi); }
@@ -21058,8 +21068,15 @@ window.MV_BOOT_PROMISE = (function bootFunnel() {
     banner.innerHTML = '<div class="pwa-banner-icon">📱</div><div class="pwa-banner-text"><strong>Adicione à sua tela inicial</strong><span>Acesso rápido, sem perder o link.</span></div><button class="pwa-banner-cta" id="pwaInstallBtn">Instalar</button><button class="pwa-banner-dismiss" id="pwaDismissBtn" aria-label="Fechar">×</button>';
     // Inserir logo após o hero
     const hero = home.querySelector('#homeHero') || home.firstElementChild;
-    if (hero && hero.nextSibling) home.insertBefore(banner, hero.nextSibling);
-    else home.appendChild(banner);
+    // O hero fica DENTRO de #scroll-home (não é filho direto de #home): inserir
+    // no PAI real dele. Antes dava NotFoundError em todo carregamento.
+    try {
+        if (hero && hero.parentNode) hero.parentNode.insertBefore(banner, hero.nextSibling);
+        else home.appendChild(banner);
+    } catch (_) { home.appendChild(banner); }
+    // Faixa DESLIGADA (nunca apareceu por causa do erro acima; o popup
+    // "Instale o Membros VIP" já cuida da instalação). Religar = decisão do dono.
+    banner.style.display = 'none'; return;
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (function(){try{return localStorage.getItem('mv_pwa_installed')==='1'}catch(e){return false}})();
     if (isStandalone) { document.body.classList.add('pwa-installed'); banner.style.display='none'; return; }
     let skipUntil = 0; try { skipUntil = parseInt(localStorage.getItem('mv_pwa_skip_until')||'0',10); } catch(e){}
@@ -21217,7 +21234,7 @@ document.addEventListener('keydown', function(e) {
     /* ACIMA de tudo (paywall=99999, popups de grupo=99998): no modo checkout
        ele abre POR CIMA do popup de compra — com z-index menor ele abria
        ATRÁS e parecia que a tela tinha congelado */
-    position: fixed; inset: 0; z-index: 100002;
+    position: fixed; inset: 0; z-index: 2147483000; /* SEMPRE no topo: nunca pode abrir ESCONDIDO atrás de outro popup (incidente 26/10) */
     background: rgba(0,0,0,0.85);
     display: none;
     align-items: center; justify-content: center;
@@ -21461,6 +21478,11 @@ document.addEventListener('keydown', function(e) {
         // Sem esta linha o toque abria o modal de e-mail ATRÁS do desconto (z-index
         // menor) — o lead via o popup "congelado" e só saía recarregando.
         if (t.closest('#mvdOv') || t.closest('#encounters') || t.closest('.enc-ov') || t.closest('#encMatch') || t.closest('#mvPushBar')) return;
+        // Telas com fluxo PRÓPRIO (prévia de vídeo do grupo, ver-uma-vez,
+        // status das modelos, planos, quiz, popup da amostra, barras de
+        // instalar/ativar). Regra pra telas NOVAS: marcar com o atributo
+        // data-mv-own-flow — assim nunca mais um popup "congela" o lead.
+        if (t.closest('[data-mv-own-flow]') || t.closest('#gaTeaserOv') || t.closest('#gaVonceOv') || t.closest('#caStory') || t.closest('#plansSheet') || t.closest('#qzCallOv') || t.closest('#previewLockModal') || t.closest('#pwaLandingBanner') || t.closest('#mvIosPushBar')) return;
         // Não intercepta controles próprios (audio/video do navegador)
         if (t.matches('audio, video, audio *, video *')) return;
         // Pra TUDO o resto, bloqueia e abre login
@@ -21523,6 +21545,36 @@ document.addEventListener('keydown', function(e) {
         document.cookie = 'mv_funnel=; path=/; max-age=0; SameSite=Lax';
     }
 
+    // Pedido de e-mail com TEMPO MÁXIMO de 12s (internet ruim não pode
+    // deixar o botão em "AGUARDE..." pra sempre).
+    function promoteFetch(body) {
+        const ctl = ('AbortController' in window) ? new AbortController() : null;
+        const tm = ctl ? setTimeout(() => { try { ctl.abort(); } catch (_) {} }, 12000) : null;
+        return fetch('/api/user/login/promote', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(body),
+            signal: ctl ? ctl.signal : undefined,
+        }).then(r => r.json()).finally(() => { if (tm) clearTimeout(tm); });
+    }
+    // Falha de CONEXÃO no modo compra: na 2ª falha seguida manda pro checkout
+    // mesmo assim (o checkout do gateway já pede o e-mail) — venda não se perde.
+    let netFails = 0;
+    function onNetFail() {
+        netFails++;
+        if (pendingCheckout && netFails >= 2) {
+            const pc = pendingCheckout;
+            try { TRACK.event('email_gate_bypass_offline', {}); } catch (_) {}
+            window.location.href = pc;
+            return;
+        }
+        errEl.textContent = 'Erro de conexão. Tenta de novo.';
+        errEl.classList.add('show');
+        submitBtn.disabled = false;
+        submitBtn.textContent = pendingCheckout ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
+    }
+
     // Submit do login no modal: promove sessão anônima → email real
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -21536,13 +21588,8 @@ document.addEventListener('keydown', function(e) {
         let pendingCampaign = null;
         try { pendingCampaign = localStorage.getItem('mv_pending_campaign') || null; } catch(_) {}
         try {
-            const r = await fetch('/api/user/login/promote', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ email, funnel_slug: window.MV_FUNNEL_SLUG, campanha: pendingCampaign, visitor_id: mvVisitorId() }),
-            });
-            const data = await r.json();
+            const data = await promoteFetch({ email, funnel_slug: window.MV_FUNNEL_SLUG, campanha: pendingCampaign, visitor_id: mvVisitorId() });
+            netFails = 0;
             if (data.success) {
                 promoteSuccess(data);
                 return;
@@ -21565,13 +21612,10 @@ document.addEventListener('keydown', function(e) {
                     sugEl.classList.remove('show');
                     submitBtn.disabled = true;
                     submitBtn.textContent = 'AGUARDE...';
-                    const r2 = await fetch('/api/user/login/promote', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ email, skipSuggestion: true, funnel_slug: window.MV_FUNNEL_SLUG, campanha: pendingCampaign, visitor_id: mvVisitorId() }),
-                    });
-                    const d2 = await r2.json();
+                    let d2;
+                    try {
+                        d2 = await promoteFetch({ email, skipSuggestion: true, funnel_slug: window.MV_FUNNEL_SLUG, campanha: pendingCampaign, visitor_id: mvVisitorId() });
+                    } catch (_) { onNetFail(); return; }
                     if (d2.success) {
                         promoteSuccess(d2);
                     } else {
@@ -21588,10 +21632,7 @@ document.addEventListener('keydown', function(e) {
             submitBtn.disabled = false;
             submitBtn.textContent = pendingCheckout ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
         } catch (err) {
-            errEl.textContent = 'Erro de conexão. Tenta de novo.';
-            errEl.classList.add('show');
-            submitBtn.disabled = false;
-            submitBtn.textContent = pendingCheckout ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
+            onNetFail();
         }
     });
 })();
