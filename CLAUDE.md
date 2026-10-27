@@ -383,6 +383,13 @@ lista + rodízio online + saudação automática), fotos de Bunny "Tinder/20 a 3
 e "Tinder/36 a 55" (idade casando com a pasta), idade/etiqueta aleatórias;
 ligar Encontros em todos os chats existentes MENOS o Suporte VIP. Dono
 confere 5 primeiro.
+FEITO 27/10 (madrugada, pelo painel): 100 chats novos (ids 94+, cópias do
+"Laiane" id 93) com fotos da pasta "IAGO GRUPOS/GRUPO VIP/apresentacao-
+mulheres/<faixa>" (preferência do dono; escolhidas olhando, só rosto
+visível, sem repetir), idade dentro da faixa da pasta, etiqueta sorteada.
+Encontros ligado em 64 chats existentes listados (menos Suporte VIP; os 22
+escondidos do funil ficaram FORA, decisão do dono). Total no Encontros: 165.
+Chave geral do Encontros continua DESLIGADA — dono liga de manhã.
 
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
