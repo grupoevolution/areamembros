@@ -340,6 +340,17 @@ campo só); sem suporte → api.whatsapp.com na mesma aba.
   ocupa até 5 das 20 conexões por pedido → endpoint leve pra bolinha de
   não-lidas + aumentar pool; boot chama a lista ~5x seguidas.
 
+**27/10 (pós-deploy) — corrigido:**
+- BUG chat: abrir outra conversa (ex.: tocar na notificação do suporte) com
+  a modelo mandando mensagens fazia as mensagens DELA caírem na tela nova.
+  Agora cada abertura tem uma "geração" (`GEN` no ChatApp): resposta/fila de
+  geração antiga é descartada.
+- Reinstalação: `beforeinstallprompt` (só dispara se NÃO instalado) apaga a
+  marca `mv_pwa_installed` antiga (+ soneca) — quem desinstalou volta a ver o
+  pedido de instalar.
+- Barra de notificação: dono quer barra FIXA (preta/vermelha, sem X, com
+  motivo/brinde). Prévia com 3 versões aguardando escolha.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
