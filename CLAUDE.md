@@ -441,6 +441,19 @@ Rodapé único: Início · Conversas · Encontros (centro) · Vídeos · Minhas
 Compras (Perfil dentro). "Tela com temporizador" que o dono viu com o app
 lento: NÃO reproduzida (nem com servidor atrasado 4s) — pedir print.
 
+**Rotina de STATUS (27/10, pelo painel):** +175 status semanais
+(`chat_status_schedule`, repete toda semana; ciclo 15/21 dias NÃO existe):
+15 modelos/dia (105 distintas na semana), ~25 posts/dia, 60% foto · 16%
+texto · 24% vídeo. Ritmo: 07–10h bom dia (texto + foto `bom-dia`), 11–14h
+`trabalho`, 16–19h `academia` + 1 vídeo, 20–22h30 `sexy` + 4 vídeos (pico),
+22h30–24h `boa-noite` + vídeo + "alguém acordado?". Fotos das pastas
+"IAGO GRUPOS/GRUPO VIP/<assunto>"; vídeos curtos (≤90s) da coleção Stream
+"PRIVE" (lib 667167). Sexy/boa-noite/nus/vídeos = `is_vip` (borrado c/
+cadeado p/ quem não assina) — trava VIP exige produto: as 67 modelos com
+status VIP ganharam `story_vip_product_id = 8` (Assinatura do Chat) +
+checkout da Laiane (não existe produto `is_story_plan`). Os 33 status antigos
+continuam.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
