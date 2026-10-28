@@ -7909,7 +7909,7 @@ a { color: inherit; text-decoration: none; }
                         <div class="form-card-title" style="color:#ff4d57;">Encontros (estilo Tinder)</div>
                         <div class="form-card-sub">O lead desliza os cards das modelos (as conversas marcadas em Chats → "Aparece no Encontros"). Curtidas grátis são limitadas; as modelos curtem de volta no tempo; ver quem curtiu e mandar mensagem direta é Premium. Match abre a conversa daquela modelo.</div>
                     </div>
-                    <label style="display:flex; align-items:center; gap:10px; font-size:14px; font-weight:700; color:#fff; cursor:pointer; margin-bottom:14px;"><input type="checkbox" id="encEnabled" style="width:16px;height:16px;"> Encontros LIGADO (aba aparece no rodapé do app)</label>
+                    <input type="checkbox" id="encEnabled" checked style="display:none;"><div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">O Encontros está sempre ligado (é o layout padrão do app).</div>
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">
                         <div><label class="form-label">Curtidas grátis antes de travar</label><input type="number" class="form-input" id="encFreeLikes" min="1" max="500" placeholder="25"></div>
                         <div><label class="form-label">Espera da 1ª trava (horas)</label><input type="number" class="form-input" id="encLockHours" min="0.1" max="168" step="0.5" placeholder="3"></div>
@@ -12476,7 +12476,7 @@ function loadEncounters(cfg) {
     document.getElementById('encIntroText').value = cfg.intro_text || '';
 }
 async function saveEncounters() {
-    const value = { enabled: document.getElementById('encEnabled').checked,
+    const value = { enabled: true,
         intro_title: document.getElementById('encIntroTitle').value.trim(), intro_text: document.getElementById('encIntroText').value.trim() };
     for (const id in ENC_FIELDS) { const [k, d] = ENC_FIELDS[id]; const n = parseFloat(document.getElementById(id).value); value[k] = isNaN(n) ? d : n; }
     const st = document.getElementById('encStatus');

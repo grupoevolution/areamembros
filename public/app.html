@@ -7052,7 +7052,7 @@ body:not(.enc-on) #libProf { display: none !important; }
 
 </style>
 </head>
-<body>
+<body class="enc-on">
 <!-- App fullscreen — sem chrome de mockup -->
 
 <!--
@@ -9158,7 +9158,8 @@ window.Enc = (function () {
         return api('/api/user/encounters/state').then(function (d) {
             S.st = d && d.success ? d : null;
             // chave ligada (ou e-mail de teste) → rodapé novo; senão, rodapé de sempre
-            document.body.classList.toggle('enc-on', !!(S.st && S.st.enabled));
+            // layout novo é o ÚNICO (out/2026): nada de voltar pro rodapé antigo
+            document.body.classList.add('enc-on');
             paintBadges();
             return S.st;
         }).catch(function () { return null; });
@@ -9865,13 +9866,6 @@ window.MVDiscount = (function () {
         <div class="nav-label">Conversas</div>
         <span class="nav-dot" id="chatNavDot" style="display:none;"></span>
     </button>
-    <!-- Layout ANTIGO (Encontros desligado): Minhas Compras no centro -->
-    <button class="nav-item nav-item-hi enc-off-only" onclick="switchScreen('library')" aria-label="Minhas compras">
-        <span class="nav-fab">
-            <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 2L3 6v13a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path stroke-linecap="round" d="M3 6h18"/><path stroke-linecap="round" d="M16 10a4 4 0 01-8 0"/></svg>
-        </span>
-        <div class="nav-label">Minhas Compras</div>
-    </button>
     <!-- ENCONTROS (estilo Tinder) — centro, só com a chave ligada (ou e-mail de teste) -->
     <button class="nav-item nav-item-hi enc-on-only" data-nav="encounters" id="navEnc" aria-label="Encontros">
         <span class="nav-fab nav-fab-enc">
@@ -9884,11 +9878,6 @@ window.MVDiscount = (function () {
         <svg class="nav-icon" id="navSoonIcon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
         <div class="nav-label" id="navSoonLabel">Surpresa</div>
         <span id="navSoonBadge" style="position:absolute; top:-3px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.12); color:rgba(255,255,255,.6); font-size:8px; font-weight:700; padding:2px 6px; border-radius:999px; letter-spacing:.3px;">em breve</span>
-    </button>
-    <!-- Layout ANTIGO: Perfil à direita -->
-    <button class="nav-item enc-off-only" data-nav="profile">
-        <svg class="nav-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zm-9 13a5 5 0 0110 0v1H7v-1z"/></svg>
-        <div class="nav-label">Perfil</div>
     </button>
     <!-- Layout NOVO: MINHAS COMPRAS à direita com destaque (o Perfil mora dentro dela) -->
     <button class="nav-item nav-item-mc enc-on-only" id="navLibrary" onclick="switchScreen('library')" aria-label="Minhas compras">

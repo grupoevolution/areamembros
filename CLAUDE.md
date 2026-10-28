@@ -433,6 +433,14 @@ sessão. REGRA: antes de criar chats em massa, conferir o custo da lista.
   consultas (antes ~2.000). Script em scratchpad (load.js) — refazer a cada
   mudança grande.
 
+**Layout antigo REMOVIDO (27/10 noite):** o app nasce com `<body class="enc-on">`
+(sem piscar o rodapé antigo enquanto pergunta ao servidor), os botões do
+rodapé antigo (Minhas Compras no centro, Perfil) foram apagados e o Encontros
+ficou SEMPRE ligado (`lib/encounters.js` enabled=true; chave do painel saiu).
+Rodapé único: Início · Conversas · Encontros (centro) · Vídeos · Minhas
+Compras (Perfil dentro). "Tela com temporizador" que o dono viu com o app
+lento: NÃO reproduzida (nem com servidor atrasado 4s) — pedir print.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
