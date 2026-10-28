@@ -772,6 +772,32 @@ function publicMsg(m) {
 // ── ROTAS ────────────────────────────────────────────────────────────────────
 
 // GET /chats — lista pra tela de conversas (com lock por usuário)
+// Chats ativos em MEMÓRIA (30s) — a lista lia a tabela inteira a cada
+// abertura. Painel que salva chat chama clearChatsCache() (efeito imediato).
+let _chatsCache = { at: 0, rows: null };
+async function activeChatsCached() {
+    if (_chatsCache.rows && Date.now() - _chatsCache.at < 30000) return _chatsCache.rows;
+    const { rows } = await db.query(`SELECT * FROM chats WHERE active = true ORDER BY display_order, id`);
+    _chatsCache = { at: Date.now(), rows };
+    return rows;
+}
+function clearChatsCache() { _chatsCache = { at: 0, rows: null }; _listSizeCache.at = 0; }
+// Quantas modelos cada lead vê na lista (painel: gamification_config
+// 'chat_list'.size; 0 = todas). Padrão 40.
+let _listSizeCache = { at: 0, v: 40 };
+async function chatListSize() {
+    if (Date.now() - _listSizeCache.at < 60000) return _listSizeCache.v;
+    let v = 40;
+    try {
+        const { rows } = await db.query(`SELECT value FROM gamification_config WHERE key = 'chat_list'`);
+        const n = rows[0] && rows[0].value && parseInt(rows[0].value.size, 10);
+        if (!isNaN(n) && n >= 0) v = Math.min(500, n);
+    } catch (_) {}
+    _listSizeCache = { at: Date.now(), v };
+    return v;
+}
+function brtDay() { return new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10); }
+
 router.get('/chats', optionalUser, async (req, res) => {
     try {
         const ident = getIdentity(req);
@@ -789,27 +815,46 @@ router.get('/chats', optionalUser, async (req, res) => {
                 if (ids && ids.length) onlyIds = ids;
             } catch (_) {}
         }
-        // Lista os chats visíveis (listed=true) MAIS os ocultos que JÁ tiveram
-        // interação com este usuário (sessão com ≥1 mensagem) OU que foram
-        // REVELADOS pela etapa 'Mostrar conversa' do funil (revealed_at, sem
-        // mensagem/notificação) — assim um chat oculto só "aparece" quando o
-        // funil manda ou quando a conversa começou.
-        const { rows: chats } = await db.query(
-            `SELECT * FROM chats
-             WHERE active = true AND ($3::int[] IS NULL OR id = ANY($3::int[])) AND (
-                listed = true
-                OR ($3::int[] IS NOT NULL AND id = ANY($3::int[]))
-                OR id IN (
-                    SELECT cs.chat_id FROM chat_sessions cs
-                    WHERE ( ($1::text IS NOT NULL AND LOWER(cs.customer_email) = $1)
-                         OR ($2::text IS NOT NULL AND cs.visitor_id = $2) )
-                      AND ( cs.revealed_at IS NOT NULL
-                            OR EXISTS (SELECT 1 FROM chat_messages cm WHERE cm.session_id = cs.id) )
-                )
-             )
-             ORDER BY display_order, id`,
-            [ident.email, ident.visitor, onlyIds]
-        );
+        // ── QUEM APARECE NA LISTA (rodízio, out/2026) ────────────────────────
+        // Fixas: Suporte + conversas que ele JÁ teve (mensagem ou revelada pelo
+        // funil). Rodízio: cada lead vê até N modelos (painel; padrão 40)
+        // sorteadas entre as listadas/do Encontros — o sorteio muda TODO DIA e
+        // é diferente por lead. Assim dá pra ter 300+ modelos cadastradas sem
+        // o servidor processar todas a cada abertura.
+        // light=1 (bolinha de não-lidas / aviso de msg nova): só as conversas
+        // que ele já teve — é só delas que vem mensagem.
+        const light = req.query.light === '1';
+        const all = await activeChatsCached();
+        let interacted = new Set();
+        try {
+            const { rows: ir } = await db.query(
+                `SELECT cs.chat_id FROM chat_sessions cs
+                  WHERE ( ($1::text IS NOT NULL AND LOWER(cs.customer_email) = $1)
+                       OR ($2::text IS NOT NULL AND cs.visitor_id = $2) )
+                    AND ( cs.revealed_at IS NOT NULL
+                          OR EXISTS (SELECT 1 FROM chat_messages cm WHERE cm.session_id = cs.id) )`,
+                [ident.email, ident.visitor]);
+            interacted = new Set(ir.map(r => r.chat_id));
+        } catch (_) {}
+        let chats;
+        if (onlyIds) {
+            chats = all.filter(c => onlyIds.includes(c.id) && (!light || interacted.has(c.id)));
+        } else if (light) {
+            chats = all.filter(c => interacted.has(c.id));
+        } else {
+            const size = await chatListSize();
+            const fixed = all.filter(c => (c.listed && c.is_support) || interacted.has(c.id));
+            const fixedIds = new Set(fixed.map(c => c.id));
+            const pool = all.filter(c => !fixedIds.has(c.id) && !c.is_support && (c.listed || c.enc_enabled));
+            let picked = pool;
+            if (size > 0 && pool.length > size) {
+                const seedKey = (ident.email || ident.visitor || 'anon') + ':' + brtDay();
+                const h = (id) => parseInt(require('crypto').createHash('md5').update(seedKey + ':' + id).digest('hex').slice(0, 8), 16);
+                picked = pool.slice().sort((x, y) => h(x.id) - h(y.id)).slice(0, size);
+            }
+            chats = fixed.concat(picked);
+        }
+        chats.sort((x, y) => ((x.display_order | 0) - (y.display_order | 0)) || (x.id - y.id));
         // "Sumir pra VIP/Premium": se algum chat pede isso, calcula 1x se este
         // cliente é Premium (leva-tudo). O VIP-daquela-conversa já vem do `owns`.
         let isPremium = false;
@@ -2604,3 +2649,4 @@ module.exports.processAbandonedCheckouts = processAbandonedCheckouts;
 module.exports.scheduleVipReception = scheduleVipReception;
 module.exports.invalidateCallPremiumConfig = () => { _callPremCache = { at: 0, val: null }; };
 module.exports.deliverUpgradeOfferToSupport = deliverUpgradeOfferToSupport;
+module.exports.clearChatsCache = () => clearChatsCache();

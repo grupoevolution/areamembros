@@ -9234,6 +9234,21 @@ window.Enc = (function () {
         setTimeout(hide, 9000);
     }
 
+    // foto leve (proxy de imagem já usado no app: ~12KB em vez de ~230KB)
+    function encImg(u, preset) { return (u && window.optimizeImg) ? optimizeImg(u, preset) : (u || ''); }
+    // LOTES: o servidor manda 30 cards por vez; faltando poucos, busca os
+    // próximos (sem o lead perceber) e junta no fim do baralho.
+    function refillDeck() {
+        if (S.refilling || !S.st || !(S.st.deck_left > S.st.deck.length)) return;
+        S.refilling = true;
+        api('/api/user/encounters/state').then(function (d) {
+            S.refilling = false;
+            if (!d || !d.success || !Array.isArray(d.deck) || !S.st) return;
+            var have = {}; S.st.deck.forEach(function (m) { have[m.chat_id] = 1; });
+            d.deck.forEach(function (m) { if (!have[m.chat_id]) S.st.deck.push(m); });
+            S.st.deck_left = d.deck_left;
+        }).catch(function () { S.refilling = false; });
+    }
     // ── deck ──
     function render() {
         var st = S.st; if (!st) return;
@@ -9251,9 +9266,9 @@ window.Enc = (function () {
             var top3 = deck.slice(0, 3);
             $('encFan').innerHTML = ['l', 'm', 'r'].map(function (pos, i) {
                 var m = top3[(i + 1) % Math.max(1, top3.length)]; if (!m) return '';
-                return '<div class="enc-fc ' + pos + '"><img src="' + esc(m.avatar_url || '') + '" alt=""><div class="sh"></div><div class="nm">' + esc(m.name) + (m.age ? ' <span>' + m.age + '</span>' : '') + '</div><div class="d"><span class="enc-dot"></span>a ' + m.dist_km + ' km de você</div></div>';
+                return '<div class="enc-fc ' + pos + '"><img src="' + esc(encImg(m.avatar_url, 'card')) + '" alt=""><div class="sh"></div><div class="nm">' + esc(m.name) + (m.age ? ' <span>' + m.age + '</span>' : '') + '</div><div class="d"><span class="enc-dot"></span>a ' + m.dist_km + ' km de você</div></div>';
             }).join('');
-            $('encFaces').innerHTML = deck.slice(3, 9).map(function (m) { return '<img src="' + esc(m.avatar_url || '') + '" alt="">'; }).join('');
+            $('encFaces').innerHTML = deck.slice(3, 9).map(function (m) { return '<img src="' + esc(encImg(m.avatar_url, 'thumb')) + '" alt="">'; }).join('');
             return;
         }
         intro.style.display = 'none';
@@ -9263,7 +9278,7 @@ window.Enc = (function () {
             var top = i === show.length - 1;
             var el = document.createElement('div');
             el.className = 'enc-card'; el.dataset.chat = m.chat_id;
-            el.innerHTML = '<img src="' + esc(m.avatar_url || '') + '" alt=""><div class="sh"></div>'
+            el.innerHTML = '<img src="' + esc(encImg(m.avatar_url, 'gallery')) + '" alt=""><div class="sh"></div>'
                 + '<div class="enc-stamp like">CURTI</div><div class="enc-stamp nope">PASSO</div>'
                 + '<div class="st"><span class="enc-dot"></span>online agora</div>'
                 + '<div class="nm">' + esc(m.name) + (m.age ? ' <span>' + m.age + '</span>' : '') + '</div>'
@@ -9304,6 +9319,8 @@ window.Enc = (function () {
             S.busy = false;
             if (d && d.locked) { S.st.lock_until = d.lock_until; if (el) { el.style.transition = 'transform .25s'; el.style.transform = ''; } openLock(d.lock_until); return; }
             S.st.deck.shift(); S.st.swipes = (S.st.swipes || 0) + 1;
+            if (S.st.deck_left) S.st.deck_left--;
+            if (S.st.deck.length <= 6) refillDeck();
             if (d && d.likes_left != null) S.st.likes_left = d.likes_left;
             setTimeout(function () {
                 render();
@@ -9326,7 +9343,7 @@ window.Enc = (function () {
     // ── oferta (popup de planos do chat, carimbo enc_*) ──
     function ensureUnlock() {
         if (window.MV_PAY_UNLOCK) return Promise.resolve(window.MV_PAY_UNLOCK);
-        return fetch('/api/user/chats?visitor_id=' + encodeURIComponent(vid()), { credentials: 'include' }).then(function (r) { return r.json(); })
+        return fetch('/api/user/chats?light=1&visitor_id=' + encodeURIComponent(vid()), { credentials: 'include' }).then(function (r) { return r.json(); })
             .then(function (d) { if (d && d.paywall_unlock) window.MV_PAY_UNLOCK = d.paywall_unlock; return window.MV_PAY_UNLOCK || null; }).catch(function () { return null; });
     }
     function offer(src, title, subtitle) {
@@ -9434,7 +9451,7 @@ window.Enc = (function () {
             g.innerHTML = list.map(function (m) {
                 var open = m.can_open;
                 return '<div class="enc-lk' + (open ? '' : ' blur') + '" onclick="' + (open ? 'Enc.openChat(' + m.chat_id + ',\'' + (m.is_match ? 'match' : 'likes') + '\')' : 'Enc.offer(\'enc_likes\')') + '">'
-                    + '<img src="' + esc(m.avatar_url || '') + '" alt=""><div class="sh"></div>'
+                    + '<img src="' + esc(encImg(m.avatar_url, 'card')) + '" alt=""><div class="sh"></div>'
                     + (open ? (m.is_match ? '<div class="lk" style="background:#22c55e;color:#06220f;font-weight:800;">MATCH</div>' : '') : '<div class="lk"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Premium</div>')
                     + '<div class="nm">' + esc(m.name) + (m.age ? ' <span>' + m.age + '</span>' : '') + '</div><div class="d">a ' + m.dist_km + ' km de você</div></div>';
             }).join('') + (isPremium() ? '' : '<button class="enc-see" onclick="Enc.offer(\'enc_likes\')"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#e50914" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg><div style="font-size:14px;font-weight:800;line-height:1.25;">Ver quem curtiu você</div><div style="font-size:11.5px;color:#9a9aa8;">e responder agora</div></button>');
@@ -10766,7 +10783,7 @@ window.ChatApp = (function() {
             for (const sec of secNames) {
                 html += '<div class="ca-sec-block">' + (hideLabel ? '' : '<div class="ca-sec-label">' + esc(sec) + '</div>');
                 for (const c of sections[sec]) {
-                    const bg = c.avatar_url ? ' style="background-image:url(\'' + esc(c.avatar_url) + '\')"' : '';
+                    const bg = c.avatar_url ? ' style="background-image:url(\'' + esc(window.optimizeImg ? optimizeImg(c.avatar_url, 'thumb') : c.avatar_url) + '\')"' : '';
                     // Avatar SEMPRE normal (foto + online), inclusive nos VIP — o lead
                     // vê tudo nítido e só descobre que é VIP ao clicar.
                     const av = '<div class="av"' + bg + '>' + (c.show_online ? '<span class="dot"></span>' : '') + '</div>';
@@ -10845,7 +10862,8 @@ window.ChatApp = (function() {
     // Mostra QUANTAS conversas têm mensagem nova.
     async function refreshUnreadDot() {
         try {
-            const r = await fetch('/api/user/chats?visitor_id=' + VID + funnelParam(), { credentials: 'include' });
+            // light=1: só as conversas que ele já teve (é delas que vem msg nova)
+            const r = await fetch('/api/user/chats?light=1&visitor_id=' + VID + funnelParam(), { credentials: 'include' });
             const data = await r.json();
             if (!data.success) return;
             updatePlanUI(data);
@@ -13682,7 +13700,7 @@ function mvRefreshChatList(force) {
     }
     async function pollChats() {
         try {
-            const r = await fetch('/api/user/chats?visitor_id=' + vid(), { credentials: 'include' });
+            const r = await fetch('/api/user/chats?light=1&visitor_id=' + vid(), { credentials: 'include' });
             const data = await r.json();
             if (!data.success || !Array.isArray(data.chats)) return;
             const inConv = document.getElementById('chatconv') && document.getElementById('chatconv').classList.contains('active');
@@ -18579,6 +18597,14 @@ function escapeAttrData(s) {
 //
 // Kill switch: window.__IMG_OPT_DISABLED = true → retorna URL original.
 // Util pra debug se wsrv cair (raro mas possivel) ou pra A/B.
+// REDE DE SEGURANÇA: se o proxy de imagem falhar numa foto, carrega a
+// ORIGINAL (nunca fica imagem quebrada). Vale pra todo <img> do app.
+document.addEventListener('error', function (e) {
+    var t = e.target;
+    if (!t || t.tagName !== 'IMG' || !/wsrv\.nl/.test(t.src || '') || t.dataset.wsrvFb) return;
+    t.dataset.wsrvFb = '1';
+    try { var u = new URL(t.src).searchParams.get('url'); if (u) t.src = u; } catch (_) {}
+}, true);
 window.optimizeImg = function(url, preset) {
     if (!url || typeof url !== 'string') return url || '';
     if (window.__IMG_OPT_DISABLED) return url;
@@ -20829,7 +20855,7 @@ window.profileUpgrade = async function() {
         let u = window.MV_PAY_UNLOCK || null;
         if (!u) {
             let vid = ''; try { vid = localStorage.getItem('mv_chat_visitor') || ''; } catch (_) {}
-            const r = await fetch('/api/user/chats?visitor_id=' + encodeURIComponent(vid), { credentials: 'include' });
+            const r = await fetch('/api/user/chats?light=1&visitor_id=' + encodeURIComponent(vid), { credentials: 'include' });
             const d = await r.json();
             if (d && d.vip === true) return; // já é VIP — nada a vender
             if (d && d.paywall_unlock) u = d.paywall_unlock;

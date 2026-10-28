@@ -7807,6 +7807,20 @@ a { color: inherit; text-decoration: none; }
                     </div>
                 </div>
 
+                <!-- ═══════════════ RODÍZIO DA LISTA DE CONVERSAS ═══════════════ -->
+                <div class="form-card" style="padding:20px;margin-bottom:18px;">
+                    <div class="form-card-head" style="margin-bottom:10px;">
+                        <div class="form-card-title">Rodízio da lista de conversas</div>
+                        <div class="form-card-sub">Cada lead vê na aba Conversas só esta quantidade de modelos, sorteadas entre as que aparecem na lista ou no Encontros. O sorteio muda TODO DIA e é diferente pra cada lead. As conversas que ele já teve e o Suporte aparecem sempre. Assim dá pra ter 300+ modelos sem pesar o app. 0 = mostrar todas (não recomendado com muitas modelos).</div>
+                    </div>
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                        <input type="number" class="form-input" id="chatListSize" min="0" max="500" style="max-width:120px;" placeholder="40">
+                        <span style="font-size:13px;color:var(--text-muted);">modelos por lead</span>
+                        <button class="btn-primary" style="padding:7px 14px;font-size:12px;" onclick="saveChatListSize()">Salvar</button>
+                        <span id="chatListSt" style="font-size:12px;color:var(--text-dim);"></span>
+                    </div>
+                </div>
+
                 <!-- ═══════════════ ALARME DE LENTIDÃO ═══════════════ -->
                 <div class="form-card" style="padding:20px;margin-bottom:18px;">
                     <div class="form-card-head" style="margin-bottom:10px;">
@@ -12225,6 +12239,14 @@ async function saveNotif() {
 // ============================================================================
 // APP CONFIG
 // ============================================================================
+async function saveChatListSize() {
+    const st = document.getElementById('chatListSt');
+    let n = parseInt(document.getElementById('chatListSize').value, 10);
+    if (isNaN(n) || n < 0) n = 40;
+    const res = await _saveGamification('chat_list', { size: Math.min(500, n) });
+    st.textContent = res.ok ? 'Salvo' : ('Erro: ' + (res.error || ''));
+    setTimeout(() => { st.textContent = ''; }, 3000);
+}
 async function loadOpsAlerts() {
     const now = document.getElementById('opsNow'); if (!now) return;
     try {
@@ -12268,6 +12290,7 @@ async function loadAppConfig() {
     
     const cfg = configs.app_config?.value || {};
     const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
+    try { const cl = configs.chat_list?.value; document.getElementById('chatListSize').value = (cl && cl.size != null) ? cl.size : 40; } catch (_) {}
     set('appName', cfg.app_name || 'Membros Vip');
     set('appTagline', cfg.app_tagline || '');
     set('appPrimaryColor', cfg.primary_color || '#e50914');

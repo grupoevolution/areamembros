@@ -28,6 +28,15 @@ const cleanFlow = (f) => FLOWS.includes(f) ? f : 'open';
 
 // ── CHATS (personas) ─────────────────────────────────────────────────────────
 
+// Qualquer escrita em chats (salvar/criar/duplicar/apagar) limpa o cache da
+// lista do app — a mudança aparece na hora, não em 30s.
+router.use((req, res, next) => {
+    if (req.method !== 'GET') res.on('finish', () => {
+        try { require('./user-chats').clearChatsCache(); } catch (_) {}
+    });
+    next();
+});
+
 router.get('/', requireAdmin, async (req, res) => {
     try {
         const { rows } = await db.query(`

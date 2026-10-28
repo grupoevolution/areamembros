@@ -408,6 +408,26 @@ sessões do lead numa consulta só, "é VIP?"/planos 1x por produto, matches do
 Encontros numa consulta só — resultado idêntico, sem consulta por chat sem
 sessão. REGRA: antes de criar chats em massa, conferir o custo da lista.
 
+**Performance pós-incidente (27/10 noite) — pronto pra deploy:**
+- ALARME DE LENTIDÃO (`lib/ops-monitor.js`): mede a cada minuto tempo das
+  rotas do app, lista de conversas, fila do banco, erros, atraso do servidor;
+  2 min ruins → push "⚠️ App lento agora" pros e-mails do painel
+  (Configurações do App → Alarme; `gamification_config.ops_alerts`); 3 min
+  bons → "✅ normalizado"; histórico em `ops_alerts`.
+- RODÍZIO da lista de conversas: cada lead vê N modelos (painel, padrão 40;
+  `chat_list.size`) sorteadas por lead+dia entre `listed OR enc_enabled`;
+  fixas = Suporte + conversas que ele já teve. Chats ativos em memória 30s
+  (painel limpa ao salvar). `?light=1` = só conversas que ele já teve (usado
+  pela bolinha/aviso de msg nova/paywall) — antes recarregava a lista inteira.
+- Encontros em LOTES de 30 (`deck_left`); app busca o próximo lote quando
+  faltam ≤6 cards.
+- Fotos de perfil (lista e Encontros) pelo proxy wsrv (~12KB vs ~230KB);
+  se o proxy falhar, `<img>` cai pra original sozinho.
+- TESTE DE CARGA (330 chats, 400 leads c/ conversas, 60 simultâneos): versão
+  que travou 2,0s mediana na lista vs nova 0,46s; 1 abertura = 11–13
+  consultas (antes ~2.000). Script em scratchpad (load.js) — refazer a cada
+  mudança grande.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);

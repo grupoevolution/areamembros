@@ -92,7 +92,12 @@ router.get('/encounters/state', optionalUser, async (req, res) => {
         const rnd = (cid) => parseInt(crypto.createHash('md5').update(id.key + ':' + cid).digest('hex').slice(0, 8), 16);
         const pinned = chats.filter(c => (c.enc_order | 0) !== 0);
         const rest = chats.filter(c => (c.enc_order | 0) === 0).sort((a, b) => rnd(a.id) - rnd(b.id));
-        const deck = pinned.concat(rest).map(c => cardOf(c, id.key, cfg));
+        // LOTES: manda só os próximos 30 cards (o app pede mais quando faltam
+        // poucos). Com 300+ perfis, mandar tudo pesava no servidor e no
+        // celular (e o aviso de curtidas consulta isso a cada 45s).
+        const fullDeck = pinned.concat(rest);
+        const deck = fullDeck.slice(0, 30).map(c => cardOf(c, id.key, cfg));
+        const deckLeft = fullDeck.length;
 
         // curtidas recebidas (entregues) + matches
         const { rows: likes } = await db.query(
@@ -121,6 +126,7 @@ router.get('/encounters/state', optionalUser, async (req, res) => {
             received,
             unseen: received.filter(r => !r.seen).length,
             deck,
+            deck_left: deckLeft,
         });
     } catch (err) {
         logger.error('[encontros] state:', err);
