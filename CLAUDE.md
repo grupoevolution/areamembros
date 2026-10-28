@@ -460,6 +460,21 @@ posts/dia, 17 VIP na semana (só o último do dia das modelos "ricas").
   "Julia", "Amanda chat", "Karen chat", "rebeca", "Valeria chat",
   "Vanessa chat", "Vanuza chat". O endpoint bunny-folder só lista IMAGENS.
 
+**28/10 — pronto pra deploy (testado local):**
+- Convite da roleta: texto vazio = compartilha SÓ o link; cartão "Clique pra entrar".
+  APÓS O DEPLOY: no painel (Roleta) apagar o texto do convite e trocar "Toca"→"Clique".
+- Relatório de notificações v2 (Growth): por dia, ranking por tipo, inscritos/instalados
+  e "vendas após abrir" (compra do mesmo e-mail até 24h depois de tocar; tabela
+  `push_opens`, o sw.js manda o endpoint no beacon de abertura). Conta só a partir do deploy.
+- Tempo por aba (Growth): app soma 5s em 5s a aba visível, envia em lote (`/api/user/tab-time`
+  → `tab_time_daily`, por dia×aba, nada por lead).
+- Métricas do funil: "compradores" só conta compra real (webhook); consultas na fila de
+  relatórios + índice funil×data.
+- Foto do Suporte VIP trocada no painel (antiga: https://a.arquivosvip.site/m/SOrnlxz.png).
+- Relatório completo do funil chatonline2 (Raquel/Eliene/Carolina, Cleia→Carol, grupos,
+  recepção VIP, 22 furos, ideias de A/B): docs/RELATORIO-FUNIL-CHATONLINE2.md.
+  Direção do dono: toda venda nasce no CHAT; testes A/B de roteiro; meta 5% em 10–15 dias.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
