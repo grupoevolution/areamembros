@@ -398,6 +398,16 @@ NOTIFICAÇÃO na tela de bloqueio; as 71 explícitas ficaram de fora até o dono
 decidir) + 68 de corpo/biquíni da pasta de apresentação. Total no Encontros:
 315 perfis, sem foto repetida. Dono vai ligar o Encontros.
 
+**INCIDENTE 27/10 (manhã) — app travado após criar 250 chats:** a lista de
+conversas fazia 5–6 consultas POR CHAT (~2 mil por abertura com 330 chats) e
+esgotou o banco (conversas/grupos levando minutos). Ação imediata (painel):
+os chats novos (ids 94+) viraram `listed=false` — SAEM da lista de conversas
+mas CONTINUAM no Encontros (o baralho não depende de `listed`; quem der match
+ou conversar vê a conversa). Correção no código (`GET /chats`): pré-carga das
+sessões do lead numa consulta só, "é VIP?"/planos 1x por produto, matches do
+Encontros numa consulta só — resultado idêntico, sem consulta por chat sem
+sessão. REGRA: antes de criar chats em massa, conferir o custo da lista.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);

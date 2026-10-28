@@ -838,13 +838,59 @@ router.get('/chats', optionalUser, async (req, res) => {
         // (antes era 1 por 1 → ~150 consultas em fila por abertura da lista).
         // A ordem final é a mesma (cada uma grava na sua posição).
         const slots = new Array(chats.length).fill(null);
+        // ── PRÉ-CARGA (1 consulta pra todos, em vez de 5–6 POR CHAT) ─────────
+        // Com 300+ chats a lista fazia ~2 mil consultas por abertura e travou o
+        // banco inteiro (27/10). Agora: sessões do lead de uma vez só (chat sem
+        // sessão nem consulta), "é VIP?" e "planos" 1x por produto, e os
+        // matches do Encontros numa consulta só.
+        const memoOwns = new Map(), memoUnlock = new Map();
+        const ownsFast = (c) => {
+            const k = (c.product_id || 0);
+            if (!memoOwns.has(k)) memoOwns.set(k, ownsChatVip(ident.email, c));
+            return memoOwns.get(k);
+        };
+        const unlockFast = async (c) => {
+            const pid = await chatUnlockProductId(c);
+            const k = pid + '|' + (c.checkout_url || '');
+            if (!memoUnlock.has(k)) memoUnlock.set(k, loadUnlock(pid, c.checkout_url));
+            const u = await memoUnlock.get(k);
+            return u ? JSON.parse(JSON.stringify(u)) : u; // cópia: cada chat marca o seu .custom
+        };
+        const chatIds = chats.map(c => c.id);
+        let sessChats = null; // Set dos chats com sessão deste lead (null = não deu pra pré-carregar)
+        try {
+            const { rows: sr } = await db.query(
+                `SELECT DISTINCT chat_id FROM chat_sessions
+                  WHERE chat_id = ANY($3::int[])
+                    AND ( ($1::text IS NOT NULL AND LOWER(customer_email) = $1)
+                       OR ($2::text IS NOT NULL AND visitor_id = $2) )`,
+                [ident.email, ident.visitor, chatIds]);
+            sessChats = new Set(sr.map(r => r.chat_id));
+        } catch (_) {}
+        let encFree = null;
+        try {
+            const keys = [];
+            if (ident.email) keys.push(ident.email);
+            if (ident.visitor) keys.push('v:' + ident.visitor);
+            encFree = new Map();
+            if (keys.length) {
+                const { rows: er } = await db.query(
+                    `SELECT chat_id, COALESCE(MAX(free_msgs_left), 0)::int AS n FROM encounter_likes
+                      WHERE identity = ANY($1::text[]) AND is_match = true AND delivered_at IS NOT NULL
+                      GROUP BY chat_id`, [keys]);
+                er.forEach(r => encFree.set(r.chat_id, r.n));
+            }
+        } catch (_) { encFree = null; }
         const buildOne = async (c, idx) => {
-            const owns = await ownsChatVip(ident.email, c);
+            const owns = await ownsFast(c);
             // conversa marcada pra sumir depois que o cliente vira membro
             // (VIP daquela conversa OU Premium) — some mesmo se já conversou.
             if (c.hide_when_member && (owns || isPremium)) return;
             const perm = permissions(c, owns, ident);
-            await applyEncPass(perm, ident, c.id);
+            if (encFree) {
+                const left = perm.locked ? (encFree.get(c.id) || 0) : 0;
+                if (left > 0) { perm.locked = false; perm.can_reply = true; perm.enc_free = left; }
+            } else await applyEncPass(perm, ident, c.id);
             // ISCA "só prévia": pro não-VIP, trava a conversa (tocar → popup, não
             // abre) MAS deixa a prévia da mensagem VISÍVEL na lista (o `teaser`
             // avisa o app pra não borrar). Pro VIP, abre normal.
@@ -852,7 +898,7 @@ router.get('/chats', optionalUser, async (req, res) => {
             if (isTeaser) perm.locked = true;
             // enriquece o desbloqueio com produto + planos (banner VIP rico)
             if (perm.locked) {
-                perm.unlock = await loadUnlock(await chatUnlockProductId(c), c.checkout_url);
+                perm.unlock = await unlockFast(c);
                 if (perm.unlock && c.product_id) perm.unlock.custom = true;
             }
             // RODÍZIO: estado online desta conversa (null = sempre online)
@@ -864,7 +910,9 @@ router.get('/chats', optionalUser, async (req, res) => {
             // preview da última mensagem + não-lidas (bot, após last_seen_at)
             let last = null;
             let unread = 0;
-            const session = await findOrCreateSession(c.id, ident, false);
+            // sem sessão pré-carregada → não existe sessão (pula a consulta)
+            const session = (sessChats && !sessChats.has(c.id) && !(c.auto_start_minutes > 0))
+                ? null : await findOrCreateSession(c.id, ident, false);
             if (session) {
                 // última mensagem + não-lidas numa consulta só
                 const { rows: lm } = await db.query(
