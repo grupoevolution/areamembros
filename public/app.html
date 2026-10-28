@@ -24446,6 +24446,8 @@ window.Roulette = (function () {
             try { if (window.MVDiscount && MVDiscount.status) ds = MVDiscount.status(); } catch (_) {}
             if (ds.st === 'open' || ds.st === 'pending') return again(5000);
             if (ds.st === 'closed' && Date.now() - ds.at < 40000) return again(40000 - (Date.now() - ds.at) + 200);
+            // sem desconto: ~30s depois da volta (o maybeShow ainda soma ~5s do painel)
+            if (ds.st === 'none' && Date.now() - started < 25000) return again(25000 - (Date.now() - started) + 200);
             if (busyScreen()) return again(8000);
             // RE-ARMA o gatilho: o do catálogo já rodou nesta carga e deixava
             // `armed` travado — o retorno do checkout nunca disparava. O "1x

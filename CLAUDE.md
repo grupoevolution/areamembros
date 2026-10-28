@@ -475,6 +475,15 @@ posts/dia, 17 VIP na semana (só o último do dia das modelos "ricas").
   recepção VIP, 22 furos, ideias de A/B): docs/RELATORIO-FUNIL-CHATONLINE2.md.
   Direção do dono: toda venda nasce no CHAT; testes A/B de roteiro; meta 5% em 10–15 dias.
 
+**28/10 (tarde) — pronto pra deploy (testado local):**
+- Checkout Kirvano abre com o e-mail do lead preenchido (`?customer.email=`, `MV_withEmail`
+  no app; outros nomes de parâmetro a Kirvano ignora). Dono desligou o "confirme seu e-mail".
+- Volta do checkout: DESCONTO primeiro; roleta ~40s depois que ele fecha o desconto
+  (sem desconto: ~30s). Roleta espera se ele está num grupo/planos/chamada (`MVDiscount.status`).
+- Lista de conversas: lead do funil que deu e-mail e ainda não comprou continua vendo as
+  conversas do funil (via `funnel_visits`); após a 1ª compra real só as que ele usou.
+- Pressel: fica como está (decisão do dono).
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
