@@ -24190,11 +24190,12 @@ window.Roulette = (function () {
     }
 
     function shareText() {
-        return S.shareText || 'Te dei 1 giro grátis nessa roleta 🎰 Eu acabei de ganhar uma chamada de vídeo. Entra pelo meu link e resgata seu giro grátis:';
+        // vazio = só o link (o cartão com foto do WhatsApp faz a "venda")
+        return typeof S.shareText === 'string' ? S.shareText : '';
     }
     function share() {
         api('/api/user/roulette/share', {}).catch(function () {});   // só conta no painel
-        var msg = shareText() + ' ' + shareLink();
+        var msg = shareText() ? shareText() + ' ' + shareLink() : shareLink();
         // 1º: folha de compartilhar do celular (lead escolhe WhatsApp, contato ou
         // grupo). Texto e link vão JUNTOS em `text` — com o link em `url`
         // separado o iPhone descartava o texto.
@@ -24228,7 +24229,7 @@ window.Roulette = (function () {
             S.enabled = (d.success === true && d.enabled === true);
             S.spins = d.spins || 0;
             S.ref = d.ref_code || S.ref;
-            if (d.share_text) S.shareText = d.share_text;
+            if (typeof d.share_text === 'string') S.shareText = d.share_text;
             readRef(d);
             S.pending = d.pending_call || null;
             if (cb) cb(d);
@@ -24318,7 +24319,7 @@ window.Roulette = (function () {
             S.enabled = true;
             S.spins = d.spins || 0;
             S.ref = d.ref_code || null;
-            if (d.share_text) S.shareText = d.share_text;
+            if (typeof d.share_text === 'string') S.shareText = d.share_text;
             readRef(d);
             S.pending = d.pending_call || null;
             try { banner(); } catch (_) {}
