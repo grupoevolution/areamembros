@@ -441,16 +441,24 @@ Rodapé único: Início · Conversas · Encontros (centro) · Vídeos · Minhas
 Compras (Perfil dentro). "Tela com temporizador" que o dono viu com o app
 lento: NÃO reproduzida (nem com servidor atrasado 4s) — pedir print.
 
-**Rotina de STATUS (27/10, refeita a pedido do dono, pelo painel):** +420
-status semanais (`chat_status_schedule`, repete toda semana; ciclo 15/21 dias
-NÃO existe). 15 modelos/dia, ~60 posts/dia: cada modelo posta 1 a 7 stories
-(2×1, 2×2, 2×3, 3×4, 2×5, 2×6, 2×7), espalhados no dia: manhã `bom-dia`,
-almoço `trabalho`, tarde `academia`, noite apresentação/Tinder; ~12% texto.
-VIP = MINORIA (15%, decisão do dono: "momento crucial"): só quem posta 4+
-ganha 1 VIP, o ÚLTIMO do dia, 20h–23h30 (foto `sexy`/`boa-noite` ou vídeo
-curto da coleção Stream "PRIVE"). Fotos abertas sem nudez, sem repetir na
-semana. Trava VIP exige `story_vip_product_id = 8` + checkout da Laiane
-(setado nas modelos com VIP). Os 33 status antigos continuam.
+**Rotina de STATUS (28/10, 3ª versão — aprovada pelo dono):** as versões
+anteriores ficaram RUINS (fotos de mulheres diferentes na mesma modelo) e
+foram apagadas. REGRA: os stories de uma modelo têm de parecer DA MESMA
+PESSOA. Hoje: 215 status semanais (+33 antigos), 13–15 modelos/dia, ~30
+posts/dia, 17 VIP na semana (só o último do dia das modelos "ricas").
+- Modelos "ricas" (4–5 stories/dia, 2 dias por semana): 8 perfis NOVOS
+  (ids 344–351: Adriane 51, Cris 44, Regina 46, Josi 44, Karen 29, Leti 23,
+  Roberta 34, Yasmin 24 — cópias do 93, listed=false, Encontros ligado) com
+  foto de perfil e stories da pasta Bunny "Grupo FREE/STATUS/<NOME>" (fotos
+  já com texto escrito; a pasta DENISE diz "Regina" na foto). + Helena (139):
+  1 dia com fotos da pasta "Helena" (trânsito, lanche, almoço, pôr do sol…).
+- Demais modelos (listadas): 1–2 posts combinando a PRÓPRIA foto de perfil,
+  texto e fotos SEM ROSTO (academia/trabalho/cama/café, ~40 escolhidas
+  olhando das pastas GRUPO VIP). Nunca rosto de outra mulher.
+- Pastas de modelo no Bunny (nome exato importa): "Grupo FREE" (1782 fotos,
+  maioria pessoas/explícitas), "Grupo FREE/STATUS/…", "Helena", "fab",
+  "Julia", "Amanda chat", "Karen chat", "rebeca", "Valeria chat",
+  "Vanessa chat", "Vanuza chat". O endpoint bunny-folder só lista IMAGENS.
 
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
