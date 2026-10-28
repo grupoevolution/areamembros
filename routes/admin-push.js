@@ -344,7 +344,7 @@ router.get('/ops', requireAdmin, async (req, res) => {
 router.post('/ops/test', requireAdmin, async (req, res) => {
     try {
         const sent = await require('../lib/ops-monitor').notify('test', '🔔 Teste do alarme',
-            'Se você recebeu isto, o alarme de lentidão vai chegar no seu celular.', null);
+            'Se você recebeu isto pelo Argos, o alarme de lentidão está funcionando.', null);
         return res.json({ success: true, sent });
     } catch (err) {
         return res.status(500).json({ success: false });

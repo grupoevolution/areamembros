@@ -411,9 +411,14 @@ sessão. REGRA: antes de criar chats em massa, conferir o custo da lista.
 **Performance pós-incidente (27/10 noite) — pronto pra deploy:**
 - ALARME DE LENTIDÃO (`lib/ops-monitor.js`): mede a cada minuto tempo das
   rotas do app, lista de conversas, fila do banco, erros, atraso do servidor;
-  2 min ruins → push "⚠️ App lento agora" pros e-mails do painel
-  (Configurações do App → Alarme; `gamification_config.ops_alerts`); 3 min
-  bons → "✅ normalizado"; histórico em `ops_alerts`.
+  2 min ruins → grava "⚠️ App lento agora" em `ops_alerts`; 3 min bons →
+  "✅ normalizado". QUEM AVISA O DONO É O ARGOS (decisão dele: nada de e-mail/
+  login no app): `radar-trafego/lib/appwatch.js` lê `ops_alerts` (conexão só
+  leitura) e ainda testa o app DE FORA a cada minuto (fora do ar/lento) →
+  push no app do Argos (categoria "Área de membros lenta ou fora do ar").
+  Medição usa `req.originalUrl` (no 'finish' o req.path vem sem prefixo).
+- Produção 27/10: lista com 65 modelos (`chat_list.size`) e rodízio de online
+  com 190 ao mesmo tempo (era 55 de 313 → ~11 online numa lista de 65).
 - RODÍZIO da lista de conversas: cada lead vê N modelos (painel, padrão 40;
   `chat_list.size`) sorteadas por lead+dia entre `listed OR enc_enabled`;
   fixas = Suporte + conversas que ele já teve. Chats ativos em memória 30s

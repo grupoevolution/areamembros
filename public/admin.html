@@ -7825,14 +7825,11 @@ a { color: inherit; text-decoration: none; }
                 <div class="form-card" style="padding:20px;margin-bottom:18px;">
                     <div class="form-card-head" style="margin-bottom:10px;">
                         <div class="form-card-title">Alarme de lentidão</div>
-                        <div class="form-card-sub">O servidor se mede a cada minuto. Se o app ficar lento ou o banco engasgar por 2 minutos seguidos, chega uma NOTIFICAÇÃO no celular de quem está abaixo (abra o app com esse e-mail e ative as notificações). Avisa de novo quando normalizar. No máximo 1 alerta a cada 30 min.</div>
+                        <div class="form-card-sub">O servidor se mede a cada minuto. Se o app ficar lento ou o banco engasgar por 2 minutos seguidos, o aviso chega no seu celular pelo <b>ARGOS</b> (ele também testa o app de fora e avisa se cair). Avisa de novo quando normalizar. No Argos: Notificações → "Área de membros lenta ou fora do ar".</div>
                     </div>
                     <div id="opsNow" style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">Carregando…</div>
-                    <label class="form-label">E-mails que recebem o alerta</label>
-                    <input type="text" class="form-input" id="opsEmails" placeholder="voce@email.com, socio@email.com">
-                    <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center;">
-                        <button class="btn-primary" style="padding:7px 14px;font-size:12px;" onclick="saveOpsAlerts()">Salvar</button>
-                        <button class="btn-secondary" style="padding:7px 14px;font-size:12px;" onclick="testOpsAlert()">Enviar alerta de teste</button>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                        <button class="btn-secondary" style="padding:7px 14px;font-size:12px;" onclick="testOpsAlert()">Enviar alerta de teste (chega pelo Argos em até 1 min)</button>
                         <span id="opsSt" style="font-size:12px;color:var(--text-dim);"></span>
                     </div>
                     <div id="opsHist" style="margin-top:14px;font-size:12.5px;"></div>
@@ -12252,8 +12249,6 @@ async function loadOpsAlerts() {
     try {
         const r = await fetch('/api/admin/push/ops', { credentials: 'include' }).then(r => r.json());
         if (!r.success) { now.textContent = 'Erro ao carregar.'; return; }
-        const em = r.config && r.config.emails;
-        document.getElementById('opsEmails').value = Array.isArray(em) ? em.join(', ') : (em || '');
         const h = (r.monitor.history || []).slice(-1)[0];
         const sec = (ms) => (ms / 1000).toFixed(1).replace('.', ',') + 's';
         now.innerHTML = r.monitor.alerting
@@ -12266,19 +12261,12 @@ async function loadOpsAlerts() {
             : '<span style="color:var(--text-dim);">Nenhum aviso ainda.</span>';
     } catch (_) { now.textContent = 'Erro de rede.'; }
 }
-async function saveOpsAlerts() {
-    const st = document.getElementById('opsSt');
-    const emails = (document.getElementById('opsEmails').value || '').split(/[\s,;]+/).map(x => x.trim()).filter(x => /@/.test(x));
-    const res = await _saveGamification('ops_alerts', { enabled: true, emails });
-    st.textContent = res.ok ? 'Salvo' : ('Erro: ' + (res.error || ''));
-    setTimeout(() => { st.textContent = ''; }, 3000);
-}
 async function testOpsAlert() {
     const st = document.getElementById('opsSt');
     st.textContent = 'Enviando…';
     try {
         const r = await fetch('/api/admin/push/ops/test', { method: 'POST', credentials: 'include' }).then(r => r.json());
-        st.textContent = r.success ? (r.sent ? 'Enviado pra ' + r.sent + ' aparelho(s)' : 'Nenhum aparelho com notificação ativa pra esses e-mails (salve os e-mails e ative as notificações no app)') : 'Erro';
+        st.textContent = r.success ? 'Gravado — o Argos manda no seu celular em até 1 minuto' : 'Erro';
         loadOpsAlerts();
     } catch (_) { st.textContent = 'Erro de rede.'; }
 }

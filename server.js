@@ -175,7 +175,9 @@ app.use((req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {
         const duration = Date.now() - start;
-        try { require('./lib/ops-monitor').record(req.path, res.statusCode, duration); } catch (_) {}
+        // originalUrl: no 'finish' o req.path já vem SEM o prefixo do router
+        // (ex.: '/chats' em vez de '/api/user/chats') — o alarme ignorava tudo
+        try { require('./lib/ops-monitor').record(String(req.originalUrl || '').split('?')[0], res.statusCode, duration); } catch (_) {}
         const level = res.statusCode >= 500 ? 'error' 
                     : res.statusCode >= 400 ? 'warn' 
                     : 'debug';
