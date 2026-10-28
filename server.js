@@ -175,6 +175,7 @@ app.use((req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {
         const duration = Date.now() - start;
+        try { require('./lib/ops-monitor').record(req.path, res.statusCode, duration); } catch (_) {}
         const level = res.statusCode >= 500 ? 'error' 
                     : res.statusCode >= 400 ? 'warn' 
                     : 'debug';
@@ -680,6 +681,7 @@ let server;
 
     // Worker de push agendado do funil (envia mesmo com o app do cliente fechado)
     try {
+        try { require('./lib/ops-monitor').start(); } catch (err) { logger.warn('ops-monitor não iniciou: ' + err.message); }
         const { startPushWorker } = require('./lib/push-worker');
         startPushWorker();
     } catch (err) {

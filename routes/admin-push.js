@@ -329,6 +329,28 @@ router.get('/bar-stats', requireAdmin, async (req, res) => {
     }
 });
 
+// ── Alarme de lentidão (lib/ops-monitor.js) ──────────────────────────────
+router.get('/ops', requireAdmin, async (req, res) => {
+    try {
+        const mon = require('../lib/ops-monitor').status();
+        const { rows: alerts } = await db.query(
+            `SELECT id, kind, title, body, created_at FROM ops_alerts ORDER BY id DESC LIMIT 20`).catch(() => ({ rows: [] }));
+        const { rows: cfg } = await db.query(`SELECT value FROM gamification_config WHERE key = 'ops_alerts'`);
+        return res.json({ success: true, monitor: mon, alerts, config: (cfg[0] && cfg[0].value) || {} });
+    } catch (err) {
+        return res.status(500).json({ success: false });
+    }
+});
+router.post('/ops/test', requireAdmin, async (req, res) => {
+    try {
+        const sent = await require('../lib/ops-monitor').notify('test', '🔔 Teste do alarme',
+            'Se você recebeu isto, o alarme de lentidão vai chegar no seu celular.', null);
+        return res.json({ success: true, sent });
+    } catch (err) {
+        return res.status(500).json({ success: false });
+    }
+});
+
 router.get('/install-steps', requireAdmin, async (req, res) => {
     try {
         const { rows } = await db.query(`SELECT * FROM install_push_steps ORDER BY delay_minutes, id`);
