@@ -420,6 +420,84 @@ router.get('/report', requireAdmin, async (req, res) => {
     }
 });
 
+// RELATÓRIO v2 (28/10) — período em dias (Brasília), tudo pela fila de
+// relatórios (db.reportQuery), nunca pesa o app:
+//   days    — por dia: enviadas, exibidas, abertas, vendas após abrir, app instalado, novos inscritos
+//   ranking — por tipo (origem + item): mesmas colunas, ordenado por vendas/abertura
+//   totals  — inscritos ativos hoje (aparelhos que recebem push)
+// "Venda após abrir" = compra (webhook) do MESMO e-mail até 24h depois de
+// tocar numa notificação; se abriu várias, conta pra ÚLTIMA antes da compra.
+router.get('/report-v2', requireAdmin, async (req, res) => {
+    const days = Math.max(1, Math.min(90, parseInt(req.query.days, 10) || 7));
+    const TZ = 'America/Sao_Paulo';
+    const startSql = `((((NOW() AT TIME ZONE '${TZ}')::date - ${days - 1}))::timestamp AT TIME ZONE '${TZ}')`;
+    const startDay = `((NOW() AT TIME ZONE '${TZ}')::date - ${days - 1})`;
+    const salesCte = `
+        WITH o AS (
+            SELECT pid, email, opened_at FROM push_opens
+            WHERE opened_at >= ${startSql} - INTERVAL '24 hours' AND email IS NOT NULL
+        ), s AS (
+            SELECT DISTINCT ON (COALESCE(ua.sale_id, ua.id::text))
+                   o.pid, ua.created_at, COALESCE(ua.sale_amount, 0)::float AS amount
+            FROM user_access ua
+            JOIN o ON LOWER(ua.email) = o.email
+                  AND ua.created_at > o.opened_at
+                  AND ua.created_at <= o.opened_at + INTERVAL '24 hours'
+            WHERE ua.granted_by = 'webhook' AND ua.created_at >= ${startSql}
+            ORDER BY COALESCE(ua.sale_id, ua.id::text), o.opened_at DESC
+        )`;
+    const safe = (p) => p.then(r => r.rows).catch(err => { logger.warn('[push report-v2] ' + err.message); return null; });
+    try {
+        const [daily, salesDay, installs, subsNew, ranking, salesRank, subsTotal] = await Promise.all([
+            safe(db.reportQuery(`
+                SELECT day::text AS day, SUM(accepted)::int AS sent, SUM(delivered)::int AS shown, SUM(opened)::int AS opened
+                FROM push_log WHERE day >= ${startDay} GROUP BY day`)),
+            safe(db.reportQuery(`${salesCte}
+                SELECT (created_at AT TIME ZONE '${TZ}')::date::text AS day, COUNT(*)::int AS sales, SUM(amount)::float AS revenue
+                FROM s GROUP BY 1`)),
+            safe(db.reportQuery(`
+                SELECT (created_at AT TIME ZONE '${TZ}')::date::text AS day, COUNT(*)::int AS n
+                FROM tracking_events WHERE event_type = 'pwa_app_installed' AND created_at >= ${startSql} GROUP BY 1`)),
+            safe(db.reportQuery(`
+                SELECT (created_at AT TIME ZONE '${TZ}')::date::text AS day, COUNT(*)::int AS n
+                FROM push_subscriptions WHERE created_at >= ${startSql} GROUP BY 1`)),
+            safe(db.reportQuery(`
+                SELECT source, ref_id, MAX(title) AS title, COUNT(DISTINCT day)::int AS days,
+                       SUM(accepted)::int AS sent, SUM(delivered)::int AS shown, SUM(opened)::int AS opened,
+                       ARRAY_AGG(id) AS ids
+                FROM push_log WHERE day >= ${startDay}
+                GROUP BY source, ref_id, CASE WHEN ref_id IS NULL THEN title END`)),
+            safe(db.reportQuery(`${salesCte}
+                SELECT pid, COUNT(*)::int AS sales, SUM(amount)::float AS revenue FROM s GROUP BY pid`)),
+            safe(db.reportQuery(`SELECT COUNT(*)::int AS n FROM push_subscriptions`)),
+        ]);
+        const failed = [daily, salesDay, installs, subsNew, ranking, salesRank, subsTotal].some(x => x === null);
+
+        // por dia (preenche dias vazios)
+        const byDay = {};
+        const ensure = (d) => (byDay[d] = byDay[d] || { day: d, sent: 0, shown: 0, opened: 0, sales: 0, revenue: 0, installs: 0, new_subs: 0 });
+        (daily || []).forEach(r => Object.assign(ensure(r.day), { sent: r.sent, shown: r.shown, opened: r.opened }));
+        (salesDay || []).forEach(r => Object.assign(ensure(r.day), { sales: r.sales, revenue: r.revenue }));
+        (installs || []).forEach(r => { ensure(r.day).installs = r.n; });
+        (subsNew || []).forEach(r => { ensure(r.day).new_subs = r.n; });
+        const dayRows = Object.values(byDay).sort((a, b) => b.day.localeCompare(a.day));
+
+        // ranking: soma as vendas dos pids de cada grupo
+        const salesByPid = {};
+        (salesRank || []).forEach(r => { salesByPid[r.pid] = r; });
+        const rank = (ranking || []).map(r => {
+            let sales = 0, revenue = 0;
+            (r.ids || []).forEach(id => { const s = salesByPid[id]; if (s) { sales += s.sales; revenue += s.revenue; } });
+            return { source: r.source, ref_id: r.ref_id, title: r.title, days: r.days, sent: r.sent, shown: r.shown, opened: r.opened, sales, revenue };
+        }).sort((a, b) => (b.sales - a.sales) || (b.opened - a.opened));
+
+        return res.json({ success: true, days, failed, subscribers: subsTotal && subsTotal[0] ? subsTotal[0].n : null, daily: dayRows, ranking: rank });
+    } catch (err) {
+        logger.error('[push report-v2]', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
 router.get('/subscribers', requireAdmin, async (req, res) => {
     try {
         const { rows } = await db.query(`

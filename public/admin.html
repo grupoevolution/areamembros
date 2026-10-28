@@ -5270,7 +5270,13 @@ a { color: inherit; text-decoration: none; }
                 <div class="form-card" style="padding:20px;margin-bottom:18px;">
                     <div class="form-card-head" style="margin-bottom:6px;">
                         <div class="form-card-title">📊 Relatório de notificações</div>
-                        <div class="form-card-sub">O funil de cada disparo: <b>Alvos</b> = aparelhos que tentamos alcançar · <b>Aceitos</b> = o Google/Apple recebeu pra entregar · <b>Exibidos</b> = apareceu de verdade na tela do aparelho · <b>Abertos</b> = o cliente tocou. Fontes automáticas (rotina, boas-vindas, funil, chats) agregam por dia.</div>
+                        <div class="form-card-sub"><b>Enviadas</b> = o Google/Apple aceitou entregar · <b>Exibidas</b> = apareceu na tela do aparelho · <b>Abertas</b> = o cliente tocou · <b>Vendas</b> = o mesmo cliente comprou até 24h depois de abrir (conta pra última notificação aberta antes da compra).</div>
+                    </div>
+                    <div id="pushRepDays" style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+                        <button type="button" class="btn-secondary" data-d="1" onclick="loadPushReport(1)">Hoje</button>
+                        <button type="button" class="btn-secondary" data-d="7" onclick="loadPushReport(7)">7 dias</button>
+                        <button type="button" class="btn-secondary" data-d="15" onclick="loadPushReport(15)">15 dias</button>
+                        <button type="button" class="btn-secondary" data-d="30" onclick="loadPushReport(30)">30 dias</button>
                     </div>
                     <div id="pushReport" style="margin-top:12px;font-size:12.5px;color:var(--text-muted);overflow-x:auto;">Carregando…</div>
                 </div>
@@ -12771,35 +12777,68 @@ async function loadGrowth() {
 // ── RELATÓRIO DE NOTIFICAÇÕES (push_log) ────────────────────────────────────
 const PUSH_SOURCES = {
     manual: '📤 Push manual', broadcast: '📢 Broadcast', rotina: '⏰ Rotina diária', pagamento: 'Pagamento confirmado', pix_lembrete: 'Lembrete do Pix',
-    boasvindas: '🚀 Boas-vindas', funil: '🧲 Funil', chat: '💬 Chats',
+    boasvindas: '🚀 Boas-vindas', funil: '🧲 Funil', chat: '💬 Chats', sistema: 'Sistema',
 };
-async function loadPushReport() {
+let _pushRepDays = 7;
+async function loadPushReport(days) {
     const box = document.getElementById('pushReport');
     if (!box) return;
+    if (days) _pushRepDays = days;
+    document.querySelectorAll('#pushRepDays button').forEach(b => {
+        const on = +b.dataset.d === _pushRepDays;
+        b.style.background = on ? 'var(--accent, #e50914)' : ''; b.style.color = on ? '#fff' : '';
+    });
+    box.innerHTML = 'Carregando…';
     try {
-        const r = await fetch('/api/admin/push/report', { credentials: 'include' }).then(r => r.json());
+        const r = await fetch('/api/admin/push/report-v2?days=' + _pushRepDays, { credentials: 'include' }).then(r => r.json());
         if (!r.success) { box.textContent = 'Erro ao carregar.'; return; }
-        if (!r.rows.length) { box.innerHTML = '<span style="color:var(--text-dim);">Nenhum disparo registrado ainda — os próximos pushes aparecem aqui.</span>'; return; }
-        const pct = (a, b) => b > 0 ? Math.round(a / b * 100) + '%' : '—';
+        const n = (v) => (v || 0).toLocaleString('pt-BR');
+        const brl = (v) => 'R$ ' + (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const pct = (a, b) => b > 0 ? Math.round(a / b * 1000) / 10 + '%' : '—';
         const day = (d) => { const s = String(d).slice(0, 10).split('-'); return s[2] + '/' + s[1]; };
-        box.innerHTML = '<table style="width:100%;border-collapse:collapse;min-width:640px;">'
-            + '<tr style="text-align:left;color:var(--text-dim);font-size:11px;text-transform:uppercase;letter-spacing:.06em;">'
-            + '<th style="padding:6px 8px;">Data</th><th style="padding:6px 8px;">Origem</th><th style="padding:6px 8px;">Título</th>'
-            + '<th style="padding:6px 8px;text-align:right;">Alvos</th><th style="padding:6px 8px;text-align:right;">Aceitos</th>'
-            + '<th style="padding:6px 8px;text-align:right;">Exibidos</th><th style="padding:6px 8px;text-align:right;">Abertos</th>'
-            + '<th style="padding:6px 8px;text-align:right;">Abertura</th></tr>'
-            + r.rows.map(x => '<tr style="border-top:1px solid var(--border);">'
-                + '<td style="padding:7px 8px;white-space:nowrap;">' + day(x.day) + '</td>'
-                + '<td style="padding:7px 8px;white-space:nowrap;">' + (PUSH_SOURCES[x.source] || x.source) + '</td>'
-                + '<td style="padding:7px 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);">' + escHtmlAdmin(x.title || '—') + '</td>'
-                + '<td style="padding:7px 8px;text-align:right;">' + x.targets + '</td>'
-                + '<td style="padding:7px 8px;text-align:right;">' + x.accepted + '</td>'
-                + '<td style="padding:7px 8px;text-align:right;color:#4CD964;font-weight:700;">' + x.delivered + '</td>'
-                + '<td style="padding:7px 8px;text-align:right;color:#f5c542;font-weight:700;">' + x.opened + '</td>'
-                + '<td style="padding:7px 8px;text-align:right;font-weight:700;">' + pct(x.opened, x.delivered || x.accepted) + '</td>'
-                + '</tr>').join('')
-            + '</table>'
-            + '<div style="font-size:11px;color:var(--text-dim);margin-top:8px;">"Exibidos"/"Abertos" dependem do app atualizado no aparelho do cliente (o service worker novo reporta sozinho) — os números crescem conforme a base atualiza.</div>';
+        const T = r.daily.reduce((t, x) => { ['sent', 'shown', 'opened', 'sales', 'revenue', 'installs', 'new_subs'].forEach(k => t[k] += x[k] || 0); return t; },
+            { sent: 0, shown: 0, opened: 0, sales: 0, revenue: 0, installs: 0, new_subs: 0 });
+        const tile = (label, val, sub, color) => '<div style="flex:1;min-width:120px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:10px 12px;">'
+            + '<div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-dim);">' + label + '</div>'
+            + '<div style="font-size:20px;font-weight:800;color:' + (color || 'var(--text)') + ';margin-top:2px;">' + val + '</div>'
+            + (sub ? '<div style="font-size:11px;color:var(--text-dim);">' + sub + '</div>' : '') + '</div>';
+        const th = (t, right) => '<th style="padding:6px 8px;' + (right ? 'text-align:right;' : '') + '">' + t + '</th>';
+        const td = (t, st) => '<td style="padding:7px 8px;' + (st || '') + '">' + t + '</td>';
+        const R = 'text-align:right;';
+        const head = '<tr style="text-align:left;color:var(--text-dim);font-size:11px;text-transform:uppercase;letter-spacing:.06em;">';
+        let html = (r.failed ? '<div style="color:#f5c542;margin-bottom:8px;">⚠️ Alguns números não carregaram — tente de novo em instantes.</div>' : '')
+            + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">'
+            + tile('Aparelhos inscritos', r.subscribers == null ? '—' : n(r.subscribers), '+' + n(T.new_subs) + ' no período')
+            + tile('App instalado', n(T.installs), 'no período')
+            + tile('Enviadas', n(T.sent))
+            + tile('Abertas', n(T.opened), pct(T.opened, T.shown || T.sent) + ' de abertura', '#f5c542')
+            + tile('Vendas após abrir', n(T.sales), brl(T.revenue), '#4CD964')
+            + '</div>';
+        // ranking por tipo
+        html += '<div style="font-weight:700;color:var(--text);margin:4px 0 6px;">🏆 Ranking por tipo de notificação</div>';
+        html += r.ranking.length ? '<table style="width:100%;border-collapse:collapse;min-width:680px;">' + head
+            + th('Tipo') + th('Notificação') + th('Enviadas', 1) + th('Exibidas', 1) + th('Abertas', 1) + th('Abertura', 1) + th('Vendas', 1) + th('R$', 1) + '</tr>'
+            + r.ranking.filter(x => x.sent || x.opened).slice(0, 40).map(x => '<tr style="border-top:1px solid var(--border);">'
+                + td(PUSH_SOURCES[x.source] || x.source, 'white-space:nowrap;')
+                + td(escHtmlAdmin(x.title || '—'), 'max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text);')
+                + td(n(x.sent), R) + td(n(x.shown), R)
+                + td(n(x.opened), R + 'color:#f5c542;font-weight:700;')
+                + td(pct(x.opened, x.shown || x.sent), R + 'font-weight:700;')
+                + td(n(x.sales), R + 'color:#4CD964;font-weight:700;')
+                + td(x.revenue ? brl(x.revenue) : '—', R)
+                + '</tr>').join('') + '</table>'
+            : '<div style="color:var(--text-dim);">Nenhuma notificação no período.</div>';
+        // por dia
+        html += '<div style="font-weight:700;color:var(--text);margin:18px 0 6px;">📅 Por dia</div>';
+        html += '<table style="width:100%;border-collapse:collapse;min-width:680px;">' + head
+            + th('Dia') + th('Enviadas', 1) + th('Exibidas', 1) + th('Abertas', 1) + th('Abertura', 1) + th('Vendas', 1) + th('R$', 1) + th('Instalaram', 1) + th('Novos inscritos', 1) + '</tr>'
+            + r.daily.map(x => '<tr style="border-top:1px solid var(--border);">'
+                + td(day(x.day), 'white-space:nowrap;') + td(n(x.sent), R) + td(n(x.shown), R)
+                + td(n(x.opened), R + 'color:#f5c542;font-weight:700;') + td(pct(x.opened, x.shown || x.sent), R + 'font-weight:700;')
+                + td(n(x.sales), R + 'color:#4CD964;font-weight:700;') + td(x.revenue ? brl(x.revenue) : '—', R)
+                + td(n(x.installs), R) + td(n(x.new_subs), R) + '</tr>').join('') + '</table>';
+        html += '<div style="font-size:11px;color:var(--text-dim);margin-top:8px;">"Vendas após abrir" só começa a contar depois deste deploy (antes o sistema não guardava QUEM abriu). Toque no banner dentro do app aberto não conta como abertura.</div>';
+        box.innerHTML = html;
     } catch (_) { box.textContent = 'Erro de rede.'; }
 }
 window.loadPushReport = loadPushReport;

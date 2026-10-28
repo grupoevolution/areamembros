@@ -200,10 +200,14 @@ self.addEventListener('notificationclick', (event) => {
     const pid = event.notification.data?.pid || null;
     // Relatório (aberta) em PARALELO: antes o app só abria DEPOIS desse envio
     // terminar — em 3G fraco o toque parecia morto por segundos.
-    const ack = pid ? fetch('/api/user/push/ack', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pid: pid, kind: 'opened' }), keepalive: true,
-    }).catch(() => {}) : Promise.resolve();
+    // O endpoint da inscrição identifica o aparelho (→ e-mail) pro relatório
+    // de vendas por notificação.
+    const ack = pid ? self.registration.pushManager.getSubscription()
+        .then((s) => s ? s.endpoint : '', () => '')
+        .then((endpoint) => fetch('/api/user/push/ack', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pid: pid, kind: 'opened', endpoint: endpoint }), keepalive: true,
+        })).catch(() => {}) : Promise.resolve();
     event.waitUntil(Promise.all([ack, (async () => {
         const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
         for (const w of wins) {

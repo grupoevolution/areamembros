@@ -2592,6 +2592,15 @@ router.post('/push/ack', async (req, res) => {
         if (!pid || !kind) return res.json({ success: true });
         const col = kind === 'opened' ? 'opened' : 'delivered';
         await db.query(`UPDATE push_log SET ${col} = ${col} + 1 WHERE id = $1`, [pid]);
+        // Abertura: guarda QUEM abriu (e-mail da inscrição do aparelho) pro
+        // relatório ligar notificação → venda. Sem e-mail = só conta.
+        if (kind === 'opened') {
+            const ep = String(req.body?.endpoint || '').slice(0, 1000);
+            db.query(
+                `INSERT INTO push_opens (pid, email)
+                 VALUES ($1, (SELECT LOWER(customer_email) FROM push_subscriptions WHERE $2 <> '' AND endpoint = $2 LIMIT 1))`,
+                [pid, ep]).catch(() => {});
+        }
         return res.json({ success: true });
     } catch (_) {
         return res.json({ success: true });
