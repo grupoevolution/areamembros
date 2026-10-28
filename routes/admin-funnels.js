@@ -319,7 +319,7 @@ router.get('/:id/metrics', requireAdmin, async (req, res) => {
         const dwhere = dc.length ? ('AND ' + dc.join(' AND ')) : '';
 
         // Resumo (funil de conversão)
-        const { rows: [summary] } = await db.query(`
+        const { rows: [summary] } = await db.reportQuery(`
             WITH visits AS (
                 SELECT * FROM funnel_visits fv WHERE fv.funnel_id = $1 ${dwhere}
             ),
@@ -333,14 +333,15 @@ router.get('/:id/metrics', requireAdmin, async (req, res) => {
                 (SELECT COUNT(DISTINCT te.customer_email) FROM tracking_events te
                     JOIN emails e ON LOWER(te.customer_email) = e.email
                     WHERE te.event_type = 'pwa_app_installed')::int AS pwa_installs,
-                (SELECT COUNT(DISTINCT ua.email) FROM user_access ua
-                    JOIN emails e ON LOWER(ua.email) = e.email WHERE ua.status = 'active')::int AS buyers,
+                -- só COMPRA de verdade (webhook): brinde da roleta/presente não conta
+                (SELECT COUNT(DISTINCT LOWER(ua.email)) FROM user_access ua
+                    JOIN emails e ON LOWER(ua.email) = e.email WHERE ua.status = 'active' AND ua.granted_by = 'webhook')::int AS buyers,
                 (SELECT COALESCE(SUM(ua.sale_amount), 0) FROM user_access ua
                     JOIN emails e ON LOWER(ua.email) = e.email WHERE ua.status = 'active' AND ua.granted_by = 'webhook')::numeric AS revenue
         `, params);
 
         // Série por dia
-        const { rows: daily } = await db.query(`
+        const { rows: daily } = await db.reportQuery(`
             SELECT TO_CHAR(visited_at::date, 'YYYY-MM-DD') AS day,
                    COUNT(*)::int AS visits,
                    COUNT(*) FILTER (WHERE converted = true)::int AS emails
@@ -349,7 +350,7 @@ router.get('/:id/metrics', requireAdmin, async (req, res) => {
         `, params);
 
         // Distribuição por HORA (Brasília = UTC-3)
-        const { rows: hourly } = await db.query(`
+        const { rows: hourly } = await db.reportQuery(`
             SELECT EXTRACT(HOUR FROM (visited_at - INTERVAL '3 hours'))::int AS hour, COUNT(*)::int AS visits
             FROM funnel_visits fv WHERE fv.funnel_id = $1 ${dwhere}
             GROUP BY 1 ORDER BY 1
@@ -358,7 +359,7 @@ router.get('/:id/metrics', requireAdmin, async (req, res) => {
         // Progresso no CHAT — conversas vinculadas ao funil (entrada + etapas 'chat')
         let chat_progress = [];
         try {
-            const { rows: cp } = await db.query(`
+            const { rows: cp } = await db.reportQuery(`
                 WITH funnel_chats AS (
                     SELECT entry_chat_id AS chat_id FROM funnels WHERE id = $1 AND entry_chat_id IS NOT NULL
                     UNION
@@ -382,9 +383,9 @@ router.get('/:id/metrics', requireAdmin, async (req, res) => {
         } catch (e) { logger.warn('chat_progress falhou: ' + e.message); }
 
         // Leads recentes com status (colocou email / instalou / comprou)
-        const { rows: leads } = await db.query(`
+        const { rows: leads } = await db.reportQuery(`
             SELECT v.customer_email AS email, v.ip, v.visited_at, v.converted_at,
-                   EXISTS(SELECT 1 FROM user_access ua WHERE LOWER(ua.email) = LOWER(v.customer_email) AND ua.status = 'active') AS bought,
+                   EXISTS(SELECT 1 FROM user_access ua WHERE LOWER(ua.email) = LOWER(v.customer_email) AND ua.status = 'active' AND ua.granted_by = 'webhook') AS bought,
                    EXISTS(SELECT 1 FROM tracking_events te WHERE LOWER(te.customer_email) = LOWER(v.customer_email) AND te.event_type = 'pwa_app_installed') AS installed
             FROM funnel_visits v WHERE v.funnel_id = $1 ${dwhere} AND v.customer_email IS NOT NULL
             ORDER BY v.visited_at DESC LIMIT 60
