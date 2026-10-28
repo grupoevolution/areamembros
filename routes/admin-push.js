@@ -498,6 +498,21 @@ router.get('/report-v2', requireAdmin, async (req, res) => {
     }
 });
 
+// TEMPO POR ABA (28/10) — soma do período por aba (tab_time_daily)
+router.get('/tab-time', requireAdmin, async (req, res) => {
+    const days = Math.max(1, Math.min(90, parseInt(req.query.days, 10) || 7));
+    try {
+        const { rows } = await db.reportQuery(`
+            SELECT tab, SUM(total_ms)::bigint AS ms, SUM(visits)::int AS visits
+            FROM tab_time_daily
+            WHERE day >= ((NOW() AT TIME ZONE 'America/Sao_Paulo')::date - ${days - 1})
+            GROUP BY tab ORDER BY 2 DESC`);
+        return res.json({ success: true, days, rows: rows.map(r => ({ tab: r.tab, ms: Number(r.ms), visits: r.visits })) });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
 router.get('/subscribers', requireAdmin, async (req, res) => {
     try {
         const { rows } = await db.query(`

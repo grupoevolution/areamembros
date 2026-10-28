@@ -24702,5 +24702,43 @@ window.MVMeta = (function () {
     return { init: init, viewContent: viewContent, lead: lead };
 })();
 </script>
+<script>
+// TEMPO POR ABA (28/10): a cada 5s soma 5s na aba que está na tela (só com o
+// app VISÍVEL). Envia o acumulado em 1 pedido quando o app vai pro 2º plano
+// ou a cada 2 min — o servidor só soma por dia×aba (nada por lead).
+(function () {
+    var NAMES = { home: 'inicio', chat: 'conversas', chatconv: 'conversa', groupconv: 'grupo', encounters: 'encontros',
+        tiktok: 'videos', library: 'compras', 'library-content': 'compras', profile: 'perfil', brindes: 'brindes',
+        product: 'produto', checkout: 'checkout', explore: 'catalogo', favorites: 'favoritos' };
+    var acc = {}, visits = {}, last = null, sentAt = Date.now();
+    function cur() {
+        var sc = document.querySelector('.screen.active');
+        if (!sc) return null;
+        var id = sc.id;
+        if (id === 'chat') { var g = document.getElementById('caTabGroups'); if (g && g.classList.contains('on')) return 'grupos'; }
+        return NAMES[id] || null;
+    }
+    function flush() {
+        var keys = Object.keys(acc);
+        if (!keys.length) return;
+        var body = JSON.stringify({ t: acc, v: visits });
+        acc = {}; visits = {}; sentAt = Date.now();
+        try {
+            if (navigator.sendBeacon && navigator.sendBeacon('/api/user/tab-time', new Blob([body], { type: 'application/json' }))) return;
+        } catch (_) {}
+        try { fetch('/api/user/tab-time', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body, keepalive: true }).catch(function () {}); } catch (_) {}
+    }
+    setInterval(function () {
+        if (document.visibilityState !== 'visible') { last = null; return; }
+        var t = cur();
+        if (!t) return;
+        acc[t] = (acc[t] || 0) + 5000;
+        if (t !== last) { visits[t] = (visits[t] || 0) + 1; last = t; }
+        if (Date.now() - sentAt > 120000) flush();
+    }, 5000);
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') flush(); });
+    window.addEventListener('pagehide', flush);
+})();
+</script>
 </body>
 </html>

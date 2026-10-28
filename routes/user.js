@@ -2607,6 +2607,28 @@ router.post('/push/ack', async (req, res) => {
     }
 });
 
+// TEMPO POR ABA (28/10): o app manda { t: {aba: ms}, v: {aba: entradas} } a
+// cada ~2 min / ao ir pro 2º plano. Soma por dia (Brasília) × aba.
+const TAB_NAMES = new Set(['inicio', 'conversas', 'grupos', 'conversa', 'grupo', 'encontros', 'videos', 'compras',
+    'perfil', 'brindes', 'produto', 'checkout', 'catalogo', 'favoritos']);
+router.post('/tab-time', async (req, res) => {
+    res.json({ success: true });
+    try {
+        const t = req.body?.t || {}, v = req.body?.v || {};
+        for (const tab of Object.keys(t).slice(0, 15)) {
+            if (!TAB_NAMES.has(tab)) continue;
+            const ms = Math.max(0, Math.min(300000, parseInt(t[tab], 10) || 0));
+            const vis = Math.max(0, Math.min(50, parseInt(v[tab], 10) || 0));
+            if (!ms && !vis) continue;
+            await db.query(
+                `INSERT INTO tab_time_daily (day, tab, total_ms, visits)
+                 VALUES ((NOW() AT TIME ZONE 'America/Sao_Paulo')::date, $1, $2, $3)
+                 ON CONFLICT (day, tab) DO UPDATE SET total_ms = tab_time_daily.total_ms + $2, visits = tab_time_daily.visits + $3`,
+                [tab, ms, vis]);
+        }
+    } catch (_) {}
+});
+
 router.post('/push/unsubscribe', async (req, res) => {
     try {
         const { endpoint } = req.body || {};
