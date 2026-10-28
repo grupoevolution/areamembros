@@ -836,6 +836,23 @@ router.get('/chats', optionalUser, async (req, res) => {
                 [ident.email, ident.visitor]);
             interacted = new Set(ir.map(r => r.chat_id));
         } catch (_) {}
+        // Lead do FUNIL que já deu o e-mail mas AINDA NÃO COMPROU (dono 28/10):
+        // as conversas do funil continuam fixas na lista (antes sumiam ao dar o
+        // e-mail pro checkout). Depois da 1ª compra real, só ficam as que ele
+        // conversou (essas já estão em `interacted`).
+        if (!onlyIds && !light && ident.email) {
+            try {
+                const { rows: fr } = await db.query(
+                    `SELECT f.visible_chat_ids FROM funnel_visits v
+                       JOIN funnels f ON f.slug = v.funnel_slug AND f.active = true
+                      WHERE LOWER(v.customer_email) = $1
+                        AND NOT EXISTS (SELECT 1 FROM user_access ua
+                                         WHERE LOWER(ua.email) = $1 AND ua.granted_by = 'webhook')
+                      ORDER BY v.converted_at DESC NULLS LAST LIMIT 1`, [ident.email]);
+                const ids = fr.length && Array.isArray(fr[0].visible_chat_ids) ? fr[0].visible_chat_ids.map(Number).filter(Boolean) : [];
+                ids.forEach(id => interacted.add(id));
+            } catch (_) {}
+        }
         let chats;
         if (onlyIds) {
             chats = all.filter(c => onlyIds.includes(c.id) && (!light || interacted.has(c.id)));

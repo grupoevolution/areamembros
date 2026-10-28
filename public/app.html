@@ -9662,13 +9662,25 @@ window.MVDiscount = (function () {
     }
     function close() {
         clearInterval(S.timer);
-        var ov = $('mvdOv'); if (ov) ov.classList.remove('rl-on');
+        var ov = $('mvdOv');
+        if (ov && ov.classList.contains('rl-on')) S.closedAt = Date.now();
+        if (ov) ov.classList.remove('rl-on');
         try { document.body.style.overflow = ''; } catch (_) {}
     }
     // volta do checkout: ao abrir/voltar pro app
     setTimeout(checkReturn, 2500);
     document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(checkReturn, 1200); });
-    return { dismissed: dismissed, go: go, close: close, checkReturn: checkReturn };
+    // Fila com a roleta (dono 28/10): na volta do checkout o DESCONTO vem
+    // primeiro; a roleta pergunta aqui se ainda tem desconto a caminho/aberto
+    // e quando ele foi fechado (pra entrar ~40s depois).
+    function status() {
+        var ov = $('mvdOv');
+        if (ov && ov.classList.contains('rl-on')) return { st: 'open' };
+        if (S.closedAt) return { st: 'closed', at: S.closedAt };
+        if (S.armed) return { st: 'pending' };
+        return { st: 'none' };
+    }
+    return { dismissed: dismissed, go: go, close: close, checkReturn: checkReturn, status: status };
 })();
 </script>
 
@@ -21092,6 +21104,20 @@ window.MV_intent = function (url, src) {
         });
     } catch (_) {}
 };
+// MV_withEmail: checkout da Kirvano já abre com o e-mail do lead preenchido
+// (parâmetro customer.email — testado 28/10; os outros nomes a Kirvano ignora).
+// Só o e-mail do PRÓPRIO lead identificado; não mexe em link de outro gateway.
+window.MV_withEmail = function (url, email) {
+    try {
+        email = String(email || window.currentUserEmail || (window.AppState && AppState.user && AppState.user.email) || '').trim();
+        if (!email || email.indexOf('@') < 1 || !/^https?:\/\/pay\.kirvano\.com\//i.test(url || '')) return url;
+        if (/[?&]customer\.email=/.test(url)) return url;
+        let hash = '';
+        const hi = url.indexOf('#');
+        if (hi >= 0) { hash = url.slice(hi); url = url.slice(0, hi); }
+        return url + (url.indexOf('?') === -1 ? '?' : '&') + 'customer.email=' + encodeURIComponent(email) + hash;
+    } catch (_) { return url; }
+};
 window.MV_buy = function (url, src) {
     if (!url) return;
     url = window.MV_stampUtm(url, src);
@@ -21104,7 +21130,7 @@ window.MV_buy = function (url, src) {
     // MESMA guia (decisão do dono): lead leigo se perde em aba nova ("não
     // consigo voltar"); na mesma guia o botão VOLTAR devolve pro app — e o
     // histórico/login sobrevivem porque a sessão já está amarrada ao e-mail.
-    window.location.href = url;
+    window.location.href = window.MV_withEmail(url);
 };
 
 // ═══════════════ DESTINO DE ENTRADA DO FUNIL ═══════════════
@@ -21619,7 +21645,7 @@ document.addEventListener('keydown', function(e) {
             // Identificado (ramo raro, corrida do estado): mesmo caminho do
             // MV_buy — registra a intenção e abre NA MESMA guia.
             try { if (window.MV_intent) window.MV_intent(url, src); } catch (_) {}
-            window.location.href = url;
+            window.location.href = window.MV_withEmail(url);
             return;
         }
         pendingCheckout = url;
@@ -21706,7 +21732,7 @@ document.addEventListener('keydown', function(e) {
             // pro app, e o histórico/login sobrevivem porque a sessão acabou
             // de ser amarrada ao e-mail no promote. Aba nova confundia o lead
             // leigo ("fiquei preso no checkout, não consigo voltar").
-            window.location.href = pc;
+            window.location.href = window.MV_withEmail(pc, data.email);
             return;
         }
         // Dispara sequência do funíl (cascata pós-e-mail)
@@ -24392,13 +24418,47 @@ window.Roulette = (function () {
             try { localStorage.removeItem('mv_checkout_at'); } catch (_) {}
             return recente;
         }
-        function tryReturnPopup() {
-            if (!voltouDoCheckout()) return;
+        // Fila (dono 28/10): DESCONTO primeiro. A roleta espera o desconto
+        // (a caminho ou aberto) e entra ~40s depois que ele FECHA, se o lead
+        // continuar no app. Nunca por cima de grupo aberto nem de tela de
+        // oferta/planos. Desiste depois de 20 min esperando.
+        var waitT = null;
+        function busyScreen() {
+            try {
+                var g = document.getElementById('groupconv');
+                if (g && g.classList.contains('active')) return true;
+                var pw = document.getElementById('mvPaywall');
+                if (pw && pw.classList.contains('open')) return true;
+                var ids = ['gaPlansOv', 'plansSheet', 'gaTeaserOv', 'caCallScr', 'videoCallOverlay'];
+                for (var i = 0; i < ids.length; i++) {
+                    var el = document.getElementById(ids[i]);
+                    if (el && el.offsetParent !== null && getComputedStyle(el).display !== 'none') return true;
+                }
+            } catch (_) {}
+            return false;
+        }
+        function queued(started) {
+            waitT = null;
+            if (Date.now() - started > 20 * 60 * 1000) return;
+            var again = function (ms) { waitT = setTimeout(function () { queued(started); }, ms); };
+            if (document.hidden) return again(5000);
+            var ds = { st: 'none' };
+            try { if (window.MVDiscount && MVDiscount.status) ds = MVDiscount.status(); } catch (_) {}
+            if (ds.st === 'open' || ds.st === 'pending') return again(5000);
+            if (ds.st === 'closed' && Date.now() - ds.at < 40000) return again(40000 - (Date.now() - ds.at) + 200);
+            if (busyScreen()) return again(8000);
             // RE-ARMA o gatilho: o do catálogo já rodou nesta carga e deixava
             // `armed` travado — o retorno do checkout nunca disparava. O "1x
             // por dia" continua valendo (servidor + rl_popup_day decidem).
             armed = false;
             try { maybeShow(); } catch (_) {}
+        }
+        function tryReturnPopup() {
+            if (!voltouDoCheckout()) return;
+            if (waitT) clearTimeout(waitT);
+            // dá tempo do desconto consultar o servidor (ele arma em ~2,5s)
+            var started = Date.now();
+            waitT = setTimeout(function () { queued(started); }, 4000);
         }
         // no boot (o checkout abre na MESMA guia: voltar recarrega o app)
         setTimeout(tryReturnPopup, 2500);
