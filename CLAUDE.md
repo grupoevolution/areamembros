@@ -484,6 +484,23 @@ posts/dia, 17 VIP na semana (só o último do dia das modelos "ricas").
   conversas do funil (via `funnel_visits`); após a 1ª compra real só as que ele usou.
 - Pressel: fica como está (decisão do dono).
 
+**28/10 (noite) — SUPORTE "GABRIELA" pronto pra deploy (testado local):**
+- Config em system_settings `support_v2` (painel: Central de Suporte → "Suporte novo
+  (Gabriela)", com liga/desliga; desligado = suporte antigo inteiro).
+- Boas-vindas 1x por e-mail (`support_welcome`), ~90s depois do login/promote:
+  ÁUDIO + VÍDEO (links do dono em a.arquivosvip.site) + oferta do Premium (link do
+  painel ou plano Premium do chat) + convite discreto (abre a roleta, 1x por conversa).
+  Foi pro Pix/checkout nos últimos 15 min → espera 15 min (Pix vem 1º); pagou → sai
+  em ~1 min SEM oferta. Lead antigo com conversa de suporte não recebe.
+- BÔNUS: comprou o Premium até 24h depois da oferta → ganha a chamada exclusiva
+  (produto escolhido no painel; dono criou a da "Gabriely") 1x na vida,
+  `user_access.granted_by='bonus'`; aviso logo abaixo do "aprovado".
+- Pix = 1 mensagem + botão copiar (contexto: "a conversa com a X"/"o grupo Y"), some
+  em 40 min (`support_msg_expiry`) ou ao pagar. Abandono curto (some ao pagar), sem o
+  "segredo do plano". Aprovado = ✅ + 1 botão + instalar. Upgrade VIP→Premium só texto.
+- Vídeo mp4 no chat limitado a 420px de altura.
+- APÓS O DEPLOY: painel → escolher a chamada da Gabriely como bônus e conferir o link do Premium.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);

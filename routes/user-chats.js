@@ -2020,7 +2020,7 @@ async function deliverUpgradeOfferToSupport(email) {
         const msgs = [];
         const txt = capFirst(await fillVars(cfg.sup_text, ctx));
         msgs.push(await insertMsg(session.id, 'bot', 'text', txt, null, { typing_ms: 0 }, null));
-        if (cfg.sup_video_url) {
+        if (cfg.sup_video_url && !(await getGabrielaConfig()).enabled) {
             msgs.push(await insertMsg(session.id, 'bot', 'video', null, cfg.sup_video_url, { typing_ms: 0 }, null));
         }
         msgs.push(await insertMsg(session.id, 'bot', 'cta', String(cfg.sup_cta_label || 'FAZER UPGRADE — R$ 30').slice(0, 60), null,
@@ -2094,6 +2094,50 @@ async function deliverPurchaseToSupport(email, productIds) {
     const cfg = await getSupportConfig();
     const GREEN = '#1fa855', RED = '#e50914';
     let firstMsg = null;
+
+    // Gabriela: some o Pix/cobrança + "✅ aprovado" + 1 botão + convite
+    const gab = await getGabrielaConfig();
+    if (gab.enabled) {
+        await _clearPaymentNags(session.id);
+        // pagou antes das boas-vindas saírem (elas esperavam o Pix): saem em
+        // ~1 min, já sem oferta
+        try {
+            await db.query(`UPDATE support_welcome SET due_at = LEAST(due_at, NOW() + INTERVAL '60 seconds')
+                             WHERE email = $1 AND sent_at IS NULL`, [e]);
+        } catch (_) {}
+        const names = prods.map(p => p.name).filter(Boolean);
+        const txt = capFirst(await fillVars(String(gab.paid_text)
+            .replace(/\{produto\}/gi, names.join(' + ') || 'seu acesso'), ctx));
+        firstMsg = await insertMsg(session.id, 'bot', 'text', txt, null, { typing_ms: 0 }, null);
+        const p0 = prods.find(p => p.post_purchase_link && p.post_purchase_link.trim());
+        const g0 = prods.find(p => groupByProduct[p.id]);
+        if (prods.length === 1 && p0) {
+            await insertMsg(session.id, 'bot', 'cta', 'Acessar agora', null, { link_url: p0.post_purchase_link.trim(), cta_color: GREEN }, null);
+        } else if (prods.length === 1 && g0) {
+            await insertMsg(session.id, 'bot', 'cta', 'Entrar no grupo agora', null, { link_url: '/?group=' + groupByProduct[g0.id], cta_color: GREEN }, null);
+        } else {
+            await insertMsg(session.id, 'bot', 'cta', 'VER MINHAS COMPRAS', null, { link_url: '/?go=compras', cta_color: GREEN }, null);
+        }
+        // ganhou a chamada bônus agora (grantWelcomeBonus rodou antes)
+        try {
+            const bpid = parseInt(gab.bonus_call_product_id, 10) || null;
+            const { rows: bn } = bpid ? await db.query(
+                `SELECT 1 FROM support_welcome WHERE email = $1 AND bonus_at > NOW() - INTERVAL '5 minutes'`, [e]) : { rows: [] };
+            const { rows: bsent } = bn.length ? await db.query(
+                `SELECT 1 FROM chat_messages WHERE session_id = $1 AND meta->>'gab' = 'bonus' LIMIT 1`, [session.id]) : { rows: [] };
+            if (bn.length && !bsent.length) {
+                await insertMsg(session.id, 'bot', 'text', capFirst(await fillVars(gab.bonus_text, ctx)), null, { typing_ms: 0, gab: 'bonus' }, null);
+                await insertMsg(session.id, 'bot', 'cta', String(gab.bonus_cta).slice(0, 60), null,
+                    { product_id: bpid, cta_color: '#d4a017', gab: 'bonus' }, null);
+            }
+        } catch (_) {}
+        await _insertInvite(session.id, gab, ctx);
+        try {
+            await insertMsg(session.id, 'bot', 'cta', '📲 Instalar o app no celular', null, { action: 'install_pwa', cta_color: RED }, null);
+        } catch (_) {}
+        await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [session.id]);
+        return [{ chat, messages: [firstMsg], email: e }];
+    }
     // Saudação pelo horário de Brasília (abre a entrega com calor humano)
     try {
         const hBr = (new Date(Date.now() - 3 * 3600 * 1000)).getUTCHours();
@@ -2197,6 +2241,217 @@ async function getSupportConfig() {
 }
 function invalidateSupportConfig() { _supportCfgCache = { at: 0, cfg: null }; }
 
+// ── SUPORTE "GABRIELA" (out/2026) ────────────────────────────────────────────
+// Suporte enxuto: boas-vindas com ÁUDIO + VÍDEO 1–2 min depois do e-mail
+// (oferta do Premium com CHAMADA EXCLUSIVA de bônus em 24h), Pix em 1
+// mensagem que some em 40 min, abandono curto, aprovado limpo. Config em
+// system_settings 'support_v2' (painel: Central de Suporte → Gabriela).
+// Desligado (enabled=false) → o suporte antigo volta inteiro.
+const GAB_DEFAULTS = {
+    enabled: true,
+    delay_seconds: 90,
+    audio_url: 'https://a.arquivosvip.site/m/kBLnOts.mp3',
+    video_url: 'https://a.arquivosvip.site/m/1PLHiZo.mp4',
+    offer_text: 'Liberando o PREMIUM hoje você libera TUDO no app e ainda ganha uma CHAMADA DE VÍDEO EXCLUSIVA 🔥',
+    offer_cta: 'LIBERAR TUDO (PREMIUM)',
+    premium_url: '',
+    bonus_call_product_id: null,
+    bonus_hours: 24,
+    bonus_text: '🎁 Sua CHAMADA DE VÍDEO EXCLUSIVA tá liberada, {nome}! Toca aqui embaixo pra atender 👇',
+    bonus_cta: 'ATENDER MINHA CHAMADA',
+    invite_text: 'Chama um amigo e ganha 1 giro na roleta 🎁',
+    invite_cta: 'CONVIDAR AMIGO',
+    pix_text: 'Seu Pix pra liberar {alvo} tá pronto 👇 Toca no botão, abre o banco e cola no Pix Copia e Cola. Liberou, eu te aviso aqui.',
+    pix_minutes: 40,
+    abandon_text: 'Vi que você parou no meio, {nome}… a {modelo} tá te esperando 👀',
+    abandon_generic: 'Vi que você parou no meio, {nome}… tá tudo separado te esperando 👀',
+    abandon_cta: 'CONTINUAR',
+    paid_text: '✅ Pagamento aprovado, {nome}! {produto} já tá liberado pra você.',
+};
+let _gabCache = { at: 0, cfg: null };
+async function getGabrielaConfig() {
+    if (_gabCache.cfg && Date.now() - _gabCache.at < 60000) return _gabCache.cfg;
+    const cfg = { ...GAB_DEFAULTS };
+    try {
+        const { rows } = await db.query(`SELECT value FROM system_settings WHERE key = 'support_v2'`);
+        const v = rows[0]?.value;
+        if (v && typeof v === 'object') {
+            for (const k of Object.keys(GAB_DEFAULTS)) {
+                if (v[k] !== undefined && v[k] !== null && v[k] !== '') cfg[k] = v[k];
+            }
+            if (v.enabled !== undefined) cfg.enabled = v.enabled === true;
+            if (v.premium_url !== undefined) cfg.premium_url = String(v.premium_url || '');
+        }
+    } catch (_) {}
+    _gabCache = { at: Date.now(), cfg };
+    return cfg;
+}
+function invalidateGabrielaConfig() { _gabCache = { at: 0, cfg: null }; }
+
+// Mensagem que SOME sozinha (Pix): o worker apaga depois de expires_at
+async function _expireMsgLater(msg, minutes) {
+    if (!msg) return;
+    try {
+        await db.query(
+            `INSERT INTO support_msg_expiry (message_id, expires_at) VALUES ($1, NOW() + make_interval(mins => $2))
+             ON CONFLICT (message_id) DO NOTHING`, [msg.id, Math.max(1, minutes | 0)]);
+    } catch (_) {}
+}
+
+// Link do checkout do PREMIUM: o do painel (Gabriela) → senão o plano Premium
+// ativo do produto do chat.
+async function _premiumCheckoutUrl(cfg) {
+    if (cfg.premium_url && /^https?:\/\//i.test(cfg.premium_url)) return cfg.premium_url;
+    try {
+        const pid = await chatPlanProductId();
+        if (!pid) return null;
+        const { rows } = await db.query(
+            `SELECT checkout_url FROM product_plans
+              WHERE product_id = $1 AND is_premium = true AND active = true
+                AND checkout_url IS NOT NULL AND checkout_url <> ''
+              ORDER BY display_order, id LIMIT 1`, [pid]);
+        return rows[0] ? rows[0].checkout_url : null;
+    } catch (_) { return null; }
+}
+
+async function _hasRealPurchase(email) {
+    const { rows } = await db.query(
+        `SELECT 1 FROM user_access WHERE LOWER(email) = $1 AND granted_by = 'webhook' LIMIT 1`, [email]);
+    return rows.length > 0;
+}
+
+// Chamado no login/promote (deu o e-mail): agenda as boas-vindas pra daqui a
+// delay_seconds. Quem já tem conversa de suporte (lead antigo) não recebe.
+async function scheduleSupportWelcome(email) {
+    const e = String(email || '').toLowerCase().trim();
+    if (!e || e.endsWith('@preview.local')) return;
+    try {
+        const cfg = await getGabrielaConfig();
+        if (!cfg.enabled) return;
+        const { rows: done } = await db.query(`SELECT 1 FROM support_welcome WHERE email = $1`, [e]);
+        if (done.length) return;
+        const { rows: old } = await db.query(
+            `SELECT 1 FROM chat_sessions s JOIN chats c ON c.id = s.chat_id AND c.is_support = true
+              WHERE LOWER(s.customer_email) = $1
+                AND EXISTS (SELECT 1 FROM chat_messages m WHERE m.session_id = s.id) LIMIT 1`, [e]);
+        await db.query(
+            `INSERT INTO support_welcome (email, due_at, sent_at, with_offer)
+             VALUES ($1, NOW() + make_interval(secs => $2), $3, $4) ON CONFLICT (email) DO NOTHING`,
+            [e, Math.max(30, parseInt(cfg.delay_seconds, 10) || 90), old.length ? new Date() : null, old.length ? false : null]);
+    } catch (err) { logger.warn('[gabriela] agendar boas-vindas: ' + err.message); }
+}
+
+// Worker (~15s): entrega as boas-vindas vencidas + apaga mensagens expiradas.
+//  - foi pro pagamento (Pix/checkout nos últimos 15 min) e não pagou → espera
+//    15 min depois disso (a mensagem do Pix vem primeiro, sem 2 ofertas juntas)
+//  - já comprou → boas-vindas SEM oferta
+async function processSupportWelcomes() {
+    const out = [];
+    try {
+        const { rows: exp } = await db.query(
+            `DELETE FROM support_msg_expiry WHERE expires_at < NOW() RETURNING message_id`);
+        if (exp.length) await db.query(`DELETE FROM chat_messages WHERE id = ANY($1)`, [exp.map(r => r.message_id)]);
+    } catch (err) { logger.warn('[gabriela] expirar msgs: ' + err.message); }
+
+    const cfg = await getGabrielaConfig();
+    if (!cfg.enabled) return out;
+    const { rows: due } = await db.query(
+        `SELECT * FROM support_welcome WHERE sent_at IS NULL AND due_at <= NOW() ORDER BY due_at LIMIT 20`);
+    for (const w of due) {
+        const e = w.email;
+        try {
+            const bought = await _hasRealPurchase(e);
+            if (!bought && Date.now() - new Date(w.created_at).getTime() < 3 * 3600 * 1000) {
+                const { rows: pend } = await db.query(
+                    `SELECT GREATEST(
+                        (SELECT MAX(created_at) FROM pix_pending_notices WHERE LOWER(customer_email) = $1 AND created_at > NOW() - INTERVAL '15 minutes'),
+                        (SELECT MAX(created_at) FROM checkout_intents WHERE LOWER(customer_email) = $1 AND completed = false AND created_at > NOW() - INTERVAL '15 minutes')
+                     ) AS last`, [e]);
+                if (pend[0] && pend[0].last) {
+                    await db.query(
+                        `UPDATE support_welcome SET due_at = $2::timestamptz + INTERVAL '15 minutes' WHERE email = $1`,
+                        [e, pend[0].last]);
+                    continue;
+                }
+            }
+            const premUrl = bought ? null : await _premiumCheckoutUrl(cfg);
+            const withOffer = !!premUrl && !(await ownsChatPremium(e));
+            const { rows: claim } = await db.query(
+                `UPDATE support_welcome SET sent_at = NOW(), with_offer = $2,
+                        offer_until = CASE WHEN $2 THEN NOW() + make_interval(hours => $3) ELSE NULL END
+                  WHERE email = $1 AND sent_at IS NULL RETURNING email`,
+                [e, withOffer, Math.max(1, parseInt(cfg.bonus_hours, 10) || 24)]);
+            if (!claim.length) continue;
+            const sup = await _supportSessionFor(e);
+            if (!sup) continue;
+            const ctx = { email: e, city: sup.session.city || null, cityFallback: sup.chat.city_fallback };
+            const sid = sup.session.id;
+            const first = cfg.audio_url
+                ? await insertMsg(sid, 'bot', 'audio', null, cfg.audio_url, { typing_ms: 0 }, null)
+                : null;
+            if (cfg.video_url) await insertMsg(sid, 'bot', 'video', null, cfg.video_url, { typing_ms: 0 }, null);
+            if (withOffer) {
+                await insertMsg(sid, 'bot', 'text', capFirst(await fillVars(cfg.offer_text, ctx)), null, { typing_ms: 0 }, null);
+                await insertMsg(sid, 'bot', 'cta', String(cfg.offer_cta).slice(0, 60), null,
+                    { link_url: premUrl, cta_color: '#d4a017' }, null);
+            }
+            await _insertInvite(sid, cfg, ctx);
+            await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [sid]);
+            if (first) out.push({ chat: sup.chat, messages: [first], email: e });
+        } catch (err) { logger.warn('[gabriela] boas-vindas ' + e + ': ' + err.message); }
+    }
+    return out;
+}
+
+// "Chama um amigo e ganha 1 giro" (discreto) — só com a roleta ligada, 1x
+async function _insertInvite(sid, cfg, ctx) {
+    try {
+        if (!cfg.invite_text) return;
+        const rcfg = await require('./user-roulette').loadConfig();
+        if (!rcfg || !rcfg.enabled) return;
+        // 1 convite por conversa (boas-vindas e aprovado não repetem)
+        const { rows: inv } = await db.query(
+            `SELECT 1 FROM chat_messages WHERE session_id = $1 AND meta->>'action' = 'roulette_share' LIMIT 1`, [sid]);
+        if (inv.length) return;
+        await insertMsg(sid, 'bot', 'text', capFirst(await fillVars(cfg.invite_text, ctx)), null, { typing_ms: 0 }, null);
+        await insertMsg(sid, 'bot', 'cta', String(cfg.invite_cta || 'CONVIDAR AMIGO').slice(0, 60), null,
+            { action: 'roulette_share', cta_color: '#1fa855' }, null);
+    } catch (_) {}
+}
+
+// Comprou o PREMIUM dentro do prazo da oferta → libera a chamada exclusiva
+// (1x na vida). Chamado pelo sales-processor ANTES da entrega no suporte —
+// o aviso sai junto do "aprovado" (deliverPurchaseToSupport).
+async function grantWelcomeBonus(email) {
+    const e = String(email || '').toLowerCase().trim();
+    if (!e) return false;
+    try {
+        const cfg = await getGabrielaConfig();
+        const pid = parseInt(cfg.bonus_call_product_id, 10) || null;
+        if (!cfg.enabled || !pid) return false;
+        const { rows: claim } = await db.query(
+            `UPDATE support_welcome SET bonus_at = NOW()
+              WHERE email = $1 AND with_offer = true AND bonus_at IS NULL AND offer_until > NOW()
+              RETURNING email`, [e]);
+        if (!claim.length) return false;
+        const { rows: [prod] } = await db.query(`SELECT id, product_type FROM products WHERE id = $1 AND is_active = true`, [pid]);
+        if (!prod) { await db.query(`UPDATE support_welcome SET bonus_at = NULL WHERE email = $1`, [e]); return false; }
+        await db.query(
+            `INSERT INTO user_access (email, product_id, status, granted_by, metadata)
+             VALUES ($1, $2, 'active', 'bonus', $3::jsonb)`,
+            [e, pid, JSON.stringify({ granted_via: 'support_welcome_bonus', product_type: prod.product_type, at: new Date().toISOString() })]);
+        return true;
+    } catch (err) { logger.warn('[gabriela] bônus: ' + err.message); return false; }
+}
+
+// Pagou: some o Pix e a cobrança de abandono da conversa de suporte
+async function _clearPaymentNags(sessionId) {
+    try {
+        await db.query(
+            `DELETE FROM chat_messages WHERE session_id = $1 AND meta->>'gab' IN ('pix', 'abandon')`, [sessionId]);
+    } catch (_) {}
+}
+
 // Primeira letra maiúscula (mensagens que começam com {saudacao} viravam
 // "boa tarde, ..." — feio na abertura da conversa)
 function capFirst(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -2212,6 +2467,8 @@ async function deliverInstallWelcome(email) {
     if (!e || e.endsWith('@preview.local')) return null;
     const cfg = await getSupportConfig();
     if (!cfg.welcome_enabled) return null;
+    // Gabriela ligada: as boas-vindas saem 1–2 min após o e-mail (áudio+vídeo)
+    if ((await getGabrielaConfig()).enabled) return null;
     const { rows: sc } = await db.query(`SELECT * FROM chats WHERE active = true AND is_support = true ORDER BY id LIMIT 1`);
     if (!sc.length) return null;
     const chat = sc[0];
@@ -2237,6 +2494,42 @@ async function deliverPixPendingToSupport(email, info) {
     const cfg = await getSupportConfig();
     const GREEN = '#1fa855';
     const prod = (info && info.product_name) ? String(info.product_name) : 'seu acesso';
+
+    // Gabriela: 1 mensagem com contexto (modelo/grupo), sem preço, botão de
+    // copiar — tudo some em pix_minutes (ou na hora em que ele paga)
+    const gab = await getGabrielaConfig();
+    if (gab.enabled) {
+        let alvo = prod;
+        try {
+            const pid = info && info.product_id;
+            const { rows: g } = pid ? await db.query(
+                `SELECT name FROM groups WHERE active = true AND product_id = $1 ORDER BY id LIMIT 1`, [pid]) : { rows: [] };
+            if (g.length) alvo = 'o grupo ' + g[0].name;
+            else {
+                const { rows: ci } = await db.query(
+                    `SELECT c.name FROM checkout_intents i JOIN chats c ON c.id = i.chat_id
+                      WHERE LOWER(i.customer_email) = $1 AND i.created_at > NOW() - INTERVAL '2 hours'
+                      ORDER BY i.id DESC LIMIT 1`, [e]);
+                if (ci.length) alvo = 'a conversa com a ' + String(ci[0].name || '').split(' ')[0];
+            }
+        } catch (_) {}
+        const mins = Math.max(5, parseInt(gab.pix_minutes, 10) || 40);
+        const tag = { typing_ms: 0, gab: 'pix' };
+        const first = await insertMsg(session.id, 'bot', 'text',
+            capFirst(await fillVars(String(gab.pix_text).replace(/\{alvo\}/gi, alvo), ctx)), null, tag, null);
+        await _expireMsgLater(first, mins);
+        let btn = null;
+        if (info && info.pix_code) {
+            btn = await insertMsg(session.id, 'bot', 'cta', 'Copiar código Pix', null,
+                { ...tag, action: 'copy_pix', pix_code: String(info.pix_code), cta_color: GREEN }, null);
+        } else if (info && info.pix_url) {
+            btn = await insertMsg(session.id, 'bot', 'cta', 'Abrir a tela de pagamento', null,
+                { ...tag, link_url: String(info.pix_url), cta_color: GREEN }, null);
+        }
+        await _expireMsgLater(btn, mins);
+        await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [session.id]);
+        return [{ chat, messages: [first], email: e }];
+    }
     const valor = (info && info.amount > 0)
         ? (' de R$ ' + Number(info.amount).toFixed(2).replace('.', ','))
         : '';
@@ -2374,12 +2667,18 @@ async function processAbandonedCheckouts() {
                 } catch (_) {}
             }
             const ctx = { email, city: sup.session.city || null, cityFallback: sup.chat.city_fallback };
-            const tpl = modelo ? cfg.abandon_template : cfg.abandon_generic_template;
+            const gab = await getGabrielaConfig();
+            if (gab.enabled && modelo) modelo = String(modelo).split(' ')[0];
+            const tpl = gab.enabled ? (modelo ? gab.abandon_text : gab.abandon_generic)
+                : (modelo ? cfg.abandon_template : cfg.abandon_generic_template);
             const txt = capFirst(await fillVars(String(tpl).replace(/\{modelo\}/gi, modelo || ''), ctx));
-            const first = await insertMsg(sup.session.id, 'bot', 'text', txt, null, { typing_ms: 0 }, null);
+            // gab:'abandon' → some da conversa quando ele paga
+            const meta = gab.enabled ? { typing_ms: 0, gab: 'abandon' } : { typing_ms: 0 };
+            const first = await insertMsg(sup.session.id, 'bot', 'text', txt, null, meta, null);
             if (it.checkout_url) {
-                await insertMsg(sup.session.id, 'bot', 'cta', String(cfg.abandon_cta_label || 'CONTINUAR DE ONDE PAREI 🔥').slice(0, 60), null,
-                    { link_url: String(it.checkout_url), cta_color: '#e50914' }, null);
+                await insertMsg(sup.session.id, 'bot', 'cta',
+                    String((gab.enabled ? gab.abandon_cta : cfg.abandon_cta_label) || 'CONTINUAR DE ONDE PAREI 🔥').slice(0, 60), null,
+                    { ...meta, link_url: String(it.checkout_url), cta_color: '#e50914' }, null);
             }
             await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [sup.session.id]);
             out.push({ chat: sup.chat, messages: [first], email });
@@ -2387,7 +2686,8 @@ async function processAbandonedCheckouts() {
     }
 
     // Etapa 2 — upsell do plano completo (só se configurado um produto)
-    const upsellPid = parseInt(cfg.upsell_product_id, 10) || null;
+    // Gabriela ligada: sem o "segredo do plano" (2ª cobrança)
+    const upsellPid = (await getGabrielaConfig()).enabled ? null : (parseInt(cfg.upsell_product_id, 10) || null);
     if (upsellPid) {
         const { rows: due2 } = await db.query(`
             UPDATE checkout_intents SET upsell_sent_at = NOW()
@@ -2667,3 +2967,8 @@ module.exports.scheduleVipReception = scheduleVipReception;
 module.exports.invalidateCallPremiumConfig = () => { _callPremCache = { at: 0, val: null }; };
 module.exports.deliverUpgradeOfferToSupport = deliverUpgradeOfferToSupport;
 module.exports.clearChatsCache = () => clearChatsCache();
+module.exports.scheduleSupportWelcome = scheduleSupportWelcome;
+module.exports.processSupportWelcomes = processSupportWelcomes;
+module.exports.grantWelcomeBonus = grantWelcomeBonus;
+module.exports.invalidateGabrielaConfig = invalidateGabrielaConfig;
+module.exports.getGabrielaConfig = getGabrielaConfig;

@@ -6095,6 +6095,33 @@ a { color: inherit; text-decoration: none; }
                         <button class="btn-secondary" onclick="toggleSupportPanel()" id="supportPanelBtn">Configurar ▾</button>
                     </div>
                     <div id="supportPanel" style="display:none; margin-top:14px; border-top:1px solid rgba(255,255,255,.08); padding-top:14px;">
+                        <div style="background:rgba(212,160,23,.07); border:1px solid rgba(212,160,23,.35); border-radius:12px; padding:14px; margin-bottom:16px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
+                                <div style="font-size:14px; font-weight:800; color:#fff;">Suporte novo (Gabriela)</div>
+                                <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:#fff;"><input type="checkbox" id="gabOn"> Ligado</label>
+                            </div>
+                            <div class="form-help" style="margin-bottom:12px;">Ligado = boas-vindas com áudio + vídeo 1–2 min depois que o lead dá o e-mail (se ele foi pro Pix, espera 15 min). Pix vira 1 mensagem que some. Aprovado limpo. Desligado = suporte antigo (configurações abaixo).</div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Esperar quantos segundos depois do e-mail</label><input type="text" class="form-input" id="gabDelay" placeholder="90"></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Áudio de boas-vindas (link .mp3)</label><input type="text" class="form-input" id="gabAudio" placeholder=""></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Vídeo de boas-vindas (link .mp4)</label><input type="text" class="form-input" id="gabVideo" placeholder=""></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Texto da oferta do Premium</label><textarea class="form-textarea" id="gabOffer" style="min-height:52px;"></textarea></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Botão da oferta</label><input type="text" class="form-input" id="gabOfferCta" placeholder=""></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Link do checkout do Premium (vazio = usa o plano Premium do chat)</label><input type="text" class="form-input" id="gabPremUrl" placeholder="https://pay.kirvano.com/..."></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Chamada EXCLUSIVA de bônus (quem compra o Premium no prazo ganha)</label><select class="form-input" id="gabBonusProd"><option value="">— nenhuma (sem bônus) —</option></select></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Prazo da oferta com bônus (horas)</label><input type="text" class="form-input" id="gabBonusHours" placeholder="24"></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Mensagem quando a chamada bônus é liberada ({nome})</label><textarea class="form-textarea" id="gabBonusText" style="min-height:52px;"></textarea></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Botão da chamada bônus</label><input type="text" class="form-input" id="gabBonusCta" placeholder=""></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Convite discreto (só aparece com a roleta ligada)</label><input type="text" class="form-input" id="gabInvite" placeholder=""></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Botão do convite</label><input type="text" class="form-input" id="gabInviteCta" placeholder=""></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Mensagem do Pix ({alvo} = "a conversa com a Fulana" / "o grupo X" / produto)</label><textarea class="form-textarea" id="gabPix" style="min-height:52px;"></textarea></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Mensagem do Pix some depois de (minutos)</label><input type="text" class="form-input" id="gabPixMin" placeholder="40"></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Parou no pagamento — com modelo ({modelo})</label><textarea class="form-textarea" id="gabAbandon" style="min-height:52px;"></textarea></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Parou no pagamento — sem modelo</label><textarea class="form-textarea" id="gabAbandonGen" style="min-height:52px;"></textarea></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Botão do "parou no pagamento"</label><input type="text" class="form-input" id="gabAbandonCta" placeholder=""></div>
+                            <div class="form-row" style="margin-bottom:10px;"><label class="form-label">Pagamento aprovado ({nome} {produto})</label><textarea class="form-textarea" id="gabPaid" style="min-height:52px;"></textarea></div>
+                            <div id="gabAlert" style="display:none;padding:10px;border-radius:8px;font-size:13px;margin-bottom:10px;"></div>
+                            <button class="btn-primary" onclick="saveGabriela()">Salvar suporte novo</button>
+                        </div>
                         <div class="form-row" style="margin-bottom:12px;">
                             <label class="form-label">💬 WhatsApp de ajuda (link — ex: https://wa.me/5511999999999)</label>
                             <input type="text" class="form-input" id="supWhats" placeholder="https://wa.me/55...">
@@ -17258,6 +17285,45 @@ async function saveSupportConfig() {
 }
 window.saveSupportConfig = saveSupportConfig;
 
+// SUPORTE NOVO (Gabriela) — support_v2
+const GAB_FIELDS = {
+    gabDelay: 'delay_seconds', gabAudio: 'audio_url', gabVideo: 'video_url', gabOffer: 'offer_text',
+    gabOfferCta: 'offer_cta', gabPremUrl: 'premium_url', gabBonusHours: 'bonus_hours', gabBonusText: 'bonus_text',
+    gabBonusCta: 'bonus_cta', gabInvite: 'invite_text', gabInviteCta: 'invite_cta', gabPix: 'pix_text',
+    gabPixMin: 'pix_minutes', gabAbandon: 'abandon_text', gabAbandonGen: 'abandon_generic',
+    gabAbandonCta: 'abandon_cta', gabPaid: 'paid_text',
+};
+async function loadGabriela() {
+    try {
+        const r = await fetch('/api/admin/chats/support-v2', { credentials: 'include' }).then(r => r.json());
+        if (!r.success) return;
+        const c = r.config || {};
+        document.getElementById('gabOn').checked = c.enabled === true;
+        for (const id in GAB_FIELDS) { const el = document.getElementById(id); if (el) el.value = c[GAB_FIELDS[id]] == null ? '' : c[GAB_FIELDS[id]]; }
+        const pr = await fetch('/api/admin/products?include_plans=1', { credentials: 'include' }).then(r => r.json());
+        const prods = pr.products || pr.data || [];
+        const calls = prods.filter(p => p.product_type === 'video_call' || p.video_call_id || (p.direct_call_video_url || '').trim());
+        const list = calls.length ? calls : prods;
+        const sel = document.getElementById('gabBonusProd');
+        sel.innerHTML = '<option value="">— nenhuma (sem bônus) —</option>'
+            + list.map(p => '<option value="' + p.id + '"' + (String(c.bonus_call_product_id || '') === String(p.id) ? ' selected' : '') + '>' + escHtmlAdmin(p.name) + '</option>').join('');
+    } catch (_) {}
+}
+window.loadGabriela = loadGabriela;
+async function saveGabriela() {
+    const body = { enabled: document.getElementById('gabOn').checked === true,
+        bonus_call_product_id: parseInt(document.getElementById('gabBonusProd').value, 10) || null };
+    for (const id in GAB_FIELDS) body[GAB_FIELDS[id]] = (document.getElementById(id)?.value || '').trim();
+    try {
+        const r = await fetch('/api/admin/chats/support-v2', {
+            method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+        }).then(r => r.json());
+        _alertModal('gabAlert', r.success ? '✅ Suporte novo salvo' : (r.error || 'Erro'), r.success ? 'success' : 'error');
+        if (r.success) loadGabriela();
+    } catch (err) { _alertModal('gabAlert', err.message || 'Erro de rede', 'error'); }
+}
+window.saveGabriela = saveGabriela;
+
 async function sendSupportBroadcast() {
     const msg = document.getElementById('supBroadcastMsg')?.value?.trim();
     if (!msg) return _alertModal('supBroadcastAlert', 'Escreve a mensagem primeiro', 'error');
@@ -17516,7 +17582,7 @@ window.saveCallPremium = saveCallPremium;
 
 async function loadAdminChats() {
     loadChatPaywallCard();
-    loadSupportConfig();
+    loadSupportConfig(); loadGabriela();
     loadRotationConfig();
     loadGreetingsConfig();
     loadVipReceptionCard();

@@ -313,6 +313,58 @@ router.put('/support-config', requireAdmin, async (req, res) => {
     }
 });
 
+// SUPORTE "GABRIELA" (system_settings 'support_v2') — boas-vindas com áudio +
+// vídeo, oferta do Premium c/ chamada bônus, Pix que some, aprovado limpo.
+router.get('/support-v2', requireAdmin, async (req, res) => {
+    try {
+        const chatsApi = require('./user-chats');
+        chatsApi.invalidateGabrielaConfig();
+        const cfg = await chatsApi.getGabrielaConfig();
+        return res.json({ success: true, config: cfg });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+router.put('/support-v2', requireAdmin, async (req, res) => {
+    try {
+        const b = req.body || {};
+        const str = (k, n) => String(b[k] || '').trim().slice(0, n);
+        const cfg = {
+            enabled: b.enabled === true,
+            delay_seconds: Math.max(30, Math.min(3600, parseInt(b.delay_seconds, 10) || 90)),
+            audio_url: str('audio_url', 500),
+            video_url: str('video_url', 500),
+            offer_text: str('offer_text', 600),
+            offer_cta: str('offer_cta', 60),
+            premium_url: str('premium_url', 500),
+            bonus_call_product_id: parseInt(b.bonus_call_product_id, 10) || null,
+            bonus_hours: Math.max(1, Math.min(168, parseInt(b.bonus_hours, 10) || 24)),
+            bonus_text: str('bonus_text', 600),
+            bonus_cta: str('bonus_cta', 60),
+            invite_text: str('invite_text', 300),
+            invite_cta: str('invite_cta', 60),
+            pix_text: str('pix_text', 600),
+            pix_minutes: Math.max(5, Math.min(1440, parseInt(b.pix_minutes, 10) || 40)),
+            abandon_text: str('abandon_text', 600),
+            abandon_generic: str('abandon_generic', 600),
+            abandon_cta: str('abandon_cta', 60),
+            paid_text: str('paid_text', 600),
+        };
+        await db.query(
+            `INSERT INTO system_settings (key, value, description)
+             VALUES ('support_v2', $1::jsonb, 'Suporte Gabriela (boas-vindas áudio/vídeo, Pix, aprovado, bônus)')
+             ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+            [JSON.stringify(cfg)]
+        );
+        try { require('./user-chats').invalidateGabrielaConfig(); } catch (_) {}
+        return res.json({ success: true });
+    } catch (err) {
+        logger.error('Erro salvando support-v2:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
 // POST /support-broadcast — aviso manual pelo chat de Suporte: injeta a
 // mensagem na conversa de suporte de todo mundo que JÁ tem essa conversa
 // (audience 'buyers' = só quem tem compra) + dispara push.

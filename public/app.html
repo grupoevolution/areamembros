@@ -11295,7 +11295,7 @@ window.ChatApp = (function() {
                     ? '<video class="photo ca-hlsvid"' + (vThumb ? ' poster="' + esc(vThumb) + '"' : '')
                         + ' controls playsinline preload="none" style="max-width:100%;max-height:320px;border-radius:10px;display:block;background:#000;"></video>'
                     : (vEmb ? embHtml
-                        : '<video class="photo" src="' + esc(m.media_url) + '" controls playsinline preload="metadata" style="max-width:100%;border-radius:10px;display:block;"></video>');
+                        : '<video class="photo" src="' + esc(m.media_url) + '" controls playsinline preload="metadata" style="max-width:100%;max-height:420px;background:#000;border-radius:10px;display:block;"></video>');
             d.innerHTML = vHtml
                 + (m.content ? '<div class="tx" style="margin-top:5px;">' + esc(m.content) + '</div>' : '') + tm;
             if (vHls) {
@@ -11341,6 +11341,20 @@ window.ChatApp = (function() {
                 d.style.width = '100%';
                 d.innerHTML = '<button class="ca-cta-btn" style="background:' + esc((m.meta.cta_color) || '#e50914') + ';">' + esc(m.content || '📲 Instalar o app') + '</button>';
                 d.querySelector('button').addEventListener('click', () => { try { gateInstall(function () {}); } catch (_) {} });
+                body.appendChild(d);
+                return;
+            }
+            // CTA de CONVIDAR AMIGO (suporte Gabriela): abre a roleta (com giro
+            // cai na roda; sem giro, na tela de compartilhar o link)
+            if (m.meta && m.meta.action === 'roulette_share') {
+                if (!window.Roulette) return;
+                d.style.alignSelf = 'stretch';
+                d.style.width = '100%';
+                d.innerHTML = '<button class="ca-cta-btn" style="background:' + esc((m.meta.cta_color) || '#1fa855') + ';">' + esc(m.content || 'Convidar amigo') + '</button>';
+                d.querySelector('button').addEventListener('click', () => {
+                    try { window.TRACK && TRACK.event('support_invite_click', {}); } catch (_) {}
+                    try { window.Roulette.open(); } catch (_) {}
+                });
                 body.appendChild(d);
                 return;
             }

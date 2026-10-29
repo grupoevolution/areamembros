@@ -173,6 +173,7 @@ router.post('/login', async (req, res) => {
             res.cookie(USER_COOKIE_NAME, forced.token, USER_COOKIE_OPTIONS);
             // Fase K2: resgata campanha (link mágico) se veio um código pendente.
             // Tolerante a falha: nunca derruba o login.
+            try { require('./user-chats').scheduleSupportWelcome(forced.email).catch(() => {}); } catch (_) {}
             const campaignResult = await tryRedeemCampaign(campanha, forced.email, req);
             return res.json({
                 success: true,
@@ -201,6 +202,7 @@ router.post('/login', async (req, res) => {
 
     // Fase K2: resgata campanha (link mágico) ANTES de retornar pro cliente.
     // Assim, quando o app chamar /library logo em seguida, o brinde já tá lá.
+    try { require('./user-chats').scheduleSupportWelcome(result.email).catch(() => {}); } catch (_) {}
     const campaignResult = await tryRedeemCampaign(campanha, result.email, req);
 
     return res.json({
@@ -2779,6 +2781,7 @@ router.post('/login/promote', async (req, res) => {
 
         // Fase K2: mesma lógica do /login — resgata campanha se houver
         // código pendente vindo do localStorage do cliente.
+        try { require('./user-chats').scheduleSupportWelcome(result.email).catch(() => {}); } catch (_) {}
         const campaignResult = await tryRedeemCampaign(campanha, result.email, req);
 
         // PIXEL META — evento Lead (o lead deu o e-mail = capturado). O CAPI
