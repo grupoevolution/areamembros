@@ -525,6 +525,17 @@ carga no volume de R$2.500/dia.
   abre na hora); desconto não abre por cima de planos/chamada nem dentro de grupo (só o
   desconto do PRÓPRIO grupo).
 
+**29/10 — chats NOVOS em teste (produção, listed=false, NÃO ligados a grupo/funil):**
+dono testa por `m.membrosvips.com/?chat=ID` com e-mail que não comprou. Aprovou → ligar.
+352 Jaqueline v2 (jeito Carol, sem "manda foto", foto com {CIDADE}) · 353 Suellen v2 (espera
+resposta antes da foto) · 354 Cleia v2 (botão ENTRAR NO GRUPO = CTA /?group=3 ANTES do ver-uma-vez,
+que pausava o fluxo) · 355 Leyla (chamada 3, a única sem chat; pra entrar ~10 min após a Cleia no
+funil chatonline2) · Carol de cada grupo sem convite: 356 Bruna (Cornos, planos) · 357 Tainá
+(Nudes) · 358 Lari (Novinhas) · 359 Paty (Encontros, planos) · 360 Dani (Conversar) · 361 Débora
+(Crentes) · 362 Jéssica (Putaria) · 363 Camila (Namoro) · 364 Lívia (Pés). Os sem "planos" terminam
+num botão pro checkout do grupo (produtos 30,31,33,32,28,29,34 não têm MENSAL/VITALÍCIO).
+Plano VITALÍCIO do Grupinho VIP (produto 2) ainda promete "WhatsApp Particular da Eliane".
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
