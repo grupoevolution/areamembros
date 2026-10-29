@@ -535,6 +535,10 @@ funil chatonline2) · Carol de cada grupo sem convite: 356 Bruna (Cornos, planos
 (Crentes) · 362 Jéssica (Putaria) · 363 Camila (Namoro) · 364 Lívia (Pés). Os sem "planos" terminam
 num botão pro checkout do grupo (produtos 30,31,33,32,28,29,34 não têm MENSAL/VITALÍCIO).
 Plano VITALÍCIO do Grupinho VIP (produto 2) ainda promete "WhatsApp Particular da Eliane".
+Aberturas dos 356–364 variadas (diretas x com perguntas). SAUDAÇÕES novas (meta: 3 tipos — Cleia/grupo,
+Encontros, chamada): 365 Bianca Moraes (rosto do perfil 95 do Encontros; "vi seu perfil no Encontros, tá sem
+foto" → solteiro? → foto → CTA "VEJA QUEM TE CURTIU" /?go=encontros) · 366 Cinthia (chamada produto 45,
+fora da roleta grátis [44,17,48]; papo → foto → "faço chamada" → CTA checkout da chamada).
 
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
