@@ -2781,7 +2781,8 @@ router.post('/login/promote', async (req, res) => {
 
         // Fase K2: mesma lógica do /login — resgata campanha se houver
         // código pendente vindo do localStorage do cliente.
-        try { require('./user-chats').scheduleSupportWelcome(result.email).catch(() => {}); } catch (_) {}
+        // Lead de funil: boas-vindas espera o paywall (fallback 10 min).
+        try { require('./user-chats').scheduleSupportWelcome(result.email, { funnel: !!funnel_slug }).catch(() => {}); } catch (_) {}
         const campaignResult = await tryRedeemCampaign(campanha, result.email, req);
 
         // PIXEL META — evento Lead (o lead deu o e-mail = capturado). O CAPI

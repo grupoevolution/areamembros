@@ -7127,47 +7127,12 @@ body:not(.enc-on) #libProf { display: none !important; }
         </div>
 
         <!-- Rotating hero -->
-        <div class="hero" id="homeHero" onclick="switchScreen('product')">
+        <!-- Hero: começa VAZIO (só o fundo escuro) e é montado com os destaques
+             do painel (renderHeroFromBackend). Antes vinha com um "Clube das
+             Casadas / 72% OFF" de demonstração que aparecia com a internet lenta. -->
+        <div class="hero" id="homeHero">
             <div class="hero-slide active" data-idx="0">
                 <div class="hero-image img-1"><div class="hero-ken"></div></div>
-                <div class="hero-live"><span class="hero-live-dot"></span>Em destaque</div>
-                <div class="hero-content">
-                    <div class="hero-category">Grupo VIP · #1 em alta</div>
-                    <h1 class="hero-title">Clube das<br><em>Casadas</em></h1>
-                    <div class="hero-ctas">
-                        <button class="btn-play" onclick="event.stopPropagation(); switchScreen('product')">
-                            <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                            Descobrir
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="hero-slide" data-idx="1">
-                <div class="hero-image img-2"><div class="hero-ken"></div></div>
-                <div class="hero-live"><span class="hero-live-dot"></span>Novidade</div>
-                <div class="hero-content">
-                    <div class="hero-category">Pack Premium · Novo</div>
-                    <h1 class="hero-title">Noites<br><em>Proibidas</em></h1>
-                    <div class="hero-ctas">
-                        <button class="btn-play"><svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Descobrir</button>
-                    </div>
-                </div>
-            </div>
-            <div class="hero-slide" data-idx="2">
-                <div class="hero-image img-3"><div class="hero-ken"></div></div>
-                <div class="hero-live"><span class="hero-live-dot"></span>Oferta</div>
-                <div class="hero-content">
-                    <div class="hero-category">VIP Total · 72% OFF</div>
-                    <h1 class="hero-title">Acesso<br><em>Vitalício</em></h1>
-                    <div class="hero-ctas">
-                        <button class="btn-play"><svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>Aproveitar</button>
-                    </div>
-                </div>
-            </div>
-            <div class="hero-dots">
-                <div class="hero-dot active" data-dot="0"></div>
-                <div class="hero-dot" data-dot="1"></div>
-                <div class="hero-dot" data-dot="2"></div>
             </div>
         </div>
 
@@ -7193,7 +7158,7 @@ body:not(.enc-on) #libProf { display: none !important; }
 
         <!-- Flash offer -->
         <div class="section">
-            <div class="flash-banner" onclick="openFabSheet()">
+            <div class="flash-banner" onclick="openFabSheet()" style="display:none;">
                 <div class="flash-bg-text">72%</div>
                 <div class="flash-tag">⚡ Oferta Relâmpago</div>
                 <div class="flash-title">Acesso <em>vitalício</em><br><em>72% OFF</em></div>
@@ -9584,10 +9549,28 @@ window.MVDiscount = (function () {
             }).catch(function () { S.armed = false; });
     }
     function money(v) { return 'R$ ' + String(v || '').replace('R$', '').trim(); }
+    function busyElsewhere() {
+        try {
+            var pw = $('mvPaywall'); if (pw && pw.classList.contains('open')) return true;
+            var gp = $('gaPlansOv'); if (gp && gp.style.display && gp.style.display !== 'none') return true;
+            var vc = $('videoCallOverlay'); if (vc && vc.classList.contains('is-open')) return true;
+            var cs = $('caCallScr'); if (cs && cs.style.display && cs.style.display !== 'none') return true;
+            var gc = $('groupconv');
+            if (gc && gc.classList.contains('active')) {
+                // desconto DO PRÓPRIO grupo (ele fechou os planos dele) pode
+                var cur = null; try { cur = window.GroupApp && GroupApp.curId ? GroupApp.curId() : null; } catch (_) {}
+                if (!(S.kind === 'group' && S.ref && cur && String(cur) === String(S.ref))) return true;
+            }
+        } catch (_) {}
+        return false;
+    }
     function show() {
         var d = S.state; if (!d || done()) return;
         // não atropela a roleta nem uma conversa de chamada aberta
         try { if (window.Roulette && Roulette.isOpen && Roulette.isOpen()) { setTimeout(show, 15000); return; } } catch (_) {}
+        // Uma oferta de cada vez: não abre por cima de planos, chamada ou dentro
+        // de um GRUPO (lá a oferta é a do grupo — o desconto de acesso atrapalhava).
+        if (busyElsewhere()) { setTimeout(show, 15000); return; }
         // RECONFERE no servidor na hora de abrir: se ele PAGOU nesse meio tempo
         // (ou o Pix ainda está "quente"), não oferece desconto em cima da compra.
         if (!S.rechecked) {
@@ -9888,8 +9871,8 @@ window.MVDiscount = (function () {
     </button>
     <button class="nav-item" id="navSoon" style="opacity:.45;" onclick="openExploreTab()">
         <svg class="nav-icon" id="navSoonIcon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-        <div class="nav-label" id="navSoonLabel">Surpresa</div>
-        <span id="navSoonBadge" style="position:absolute; top:-3px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.12); color:rgba(255,255,255,.6); font-size:8px; font-weight:700; padding:2px 6px; border-radius:999px; letter-spacing:.3px;">em breve</span>
+        <div class="nav-label" id="navSoonLabel">Vídeos</div>
+        <span id="navSoonBadge" style="display:none;position:absolute; top:-3px; left:50%; transform:translateX(-50%); background:rgba(255,255,255,.12); color:rgba(255,255,255,.6); font-size:8px; font-weight:700; padding:2px 6px; border-radius:999px; letter-spacing:.3px;">em breve</span>
     </button>
     <!-- Layout NOVO: MINHAS COMPRAS à direita com destaque (o Perfil mora dentro dela) -->
     <button class="nav-item nav-item-mc enc-on-only" id="navLibrary" onclick="switchScreen('library')" aria-label="Minhas compras">
@@ -11257,6 +11240,9 @@ window.ChatApp = (function() {
 
         if (m.type === 'text' || m.type === 'buttons') {
             if (!m.content && m.type === 'buttons') return;
+            // Mensagem nova dela com a tela de PLANOS aberta: aparece por cima
+            // dos planos (senão o "tá aí?" chegava escondido atrás).
+            if (m._fresh && !mine && m.content) { try { window.MVPaywall && MVPaywall.peek && MVPaywall.peek((CUR && CUR.chat && CUR.chat.name) || '', (CUR && CUR.chat && CUR.chat.avatar_url) || '', m.content); } catch (_) {} }
             d.className = 'ca-bub' + (mine ? ' mine' : '');
             d.innerHTML = statusReplyQuote(m) + '<div class="tx">' + esc(m.content) + '</div>' + tm;
         } else if (m.type === 'audio') {
@@ -13469,7 +13455,7 @@ window.GroupApp = (function () {
         }
     }
 
-    return { tab, loadList, checkTabs, open, back, send, ctaClick, openMedia, closeMedia, closeFull, fullNav, openPass, stop: stopTimers };
+    return { tab, loadList, checkTabs, open, back, send, ctaClick, openMedia, closeMedia, closeFull, fullNav, openPass, stop: stopTimers, curId: () => (CUR ? CUR.id : null) };
 })();
 
 // Deep-link do push de mensagem: /?chat=<id> abre a conversa direto
@@ -20740,6 +20726,9 @@ window.tryTriggerCallAfterLogin = async function() {
     }
 
     // 2) Fallback: chamada global (n\u00e3o vinculada a fun\u00edl/produto)
+    // Convidado da roleta: a tela dele é o popup do giro grátis → roleta.
+    // A chamada geral tocava por cima da roleta logo depois do e-mail.
+    if (effectiveRef === 'convite-roleta') return;
     try {
         const r = await fetch('/api/user/active-call?email=' + encodeURIComponent(email), { credentials:'include' });
         const data = await r.json();
@@ -21621,9 +21610,35 @@ document.addEventListener('keydown', function(e) {
         sugEl.classList.remove('show');
         pendingCheckout = null;
         pendingCheckoutSrc = null;
+        pendingAfter = null;
+        customCopy = null;
         setCheckoutCopy(false);
     }
     window.MV_openLoginModal = openModal;
+    // Pedido de e-mail com TEXTO PRÓPRIO + ação depois de aceito (ex.: convite
+    // da roleta: "Seu giro grátis está te esperando" → abre a roleta).
+    let pendingAfter = null;
+    let customCopy = null;
+    function btnLabel() {
+        if (customCopy && customCopy.btn) return customCopy.btn;
+        return pendingCheckout ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
+    }
+    window.MV_askEmailThen = function (copy, cb) {
+        if (!window.MV_ANONYMOUS) { try { cb && cb(); } catch (_) {} return; }
+        pendingCheckout = null;
+        pendingAfter = cb || null;
+        customCopy = copy || null;
+        netFails = 0;
+        setCheckoutCopy(false);
+        if (customCopy) {
+            if (titleEl && customCopy.title) titleEl.textContent = customCopy.title;
+            if (subEl && customCopy.sub) subEl.textContent = customCopy.sub;
+            if (hintEl && customCopy.hint != null) hintEl.textContent = customCopy.hint;
+            if (submitBtn && !submitBtn.disabled) submitBtn.textContent = btnLabel();
+        }
+        modal.classList.add('is-open');
+        setTimeout(() => emailInput && emailInput.focus(), 200);
+    };
 
     // ── MODO CHECKOUT: e-mail no CLIQUE de comprar (funil sem e-mail) ──
     // O lead anônimo tocou num botão de compra: este mesmo modal abre com a
@@ -21717,6 +21732,7 @@ document.addEventListener('keydown', function(e) {
     function promoteSuccess(data) {
         const pc = pendingCheckout; // captura ANTES do closeModal (que zera)
         const pcSrc = pendingCheckoutSrc;
+        const after = pendingAfter;
         // Pixel Meta: o servidor mandou o Lead via CAPI e devolveu o event_id —
         // dispara o fbq igual pro Meta casar os dois num evento só.
         try { if (window.MVMeta && data.meta_lead) MVMeta.lead(data.meta_lead); } catch (_) {}
@@ -21759,6 +21775,9 @@ document.addEventListener('keydown', function(e) {
             const gid = window.MV_pendingGroup; window.MV_pendingGroup = null;
             setTimeout(() => { try { GroupApp.open(gid); } catch (_) {} }, 250);
         }
+        if (after) setTimeout(() => { try { after(); } catch (_) {} }, 300);
+        // já tinha batido no paywall antes do e-mail → boas-vindas em ~40s
+        if (window.MV_pwSeen) { window.MV_pwSeen = false; setTimeout(() => { try { fetch('/api/user/support-welcome/paywall', { method: 'POST', credentials: 'include' }).catch(() => {}); } catch (_) {} }, 4000); }
         // Limpa cookie de funíl pra próximas sessões serem normais
         document.cookie = 'mv_funnel=; path=/; max-age=0; SameSite=Lax';
     }
@@ -21794,7 +21813,7 @@ document.addEventListener('keydown', function(e) {
         errEl.textContent = 'Erro de conexão. Tenta de novo.';
         errEl.classList.add('show');
         submitBtn.disabled = false;
-        submitBtn.textContent = pendingCheckout ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
+        submitBtn.textContent = btnLabel();
     }
 
     // Submit do login no modal: promove sessão anônima → email real
@@ -21824,7 +21843,7 @@ document.addEventListener('keydown', function(e) {
                     + '</div>';
                 sugEl.classList.add('show');
                 submitBtn.disabled = false;
-                submitBtn.textContent = pendingCheckout ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
+                submitBtn.textContent = btnLabel();
                 document.getElementById('mvLoginSugYes').addEventListener('click', () => {
                     emailInput.value = data.suggestion;
                     sugEl.classList.remove('show');
@@ -21844,7 +21863,7 @@ document.addEventListener('keydown', function(e) {
                         errEl.textContent = d2.error || 'Erro';
                         errEl.classList.add('show');
                         submitBtn.disabled = false;
-                        submitBtn.textContent = pendingCheckout ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
+                        submitBtn.textContent = btnLabel();
                     }
                 });
                 return;
@@ -21852,7 +21871,7 @@ document.addEventListener('keydown', function(e) {
             errEl.textContent = data.error || 'Erro no login';
             errEl.classList.add('show');
             submitBtn.disabled = false;
-            submitBtn.textContent = pendingCheckout ? 'IR PRO PAGAMENTO' : 'DESBLOQUEAR ACESSO';
+            submitBtn.textContent = btnLabel();
         } catch (err) {
             onNetFail(err);
         }
@@ -22780,6 +22799,7 @@ window.MVPaywall = (function () {
             try { console.warn('[paywall] sem planos/checkout configurados — banner não renderizado. Configure o card 💎 na tela de Chats.'); } catch (_) {}
             return;
         }
+        notePaywall();
         el.classList.add('mvpw-inline');
         el.innerHTML = bannerHTML(unlock, opts);
         wire(el, unlock, opts);
@@ -22787,14 +22807,44 @@ window.MVPaywall = (function () {
         watchPix(el, unlock, opts);
     }
 
+    // Chegou no paywall: avisa o servidor 1x por abertura do app — a
+    // boas-vindas da Gabriela sai ~40s depois (não no meio da conversa).
+    let _pwNoted = false;
+    function notePaywall() {
+        if (_pwNoted) return;
+        // anônimo: guarda que já viu — o aviso sai quando ele der o e-mail
+        if (window.MV_ANONYMOUS === true || !window.currentUserEmail) { window.MV_pwSeen = true; return; }
+        _pwNoted = true;
+        try { fetch('/api/user/support-welcome/paywall', { method: 'POST', credentials: 'include' }).catch(() => {}); } catch (_) {}
+    }
+
     // Modal de tela cheia (tiktok / uso genérico)
+    // Chamada tocando/na tela: planos que abrem SOZINHOS esperam ela fechar
+    // (uma coisa de cada vez). Toque do lead (ex.: "atender" travado) abre na hora.
+    function callShowing() {
+        const v = document.getElementById('videoCallOverlay');
+        if (v && v.classList.contains('is-open')) return true;
+        const c = document.getElementById('caCallScr');
+        return !!(c && c.style.display && c.style.display !== 'none');
+    }
     function openModal(unlock, opts) {
         opts = opts || {};
+        const byTap = !!(navigator.userActivation && navigator.userActivation.isActive);
+        if (!byTap && callShowing() && !opts._waited) {
+            const t0 = Date.now();
+            const iv = setInterval(() => {
+                if (callShowing() && Date.now() - t0 < 180000) return;
+                clearInterval(iv);
+                setTimeout(() => openModal(unlock, Object.assign({}, opts, { _waited: true })), 900);
+            }, 800);
+            return;
+        }
         _src = opts.src || null; // origem (ex.: 'chat_7') pro carimbo UTM do checkout
         if (!isActionable(unlock, opts)) {
             try { console.warn('[paywall] sem planos/checkout configurados — popup não aberto. Configure o card 💎 na tela de Chats.'); } catch (_) {}
             return;
         }
+        notePaywall();
         let m = document.getElementById('mvPaywall');
         if (!m) { m = document.createElement('div'); m.id = 'mvPaywall'; document.body.appendChild(m); }
         const userClose = opts.onClose;
@@ -22811,7 +22861,26 @@ window.MVPaywall = (function () {
     }
     function close() { _src = null; const m = document.getElementById('mvPaywall'); if (m) { m.classList.remove('open'); m.innerHTML = ''; } }
 
-    return { bannerHTML, renderInline, openModal, close, checkout };
+    // Faixa "Raquel: tá aí?" por cima da tela de planos (só se ela está aberta)
+    function peek(name, photo, text) {
+        const m = document.getElementById('mvPaywall');
+        if (!m || !m.classList.contains('open')) return;
+        let b = document.getElementById('mvpwPeek');
+        if (!b) {
+            b = document.createElement('div'); b.id = 'mvpwPeek';
+            b.style.cssText = 'position:fixed;left:12px;right:12px;top:calc(12px + env(safe-area-inset-top));z-index:100001;display:flex;gap:10px;align-items:center;background:#1f2c33;color:#fff;border-radius:14px;padding:10px 12px;box-shadow:0 8px 28px rgba(0,0,0,.5);transition:transform .3s,opacity .3s;transform:translateY(-120%);opacity:0;';
+            document.body.appendChild(b);
+        }
+        const e = (x) => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+        b.innerHTML = (photo ? '<img src="' + e(photo) + '" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none;">' : '')
+            + '<div style="min-width:0;"><div style="font-size:13px;font-weight:700;">' + e(name || 'Nova mensagem') + '</div>'
+            + '<div style="font-size:13.5px;color:#d9dee0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + e(text) + '</div></div>';
+        b.onclick = () => { b.style.transform = 'translateY(-120%)'; b.style.opacity = '0'; };
+        requestAnimationFrame(() => { b.style.transform = 'translateY(0)'; b.style.opacity = '1'; });
+        clearTimeout(b._t);
+        b._t = setTimeout(() => { b.style.transform = 'translateY(-120%)'; b.style.opacity = '0'; }, 5000);
+    }
+    return { bannerHTML, renderInline, openModal, close, checkout, peek };
 })();
 
 // ──────────────── Explore: feed vertical estilo TikTok ────────────────
@@ -24515,6 +24584,96 @@ window.Roulette = (function () {
             if (!vid) return;
             api('/api/user/roulette/track-ref', { code: code, visitor_id: vid }).catch(function () {});
         } catch (_) {}
+    })();
+
+    // ── CONVIDADO SEM CONTA (prévia aprovada pelo dono 29/10) ───────────
+    // Entrou pelo link de um amigo → o servidor liga o funil 'convite-roleta'
+    // (sem login, cai na aba Grupos). Aqui sobe o popup "1 giro grátis" com as
+    // modelos das chamadas passando de lado; GIRAR ROLETA pede só o e-mail e
+    // abre a roleta (conta nova já nasce com 1 giro).
+    var invitePopShown = false;
+    function inviteEsc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+    function inviteThumb(u) {
+        try { return 'https://wsrv.nl/?url=' + encodeURIComponent(u) + '&w=240&h=340&fit=cover&q=70&output=webp'; } catch (_) { return u; }
+    }
+    function closeInvitePop() {
+        var o = document.getElementById('rlInvOv');
+        if (o) o.remove();
+    }
+    function showInvitePop(models) {
+        if (invitePopShown || document.getElementById('rlInvOv')) return;
+        invitePopShown = true;
+        if (!document.getElementById('rlInvCss')) {
+            var st = document.createElement('style'); st.id = 'rlInvCss';
+            st.textContent = '#rlInvOv{position:fixed;inset:0;z-index:760;background:rgba(0,0,0,.6);display:flex;align-items:flex-end}'
+                + '#rlInvOv .sh{width:100%;max-width:520px;margin:0 auto;text-align:center;color:#fff;background:linear-gradient(180deg,#2a0306 0%,#0b0000 55%);border-radius:24px 24px 0 0;padding:22px 0 calc(22px + env(safe-area-inset-bottom));border-top:1px solid rgba(229,9,20,.5);box-shadow:0 -10px 40px rgba(229,9,20,.25);animation:rlInvUp .45s ease}'
+                + '@keyframes rlInvUp{from{transform:translateY(100%)}}'
+                + '#rlInvOv .ey{display:inline-block;background:rgba(255,215,94,.12);color:#ffd75e;font-size:11px;font-weight:800;letter-spacing:1.5px;padding:6px 12px;border-radius:999px}'
+                + '#rlInvOv .tt{margin:12px 20px 6px;font-size:25px;font-weight:900;line-height:1.1}#rlInvOv .tt em{font-style:normal;color:#ffd75e}'
+                + '#rlInvOv .sb{margin:0 20px 16px;font-size:14px;color:#ccc;line-height:1.4}'
+                + '#rlInvOv .rl{overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}'
+                + '#rlInvOv .tr{display:flex;gap:10px;width:max-content;animation:rlInvRoll 24s linear infinite}@keyframes rlInvRoll{to{transform:translateX(-50%)}}'
+                + '#rlInvOv .cd{width:112px;height:160px;border-radius:16px;background:#222;position:relative;overflow:hidden;flex:none}'
+                + '#rlInvOv .cd img{width:100%;height:100%;object-fit:cover;display:block}'
+                + '#rlInvOv .cd::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.85))}'
+                + '#rlInvOv .on{position:absolute;top:8px;left:8px;z-index:1;font-size:10px;font-weight:800;background:rgba(0,0,0,.55);padding:3px 7px;border-radius:999px}'
+                + '#rlInvOv .on::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#2ecc71;margin-right:4px;vertical-align:1px}'
+                + '#rlInvOv .nm{position:absolute;left:8px;bottom:24px;z-index:1;font-size:13px;font-weight:800;text-align:left}'
+                + '#rlInvOv .cl{position:absolute;left:8px;bottom:8px;z-index:1;font-size:10px;color:#ddd;display:flex;gap:4px;align-items:center}'
+                + '#rlInvOv .bt{display:block;margin:18px 20px 0;width:calc(100% - 40px);padding:16px;border:0;border-radius:14px;background:linear-gradient(180deg,#ff2a35,#c3000b);color:#fff;font-size:17px;font-weight:900;letter-spacing:.5px;box-shadow:0 6px 22px rgba(229,9,20,.5);animation:rlInvPulse 1.6s infinite}'
+                + '@keyframes rlInvPulse{50%{transform:scale(1.03)}}#rlInvOv .mi{margin-top:10px;font-size:12px;color:#888}';
+            document.head.appendChild(st);
+        }
+        var ic = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 10l4.5-2.3A1 1 0 0121 8.6v6.8a1 1 0 01-1.5.9L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>';
+        var cards = '';
+        if (models && models.length) {
+            var list = models.length < 6 ? models.concat(models) : models;
+            list = list.concat(list); // 2 voltas = rolagem sem emenda
+            cards = list.map(function (m) {
+                return '<div class="cd"><img loading="lazy" src="' + inviteEsc(inviteThumb(m.photo)) + '" data-o="' + inviteEsc(m.photo) + '" onerror="if(this.dataset.f){this.style.display=\'none\'}else{this.dataset.f=1;this.src=this.dataset.o}" alt=""><span class="on">online</span><span class="nm">' + inviteEsc(m.name) + '</span><span class="cl">' + ic + 'chamada de vídeo</span></div>';
+            }).join('');
+        }
+        var o = document.createElement('div');
+        o.id = 'rlInvOv'; o.setAttribute('data-mv-own-flow', '1');
+        o.innerHTML = '<div class="sh">'
+            + '<div class="ey">🎁 PRESENTE DE UM AMIGO</div>'
+            + '<div class="tt">Você ganhou <em>1 giro grátis</em> na Roleta VIP</div>'
+            + '<div class="sb">Gire a roleta e ganhe <b>chamada de vídeo</b>, <b>acessos VIP</b> e até <b style="color:#ffd75e">R$ 1.000 no Pix</b>.</div>'
+            + (cards ? '<div class="rl"><div class="tr">' + cards + '</div></div>' : '')
+            + '<button class="bt" type="button">GIRAR ROLETA</button>'
+            + '<div class="mi">Leva 5 segundos · grátis</div></div>';
+        document.body.appendChild(o);
+        try { TRACK.event('invite_pop_shown', {}); } catch (_) {}
+        o.addEventListener('click', function (e) { if (e.target === o) closeInvitePop(); });
+        o.querySelector('.bt').addEventListener('click', function () {
+            try { TRACK.event('invite_pop_spin', {}); } catch (_) {}
+            closeInvitePop();
+            try { localStorage.setItem('rl_invited_shown', '1'); } catch (_) {}
+            var openWheel = function () { open(); };
+            if (typeof window.MV_askEmailThen === 'function') {
+                window.MV_askEmailThen({
+                    title: 'Seu giro grátis está te esperando 🎁',
+                    sub: 'Coloque seu e-mail e gire agora',
+                    btn: 'GIRAR AGORA',
+                    hint: '100% grátis · sem cartão',
+                }, openWheel);
+            } else if (window.MV_openLoginModal) window.MV_openLoginModal();
+        });
+    }
+    (function inviteGuest() {
+        var fromInvite = false;
+        try { fromInvite = localStorage.getItem('rl_from_invite') === '1' || /[?&]convite=/.test(window.location.search); } catch (_) {}
+        if (!fromInvite || window.MV_FUNNEL_SLUG !== 'convite-roleta') return;
+        Promise.resolve(window.MV_BOOT_PROMISE).then(function () {
+            if (window.MV_ANONYMOUS !== true) return;
+            return api('/api/user/roulette/invite-models').then(function (d) {
+                if (!d || d.enabled === false) return;
+                // dá tempo do app abrir na aba Grupos (funil) antes de subir
+                setTimeout(function () {
+                    if (window.MV_ANONYMOUS === true) showInvitePop(d.models || []);
+                }, 1800);
+            });
+        }).catch(function () {});
     })();
 
     return {

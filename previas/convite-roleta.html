@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prévia — Convite da roleta</title>
+<style>
+:root{--red:#e50914;--gold:#ffd75e}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#111;font-family:-apple-system,Roboto,Arial,sans-serif;color:#fff;display:flex;flex-wrap:wrap;gap:28px;justify-content:center;padding:24px 12px}
+.cap{width:100%;text-align:center;color:#aaa;font-size:13px;margin-bottom:14px}
+.phone{width:375px;height:760px;border-radius:34px;border:8px solid #222;overflow:hidden;position:relative;background:#000}
+.lbl{position:absolute;top:-26px;left:0;right:0;text-align:center;font-size:12px;color:#888}
+.wrap{position:relative}
+/* fundo: aba de grupos */
+.groups{padding:18px 14px;filter:blur(2px) brightness(.45)}
+.groups h2{font-size:20px;margin-bottom:14px}
+.g{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #222}
+.g i{width:48px;height:48px;border-radius:50%;background:#333 center/cover}
+.g b{font-size:14px}.g span{display:block;font-size:12px;color:#888}
+/* popup */
+.ov{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end}
+.sheet{width:100%;text-align:center;background:linear-gradient(180deg,#2a0306 0%,#0b0000 55%);border-radius:24px 24px 0 0;padding:22px 0 26px;border-top:1px solid rgba(229,9,20,.5);box-shadow:0 -10px 40px rgba(229,9,20,.25);animation:up .5s ease}
+@keyframes up{from{transform:translateY(100%)}}
+.eye{display:inline-flex;gap:6px;align-items:center;margin:0 20px;background:rgba(255,215,94,.12);color:var(--gold);font-size:11px;font-weight:800;letter-spacing:1.5px;padding:6px 12px;border-radius:999px}
+.t{margin:12px 20px 6px;font-size:25px;font-weight:900;line-height:1.1}
+.t em{font-style:normal;color:var(--gold)}
+.s{margin:0 20px 16px;font-size:14px;color:#ccc;line-height:1.4}
+/* faixa de chamadas rolando */
+.rail{overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.track{display:flex;gap:10px;width:max-content;animation:roll 22s linear infinite}
+@keyframes roll{to{transform:translateX(-50%)}}
+.card{width:118px;height:168px;border-radius:16px;background:#222 center/cover;position:relative;overflow:hidden;flex:none}
+.card::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(0,0,0,.85))}
+.on{position:absolute;top:8px;left:8px;z-index:1;font-size:10px;font-weight:800;background:rgba(0,0,0,.55);padding:3px 7px;border-radius:999px}
+.on::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#2ecc71;margin-right:4px;vertical-align:1px}
+.nm{position:absolute;left:8px;bottom:26px;z-index:1;font-size:13px;font-weight:800}
+.call{position:absolute;left:8px;bottom:8px;z-index:1;font-size:10px;color:#ddd;display:flex;gap:4px;align-items:center}
+.call svg{width:12px;height:12px}
+.btn{display:block;margin:18px 20px 0;padding:16px;border:0;border-radius:14px;background:linear-gradient(180deg,#ff2a35,#c3000b);color:#fff;font-size:17px;font-weight:900;letter-spacing:.5px;box-shadow:0 6px 22px rgba(229,9,20,.5);width:calc(100% - 40px);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{transform:scale(1.03)}}
+.mini{text-align:center;margin-top:10px;font-size:12px;color:#888}
+/* tela 2: e-mail */
+.mail{position:absolute;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:20px}
+.box{background:#161616;border-radius:18px;padding:22px;width:100%;text-align:center}
+.box h3{font-size:19px;margin-bottom:6px}.box p{font-size:13px;color:#aaa;margin-bottom:14px}
+.in{background:#0a0a0a;border:1px solid #333;border-radius:10px;padding:14px;text-align:left;color:#666;font-size:15px;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="cap">Prévia — quem chega pelo link de um amigo. Fotos aqui são só exemplo: no app entram as modelos das chamadas de vídeo.</div>
+
+<div class="wrap"><div class="lbl">1. Entra no app (aba Grupos) → popup sobe</div>
+<div class="phone">
+  <div class="groups"><h2>Grupos</h2>
+    <div class="g"><i></i><div><b>Clube das Casadas</b><span>1.284 membros</span></div></div>
+    <div class="g"><i></i><div><b>Vizinhas</b><span>932 membros</span></div></div>
+    <div class="g"><i></i><div><b>Grupo VIP</b><span>2.110 membros</span></div></div>
+    <div class="g"><i></i><div><b>Coroas</b><span>640 membros</span></div></div>
+  </div>
+  <div class="ov"><div class="sheet">
+    <div class="eye">🎁 PRESENTE DE UM AMIGO</div>
+    <div class="t">Você ganhou <em>1 giro grátis</em> na Roleta VIP</div>
+    <div class="s">Gire a roleta e ganhe <b>chamada de vídeo</b>, <b>acessos VIP</b> e até <b style="color:#ffd75e">R$ 1.000 no Pix</b>.</div>
+    <div class="rail"><div class="track" id="tr"></div></div>
+    <button class="btn">GIRAR ROLETA</button>
+    <div class="mini">Leva 5 segundos · grátis</div>
+  </div></div>
+</div></div>
+
+<div class="wrap"><div class="lbl">2. Toca em GIRAR → pede só o e-mail → abre a roleta</div>
+<div class="phone">
+  <div class="groups"><h2>Grupos</h2>
+    <div class="g"><i></i><div><b>Clube das Casadas</b><span>1.284 membros</span></div></div>
+    <div class="g"><i></i><div><b>Vizinhas</b><span>932 membros</span></div></div>
+  </div>
+  <div class="mail"><div class="box">
+    <h3>Seu giro grátis está te esperando 🎁</h3>
+    <p>Coloque seu e-mail e gire agora</p>
+    <div class="in">seuemail@gmail.com</div>
+    <button class="btn" style="margin:0;width:100%;animation:none">GIRAR AGORA</button>
+  </div></div>
+</div></div>
+
+<script>
+var f=[
+ ['Adriane','https://membrosvip-storage.b-cdn.net/Grupo%20FREE/STATUS/ADRIANE,%20SOLTEIRA,%2051/WhatsApp%20Image%202026-09-07%20at%2019.54.56.jpeg'],
+ ['Roberta','https://membrosvip-storage.b-cdn.net/Grupo%20FREE/STATUS/ROBERTA,%2034,%20SOLTEIRA/WhatsApp%20Image%202026-09-05%20at%2016.44.31.jpeg'],
+ ['Helena','https://membrosvip-storage.b-cdn.net/Helena/1005f57a8bda95adf7b373831ed6812b.jpg'],
+ ['Karen',''],['Yasmin',''],['Leti','']];
+var ic='<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M15 10l4.5-2.3A1 1 0 0121 8.6v6.8a1 1 0 01-1.5.9L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>';
+var h=f.concat(f).map(function(x){return '<div class="card" style="background-image:url(\''+x[1]+'\')"><span class="on">online</span><span class="nm">'+x[0]+'</span><span class="call">'+ic+'chamada de vídeo</span></div>'}).join('');
+document.getElementById('tr').innerHTML=h;
+</script>
+</body>
+</html>

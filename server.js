@@ -403,6 +403,22 @@ app.get('/', async (req, res) => {
         try {
             const cfg = await inviteCardCfg();
             const url = 'https://' + req.get('host') + '/?convite=' + encodeURIComponent(String(req.query.convite).slice(0, 40));
+            // Convidado SEM conta (nem e-mail): entra no app como o lead do funil
+            // (sem tela de login) pelo funil automático 'convite-roleta' — cai na
+            // aba Grupos, vê o popup do giro grátis e o e-mail é pedido no GIRAR.
+            try {
+                let hasUser = false;
+                try {
+                    const { verifyUserToken, USER_COOKIE_NAME } = require('./lib/user-auth');
+                    const tok = req.cookies?.[USER_COOKIE_NAME];
+                    if (tok) { const v = verifyUserToken(tok); hasUser = !!(v && v.valid && !v.anonymous); }
+                } catch (_) {}
+                if (!hasUser) {
+                    const { rows } = await require('./db').query(
+                        `SELECT 1 FROM funnels WHERE slug = 'convite-roleta' AND active = true LIMIT 1`);
+                    if (rows.length) res.cookie('mv_funnel', 'convite-roleta', { maxAge: 7*24*60*60*1000, path: '/', httpOnly: false, sameSite: 'lax' });
+                }
+            } catch (_) {}
             const html = appHtmlCached().replace(/<meta charset="UTF-8">/i, (m) => m + inviteOgTags(cfg, url));
             return res.type('html').send(html);
         } catch (err) {

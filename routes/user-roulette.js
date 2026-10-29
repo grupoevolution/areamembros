@@ -369,6 +369,34 @@ async function callOptions(ids) {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
+// GET /api/user/roulette/invite-models  (SEM login)
+// Fotos/nomes das modelos de chamada da roleta pra faixa do popup do CONVIDADO
+// (quem chega pelo link de um amigo ainda não tem e-mail). Só leitura.
+// ─────────────────────────────────────────────────────────────────────────────
+let _inviteModelsCache = { at: 0, data: null };
+router.get('/roulette/invite-models', async (req, res) => {
+    try {
+        if (_inviteModelsCache.data && Date.now() - _inviteModelsCache.at < 5 * 60 * 1000) {
+            return res.json(_inviteModelsCache.data);
+        }
+        const cfg = await loadConfig();
+        let models = [];
+        if (configUsable(cfg)) {
+            models = (await callOptions(cfg.call_product_ids))
+                .filter(m => m.photo)
+                .slice(0, 12)
+                .map(m => ({ name: String(m.name || '').replace(/^\s*(chamada( de v[ií]deo)?|video ?chamada)\s*(com|da|de)?\s*/i, '').split(/[\s\-–|·]/)[0] || m.name, photo: m.photo }));
+        }
+        const data = { success: true, enabled: configUsable(cfg), models };
+        _inviteModelsCache = { at: Date.now(), data };
+        return res.json(data);
+    } catch (err) {
+        return res.json({ success: true, enabled: false, models: [] });
+    }
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
 // POST /api/user/roulette/spin
 // ─────────────────────────────────────────────────────────────────────────────
 router.post('/roulette/spin', requireUser, async (req, res) => {

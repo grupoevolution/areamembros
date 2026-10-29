@@ -2250,6 +2250,10 @@ function invalidateSupportConfig() { _supportCfgCache = { at: 0, cfg: null }; }
 const GAB_DEFAULTS = {
     enabled: true,
     delay_seconds: 90,
+    // Lead do FUNIL: a boas-vindas espera ele chegar no paywall (+40s) pra não
+    // atrapalhar a conversa com a modelo; se nunca chegar, sai em 10 min.
+    paywall_seconds: 40,
+    funnel_fallback_seconds: 600,
     audio_url: 'https://a.arquivosvip.site/m/kBLnOts.mp3',
     video_url: 'https://a.arquivosvip.site/m/1PLHiZo.mp4',
     offer_text: 'Liberando o PREMIUM hoje você libera TUDO no app e ainda ganha uma CHAMADA DE VÍDEO EXCLUSIVA 🔥',
@@ -2322,7 +2326,7 @@ async function _hasRealPurchase(email) {
 
 // Chamado no login/promote (deu o e-mail): agenda as boas-vindas pra daqui a
 // delay_seconds. Quem já tem conversa de suporte (lead antigo) não recebe.
-async function scheduleSupportWelcome(email) {
+async function scheduleSupportWelcome(email, opts) {
     const e = String(email || '').toLowerCase().trim();
     if (!e || e.endsWith('@preview.local')) return;
     try {
@@ -2337,9 +2341,29 @@ async function scheduleSupportWelcome(email) {
         await db.query(
             `INSERT INTO support_welcome (email, due_at, sent_at, with_offer)
              VALUES ($1, NOW() + make_interval(secs => $2), $3, $4) ON CONFLICT (email) DO NOTHING`,
-            [e, Math.max(30, parseInt(cfg.delay_seconds, 10) || 90), old.length ? new Date() : null, old.length ? false : null]);
+            [e, (opts && opts.funnel)
+                ? Math.max(60, parseInt(cfg.funnel_fallback_seconds, 10) || 600)
+                : Math.max(30, parseInt(cfg.delay_seconds, 10) || 90),
+             old.length ? new Date() : null, old.length ? false : null]);
     } catch (err) { logger.warn('[gabriela] agendar boas-vindas: ' + err.message); }
 }
+
+// Lead chegou no PAYWALL (app avisa): adianta a boas-vindas pra daqui a
+// paywall_seconds (só se ainda não saiu e se isso for ANTES do que estava marcado).
+router.post('/support-welcome/paywall', optionalUser, async (req, res) => {
+    try {
+        const u = req.user;
+        if (!u || u.anonymous || !u.email) return res.json({ success: true });
+        const cfg = await getGabrielaConfig();
+        if (!cfg.enabled) return res.json({ success: true });
+        await db.query(
+            `UPDATE support_welcome
+                SET due_at = LEAST(due_at, NOW() + make_interval(secs => $2))
+              WHERE email = $1 AND sent_at IS NULL`,
+            [String(u.email).toLowerCase(), Math.max(10, parseInt(cfg.paywall_seconds, 10) || 40)]);
+    } catch (_) {}
+    return res.json({ success: true });
+});
 
 // Worker (~15s): entrega as boas-vindas vencidas + apaga mensagens expiradas.
 //  - foi pro pagamento (Pix/checkout nos últimos 15 min) e não pagou → espera

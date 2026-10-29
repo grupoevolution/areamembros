@@ -509,6 +509,22 @@ lembrete do Pix/pushes do funil). Aprovado pelo dono. Próximos (propostos, não
 app pedir a lista de conversas 1x ao abrir (hoje ~5x), pool do banco 20→~35, teste de
 carga no volume de R$2.500/dia.
 
+**29/10 — pronto pra deploy (testado local):**
+- CONVITE DA ROLETA sem login: `/?convite=` pra quem não tem conta liga o funil automático
+  `convite-roleta` (criado por migração, entrada = aba Grupos; NÃO apagar no painel). Popup
+  "PRESENTE DE UM AMIGO / 1 giro grátis" (prévia aprovada `previas/convite-roleta.html`)
+  com as modelos das chamadas da roleta passando de lado (`GET /api/user/roulette/invite-models`,
+  sem login) → GIRAR ROLETA pede só o e-mail (`MV_askEmailThen`, texto próprio) → abre a
+  roleta (conta nova = 1 giro). Chamada geral "on_login" não toca pra quem veio do convite.
+- Tela de demonstração antiga removida (hero "Clube das Casadas", "72% OFF 23:47:32",
+  rodapé "Surpresa/em breve") — aparecia com internet lenta. Hero nasce vazio.
+- Gabriela: lead de FUNIL recebe a boas-vindas 40s depois de chegar no PAYWALL
+  (`POST /api/user/support-welcome/paywall`); nunca chegou → 10 min. Login normal = 90s.
+- Popups 1 por vez: mensagem nova da modelo com os planos abertos aparece numa faixa por
+  cima (`MVPaywall.peek`); planos que abrem SOZINHOS esperam a chamada fechar (toque do lead
+  abre na hora); desconto não abre por cima de planos/chamada nem dentro de grupo (só o
+  desconto do PRÓPRIO grupo).
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
