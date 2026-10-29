@@ -24401,12 +24401,22 @@ window.Roulette = (function () {
         }).catch(function () {});
     }
 
+    // Voltando do checkout, quem decide a hora da roleta é a FILA da volta
+    // (desconto primeiro, roleta depois) — o gatilho do catálogo não atropela.
+    var holdForReturn = false;
+    function checkoutReturnPending() {
+        if (holdForReturn) return true;
+        var t = 0;
+        try { t = parseInt(localStorage.getItem('mv_checkout_at'), 10) || 0; } catch (_) {}
+        return !!t && Date.now() - t < 30 * 60 * 1000;
+    }
+
     // Wrapper do switchScreen: entrou no catálogo → arma o gatilho.
     try {
         var _prevSwitch = window.switchScreen;
         window.switchScreen = function (name) {
             var out = _prevSwitch.apply(this, arguments);
-            if (name === 'home') { try { maybeShow(); } catch (_) {} }
+            if (name === 'home' && !checkoutReturnPending()) { try { maybeShow(); } catch (_) {} }
             return out;
         };
     } catch (_) {}
@@ -24415,7 +24425,7 @@ window.Roulette = (function () {
     setTimeout(function () {
         try {
             var h = document.getElementById('home');
-            if (h && h.classList.contains('active')) maybeShow();
+            if (h && h.classList.contains('active') && !checkoutReturnPending()) maybeShow();
         } catch (_) {}
     }, 3000);
 
@@ -24471,6 +24481,7 @@ window.Roulette = (function () {
         }
         function tryReturnPopup() {
             if (!voltouDoCheckout()) return;
+            holdForReturn = true;
             if (waitT) clearTimeout(waitT);
             // dá tempo do desconto consultar o servidor (ele arma em ~2,5s)
             var started = Date.now();
