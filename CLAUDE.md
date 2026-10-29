@@ -501,6 +501,14 @@ posts/dia, 17 VIP na semana (só o último do dia das modelos "ricas").
 - Vídeo mp4 no chat limitado a 420px de altura.
 - APÓS O DEPLOY: painel → escolher a chamada da Gabriely como bônus e conferir o link do Premium.
 
+**28/10 (noite) — notificações da rotina ESPALHADAS:** alarme 20:48 ("banco com 27
+pedidos na fila", 3 min) veio logo após a rotina das 20:30 pros ~28 mil aparelhos (todos
+abrindo o app juntos no pico). Agora cada horário da rotina é enviado em ~12 min
+(`SPREAD_MIN` em lib/push-worker.js), em ordem sorteada e em 2º plano (não segura
+lembrete do Pix/pushes do funil). Aprovado pelo dono. Próximos (propostos, não feitos):
+app pedir a lista de conversas 1x ao abrir (hoje ~5x), pool do banco 20→~35, teste de
+carga no volume de R$2.500/dia.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
