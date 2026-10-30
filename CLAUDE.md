@@ -526,8 +526,8 @@ carga no volume de R$2.500/dia.
   desconto do PRÓPRIO grupo).
 
 **29/10 — chats novos APROVADOS e LIGADOS (noite):** convite dos grupos: 2→352, 5→353, 4→356, 6→357,
-7→358, 8→359, 9→360, 10→361, 11→362, 12→363, 13→364 (3 Casadas segue 70). Funil chatonline2: Cleia 74→354
-(55s) + Leyla 355 em 655s (delay do funil conta do INÍCIO). 365/366 ainda sem lugar (dono decide). Antigos
+7→358, 8→359, 9→360, 10→361, 11→362, 12→363, 13→364 (3 Casadas segue 70). Funil chatonline2 (delay conta do INÍCIO): Cleia 354 55s · Bianca 365 2min · Leyla 355 6min ·
+Cinthia 366 10min (decisão do dono). Antigos
 68/69/74 intactos (desligados do uso). Stories 344–351 estavam INATIVOS (cópia nasce inativa) → ativados.
 **29/10 — chats NOVOS em teste (produção, listed=false, NÃO ligados a grupo/funil):**
 dono testa por `m.membrosvips.com/?chat=ID` com e-mail que não comprou. Aprovou → ligar.
