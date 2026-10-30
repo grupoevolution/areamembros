@@ -545,6 +545,12 @@ Encontros, chamada): 365 Bianca Moraes (rosto do perfil 95 do Encontros; "vi seu
 foto" → solteiro? → foto → CTA "VEJA QUEM TE CURTIU" /?go=encontros) · 366 Cinthia (chamada produto 45,
 fora da roleta grátis [44,17,48]; papo → foto → "faço chamada" → CTA checkout da chamada).
 
+**NOVA FASE (29/10, áudio do dono) — LER `docs/ESTRATEGIA-INSTALAR-E-NUTRIR.md`:** foco em fazer o
+lead INSTALAR o app + ATIVAR notificação (base pra nutrir 10–15 dias quem não comprou e gerar
+recompra de quem comprou), depois rotina de nutrição, mais chats segmentados com campeão, quiz,
+novos funis/fontes de tráfego, catálogo vivo (5–6 chamadas/semana), e só então IA. Ainda em
+CONVERSA — não codar sem o dono pedir.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
