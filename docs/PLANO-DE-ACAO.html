@@ -1,0 +1,248 @@
+<title>Plano de Crescimento do App</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: coluna de leitura única; fases como trilha numerada (é uma sequência real) */
+:root{
+  --bg:#f7f5f6; --surface:#ffffff; --fg:#1d1a1c; --muted:#6b6168; --line:#e6dfe3;
+  --accent:#c4102a; --accent-soft:#fbe7ea; --ok:#1f7a4d; --ok-soft:#e3f3ea; --warn:#9a5b00; --warn-soft:#fdf0d9;
+  --display:"Archivo",system-ui,sans-serif; --body:"Source Sans 3",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141113; --surface:#1d191c; --fg:#efe9ec; --muted:#a79ca3; --line:#332c31;
+  --accent:#ff4a5e; --accent-soft:#3a1a20; --ok:#5cc98f; --ok-soft:#173025; --warn:#f0b450; --warn-soft:#352812; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141113; --surface:#1d191c; --fg:#efe9ec; --muted:#a79ca3; --line:#332c31;
+  --accent:#ff4a5e; --accent-soft:#3a1a20; --ok:#5cc98f; --ok-soft:#173025; --warn:#f0b450; --warn-soft:#352812; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:17px/1.6 var(--body)}
+.wrap{max-width:820px;margin:0 auto;padding-block:40px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:44px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(30px,6vw,44px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:26px;font-weight:800}
+h3{font-size:19px;font-weight:700}
+p{margin:0}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.lead{font-size:19px;color:var(--muted);max-width:62ch}
+section{display:flex;flex-direction:column;gap:16px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.stat b{font:800 26px var(--display);font-variant-numeric:tabular-nums}
+.stat span{font-size:14px;color:var(--muted);line-height:1.35}
+.note{border-radius:12px;padding:14px 16px;font-size:16px}
+.note.warn{background:var(--warn-soft);color:var(--fg);border-left:4px solid var(--warn)}
+.note.ok{background:var(--ok-soft);border-left:4px solid var(--ok)}
+.note.key{background:var(--accent-soft);border-left:4px solid var(--accent)}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:15px;min-width:520px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{height:8px;border-radius:4px;background:var(--accent);min-width:2px}
+.phases{display:flex;flex-direction:column;gap:0;border-left:2px solid var(--line);margin-left:14px}
+.ph{position:relative;padding:0 0 30px 30px;display:flex;flex-direction:column;gap:10px}
+.ph::before{content:attr(data-n);position:absolute;left:-16px;top:-2px;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;font:700 14px var(--display);display:flex;align-items:center;justify-content:center}
+.ph .when{font:500 12px var(--mono);color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+ul,ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:14px}
+.flow span{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px 11px}
+.flow i{color:var(--muted);font-style:normal}
+.q{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips span{font-size:14px;background:var(--accent-soft);border-radius:6px;padding:3px 9px}
+.muted{color:var(--muted)}
+.qs ol{gap:12px}
+footer{font-size:14px;color:var(--muted)}
+</style>
+
+<div class="wrap">
+
+<header style="display:flex;flex-direction:column;gap:12px">
+  <div class="eyebrow">Membros VIP · plano de ação · 29/10/2026</div>
+  <h1>Do "compra agora" para "compra nos próximos 10 dias"</h1>
+  <p class="lead">Hoje o app tenta vender em poucos minutos e quem sai, some. O plano é descobrir o que cada lead quer (KISS), ter conversas certas pra cada desejo, fazer ele instalar o app e ativar as notificações, e vender pra ele por 10 dias, tanto pra quem nunca comprou quanto pra quem já comprou.</p>
+</header>
+
+<section>
+  <div class="eyebrow">1 · Onde estamos (dados reais do painel)</div>
+  <h2>Funil chatonline2, últimos 15 dias</h2>
+  <div class="stats">
+    <div class="stat"><b>66.621</b><span>visitas no funil</span></div>
+    <div class="stat"><b>7.949</b><span>deram e-mail (12%)</span></div>
+    <div class="stat"><b>560</b><span>compraram (0,84% das visitas · 7% de quem deu e-mail)</span></div>
+    <div class="stat"><b>R$ 23,7 mil</b><span>faturamento do funil</span></div>
+  </div>
+  <p>De cada <b>100 pessoas</b> que chegam: ~25 começam a conversar, ~12 deixam e-mail, <b>menos de 1 compra</b>. Ou seja, <b>99 de cada 100 vão embora</b>. É exatamente esse povo que o plano quer recuperar.</p>
+
+  <h3>O que vende (todo o app, 15 dias)</h3>
+  <div class="tbl"><table>
+    <tr><th>Área</th><th>Vendas</th><th>Faturamento</th><th style="width:30%"></th></tr>
+    <tr><td>Grupos</td><td class="n">379</td><td class="n">R$ 7.435</td><td><div class="bar" style="width:100%"></div></td></tr>
+    <tr><td>Chat Premium</td><td class="n">129</td><td class="n">R$ 6.743</td><td><div class="bar" style="width:91%"></div></td></tr>
+    <tr><td>Chat VIP</td><td class="n">152</td><td class="n">R$ 4.238</td><td><div class="bar" style="width:57%"></div></td></tr>
+    <tr><td>Passe vitalício</td><td class="n">27</td><td class="n">R$ 2.043</td><td><div class="bar" style="width:27%"></div></td></tr>
+    <tr><td>Catálogo</td><td class="n">71</td><td class="n">R$ 1.421</td><td><div class="bar" style="width:19%"></div></td></tr>
+    <tr><td>Chamadas de vídeo</td><td class="n">38</td><td class="n">R$ 1.072</td><td><div class="bar" style="width:14%"></div></td></tr>
+    <tr><td>Upgrade</td><td class="n">34</td><td class="n">R$ 1.029</td><td><div class="bar" style="width:14%"></div></td></tr>
+    <tr><td>Encontros</td><td class="n">9</td><td class="n">R$ 394</td><td><div class="bar" style="width:5%"></div></td></tr>
+  </table></div>
+  <p class="muted">Ticket médio R$ 29. Chamada de vídeo é um desejo forte do lead, mas só 38 vendas: tem espaço pra crescer (a Leyla e a Cinthia vão mostrar isso).</p>
+
+  <h3>App e notificações (última semana)</h3>
+  <div class="stats">
+    <div class="stat"><b>12.235</b><span>viram o pedido de instalar</span></div>
+    <div class="stat"><b>26,6%</b><span>tocaram em instalar</span></div>
+    <div class="stat"><b>~1.700</b><span>instalaram de fato</span></div>
+    <div class="stat"><b>26.666</b><span>aparelhos recebendo notificação (base total)</span></div>
+    <div class="stat"><b>~26%</b><span>ativam notificação pela barra na 1ª vez</span></div>
+    <div class="stat"><b>30%</b><span>de quem compra, compra de novo em 7 dias</span></div>
+  </div>
+  <div class="note key"><b>Leitura:</b> a recompra já é boa (30%). O vazamento grande está <b>antes</b> da 1ª compra e na notificação: só ~1 em 4 ativa. Sua meta de 90% de quem instala ativar é o maior ganho do plano inteiro, porque sem notificação não existe rotina de 10 dias.</div>
+  <div class="note warn"><b>Alerta para investigar:</b> no painel, os e-mails por dia caíram de ~700 (até 25/10) para ~270 (26 a 29/10), com visitas parecidas. Pode ser mudança no tráfego ou algo no funil. É a primeira coisa a checar, antes de tudo.</div>
+</section>
+
+<section>
+  <div class="eyebrow">2 · A ordem (e por quê)</div>
+  <h2>Sim, o KISS vem primeiro</h2>
+  <p>Concordo com você. O KISS é simples de construir, já serve de <b>pesquisa de mercado</b> (cada resposta vira dado) e ele decide quais conversas a gente precisa criar. Sem saber o que o lead quer, criar conversas novas é tiro no escuro. Mas antes dele vem um passo pequeno: <b>medir</b>, senão a gente não sabe se o KISS ganhou ou perdeu.</p>
+
+  <div class="phases">
+
+    <div class="ph" data-n="0">
+      <div class="when">2–3 dias · base</div>
+      <h3>Medir a jornada inteira do lead</h3>
+      <div class="flow"><span>visitou</span><i>→</i><span>conversou</span><i>→</i><span>respondeu KISS</span><i>→</i><span>deu e-mail</span><i>→</i><span>instalou</span><i>→</i><span>abriu o app</span><i>→</i><span>ativou notificação</span><i>→</i><span>comprou</span><i>→</i><span>comprou de novo</span></div>
+      <ul>
+        <li>Uma página no painel com esse caminho, separado por <b>funil</b>, <b>chat</b> e <b>resposta do KISS</b>.</li>
+        <li>Cada chat ganha uma nota: <b>quanto fatura a cada 100 leads</b>. É essa nota que escolhe o "campeão".</li>
+        <li>Investigar a queda de e-mails desde 26/10.</li>
+      </ul>
+    </div>
+
+    <div class="ph" data-n="1">
+      <div class="when">1 semana · KISS</div>
+      <h3>Funil do KISS</h3>
+      <div class="flow"><span>anúncio</span><i>→</i><span>pressel (abre no Chrome)</span><i>→</i><span>app com TODAS as conversas</span><i>→</i><span>1–2 s</span><i>→</i><span>popup KISS (3–4 toques)</span><i>→</i><span>"achamos 3 mulheres pra você"</span><i>→</i><span>elas começam a chamar</span></div>
+      <p>Proposta de perguntas (você ajusta, a lógica é sua):</p>
+      <div class="q"><b>1. O que você procura hoje?</b><div class="chips"><span>Conversar</span><span>Chamada de vídeo</span><span>Encontro / sexo</span><span>Namoro</span></div><span class="muted">Essa decide a OFERTA (o que a conversa vai vender).</span></div>
+      <div class="q"><b>2. Prefere mulher…</b><div class="chips"><span>Solteira</span><span>Casada</span><span>Tanto faz</span></div><span class="muted">Decide a história da personagem. Resolve o caso "não gosta de casada e sai da conversa".</span></div>
+      <div class="q"><b>3. Que idade te atrai?</b><div class="chips"><span>18 a 25</span><span>26 a 35</span><span>36+ (madura)</span></div><span class="muted">Decide a foto (pastas por faixa etária já existem).</span></div>
+      <div class="q"><b>4. (opcional) E você, é…</b><div class="chips"><span>Solteiro</span><span>Casado / enrolado</span></div><span class="muted">Não muda o chat, mas ajusta o texto ("seu segredo tá seguro comigo") e vira dado pra nutrição.</span></div>
+      <div class="note ok"><b>Truque pra não precisar de 36 conversas:</b> em vez de um chat pra cada combinação (4×3×3), cada chat ganha <b>etiquetas</b> (oferta, solteira/casada, faixa). O app escolhe os 2–3 que mais combinam. Com <b>~12 conversas</b> (3 por desejo) cobrimos tudo bem. Já existe um módulo de quiz no sistema (criado em agosto, nunca usado) que pode ser aproveitado.</div>
+      <p><b>Como testar:</b> metade do tráfego no chatonline2 atual, metade no KISS, mesmo orçamento. Compara <b>venda por 100 visitas</b>, não por quem terminou o quiz (o quiz filtra gente, e isso tem que entrar na conta).</p>
+    </div>
+
+    <div class="ph" data-n="2">
+      <div class="when">contínuo, começa junto · conversas</div>
+      <h3>Fábrica de conversas (o mais difícil e o mais importante)</h3>
+      <ul>
+        <li>Destrinchar Raquel, Eliene e Carolina: abertura, quando manda foto, quando cobra, onde o lead some. A base já está em <code>docs/RELATORIO-FUNIL-CHATONLINE2.md</code>.</li>
+        <li>Um <b>molde por desejo</b>: conversa (papo longo → VIP), chamada (estilo Leyla: liga rapidinho grátis → vende o pack + chamada), encontro (estilo Bianca: "vi seu perfil perto de você" → Encontros/Premium), namoro (carinho, áudio → VIP), casada (segredo → grupo das Casadas).</li>
+        <li>3 variações por molde = as ~12 conversas do KISS.</li>
+        <li><b>Campeão + rodízio:</b> o chat com melhor nota aparece pra maioria (ex.: 60%), os outros dividem o resto. Assim o campeão vende e os outros continuam sendo testados, porque cada lead é de um jeito.</li>
+      </ul>
+    </div>
+
+    <div class="ph" data-n="3">
+      <div class="when">1–2 semanas · instalar + notificação (Android)</div>
+      <h3>Fazer o lead instalar e ativar a notificação</h3>
+      <p>Boa notícia que você trouxe: a pressel já joga o lead pro Chrome. É no Chrome que dá pra instalar, e no Android o app instalado <b>divide o login com o Chrome</b>, então a conversa com a Raquel continua do mesmo ponto dentro do app.</p>
+      <ul>
+        <li><b>Depois de instalar:</b> tela cheia "Pronto! Sua conversa com a Raquel tá no app" + botão ABRIR. Se ele voltar ao site depois, o Chrome nos diz se o app já está instalado e mostramos só "Continuar no app" (estilo TikTok).</li>
+        <li><b>1ª abertura do app:</b> antes do pedido oficial do Android, nosso popup com motivo: "A Raquel vai te mandar uma foto daqui a pouco. Ative pra receber". Um toque e ele ativa. O Android só deixa pedir 1–2 vezes, por isso o motivo importa.</li>
+        <li><b>Recompensas:</b> instalou = foto exclusiva; ativou = giro grátis (a barra C já faz isso, dá pra ampliar).</li>
+        <li><b>Na conversa:</b> a modelo pede, natural: "me chama pelo app que lá eu te mando áudio".</li>
+        <li><b>Quem já comprou:</b> chamada de vídeo e lives "abrem no app", com uma saída discreta "assistir pelo site".</li>
+      </ul>
+      <p><b>Meta:</b> de quem instala, 90% com notificação ativa (hoje ~26%).</p>
+    </div>
+
+    <div class="ph" data-n="4">
+      <div class="when">2 semanas · rotina de 10 dias</div>
+      <h3>Funil único de 10 dias, com caminhos por perfil</h3>
+      <p>1 a 2 toques por dia (notificação + uma conversa nova chegando), nos horários de pico (20h–23h é quando mais gente entra). O caminho muda conforme o que ele já comprou:</p>
+      <div class="tbl"><table>
+        <tr><th>Situação do lead</th><th>O que oferecer nos 10 dias</th></tr>
+        <tr><td>Não comprou nada</td><td>Primeiro o desejo que ele escolheu no KISS; se não comprar, vai alternando: grupo → Encontros → chamada → conversa longa</td></tr>
+        <tr><td>Comprou só grupo</td><td>Chat VIP/Premium, outros grupos</td></tr>
+        <tr><td>Comprou VIP</td><td>Upgrade Premium, grupos, chamadas</td></tr>
+        <tr><td>Comprou Premium</td><td>Chamadas, packs de conteúdo, passe dos grupos, lives</td></tr>
+      </table></div>
+      <p>Exemplo pra quem <b>não comprou</b> e escolheu "chamada de vídeo":</p>
+      <div class="tbl"><table>
+        <tr><th>Dia</th><th>Toque</th><th>Tipo</th></tr>
+        <tr><td class="n">D1</td><td>Modelo de chamada liga rapidinho grátis → oferece pack + chamada</td><td>venda</td></tr>
+        <tr><td class="n">D2</td><td>Outra modelo: "vi que vc tá online" → chamada mais barata</td><td>venda</td></tr>
+        <tr><td class="n">D3</td><td><b>Presente:</b> conversa longa sem cobrar nada</td><td>encantar</td></tr>
+        <tr><td class="n">D4</td><td>Convite pra um grupo (prévia de vídeo)</td><td>venda</td></tr>
+        <tr><td class="n">D5</td><td>Curtida no Encontros → match → conversa</td><td>venda</td></tr>
+        <tr><td class="n">D6</td><td><b>Presente:</b> chamada de 10 s grátis ("foi sem querer kkk")</td><td>encantar</td></tr>
+        <tr><td class="n">D7</td><td>Desconto de "última chance" no que ele mais olhou</td><td>venda</td></tr>
+        <tr><td class="n">D8–D10</td><td>Rodízio entre as ofertas que ele mais abriu</td><td>venda</td></tr>
+      </table></div>
+      <p class="muted">Os dias de "presente" são a sua ideia de não ficar tudo pago: deixam o lead encantado e carente de mais. No futuro a IA pode fazer a conversa longa grátis.</p>
+    </div>
+
+    <div class="ph" data-n="5">
+      <div class="when">semanal, a partir da fase 2 · catálogo vivo</div>
+      <h3>Produtos novos toda semana</h3>
+      <ul>
+        <li><b>3–4 chamadas de vídeo novas</b> por semana; as que mais vendem sobem pro topo e entram nos chats.</li>
+        <li><b>Linha masculina</b> (sua ideia): conversa de "avaliação" → oferta de produto. Pra começar, <b>e-book de exercícios</b> (produto nosso, margem total) ou <b>afiliado</b> de suplemento. Cuidado: nada disso pode aparecer no anúncio da Meta, só dentro do app, e sem promessa médica no texto.</li>
+        <li>Renovar o conteúdo dos grupos.</li>
+      </ul>
+    </div>
+
+    <div class="ph" data-n="6">
+      <div class="when">quando 1–4 estiverem redondos · tráfego</div>
+      <h3>Novas portas de entrada</h3>
+      <ul>
+        <li>Anúncios com destino diferente: KISS, direto pro Encontros, direto pra um grupo.</li>
+        <li>Fontes novas: Kwai, Google e redes de anúncio de sites adultos (tráfego barato, sem risco de conta Meta). Cada uma com criativo próprio.</li>
+        <li>Recuperação fora do app: WhatsApp pro Pix não pago, e-mail pra base antiga.</li>
+      </ul>
+    </div>
+
+    <div class="ph" data-n="7">
+      <div class="when">depois · IA</div>
+      <h3>IA nas conversas</h3>
+      <ul>
+        <li>Primeiro no pós-compra (o cliente recebe a conversa que pagou) e nos dias de "presente".</li>
+        <li>Depois: testar tíquete alto (R$ 300–500) com a IA conduzindo.</li>
+        <li>Mais pra frente: IA dentro dos grupos.</li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <div class="eyebrow">3 · Rotina semanal (eu + você)</div>
+  <h2>Como a gente trabalha toda semana</h2>
+  <div class="tbl"><table>
+    <tr><th>Quando</th><th>O que</th></tr>
+    <tr><td>Segunda</td><td>Eu leio os números da semana: campeão de chat, notificações que mais vendem, respostas do KISS. Te mando um resumo curto com 3 sugestões.</td></tr>
+    <tr><td>Terça–quarta</td><td>Criar ou ajustar 2–3 conversas e 3–4 chamadas novas (você manda mídia, eu monto a estrutura).</td></tr>
+    <tr><td>Quinta</td><td>Ajustar a rotina de 10 dias (troca as mensagens que não converteram).</td></tr>
+    <tr><td>Sexta</td><td>Deploy fora do pico + anotar o aprendizado no "Cérebro".</td></tr>
+  </table></div>
+</section>
+
+<section class="qs">
+  <div class="eyebrow">4 · Dúvidas pra você</div>
+  <h2>O que preciso que você responda</h2>
+  <ol>
+    <li><b>Queda de e-mails desde 26/10:</b> mudou alguma coisa no anúncio ou na pressel nesses dias?</li>
+    <li><b>Perguntas do KISS:</b> as 4 acima fazem sentido, ou você já tem as suas? Quer que o resultado mostre "achamos 3 mulheres pra você" ou abra direto a primeira conversa?</li>
+    <li><b>KISS vs. funil atual:</b> concorda em rodar 50/50 com o mesmo orçamento pra comparar?</li>
+    <li><b>Mídia das conversas novas:</b> pra ~12 conversas, cada uma precisa de foto de perfil + 2–4 mídias da MESMA mulher. Você tem pastas assim no Bunny, ou eu monto com o que já existe?</li>
+    <li><b>Rotina de 10 dias:</b> 1 ou 2 toques por dia? Você topa os dias de "presente" (sem cobrar)?</li>
+    <li><b>Linha masculina:</b> produto nosso (e-book) ou afiliado? Já tem algum em mente?</li>
+    <li><b>Recompensa por instalar/ativar:</b> foto exclusiva e giro grátis podem? Ou prefere outra coisa?</li>
+  </ol>
+</section>
+
+<footer>Feito com dados do painel de 15 a 29/10/2026. Junto com o áudio do dono, está salvo em docs/ESTRATEGIA-INSTALAR-E-NUTRIR.md.</footer>
+</div>

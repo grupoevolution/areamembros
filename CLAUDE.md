@@ -545,7 +545,7 @@ Encontros, chamada): 365 Bianca Moraes (rosto do perfil 95 do Encontros; "vi seu
 foto" → solteiro? → foto → CTA "VEJA QUEM TE CURTIU" /?go=encontros) · 366 Cinthia (chamada produto 45,
 fora da roleta grátis [44,17,48]; papo → foto → "faço chamada" → CTA checkout da chamada).
 
-**NOVA FASE (29/10, áudio do dono) — LER `docs/ESTRATEGIA-INSTALAR-E-NUTRIR.md`:** foco em fazer o
+**NOVA FASE (29/10, áudio do dono) — LER `docs/ESTRATEGIA-INSTALAR-E-NUTRIR.md` + plano em fases `docs/PLANO-DE-ACAO.html` (0 medir → 1 KISS/quiz → 2 fábrica de chats → 3 instalar+notif → 4 rotina 10 dias → 5 catálogo → 6 tráfego → 7 IA):** foco em fazer o
 lead INSTALAR o app + ATIVAR notificação (base pra nutrir 10–15 dias quem não comprou e gerar
 recompra de quem comprou), depois rotina de nutrição, mais chats segmentados com campeão, quiz,
 novos funis/fontes de tráfego, catálogo vivo (5–6 chamadas/semana), e só então IA. Ainda em
