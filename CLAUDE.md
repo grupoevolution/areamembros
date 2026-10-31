@@ -555,7 +555,7 @@ CONVERSA — não codar sem o dono pedir.
 30/10 21:01), ambos logo após a rotina das 20:30 + pico. Pronto pra deploy: pool 20→35 conexões
 (db/index.js) e RAIO-X no alarme (ops_alerts.stats guarda as 8 rotas mais pesadas do minuto +
 últimos 10 min; ver em GET /api/admin/push/ops). Próximo alarme → ler o raio-x antes de agir.
-Proposto (não feito): app pedir a lista de conversas 1x ao abrir; rotina da noite 20:30→19:30.
+Feito: lista de conversas sem pedidos repetidos (MV_chatsLight = 1 pedido leve compartilhado, 8s; loadList não duplica; foco+visibilidade+pageshow viram 1). Proposto: rotina da noite 20:30→19:30.
 
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata

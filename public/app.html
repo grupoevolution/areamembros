@@ -9309,7 +9309,7 @@ window.Enc = (function () {
     // ── oferta (popup de planos do chat, carimbo enc_*) ──
     function ensureUnlock() {
         if (window.MV_PAY_UNLOCK) return Promise.resolve(window.MV_PAY_UNLOCK);
-        return fetch('/api/user/chats?light=1&visitor_id=' + encodeURIComponent(vid()), { credentials: 'include' }).then(function (r) { return r.json(); })
+        return (window.MV_chatsLight ? window.MV_chatsLight() : fetch('/api/user/chats?light=1&visitor_id=' + encodeURIComponent(vid()), { credentials: 'include' }).then(function (r) { return r.json(); }))
             .then(function (d) { if (d && d.paywall_unlock) window.MV_PAY_UNLOCK = d.paywall_unlock; return window.MV_PAY_UNLOCK || null; }).catch(function () { return null; });
     }
     function offer(src, title, subtitle) {
@@ -10709,7 +10709,15 @@ window.ChatApp = (function() {
         } catch (_) { return ''; }
     }
 
-    async function loadList() {
+    // Vários gatilhos ao abrir/voltar pro app (foco, visibilidade, pageshow)
+    // chamavam a lista junto: se já tem uma carregando, usa a mesma.
+    let LIST_P = null;
+    function loadList() {
+        if (LIST_P) return LIST_P;
+        LIST_P = loadListReal().finally(() => { LIST_P = null; });
+        return LIST_P;
+    }
+    async function loadListReal() {
         const scroll = document.getElementById('caListScroll');
         if (!scroll) return;
         try {
@@ -10844,11 +10852,25 @@ window.ChatApp = (function() {
 
     // Atualiza só o badge da aba (sem re-render da lista) — usado no boot/poll.
     // Mostra QUANTAS conversas têm mensagem nova.
-    async function refreshUnreadDot() {
+    // Lista LEVE compartilhada (30/10): bolinha, aviso de msg nova, planos e
+    // perfil pediam a mesma coisa várias vezes ao abrir o app. Agora 1 pedido
+    // por vez + resposta reaproveitada por 8s (pico das 21h enchia o banco).
+    let LIGHT_P = null, LIGHT_AT = 0;
+    function lightChats(force) {
+        if (LIGHT_P && (force !== true || !LIGHT_AT) && (!LIGHT_AT || Date.now() - LIGHT_AT < 8000)) return LIGHT_P;
+        LIGHT_AT = 0;
+        const p = fetch('/api/user/chats?light=1&visitor_id=' + VID + funnelParam(), { credentials: 'include' })
+            .then(r => r.json())
+            .then(d => { if (LIGHT_P === p) LIGHT_AT = Date.now(); return d; })
+            .catch(e => { if (LIGHT_P === p) LIGHT_P = null; throw e; });
+        LIGHT_P = p;
+        return p;
+    }
+    window.MV_chatsLight = lightChats;
+    async function refreshUnreadDot(force) {
         try {
             // light=1: só as conversas que ele já teve (é delas que vem msg nova)
-            const r = await fetch('/api/user/chats?light=1&visitor_id=' + VID + funnelParam(), { credentials: 'include' });
-            const data = await r.json();
+            const data = await lightChats(force);
             if (!data.success) return;
             updatePlanUI(data);
             const convsUnread = (data.chats || []).filter(c => (c.unread || 0) > 0).length;
@@ -13534,7 +13556,12 @@ window.GroupApp = (function () {
     setInterval(ping, 15000);
     // Volta do segundo plano: além do visibilitychange (que em Android/webview
     // do Instagram às vezes NÃO dispara), escuta focus e pageshow.
-    const wake = () => { if (!document.hidden) { try { mvRefreshChatList(true); } catch (_) { ping(); } } };
+    // visibilitychange + focus + pageshow disparam JUNTOS ao voltar → 1 só
+    let wakeT = null;
+    const wake = () => {
+        if (document.hidden || wakeT) return;
+        wakeT = setTimeout(() => { wakeT = null; if (document.hidden) return; try { mvRefreshChatList(true); } catch (_) { ping(); } }, 400);
+    };
     document.addEventListener('visibilitychange', wake);
     window.addEventListener('focus', wake);
     window.addEventListener('pageshow', wake);
@@ -13677,7 +13704,7 @@ function mvRefreshChatList(force) {
         const inConv = document.getElementById('chatconv') && document.getElementById('chatconv').classList.contains('active');
         const chatsTabOn = !document.getElementById('caTabChats') || document.getElementById('caTabChats').classList.contains('on');
         if (onList && !inConv && chatsTabOn) ChatApp.loadList();
-        else ChatApp.refreshUnreadDot();
+        else ChatApp.refreshUnreadDot(true); // pedido explícito → resposta nova (já limitado a 1 a cada 3s)
     } catch (_) {}
 }
 
@@ -13701,8 +13728,8 @@ function mvRefreshChatList(force) {
     }
     async function pollChats() {
         try {
-            const r = await fetch('/api/user/chats?light=1&visitor_id=' + vid(), { credentials: 'include' });
-            const data = await r.json();
+            const data = window.MV_chatsLight ? await window.MV_chatsLight()
+                : await (await fetch('/api/user/chats?light=1&visitor_id=' + vid(), { credentials: 'include' })).json();
             if (!data.success || !Array.isArray(data.chats)) return;
             const inConv = document.getElementById('chatconv') && document.getElementById('chatconv').classList.contains('active');
             const curOpen = (inConv && window.ChatApp && ChatApp.curId) ? ChatApp.curId() : null;
@@ -20859,8 +20886,8 @@ window.profileUpgrade = async function() {
         let u = window.MV_PAY_UNLOCK || null;
         if (!u) {
             let vid = ''; try { vid = localStorage.getItem('mv_chat_visitor') || ''; } catch (_) {}
-            const r = await fetch('/api/user/chats?light=1&visitor_id=' + encodeURIComponent(vid), { credentials: 'include' });
-            const d = await r.json();
+            const d = window.MV_chatsLight ? await window.MV_chatsLight()
+                : await (await fetch('/api/user/chats?light=1&visitor_id=' + encodeURIComponent(vid), { credentials: 'include' })).json();
             if (d && d.vip === true) return; // já é VIP — nada a vender
             if (d && d.paywall_unlock) u = d.paywall_unlock;
         }
