@@ -551,6 +551,12 @@ recompra de quem comprou), depois rotina de nutrição, mais chats segmentados c
 novos funis/fontes de tráfego, catálogo vivo (5–6 chamadas/semana), e só então IA. Ainda em
 CONVERSA — não codar sem o dono pedir.
 
+**30/10 — 2º alarme (21:01, fila de 108 no banco, 3 min):** só 2 alarmes até hoje (28/10 20:48 e
+30/10 21:01), ambos logo após a rotina das 20:30 + pico. Pronto pra deploy: pool 20→35 conexões
+(db/index.js) e RAIO-X no alarme (ops_alerts.stats guarda as 8 rotas mais pesadas do minuto +
+últimos 10 min; ver em GET /api/admin/push/ops). Próximo alarme → ler o raio-x antes de agir.
+Proposto (não feito): app pedir a lista de conversas 1x ao abrir; rotina da noite 20:30→19:30.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
