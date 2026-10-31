@@ -334,7 +334,7 @@ router.get('/ops', requireAdmin, async (req, res) => {
     try {
         const mon = require('../lib/ops-monitor').status();
         const { rows: alerts } = await db.query(
-            `SELECT id, kind, title, body, created_at FROM ops_alerts ORDER BY id DESC LIMIT 20`).catch(() => ({ rows: [] }));
+            `SELECT id, kind, title, body, stats, created_at FROM ops_alerts ORDER BY id DESC LIMIT 20`).catch(() => ({ rows: [] }));
         const { rows: cfg } = await db.query(`SELECT value FROM gamification_config WHERE key = 'ops_alerts'`);
         return res.json({ success: true, monitor: mon, alerts, config: (cfg[0] && cfg[0].value) || {} });
     } catch (err) {

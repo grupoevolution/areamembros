@@ -24,7 +24,7 @@ if (!process.env.DATABASE_URL) {
 // Pool de conexões — reutiliza conexões entre requisições
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    max: 20,                        // máximo de conexões simultâneas
+    max: 35,                        // máximo de conexões simultâneas (20→35 em 30/10: fila de 108 no pico)
     idleTimeoutMillis: 30000,       // fecha conexão ociosa após 30s
     connectionTimeoutMillis: 5000,  // timeout pra criar nova conexão
     // Em produção no EasyPanel, SSL não é necessário (rede interna)
