@@ -3031,7 +3031,7 @@ const TRIG_DEFAULTS = {
             { key: 'champanhe', name: 'Champanhe', price: 59.9, checkout_url: '' },
             { key: 'diamante', name: 'Diamante', price: 119.9, checkout_url: '' },
             { key: 'joias', name: 'Joias', price: 249.9, checkout_url: '' },
-            { key: 'conquista', name: 'Conquiste o coração dela', price: 499.9, checkout_url: '', special: true },
+            { key: 'conquista', name: 'Conquiste o coração dela', price: 500, checkout_url: '', special: true },
         ],
         thanks: [
             'AMOOOR 😍 recebi seu presente!! você é muito especial, sério',
