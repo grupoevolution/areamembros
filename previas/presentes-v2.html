@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-br"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prévia — Presentes v2</title>
+<style>
+body{margin:0;background:#0b0709;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#fff;min-height:100vh;display:flex;align-items:flex-end;justify-content:center}
+.sh{width:100%;max-width:480px;background:linear-gradient(180deg,#1d1418,#110b0e);border-radius:22px 22px 0 0;padding:18px 16px 22px;box-shadow:0 -10px 40px rgba(0,0,0,.5)}
+.grab{width:40px;height:4px;border-radius:4px;background:rgba(255,255,255,.2);margin:0 auto 14px}
+.hd{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.av{width:52px;height:52px;border-radius:50%;border:2px solid #ff3b6b;background:linear-gradient(135deg,#6b3a48,#2a1a20)}
+.t1{font-size:18px;font-weight:800}.t2{font-size:13px;color:rgba(255,255,255,.65);margin-top:2px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.g{position:relative;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.08);border-radius:16px;padding:10px 6px 9px;text-align:center;cursor:pointer;transition:transform .12s}
+.g:active{transform:scale(.96)}
+.g.sel{border-color:#ff3b6b;background:rgba(255,59,107,.12)}
+.g svg{width:46px;height:46px;display:block;margin:0 auto 4px}
+.g .n{font-size:12.5px;font-weight:700}.g .p{font-size:12px;color:#ffc531;font-weight:800;margin-top:2px}
+/* ── O ESPECIAL: 6º quadrado dourado ── */
+.g.vip{overflow:hidden;border:0;padding:11px 6px 9px;background:linear-gradient(160deg,#4a1020,#2a0812 55%,#3d2606);
+  box-shadow:0 0 0 1.5px #f5c542,0 0 14px rgba(245,197,66,.45);animation:glow 2s ease-in-out infinite}
+.g.vip::before{content:"";position:absolute;inset:0;border-radius:16px;padding:1.5px;background:linear-gradient(135deg,#fff3b0,#e2a312,#fff3b0,#b97a00);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.g.vip::after{content:"";position:absolute;top:-60%;left:-70%;width:45%;height:220%;background:linear-gradient(100deg,transparent,rgba(255,240,190,.55),transparent);transform:rotate(18deg);animation:shine 2.6s ease-in-out infinite;pointer-events:none}
+.g.vip svg{filter:drop-shadow(0 0 8px rgba(255,59,107,.9)) drop-shadow(0 0 3px rgba(255,214,102,.8));animation:beat 1.2s ease-in-out infinite}
+.g.vip .n{font-size:11px;line-height:1.15;color:#ffe08a;font-weight:900}
+.g.vip .p{color:#fff;font-size:12.5px}
+.g.vip .tag{position:absolute;top:6px;right:-22px;transform:rotate(35deg);background:linear-gradient(90deg,#f5c542,#ffe9a0);color:#3a2300;font-size:7.5px;font-weight:900;letter-spacing:.5px;padding:2px 22px}
+.g.vip.sel{box-shadow:0 0 0 2px #fff,0 0 26px rgba(255,59,107,.8)}
+.spark{position:absolute;width:4px;height:4px;border-radius:50%;background:#fff6c9;box-shadow:0 0 6px #ffe08a;animation:tw 1.8s ease-in-out infinite}
+@keyframes shine{0%{left:-70%}60%,100%{left:140%}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 1.5px #f5c542,0 0 10px rgba(245,197,66,.35)}50%{box-shadow:0 0 0 1.5px #f5c542,0 0 24px rgba(245,197,66,.75),0 0 40px rgba(255,59,107,.35)}}
+@keyframes beat{0%,100%{transform:scale(1)}14%{transform:scale(1.16)}28%{transform:scale(1)}42%{transform:scale(1.1)}60%{transform:scale(1)}}
+@keyframes tw{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:1;transform:scale(1)}}
+.go{width:100%;margin-top:14px;padding:15px;border:0;border-radius:14px;font-size:15px;font-weight:800;color:#fff;background:linear-gradient(135deg,#ff3b6b,#d6094a);box-shadow:0 6px 22px rgba(255,59,107,.35)}
+.go.gold{background:linear-gradient(135deg,#f5c542,#d98e04);color:#2b1800;box-shadow:0 6px 22px rgba(245,197,66,.45)}
+.note{font-size:11.5px;color:rgba(255,255,255,.45);text-align:center;margin-top:8px}
+</style></head><body>
+<div class="sh">
+  <div class="grab"></div>
+  <div class="hd"><div class="av"></div><div><div class="t1">Surpreenda a Gaby</div><div class="t2">Mande um presente — ela vai saber que foi você 💝</div></div></div>
+  <div class="grid">
+    <div class="g" data-n="Rosa" data-p="9,90"><svg viewBox="0 0 64 64"><defs><linearGradient id="gR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff5c8a"/><stop offset="1" stop-color="#c2134a"/></linearGradient></defs><path d="M32 40c-9 0-15-7-15-15 0-5 3-9 6-11 1 4 5 6 9 6s8-2 9-6c3 2 6 6 6 11 0 8-6 15-15 15z" fill="url(#gR)"/><path d="M23 14c3-5 15-5 18 0-3 3-6 4-9 4s-6-1-9-4z" fill="#ff8fb0"/><path d="M32 40v18" stroke="#2fa35a" stroke-width="3" stroke-linecap="round"/><path d="M32 50c-5-1-8-4-9-8 5 0 8 3 9 8zM32 47c5-1 8-4 9-8-5 0-8 3-9 8z" fill="#3cc06a"/></svg><div class="n">Rosa</div><div class="p">R$ 9,90</div></div>
+    <div class="g sel" data-n="Coração" data-p="29,90"><svg viewBox="0 0 64 64"><defs><linearGradient id="gH" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6b9a"/><stop offset="1" stop-color="#e0103f"/></linearGradient></defs><path d="M32 55S8 41 8 24c0-8 6-14 13-14 5 0 9 3 11 7 2-4 6-7 11-7 7 0 13 6 13 14 0 17-24 31-24 31z" fill="url(#gH)"/><path d="M19 19c-3 1-5 4-5 7" stroke="#fff" stroke-opacity=".6" stroke-width="3" stroke-linecap="round" fill="none"/></svg><div class="n">Coração</div><div class="p">R$ 29,90</div></div>
+    <div class="g" data-n="Champanhe" data-p="59,90"><svg viewBox="0 0 64 64"><defs><linearGradient id="gC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9a8"/><stop offset="1" stop-color="#e0a92a"/></linearGradient></defs><path d="M20 8h10l-1 14c0 5-3 8-4 8s-4-3-4-8z" fill="url(#gC)"/><path d="M25 30v20M19 52h12" stroke="#f3d27a" stroke-width="3" stroke-linecap="round"/><path d="M34 8h10l-1 14c0 5-3 8-4 8s-4-3-4-8z" fill="url(#gC)" transform="rotate(14 39 30)"/><path d="M41 30l-3 19M34 51l10 2" stroke="#f3d27a" stroke-width="3" stroke-linecap="round"/></svg><div class="n">Champanhe</div><div class="p">R$ 59,90</div></div>
+    <div class="g" data-n="Diamante" data-p="119,90"><svg viewBox="0 0 64 64"><defs><linearGradient id="gD" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9ef0ff"/><stop offset="1" stop-color="#3b7bff"/></linearGradient></defs><path d="M16 22l8-10h16l8 10-16 30z" fill="url(#gD)"/><path d="M16 22h32M24 12l8 10 8-10M32 22v30M24 22l8 30 8-30" stroke="#fff" stroke-opacity=".55" stroke-width="1.6" fill="none"/></svg><div class="n">Diamante</div><div class="p">R$ 119,90</div></div>
+    <div class="g" data-n="Joias" data-p="249,90"><svg viewBox="0 0 64 64"><defs><linearGradient id="gJ" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset="1" stop-color="#d9a21b"/></linearGradient><linearGradient id="gJ2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd1e8"/><stop offset="1" stop-color="#ff3b8b"/></linearGradient></defs><path d="M12 12c2 16 10 26 20 26s18-10 20-26" stroke="url(#gJ)" stroke-width="3" fill="none" stroke-linecap="round"/><g fill="url(#gJ)"><circle cx="15" cy="21" r="2"/><circle cx="20" cy="28" r="2"/><circle cx="26" cy="33" r="2"/><circle cx="38" cy="33" r="2"/><circle cx="44" cy="28" r="2"/><circle cx="49" cy="21" r="2"/></g><path d="M32 38l7 8-7 12-7-12z" fill="url(#gJ2)"/></svg><div class="n">Joias</div><div class="p">R$ 249,90</div></div>
+    <div class="g vip" data-n="Conquiste o coração dela" data-p="499,90" data-vip="1">
+      <span class="tag">ESPECIAL</span>
+      <span class="spark" style="top:12px;left:12px;animation-delay:.2s"></span>
+      <span class="spark" style="top:30px;right:14px;animation-delay:.9s"></span>
+      <span class="spark" style="top:52px;left:20px;animation-delay:1.4s"></span>
+      <svg viewBox="0 0 64 64"><defs><radialGradient id="gQ" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#ffb3cf"/><stop offset=".55" stop-color="#ff2d6f"/><stop offset="1" stop-color="#a1003a"/></radialGradient><linearGradient id="gQ2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff2b0"/><stop offset="1" stop-color="#e2a312"/></linearGradient></defs><path d="M32 58S6 43 6 24c0-9 7-15 14-15 6 0 10 3 12 8 2-5 6-8 12-8 7 0 14 6 14 15 0 19-26 34-26 34z" fill="url(#gQ)" stroke="url(#gQ2)" stroke-width="3"/><path d="M18 19c-3 2-5 5-5 9" stroke="#fff" stroke-opacity=".7" stroke-width="3" stroke-linecap="round" fill="none"/></svg>
+      <div class="n">Conquiste o coração dela</div><div class="p">R$ 499,90</div>
+    </div>
+  </div>
+  <button class="go">ENVIAR CORAÇÃO · R$ 29,90</button>
+  <div class="note">Pagamento único · ela recebe na hora</div>
+</div>
+<script>
+const go=document.querySelector('.go');
+document.querySelectorAll('.g').forEach(c=>c.onclick=()=>{
+  document.querySelectorAll('.g').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');
+  const vip=c.dataset.vip;go.classList.toggle('gold',!!vip);
+  go.textContent=(vip?'CONQUISTAR ELA':'ENVIAR '+c.dataset.n.toUpperCase())+' · R$ '+c.dataset.p;
+});
+</script>
+</body></html>

@@ -21159,16 +21159,20 @@ window.MVGift = (function () {
             + '#mvGiftOv .g .p{font-size:12px;color:#ffc531;font-weight:800;margin-top:2px}'
             + '#mvGiftOv .go{width:100%;margin-top:14px;padding:15px;border:0;border-radius:14px;font-size:15px;font-weight:800;color:#fff;background:linear-gradient(135deg,#ff3b6b,#d6094a);box-shadow:0 6px 22px rgba(255,59,107,.35);letter-spacing:.3px}'
             + '#mvGiftOv .go:disabled{opacity:.45}'
-            + '#mvGiftOv .gx{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;margin-top:10px;padding:12px 14px;border-radius:18px;cursor:pointer;background:linear-gradient(135deg,#3a0718,#5c0a2a 45%,#3b1405);border:1.5px solid #f5c542;box-shadow:0 0 0 1px rgba(255,59,107,.35),0 0 22px rgba(255,59,107,.45),inset 0 0 18px rgba(245,197,66,.18);animation:mvgxPulse 2.2s ease-in-out infinite}'
-            + '#mvGiftOv .gx::after{content:"";position:absolute;top:-50%;left:-60%;width:40%;height:200%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:rotate(18deg);animation:mvgxShine 2.6s ease-in-out infinite}'
-            + '#mvGiftOv .gx svg{width:58px;height:58px;flex-shrink:0;filter:drop-shadow(0 0 10px rgba(255,59,107,.8));animation:mvgxBeat 1.3s ease-in-out infinite}'
-            + '#mvGiftOv .gx .n{font-size:15px;font-weight:900;color:#ffe08a;letter-spacing:.2px}'
-            + '#mvGiftOv .gx .s{font-size:11.5px;color:rgba(255,255,255,.72);margin-top:2px}'
-            + '#mvGiftOv .gx .p{margin-left:auto;font-size:15px;font-weight:900;color:#fff;white-space:nowrap}'
-            + '#mvGiftOv .gx.sel{border-color:#fff;box-shadow:0 0 0 2px #ff3b6b,0 0 30px rgba(255,59,107,.7)}'
-            + '@keyframes mvgxShine{0%{left:-60%}60%,100%{left:130%}}'
-            + '@keyframes mvgxPulse{0%,100%{box-shadow:0 0 0 1px rgba(255,59,107,.35),0 0 16px rgba(255,59,107,.35)}50%{box-shadow:0 0 0 1px rgba(255,59,107,.6),0 0 30px rgba(255,59,107,.65)}}'
-            + '@keyframes mvgxBeat{0%,100%{transform:scale(1)}15%{transform:scale(1.12)}30%{transform:scale(1)}}'
+            + '#mvGiftOv .g{position:relative}'
+            + '#mvGiftOv .g.vip{overflow:hidden;border:0;padding:11px 6px 9px;background:linear-gradient(160deg,#4a1020,#2a0812 55%,#3d2606);box-shadow:0 0 0 1.5px #f5c542,0 0 14px rgba(245,197,66,.45);animation:mvgGlow 2s ease-in-out infinite}'
+            + '#mvGiftOv .g.vip::after{content:"";position:absolute;top:-60%;left:-70%;width:45%;height:220%;background:linear-gradient(100deg,transparent,rgba(255,240,190,.55),transparent);transform:rotate(18deg);animation:mvgShine 2.6s ease-in-out infinite;pointer-events:none}'
+            + '#mvGiftOv .g.vip svg{filter:drop-shadow(0 0 8px rgba(255,59,107,.9)) drop-shadow(0 0 3px rgba(255,214,102,.8));animation:mvgBeat 1.2s ease-in-out infinite}'
+            + '#mvGiftOv .g.vip .n{font-size:11px;line-height:1.15;color:#ffe08a;font-weight:900}'
+            + '#mvGiftOv .g.vip .p{color:#fff;font-size:12.5px}'
+            + '#mvGiftOv .g.vip .tag{position:absolute;top:6px;right:-22px;transform:rotate(35deg);background:linear-gradient(90deg,#f5c542,#ffe9a0);color:#3a2300;font-size:7.5px;font-weight:900;letter-spacing:.5px;padding:2px 22px}'
+            + '#mvGiftOv .g.vip.sel{box-shadow:0 0 0 2px #fff,0 0 26px rgba(255,59,107,.8)}'
+            + '#mvGiftOv .spark{position:absolute;width:4px;height:4px;border-radius:50%;background:#fff6c9;box-shadow:0 0 6px #ffe08a;animation:mvgTw 1.8s ease-in-out infinite}'
+            + '#mvGiftOv .go.gold{background:linear-gradient(135deg,#f5c542,#d98e04);color:#2b1800;box-shadow:0 6px 22px rgba(245,197,66,.45)}'
+            + '@keyframes mvgShine{0%{left:-70%}60%,100%{left:140%}}'
+            + '@keyframes mvgGlow{0%,100%{box-shadow:0 0 0 1.5px #f5c542,0 0 10px rgba(245,197,66,.35)}50%{box-shadow:0 0 0 1.5px #f5c542,0 0 24px rgba(245,197,66,.75),0 0 40px rgba(255,59,107,.35)}}'
+            + '@keyframes mvgBeat{0%,100%{transform:scale(1)}14%{transform:scale(1.16)}28%{transform:scale(1)}42%{transform:scale(1.1)}60%{transform:scale(1)}}'
+            + '@keyframes mvgTw{0%,100%{opacity:0;transform:scale(.4)}50%{opacity:1;transform:scale(1)}}'
             + '#mvGiftOv .note{font-size:11.5px;color:rgba(255,255,255,.45);text-align:center;margin-top:8px}';
         document.head.appendChild(st);
     }
@@ -21214,24 +21218,31 @@ window.MVGift = (function () {
         const nome = m.name || 'ela';
         let html = head(m, 'Surpreenda a ' + nome, 'Mande um presente — ela vai saber que foi você 💝')
             + '<div class="grid">';
-        // presente ESPECIAL (Conquiste o coração dela): cartão largo brilhando, abaixo da grade
-        let spec = '';
-        d.tiers.forEach((t, i) => {
+        // presente ESPECIAL (Conquiste o coração dela): quadrado DOURADO no fim da
+        // grade (fita ESPECIAL, coração batendo, brilho) — prévia aprovada 03/11
+        const ord = d.tiers.map((t, i) => i).filter(i => !d.tiers[i].special).concat(d.tiers.map((t, i) => i).filter(i => d.tiers[i].special));
+        ord.forEach((i) => {
+            const t = d.tiers[i];
             if (t.special) {
-                spec += '<div class="gx" data-i="' + i + '">' + (GIFT_SVG[t.key] || GIFT_SVG.conquista)
-                    + '<div><div class="n">' + esc(t.name) + '</div><div class="s">O presente mais especial — ela nunca vai esquecer</div></div>'
-                    + '<div class="p">' + brl(t.price) + '</div></div>';
+                html += '<div class="g vip" data-i="' + i + '"><span class="tag">ESPECIAL</span>'
+                    + '<span class="spark" style="top:12px;left:12px;animation-delay:.2s"></span><span class="spark" style="top:30px;right:14px;animation-delay:.9s"></span><span class="spark" style="top:52px;left:20px;animation-delay:1.4s"></span>'
+                    + (GIFT_SVG[t.key] || GIFT_SVG.conquista)
+                    + '<div class="n">' + esc(t.name) + '</div><div class="p">' + brl(t.price) + '</div></div>';
                 return;
             }
-            html += '<div class="g' + (i === 1 ? ' sel' : '') + '" data-i="' + i + '">' + (GIFT_SVG[t.key] || GIFT_SVG_DEFAULT)
+            html += '<div class="g' + (t.key === 'coracao' ? ' sel' : '') + '" data-i="' + i + '">' + (GIFT_SVG[t.key] || GIFT_SVG_DEFAULT)
                 + '<div class="n">' + esc(t.name) + '</div><div class="p">' + brl(t.price) + '</div></div>';
         });
-        html += '</div>' + spec + '<button class="go">ENVIAR PRESENTE</button><div class="note">Pagamento único · ela recebe na hora</div>';
+        html += '</div><button class="go">ENVIAR PRESENTE</button><div class="note">Pagamento único · ela recebe na hora</div>';
         const ov = sheet(html);
-        let sel = Math.min(1, d.tiers.length - 1);
-        const cells = ov.querySelectorAll('.g, .gx');
+        // pré-marcado: Coração (ou o 1º não-especial)
+        let sel = d.tiers.findIndex(t => t.key === 'coracao');
+        if (sel < 0) sel = Math.max(0, d.tiers.findIndex(t => !t.special));
+        if (!ov.querySelector('.g.sel')) { const c0 = ov.querySelector('.g[data-i="' + sel + '"]'); if (c0) c0.classList.add('sel'); }
+        const cells = ov.querySelectorAll('.g');
         cells.forEach(c => c.addEventListener('click', () => {
             cells.forEach(x => x.classList.remove('sel')); c.classList.add('sel'); sel = parseInt(c.dataset.i, 10) || 0;
+            ov.querySelector('.go').classList.toggle('gold', !!d.tiers[sel].special);
             ov.querySelector('.go').textContent = (d.tiers[sel].special ? 'CONQUISTAR ELA' : 'ENVIAR ' + String(d.tiers[sel].name).toUpperCase()) + ' · ' + brl(d.tiers[sel].price);
         }));
         ov.querySelector('.go').textContent = (d.tiers[sel].special ? 'CONQUISTAR ELA' : 'ENVIAR ' + String(d.tiers[sel].name).toUpperCase()) + ' · ' + brl(d.tiers[sel].price);
