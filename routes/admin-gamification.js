@@ -44,6 +44,7 @@ const VALID_KEYS = [
     'push_bar',
     'ops_alerts',
     'chat_list',
+    'chat_triggers',
 ];
 
 // =============================================================================
@@ -141,6 +142,7 @@ router.put('/:key', requireAdmin, async (req, res) => {
         if (key === 'encounters') { try { require('../lib/encounters').clearCache(); } catch (_) {} }
         if (key === 'testers') { try { require('../lib/testers').clearCache(); } catch (_) {} }
         if (key === 'chat_list') { try { require('./user-chats').clearChatsCache(); } catch (_) {} }
+        if (key === 'chat_triggers') { try { require('./user-chats').invalidateTriggers(); } catch (_) {} }
 
         // O lib do pixel cacheia a config por 60s — salvar aplica na hora
         if (key === 'meta_pixel') {

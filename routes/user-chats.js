@@ -1963,9 +1963,10 @@ async function scheduleVipReception(email, tier, opts) {
     for (const en of cfg.entries) {
         const chatId = parseInt(en && en.chat_id, 10);
         if (!chatId) continue;
-        const audience = en.audience === 'vip' ? 'vip' : 'both';
-        // Premium só recebe as marcadas "VIP e Premium"; VIP recebe todas
+        const audience = en.audience === 'vip' ? 'vip' : (en.audience === 'premium' ? 'premium' : 'both');
+        // Premium só recebe "VIP e Premium" + "só Premium"; VIP não recebe "só Premium"
         if (tier === 'premium' && audience === 'vip') continue;
+        if (tier !== 'premium' && audience === 'premium') continue;
         try {
             const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
             if (!cr.length) continue;
@@ -2977,7 +2978,319 @@ async function postDueStatusSchedules() {
     return posted;
 }
 
+
+// ═════════════════════════════════════════════════════════════════════════════
+// GATILHOS DE CONVERSA (02/11) — "a modelo certa chama no momento certo"
+// Config: gamification_config.chat_triggers (painel → Growth → Gatilhos).
+//  - pix_model: gerou Pix e não pagou → a MODELO da conversa onde ele clicou
+//    em comprar (checkout_intents) manda 1 mensagem + botão pro Pix. Some
+//    sozinha quando ele paga.
+//  - pos_call: terminou a chamada PAGA → a modelo da chamada puxa papo
+//    (frases variadas; o mesmo lead nunca recebe a mesma até o banco acabar).
+//  - free_call: terminou a 1ª chamada paga da vida → minutos depois OUTRA
+//    modelo do grupo de "chamada grátis" começa a conversa dela (roteiro).
+//  - gifts: presentes (Rosa → Coroa) com checkout próprio; pagou → a modelo
+//    agradece. Carimbo gift_<chatId> no link diz pra QUEM foi.
+// Leve: 1 tabela (chat_trigger_jobs) varrida a cada ~15s pelo chat-worker.
+// ═════════════════════════════════════════════════════════════════════════════
+const TRIG_DEFAULTS = {
+    notif_chat_ids: [],
+    pix_model: {
+        enabled: false, delay_min: 8, cta: 'VER MEU PIX 💗',
+        texts: [
+            'oi {nome}… vi que você gerou o Pix e não finalizou 🥺 tô aqui te esperando',
+            '{nome}, me arrumei todinha pra você e nada… o Pix tá pronto, é só pagar 😘',
+            'ei, deu algum problema no pagamento? fiquei esperando você 🙈',
+            'amor, seu Pix ainda tá aberto… não me deixa esperando não 💋',
+            '{nome} tava ansiosa pra gente ficar juntinhos… termina lá que eu te espero',
+            'oi sumido 😏 o Pix ficou pendente, quer ajuda pra pagar?',
+        ],
+    },
+    pos_call: {
+        enabled: false, delay_min: 1, map: {},
+        texts: [
+            'e aí {nome}, gostou da nossa chamada? 😏',
+            'amor, eu tava te vendo mas não consegui te ouvir… acho que deu um bug no áudio 🙈 você falou alguma coisa?',
+            'vi que você ficou quietinho só me olhando né 😏 adorei',
+            'oi {nome}! só passando pra saber se você curtiu… quando quiser a gente marca outra 🔥',
+            'eu faço assim mesmo, só me mostrando pra você 😈 me conta o que achou',
+            'nossa, adorei fazer chamada com você… acha que eu mereço um presentinho? 🥺 [presente]',
+            'ficou com vontade de mais? 😏 se quiser me mimar eu deixo [presente]',
+            'gostei de você {nome}… sério. me manda um presentinho que eu te dou atenção especial 💋 [presente]',
+        ],
+    },
+    free_call: { enabled: false, delay_min: 3, chat_ids: [] },
+    rating: { enabled: true },
+    gifts: {
+        enabled: false,
+        tiers: [
+            { key: 'rosa', name: 'Rosa', price: 9.9, checkout_url: '' },
+            { key: 'coracao', name: 'Coração', price: 29.9, checkout_url: '' },
+            { key: 'champanhe', name: 'Champanhe', price: 59.9, checkout_url: '' },
+            { key: 'diamante', name: 'Diamante', price: 119.9, checkout_url: '' },
+            { key: 'coroa', name: 'Coroa', price: 249.9, checkout_url: '' },
+        ],
+        thanks: [
+            'AMOOOR 😍 recebi seu presente!! você é muito especial, sério',
+            '{nome} você é demais 🥹 obrigada pelo presente, vou lembrar de você hoje',
+            'nossa, ninguém nunca fez isso por mim… obrigada de verdade 💋',
+            'ganhei seu presente e fiquei toda boba aqui 🙈 você merece um carinho especial',
+        ],
+    },
+};
+let _trigCache = { at: 0, val: null };
+async function triggersConfig() {
+    if (_trigCache.val && Date.now() - _trigCache.at < 60000) return _trigCache.val;
+    let v = {};
+    try {
+        const { rows } = await db.query(`SELECT value FROM gamification_config WHERE key = 'chat_triggers'`);
+        v = (rows[0] && rows[0].value) || {};
+    } catch (_) {}
+    const merge = (k) => ({ ...TRIG_DEFAULTS[k], ...(v[k] || {}) });
+    const cfg = {
+        notif_chat_ids: Array.isArray(v.notif_chat_ids) ? v.notif_chat_ids.map(Number).filter(Boolean) : [],
+        pix_model: merge('pix_model'), pos_call: merge('pos_call'), free_call: merge('free_call'),
+        rating: merge('rating'), gifts: merge('gifts'),
+    };
+    for (const k of ['pix_model', 'pos_call']) {
+        if (!Array.isArray(cfg[k].texts) || !cfg[k].texts.filter(Boolean).length) cfg[k].texts = TRIG_DEFAULTS[k].texts;
+    }
+    if (!Array.isArray(cfg.gifts.thanks) || !cfg.gifts.thanks.filter(Boolean).length) cfg.gifts.thanks = TRIG_DEFAULTS.gifts.thanks;
+    if (!Array.isArray(cfg.gifts.tiers)) cfg.gifts.tiers = TRIG_DEFAULTS.gifts.tiers;
+    _trigCache = { at: Date.now(), val: cfg };
+    return cfg;
+}
+
+// frase variada: o mesmo lead percorre o banco inteiro antes de repetir
+function trigVariant(list, email, n) {
+    const arr = (list || []).filter(t => t && String(t).trim());
+    if (!arr.length) return null;
+    let h = 0; for (const c of String(email)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    return String(arr[(h + n) % arr.length]);
+}
+
+async function trigJob(email, kind, ref, chatId, delaySec, val) {
+    const { rows } = await db.query(
+        `INSERT INTO chat_trigger_jobs (email, kind, ref, chat_id, run_at, val)
+         VALUES ($1, $2, $3, $4, NOW() + make_interval(secs => $5), $6)
+         ON CONFLICT (email, kind, ref) DO NOTHING RETURNING id`,
+        [email, kind, String(ref || '').slice(0, 80), chatId || null, Math.max(0, delaySec || 0), val == null ? null : val]);
+    return rows.length > 0;
+}
+
+// roteiro 'open' de um chat NOVO pra esse lead, daqui a X segundos
+// (mesma técnica da recepção VIP: o worker entrega + manda o push)
+async function trigScheduleOpen(email, chatId, delaySec) {
+    const { rows: cr } = await db.query(`SELECT id FROM chats WHERE id = $1 AND active = true`, [chatId]);
+    if (!cr.length) return false;
+    const session = await findOrCreateSession(chatId, { email, visitor: null }, true);
+    if (!session) return false;
+    const { rows: [n] } = await db.query(`SELECT COUNT(*)::int AS n FROM chat_messages WHERE session_id = $1`, [session.id]);
+    if (n.n > 0 || session.awaiting) return false;
+    const steps = await loadSteps(chatId, 'open');
+    if (!steps.length) return false;
+    await db.query(
+        `UPDATE chat_sessions SET current_flow = 'open', current_order = 0, awaiting = 'delay',
+                resume_at = NOW() + make_interval(secs => $2), updated_at = NOW() WHERE id = $1`,
+        [session.id, Math.max(5, delaySec)]);
+    return true;
+}
+
+// modelo "dona" de um produto: mapa do painel → chat da chamada (mesma
+// chamada vinculada) → conversa de convite do grupo do produto
+async function trigModelChatFor(productId, cfg) {
+    const pid = parseInt(productId, 10);
+    if (!pid) return null;
+    const mapped = parseInt((cfg.pos_call.map || {})[String(pid)], 10);
+    if (mapped) return mapped;
+    try {
+        const { rows } = await db.query(
+            `SELECT c.id FROM products p JOIN chats c ON c.call_video_call_id = p.video_call_id
+              WHERE p.id = $1 AND p.video_call_id IS NOT NULL AND c.active = true AND c.is_support = false
+              ORDER BY c.id LIMIT 1`, [pid]);
+        if (rows[0]) return rows[0].id;
+        const { rows: g } = await db.query(
+            `SELECT invite_chat_ids FROM groups WHERE product_id = $1 AND active = true LIMIT 1`, [pid]);
+        const ids = g[0] && Array.isArray(g[0].invite_chat_ids) ? g[0].invite_chat_ids.map(Number).filter(Boolean) : [];
+        if (ids.length) return ids[0];
+    } catch (_) {}
+    return null;
+}
+
+// Lead terminou uma chamada PAGA (app → POST /calls/ended)
+async function onCallEnded(email, productId, rating) {
+    const e = String(email || '').toLowerCase().trim();
+    const pid = parseInt(productId, 10);
+    if (!e || !pid) return { ok: false };
+    const cfg = await triggersConfig();
+    const day = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
+    const r = parseInt(rating, 10);
+    const fresh = await trigJob(e, 'call_end', pid + ':' + day, null, 0, r >= 1 && r <= 5 ? r : null);
+    if (!fresh) {
+        // 2º aviso do mesmo dia: só atualiza a nota (veio depois das estrelas)
+        if (r >= 1 && r <= 5) await db.query(`UPDATE chat_trigger_jobs SET val = $3 WHERE email = $1 AND kind = 'call_end' AND ref = $2`, [e, pid + ':' + day, r]).catch(() => {});
+        return { ok: true, repeat: true };
+    }
+    await db.query(`UPDATE chat_trigger_jobs SET done_at = NOW() WHERE email = $1 AND kind = 'call_end' AND ref = $2`, [e, pid + ':' + day]).catch(() => {});
+    if (cfg.pos_call.enabled) {
+        const chatId = await trigModelChatFor(pid, cfg);
+        if (chatId) await trigJob(e, 'pos', pid + ':' + day, chatId, Math.round((parseFloat(cfg.pos_call.delay_min) || 1) * 60));
+    }
+    if (cfg.free_call.enabled && (cfg.free_call.chat_ids || []).length) {
+        const { rows: [c] } = await db.query(`SELECT COUNT(*)::int AS n FROM chat_trigger_jobs WHERE email = $1 AND kind = 'call_end'`, [e]);
+        if (c.n === 1) { // 1ª chamada paga da vida: presente de outra modelo
+            for (const cid of cfg.free_call.chat_ids) {
+                if (await trigScheduleOpen(e, parseInt(cid, 10), Math.round((parseFloat(cfg.free_call.delay_min) || 3) * 60))) break;
+            }
+        }
+    }
+    return { ok: true };
+}
+
+// Presente pago (carimbo gift_<chatId>): a modelo agradece
+async function onGiftPurchased(email, chatId, saleId) {
+    const e = String(email || '').toLowerCase().trim();
+    const cid = parseInt(chatId, 10);
+    if (!e || !cid) return false;
+    return trigJob(e, 'gift', String(saleId || Date.now()), cid, 40);
+}
+
+// Pagou qualquer coisa: some a cobrança do Pix que a modelo mandou
+async function onPurchaseClearsPix(email) {
+    const e = String(email || '').toLowerCase().trim();
+    if (!e) return;
+    try {
+        await db.query(
+            `DELETE FROM chat_messages WHERE meta->>'trig' = 'pix'
+               AND session_id IN (SELECT id FROM chat_sessions WHERE LOWER(customer_email) = $1)`, [e]);
+    } catch (_) {}
+}
+
+async function _trigDeliver(email, chatId, texts, n, extra) {
+    const { rows: cr } = await db.query(`SELECT * FROM chats WHERE id = $1 AND active = true`, [chatId]);
+    if (!cr.length) return null;
+    const chat = cr[0];
+    const session = await findOrCreateSession(chatId, { email, visitor: null }, true);
+    if (!session) return null;
+    let txt = trigVariant(texts, email, n);
+    if (!txt) return null;
+    const wantsGift = /\[presente\]/i.test(txt);
+    txt = txt.replace(/\s*\[presente\]/gi, '').trim();
+    const ctx = { email, city: session.city || null, cityFallback: chat.city_fallback };
+    const meta = { typing_ms: 0, ...(extra && extra.meta || {}) };
+    const msgs = [await insertMsg(session.id, 'bot', 'text', capFirst(await fillVars(txt, ctx)), null, meta, null)];
+    if (extra && extra.cta) msgs.push(await insertMsg(session.id, 'bot', 'cta', extra.cta.label, null, { ...meta, link_url: extra.cta.url, cta_color: extra.cta.color || '#e50914' }, null));
+    if (wantsGift && extra && extra.giftOk) msgs.push(await insertMsg(session.id, 'bot', 'cta', '🎁 MANDAR UM PRESENTE', null, { ...meta, link_url: '/?gift=' + chatId, cta_color: '#d4a017' }, null));
+    await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [session.id]);
+    return { chat, messages: msgs, email };
+}
+
+// Worker (~15s): Pix sem pagar → modelo; jobs vencidos (pós-chamada, presente)
+async function processChatTriggers() {
+    const cfg = await triggersConfig();
+    const out = [];
+    // 1) Pix gerado e não pago → a modelo de onde ele clicou
+    if (cfg.pix_model.enabled) {
+        let pix = [];
+        try {
+            ({ rows: pix } = await db.query(`
+                UPDATE pix_pending_notices SET model_notified_at = NOW()
+                WHERE id IN (
+                    SELECT p.id FROM pix_pending_notices p
+                     WHERE p.model_notified_at IS NULL AND p.pix_code IS NOT NULL AND p.customer_email IS NOT NULL
+                       AND p.created_at < NOW() - make_interval(mins => $1)
+                       AND p.created_at > NOW() - INTERVAL '90 minutes'
+                       AND NOT EXISTS (SELECT 1 FROM processed_sales ps WHERE ps.gateway = p.gateway AND ps.sale_id = p.sale_id)
+                       AND NOT EXISTS (SELECT 1 FROM user_access ua WHERE ua.gateway = p.gateway AND ua.sale_id = p.sale_id)
+                     LIMIT 30
+                ) RETURNING customer_email, product_id, created_at`, [Math.max(1, parseFloat(cfg.pix_model.delay_min) || 8)]));
+        } catch (err) { logger.warn('[gatilhos] pix: ' + err.message); }
+        let supportId = null;
+        if (pix.length) {
+            try { const { rows: sc } = await db.query(`SELECT id FROM chats WHERE active = true AND is_support = true ORDER BY id LIMIT 1`); supportId = sc[0] ? sc[0].id : null; } catch (_) {}
+        }
+        for (const p of pix) {
+            try {
+                const e = String(p.customer_email).toLowerCase();
+                const { rows: it } = await db.query(
+                    `SELECT ci.chat_id FROM checkout_intents ci JOIN chats c ON c.id = ci.chat_id
+                      WHERE LOWER(ci.customer_email) = $1 AND ci.chat_id IS NOT NULL AND c.is_support = false
+                        AND ci.created_at > $2::timestamptz - INTERVAL '3 hours'
+                      ORDER BY ci.id DESC LIMIT 1`, [e, p.created_at]);
+                const chatId = it[0] ? it[0].chat_id : await trigModelChatFor(p.product_id, cfg);
+                if (!chatId) continue;
+                const { rows: [c] } = await db.query(`SELECT COUNT(*)::int AS n FROM chat_trigger_jobs WHERE email = $1 AND kind = 'pix'`, [e]);
+                await trigJob(e, 'pix', String(p.created_at.getTime ? p.created_at.getTime() : p.created_at), chatId, 0);
+                await db.query(`UPDATE chat_trigger_jobs SET done_at = NOW() WHERE email = $1 AND kind = 'pix' AND done_at IS NULL`, [e]);
+                const r = await _trigDeliver(e, chatId, cfg.pix_model.texts, c.n, {
+                    meta: { trig: 'pix' },
+                    cta: supportId ? { label: String(cfg.pix_model.cta || 'VER MEU PIX 💗').slice(0, 60), url: '/?chat=' + supportId } : null,
+                });
+                if (r) out.push(r);
+            } catch (err) { logger.warn('[gatilhos] pix → modelo: ' + err.message); }
+        }
+    }
+    // 2) jobs vencidos
+    let due = [];
+    try {
+        ({ rows: due } = await db.query(`
+            UPDATE chat_trigger_jobs SET done_at = NOW()
+             WHERE id IN (SELECT id FROM chat_trigger_jobs WHERE done_at IS NULL AND run_at <= NOW()
+                           AND kind IN ('pos', 'gift') ORDER BY run_at LIMIT 30 FOR UPDATE SKIP LOCKED)
+            RETURNING *`));
+    } catch (err) { logger.warn('[gatilhos] jobs: ' + err.message); }
+    const giftOk = cfg.gifts.enabled && (cfg.gifts.tiers || []).some(t => t && t.checkout_url);
+    for (const j of due) {
+        try {
+            const { rows: [c] } = await db.query(
+                `SELECT COUNT(*)::int AS n FROM chat_trigger_jobs WHERE email = $1 AND kind = $2 AND done_at IS NOT NULL AND id <> $3`, [j.email, j.kind, j.id]);
+            const r = j.kind === 'gift'
+                ? await _trigDeliver(j.email, j.chat_id, cfg.gifts.thanks, c.n, {})
+                : await _trigDeliver(j.email, j.chat_id, cfg.pos_call.texts, c.n, { giftOk });
+            if (r) out.push(r);
+        } catch (err) { logger.warn('[gatilhos] job ' + j.id + ': ' + err.message); }
+    }
+    return out;
+}
+
+// POST /calls/ended — app avisa que a chamada PAGA terminou (+ estrelas)
+router.post('/calls/ended', optionalUser, async (req, res) => {
+    try {
+        const ident = getIdentity(req);
+        if (!ident.email) return res.json({ success: true, skipped: 'anon' });
+        const r = await onCallEnded(ident.email, req.body && req.body.product_id, req.body && req.body.rating);
+        return res.json({ success: true, ...r });
+    } catch (err) {
+        logger.warn('calls/ended: ' + err.message);
+        return res.json({ success: false });
+    }
+});
+
+// GET /gifts — presentes ativos (só os que têm checkout) + nome/foto da modelo
+router.get('/gifts', optionalUser, async (req, res) => {
+    try {
+        const cfg = await triggersConfig();
+        const tiers = cfg.gifts.enabled ? (cfg.gifts.tiers || []).filter(t => t && t.checkout_url).map(t => ({
+            key: String(t.key || ''), name: String(t.name || ''), price: Number(t.price) || 0, checkout_url: String(t.checkout_url),
+        })) : [];
+        let model = null;
+        let cid = parseInt(req.query.chat_id, 10);
+        if (!cid && req.query.product_id) cid = await trigModelChatFor(req.query.product_id, cfg);
+        if (cid) {
+            const { rows } = await db.query(`SELECT id, name, avatar_url FROM chats WHERE id = $1`, [cid]);
+            if (rows[0]) model = { chat_id: rows[0].id, name: String(rows[0].name || '').split(' ')[0], avatar_url: rows[0].avatar_url };
+        }
+        return res.json({ success: true, tiers, rating: cfg.rating.enabled !== false, model });
+    } catch (err) { return res.json({ success: false, tiers: [] }); }
+});
+
 module.exports = router;
+module.exports.processChatTriggers = processChatTriggers;
+module.exports.onGiftPurchased = onGiftPurchased;
+module.exports.onCallEnded = onCallEnded;
+module.exports.onPurchaseClearsPix = onPurchaseClearsPix;
+module.exports.triggersConfig = triggersConfig;
+module.exports.invalidateTriggers = () => { _trigCache = { at: 0, val: null }; };
 module.exports.resumeDelayed = resumeDelayed;
 module.exports.triggerPostPurchaseChats = triggerPostPurchaseChats;
 module.exports.deliverPurchaseToSupport = deliverPurchaseToSupport;

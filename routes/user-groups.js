@@ -138,6 +138,18 @@ async function ensureSessionGeo(session, req) {
     } catch (_) {}
 }
 
+// Nome do grupo com {cidade} (ex.: "Grupinho de {cidade}", 02/11): cada lead
+// vê a PRÓPRIA cidade (geo por IP, sem consulta ao banco). Sem cidade → "da
+// sua região".
+function groupDisplayName(name, req, session) {
+    const n = String(name || '');
+    if (!/\{cidade\}/i.test(n)) return n;
+    let city = session && session.city;
+    if (!city && req) { try { city = resolveCity((req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').toString()); } catch (_) {} }
+    if (city) return n.replace(/\{cidade\}/gi, city);
+    return n.replace(/\b(de|da|do)\s+\{cidade\}/i, 'da sua região').replace(/\{cidade\}/gi, 'sua região');
+}
+
 // ── Aleatório DETERMINÍSTICO (a base do "igual pra todos") ───────────────────
 function hashStr(s) {
     let h = 2166136261;
@@ -1034,7 +1046,7 @@ router.get('/groups', optionalUser, async (req, res) => {
                     : null;
             }
             return {
-                id: g.id, name: g.name, avatar_url: g.avatar_url,
+                id: g.id, name: groupDisplayName(g.name, req, session), avatar_url: g.avatar_url,
                 is_free: g.is_free, pinned: g.pinned === true || owned,
                 owned, locked_preview: masked,
                 members_count: g.members_count, online_count: g.online_count,
@@ -1089,7 +1101,7 @@ router.get('/groups/:id/offer', optionalUser, async (req, res) => {
         const main = plans.find(p => p.is_recommended) || plans[0] || null;
         return res.json({
             success: true, owned,
-            group: { id: g.id, name: g.name, avatar_url: g.avatar_url, members_count: g.members_count, online_count: g.online_count, is_free: g.is_free },
+            group: { id: g.id, name: groupDisplayName(g.name, req, null), avatar_url: g.avatar_url, members_count: g.members_count, online_count: g.online_count, is_free: g.is_free },
             plan: main ? { name: main.name, price: main.price, original_price: main.original_price, checkout_url: main.checkout_url } : null,
         });
     } catch (err) {
@@ -1194,7 +1206,7 @@ router.post('/groups/:id/open', optionalUser, async (req, res) => {
         return res.json({
             success: true,
             group: {
-                id: group.id, name: group.name, avatar_url: group.avatar_url,
+                id: group.id, name: groupDisplayName(group.name, req, session), avatar_url: group.avatar_url,
                 is_free: group.is_free,
                 members_count: group.members_count, online_count: group.online_count,
                 has_media: !!(group.media_video_collection_id || (group.media_image_urls || []).length || hasFolderMedia),

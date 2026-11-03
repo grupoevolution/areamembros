@@ -1172,6 +1172,15 @@ router.post('/vip-reception/test', requireAdmin, async (req, res) => {
     }
 });
 
+// GET /api/admin/chats/triggers — config dos gatilhos JÁ com os padrões
+// (frases de fábrica aparecem no painel pra editar)
+router.get('/triggers', requireAdmin, async (req, res) => {
+    try {
+        const cfg = await require('./user-chats').triggersConfig();
+        return res.json({ success: true, config: cfg });
+    } catch (err) { return res.status(500).json({ success: false, error: err.message }); }
+});
+
 // GET /api/admin/chats/bunny-folder?path=Tinder/20%20a%2035
 // Lista as FOTOS de uma pasta do Bunny Storage (só leitura) — usado pra
 // montar perfis (foto de perfil do chat/Encontros) a partir das pastas.

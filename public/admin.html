@@ -5988,6 +5988,58 @@ a { color: inherit; text-decoration: none; }
                     </div>
                 </div>
 
+                <!-- GATILHOS DE CONVERSA (02/11): notificação, Pix → modelo, pós-chamada, chamada grátis, estrelas, presentes -->
+                <div style="margin-top:16px; background:linear-gradient(135deg, rgba(255,59,107,.08), rgba(0,0,0,.25)); border:1px solid rgba(255,59,107,.3); border-radius:14px; padding:16px 18px;">
+                    <div style="font-size:14px; font-weight:700; color:#ff8fab;">Gatilhos de conversa</div>
+                    <div class="form-help" style="margin-top:4px;">A modelo certa chama o lead no momento certo. Cada parte liga/desliga sozinha. Frases: <b>1 por linha</b> — o mesmo lead percorre a lista inteira antes de repetir. <code>{nome}</code> = nome do lead.</div>
+
+                    <div style="margin-top:14px; font-size:13px; font-weight:700; color:#fff;">1. Notificação "fulana te mandou mensagem"</div>
+                    <div class="form-help">IDs das conversas (free, com saudação) que aparecem nas notificações da rotina. Vazio = comportamento antigo (qualquer modelo da lista).</div>
+                    <input class="form-control" id="tgNotif" placeholder="ex.: 94, 95, 120">
+
+                    <div style="margin-top:16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div style="font-size:13px; font-weight:700; color:#fff;">2. Gerou Pix e não pagou → a modelo chama</div>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12.5px;"><input type="checkbox" id="tgPixOn"> Ligado</label>
+                        <span style="font-size:12.5px;">depois de <input class="form-control" id="tgPixMin" type="number" min="1" max="60" style="width:70px; display:inline-block;"> min</span>
+                    </div>
+                    <div class="form-help">Quem manda é a modelo da conversa onde ele clicou em comprar (grupo → conversa de convite do grupo; chamada → conversa da modelo). Botão leva pro Pix no suporte. Some sozinha quando ele paga.</div>
+                    <textarea class="form-control" id="tgPixTexts" rows="4"></textarea>
+                    <input class="form-control" id="tgPixCta" placeholder="Texto do botão" style="margin-top:6px; max-width:280px;">
+
+                    <div style="margin-top:16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div style="font-size:13px; font-weight:700; color:#fff;">3. Terminou a chamada paga → a modelo puxa papo</div>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12.5px;"><input type="checkbox" id="tgPosOn"> Ligado</label>
+                        <span style="font-size:12.5px;">depois de <input class="form-control" id="tgPosMin" type="number" min="0" max="120" style="width:70px; display:inline-block;"> min</span>
+                    </div>
+                    <div class="form-help">Frase com <code>[presente]</code> no fim ganha o botão "MANDAR UM PRESENTE".</div>
+                    <textarea class="form-control" id="tgPosTexts" rows="5"></textarea>
+                    <div class="form-help" style="margin-top:6px;">Qual conversa é a modelo de cada chamada (1 por linha, <code>produto = conversa</code>, ex.: <code>45 = 366</code>). Sem linha, o sistema procura a conversa com a mesma chamada vinculada.</div>
+                    <textarea class="form-control" id="tgPosMap" rows="3" placeholder="45 = 366"></textarea>
+
+                    <div style="margin-top:16px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        <div style="font-size:13px; font-weight:700; color:#fff;">4. 1ª chamada paga da vida → outra modelo faz uma grátis</div>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12.5px;"><input type="checkbox" id="tgFreeOn"> Ligado</label>
+                        <span style="font-size:12.5px;">depois de <input class="form-control" id="tgFreeMin" type="number" min="1" max="120" style="width:70px; display:inline-block;"> min</span>
+                    </div>
+                    <div class="form-help">IDs das conversas (roteiro com bloco de chamada + oferta). Usa a 1ª que ele ainda não teve.</div>
+                    <input class="form-control" id="tgFreeIds" placeholder="ex.: 380, 381, 382">
+
+                    <div style="margin-top:16px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                        <div style="font-size:13px; font-weight:700; color:#fff;">5. Estrelas + presentes</div>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12.5px;"><input type="checkbox" id="tgRateOn"> Estrelas no fim da chamada paga</label>
+                        <label style="display:flex; align-items:center; gap:6px; font-size:12.5px;"><input type="checkbox" id="tgGiftOn"> Presentes ligados</label>
+                    </div>
+                    <div class="form-help">Presentes: 1 por linha <code>chave | nome | preço | link do checkout</code>. Chaves com desenho pronto: rosa, coracao, champanhe, diamante, coroa. Sem link = não aparece. 4–5 estrelas abrem os presentes.</div>
+                    <textarea class="form-control" id="tgGiftTiers" rows="5"></textarea>
+                    <div class="form-help" style="margin-top:6px;">Agradecimento da modelo quando ele manda o presente:</div>
+                    <textarea class="form-control" id="tgGiftThanks" rows="3"></textarea>
+
+                    <div style="display:flex; align-items:center; gap:12px; margin-top:12px;">
+                        <button class="btn-primary" onclick="saveTriggers()">Salvar gatilhos</button>
+                        <span id="tgStatus" style="font-size:12px; color:rgba(255,255,255,.55);"></span>
+                    </div>
+                </div>
+
                 <!-- RECEPÇÃO VIP: virou VIP/Premium → modelas mandam mensagem espalhadas no tempo -->
                 <div style="margin-top:16px; background:linear-gradient(135deg, rgba(245,214,123,.08), rgba(0,0,0,.25)); border:1px solid rgba(245,214,123,.3); border-radius:14px; padding:16px 18px;">
                     <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
@@ -17470,8 +17522,9 @@ async function vrAddRow(entry) {
     row.style.cssText = 'display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.07); border-radius:10px; padding:8px 10px;';
     row.innerHTML = '<select class="form-control vr-chat" style="flex:2; min-width:170px;"></select>'
         + '<select class="form-control vr-aud" style="flex:1; min-width:130px;">'
-        +   '<option value="both"' + (e.audience !== 'vip' ? ' selected' : '') + '>VIP e Premium</option>'
+        +   '<option value="both"' + (e.audience !== 'vip' && e.audience !== 'premium' ? ' selected' : '') + '>VIP e Premium</option>'
         +   '<option value="vip"' + (e.audience === 'vip' ? ' selected' : '') + '>Só VIP</option>'
+        +   '<option value="premium"' + (e.audience === 'premium' ? ' selected' : '') + '>Só Premium</option>'
         + '</select>'
         + '<span style="font-size:12px; color:rgba(255,255,255,.55);">de</span>'
         + '<input class="form-control vr-min" type="number" min="0" max="1440" style="width:74px;" value="' + (e.min_min != null ? e.min_min : 0) + '">'
@@ -17506,7 +17559,7 @@ async function saveVipReception() {
         if (!chatId) return;
         let mn = parseFloat(row.querySelector('.vr-min').value); if (isNaN(mn) || mn < 0) mn = 0;
         let mx = parseFloat(row.querySelector('.vr-max').value); if (isNaN(mx) || mx < mn) mx = mn;
-        entries.push({ chat_id: chatId, audience: row.querySelector('.vr-aud').value === 'vip' ? 'vip' : 'both', min_min: mn, max_min: mx });
+        entries.push({ chat_id: chatId, audience: ['vip', 'premium'].includes(row.querySelector('.vr-aud').value) ? row.querySelector('.vr-aud').value : 'both', min_min: mn, max_min: mx });
     });
     const enabled = document.getElementById('vrEnabled').checked;
     if (enabled && !entries.length) { if (st) st.textContent = 'Escolha pelo menos 1 conversa antes de ligar.'; return; }
@@ -17580,8 +17633,61 @@ async function saveCallPremium() {
 }
 window.saveCallPremium = saveCallPremium;
 
+
+// ─── Gatilhos de conversa (02/11) ───────────────────────────────────────────
+const TG_DEFAULT_TIERS = 'rosa | Rosa | 9,90 | \ncoracao | Coração | 29,90 | \nchampanhe | Champanhe | 59,90 | \ndiamante | Diamante | 119,90 | \ncoroa | Coroa | 249,90 | ';
+async function loadTriggersCard() {
+    const $ = (id) => document.getElementById(id);
+    if (!$('tgNotif')) return;
+    try {
+        const r = await fetch('/api/admin/chats/triggers', { credentials: 'include' }).then(r => r.json());
+        const c = (r && r.config) || {};
+        $('tgNotif').value = (c.notif_chat_ids || []).join(', ');
+        $('tgPixOn').checked = !!(c.pix_model && c.pix_model.enabled);
+        $('tgPixMin').value = (c.pix_model && c.pix_model.delay_min) || 8;
+        $('tgPixTexts').value = ((c.pix_model && c.pix_model.texts) || []).join('\n');
+        $('tgPixCta').value = (c.pix_model && c.pix_model.cta) || '';
+        $('tgPosOn').checked = !!(c.pos_call && c.pos_call.enabled);
+        $('tgPosMin').value = (c.pos_call && c.pos_call.delay_min != null) ? c.pos_call.delay_min : 1;
+        $('tgPosTexts').value = ((c.pos_call && c.pos_call.texts) || []).join('\n');
+        $('tgPosMap').value = Object.entries((c.pos_call && c.pos_call.map) || {}).map(([k, v]) => k + ' = ' + v).join('\n');
+        $('tgFreeOn').checked = !!(c.free_call && c.free_call.enabled);
+        $('tgFreeMin').value = (c.free_call && c.free_call.delay_min) || 3;
+        $('tgFreeIds').value = ((c.free_call && c.free_call.chat_ids) || []).join(', ');
+        $('tgRateOn').checked = !(c.rating && c.rating.enabled === false);
+        $('tgGiftOn').checked = !!(c.gifts && c.gifts.enabled);
+        const tiers = (c.gifts && c.gifts.tiers) || [];
+        $('tgGiftTiers').value = tiers.length ? tiers.map(t => [t.key, t.name, String(Number(t.price || 0).toFixed(2)).replace('.', ','), t.checkout_url || ''].join(' | ')).join('\n') : TG_DEFAULT_TIERS;
+        $('tgGiftThanks').value = ((c.gifts && c.gifts.thanks) || []).join('\n');
+    } catch (_) {}
+}
+async function saveTriggers() {
+    const $ = (id) => document.getElementById(id);
+    const ids = (v) => String(v || '').split(/[^0-9]+/).map(Number).filter(Boolean);
+    const lines = (v) => String(v || '').split('\n').map(x => x.trim()).filter(Boolean);
+    const map = {};
+    lines($('tgPosMap').value).forEach(l => { const m = l.match(/(\d+)\s*[=:>-]+\s*(\d+)/); if (m) map[m[1]] = parseInt(m[2], 10); });
+    const tiers = lines($('tgGiftTiers').value).map(l => {
+        const p = l.split('|').map(x => x.trim());
+        return { key: (p[0] || '').toLowerCase(), name: p[1] || p[0] || '', price: parseFloat(String(p[2] || '0').replace(',', '.')) || 0, checkout_url: p[3] || '' };
+    }).filter(t => t.name);
+    const value = {
+        notif_chat_ids: ids($('tgNotif').value),
+        pix_model: { enabled: $('tgPixOn').checked, delay_min: parseFloat($('tgPixMin').value) || 8, texts: lines($('tgPixTexts').value), cta: $('tgPixCta').value.trim() || 'VER MEU PIX 💗' },
+        pos_call: { enabled: $('tgPosOn').checked, delay_min: parseFloat($('tgPosMin').value) || 0, texts: lines($('tgPosTexts').value), map },
+        free_call: { enabled: $('tgFreeOn').checked, delay_min: parseFloat($('tgFreeMin').value) || 3, chat_ids: ids($('tgFreeIds').value) },
+        rating: { enabled: $('tgRateOn').checked },
+        gifts: { enabled: $('tgGiftOn').checked, tiers, thanks: lines($('tgGiftThanks').value) },
+    };
+    const result = await _saveGamification('chat_triggers', value);
+    const st = $('tgStatus');
+    if (st) { st.textContent = result.ok ? 'Salvo' : ('Erro: ' + (result.error || '')); setTimeout(() => { st.textContent = ''; }, 3500); }
+}
+window.saveTriggers = saveTriggers;
+
 async function loadAdminChats() {
     loadChatPaywallCard();
+    loadTriggersCard();
     loadSupportConfig(); loadGabriela();
     loadRotationConfig();
     loadGreetingsConfig();

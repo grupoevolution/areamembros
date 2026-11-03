@@ -13665,6 +13665,8 @@ function mvNavigate(url) {
     try {
         if (/[?&]go=lives/.test(String(url))) { if (typeof openExploreTab === 'function') openExploreTab('lives'); return; }
         if (/[?&](videos=|go=videos)/.test(String(url))) { if (typeof openExploreTab === 'function') openExploreTab(); return; }
+        const mgf = String(url).match(/[?&]gift=(\d+)/);
+        if (mgf && window.MVGift) { MVGift.open({ chatId: parseInt(mgf[1], 10), src: 'link' }); return; }
         const mc = String(url).match(/[?&]chat=(\d+)/);
         if (mc && window.ChatApp) { ChatApp.open(parseInt(mc[1], 10)); return; }
         const mg = String(url).match(/[?&]group=(\d+)/);
@@ -20469,6 +20471,13 @@ body.is-logged #pwaLandingBanner, body.pwa-installed #pwaLandingBanner { display
         closeOverlay();
     }
     function endCall() {
+        // Chamada PAGA terminou → estrelas + presente + gatilhos (02/11)
+        try {
+            if (currentOpts && currentOpts.paidProductId && window.MVGift) {
+                const pid = currentOpts.paidProductId, c = currentCall;
+                setTimeout(() => MVGift.rate(pid, c), 1700);
+            }
+        } catch (_) {}
         // Fase J1: dispara cleanup IMEDIATO. Antes o cleanup completo só rolava
         // em closeOverlay (1.6s depois) — durante esse tempo hls.js continuava
         // baixando/decodando segmentos em background → travava o app inteiro.
@@ -21099,6 +21108,148 @@ window.MV_hlsAttach = function (videoEl, hlsUrl, onFail) {
     });
 };
 
+// ═══════════════ AVALIAÇÃO DA CHAMADA + PRESENTES (02/11) ═══════════════
+// Terminou a chamada PAGA → "Como foi a chamada com a X?" (estrelas). 4–5
+// estrelas → "Surpreenda a X" com os presentes (Rosa → Coroa), cada um com
+// checkout próprio (painel → Gatilhos). Pagou → a modelo agradece no chat
+// (carimbo gift_<chatId>). Também abre por link: /?gift=<chatId>.
+window.MVGift = (function () {
+    const GIFT_SVG = {
+        rosa: '<svg viewBox="0 0 64 64"><defs><linearGradient id="gR" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff5c8a"/><stop offset="1" stop-color="#c2134a"/></linearGradient></defs><path d="M32 40c-9 0-15-7-15-15 0-5 3-9 6-11 1 4 5 6 9 6s8-2 9-6c3 2 6 6 6 11 0 8-6 15-15 15z" fill="url(#gR)"/><path d="M23 14c3-5 15-5 18 0-3 3-6 4-9 4s-6-1-9-4z" fill="#ff8fb0"/><path d="M32 40v18" stroke="#2fa35a" stroke-width="3" stroke-linecap="round"/><path d="M32 50c-5-1-8-4-9-8 5 0 8 3 9 8zM32 47c5-1 8-4 9-8-5 0-8 3-9 8z" fill="#3cc06a"/></svg>',
+        coracao: '<svg viewBox="0 0 64 64"><defs><linearGradient id="gH" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6b9a"/><stop offset="1" stop-color="#e0103f"/></linearGradient></defs><path d="M32 55S8 41 8 24c0-8 6-14 13-14 5 0 9 3 11 7 2-4 6-7 11-7 7 0 13 6 13 14 0 17-24 31-24 31z" fill="url(#gH)"/><path d="M19 19c-3 1-5 4-5 7" stroke="#fff" stroke-opacity=".6" stroke-width="3" stroke-linecap="round" fill="none"/></svg>',
+        champanhe: '<svg viewBox="0 0 64 64"><defs><linearGradient id="gC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9a8"/><stop offset="1" stop-color="#e0a92a"/></linearGradient></defs><path d="M20 8h10l-1 14c0 5-3 8-4 8s-4-3-4-8z" fill="url(#gC)" stroke="#fff6" /><path d="M25 30v20M19 52h12" stroke="#f3d27a" stroke-width="3" stroke-linecap="round"/><path d="M34 8h10l-1 14c0 5-3 8-4 8s-4-3-4-8z" fill="url(#gC)" stroke="#fff6" transform="rotate(14 39 30)"/><path d="M41 30l-3 19M34 51l10 2" stroke="#f3d27a" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="6" r="2" fill="#ffe9a8"/><circle cx="27" cy="3" r="1.4" fill="#ffe9a8"/><circle cx="37" cy="3" r="1.4" fill="#ffe9a8"/></svg>',
+        diamante: '<svg viewBox="0 0 64 64"><defs><linearGradient id="gD" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9ef0ff"/><stop offset="1" stop-color="#3b7bff"/></linearGradient></defs><path d="M16 22l8-10h16l8 10-16 30z" fill="url(#gD)"/><path d="M16 22h32M24 12l8 10 8-10M32 22v30M24 22l8 30 8-30" stroke="#fff" stroke-opacity=".55" stroke-width="1.6" fill="none"/></svg>',
+        coroa: '<svg viewBox="0 0 64 64"><defs><linearGradient id="gK" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="1" stop-color="#d48a0a"/></linearGradient></defs><path d="M10 22l11 9 11-17 11 17 11-9-5 26H15z" fill="url(#gK)"/><rect x="15" y="48" width="34" height="6" rx="2" fill="#c27a06"/><circle cx="10" cy="21" r="3" fill="#ffe27a"/><circle cx="32" cy="12" r="3.4" fill="#ff5c8a"/><circle cx="54" cy="21" r="3" fill="#ffe27a"/><circle cx="32" cy="38" r="3" fill="#7fe3ff"/></svg>',
+    };
+    const GIFT_SVG_DEFAULT = GIFT_SVG.coracao;
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+    function brl(v) { return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ','); }
+    function css() {
+        if (document.getElementById('mvGiftCss')) return;
+        const st = document.createElement('style');
+        st.id = 'mvGiftCss';
+        st.textContent = ''
+            + '#mvGiftOv{position:fixed;inset:0;z-index:2147483000;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center;opacity:0;transition:opacity .2s}'
+            + '#mvGiftOv.on{opacity:1}'
+            + '#mvGiftOv .sh{width:100%;max-width:480px;background:linear-gradient(180deg,#1d1418,#110b0e);border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));color:#fff;transform:translateY(30px);transition:transform .25s;box-shadow:0 -10px 40px rgba(0,0,0,.5)}'
+            + '#mvGiftOv.on .sh{transform:none}'
+            + '#mvGiftOv .grab{width:40px;height:4px;border-radius:4px;background:rgba(255,255,255,.2);margin:0 auto 14px}'
+            + '#mvGiftOv .hd{display:flex;align-items:center;gap:12px;margin-bottom:6px}'
+            + '#mvGiftOv .av{width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #ff3b6b;flex-shrink:0;background:#333}'
+            + '#mvGiftOv .t1{font-size:18px;font-weight:800;line-height:1.2}'
+            + '#mvGiftOv .t2{font-size:13px;color:rgba(255,255,255,.65);margin-top:2px}'
+            + '#mvGiftOv .stars{display:flex;justify-content:center;gap:10px;margin:18px 0 8px}'
+            + '#mvGiftOv .stars button{background:none;border:0;padding:4px;cursor:pointer}'
+            + '#mvGiftOv .stars svg{width:42px;height:42px;fill:rgba(255,255,255,.18);transition:fill .15s,transform .15s}'
+            + '#mvGiftOv .stars button.on svg{fill:#ffc531;transform:scale(1.08)}'
+            + '#mvGiftOv .skip{display:block;margin:10px auto 0;background:none;border:0;color:rgba(255,255,255,.5);font-size:13px;padding:8px}'
+            + '#mvGiftOv .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}'
+            + '#mvGiftOv .g{background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.08);border-radius:16px;padding:10px 6px 9px;text-align:center;cursor:pointer;transition:transform .12s,border-color .12s}'
+            + '#mvGiftOv .g:active{transform:scale(.96)}'
+            + '#mvGiftOv .g.sel{border-color:#ff3b6b;background:rgba(255,59,107,.12)}'
+            + '#mvGiftOv .g svg{width:46px;height:46px;display:block;margin:0 auto 4px}'
+            + '#mvGiftOv .g .n{font-size:12.5px;font-weight:700}'
+            + '#mvGiftOv .g .p{font-size:12px;color:#ffc531;font-weight:800;margin-top:2px}'
+            + '#mvGiftOv .go{width:100%;margin-top:14px;padding:15px;border:0;border-radius:14px;font-size:15px;font-weight:800;color:#fff;background:linear-gradient(135deg,#ff3b6b,#d6094a);box-shadow:0 6px 22px rgba(255,59,107,.35);letter-spacing:.3px}'
+            + '#mvGiftOv .go:disabled{opacity:.45}'
+            + '#mvGiftOv .note{font-size:11.5px;color:rgba(255,255,255,.45);text-align:center;margin-top:8px}';
+        document.head.appendChild(st);
+    }
+    function sheet(html) {
+        css();
+        close();
+        const ov = document.createElement('div');
+        ov.id = 'mvGiftOv';
+        ov.setAttribute('data-mv-own-flow', '1');
+        ov.innerHTML = '<div class="sh"><div class="grab"></div>' + html + '</div>';
+        ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+        document.body.appendChild(ov);
+        requestAnimationFrame(() => ov.classList.add('on'));
+        return ov;
+    }
+    function close() { const o = document.getElementById('mvGiftOv'); if (o) o.remove(); }
+    function head(m, t1, t2) {
+        return '<div class="hd">' + (m && m.avatar_url ? '<img class="av" src="' + esc(m.avatar_url) + '" alt="">' : '')
+            + '<div><div class="t1">' + esc(t1) + '</div><div class="t2">' + esc(t2) + '</div></div></div>';
+    }
+    async function load(q) {
+        try {
+            const r = await fetch('/api/user/gifts?' + q, { credentials: 'include' });
+            return await r.json();
+        } catch (_) { return null; }
+    }
+    function track(t, meta) { try { window.TRACK && TRACK.event(t, meta || {}); } catch (_) {} }
+    function sendEnded(productId, rating) {
+        try {
+            fetch('/api/user/calls/ended', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+                body: JSON.stringify({ product_id: productId, rating: rating || null }),
+            }).catch(() => {});
+        } catch (_) {}
+    }
+
+    // Presentes pra uma modelo (chatId) — lista vem do painel
+    async function open(opts) {
+        opts = opts || {};
+        const d = opts.data || await load(opts.chatId ? 'chat_id=' + opts.chatId : 'product_id=' + (opts.productId || ''));
+        if (!d || !d.success || !d.tiers || !d.tiers.length || !d.model) return false;
+        const m = d.model;
+        const nome = m.name || 'ela';
+        let html = head(m, 'Surpreenda a ' + nome, 'Mande um presente — ela vai saber que foi você 💝')
+            + '<div class="grid">';
+        d.tiers.forEach((t, i) => {
+            html += '<div class="g' + (i === 1 ? ' sel' : '') + '" data-i="' + i + '">' + (GIFT_SVG[t.key] || GIFT_SVG_DEFAULT)
+                + '<div class="n">' + esc(t.name) + '</div><div class="p">' + brl(t.price) + '</div></div>';
+        });
+        html += '</div><button class="go">ENVIAR PRESENTE</button><div class="note">Pagamento único · ela recebe na hora</div>';
+        const ov = sheet(html);
+        let sel = Math.min(1, d.tiers.length - 1);
+        const cells = ov.querySelectorAll('.g');
+        cells.forEach(c => c.addEventListener('click', () => {
+            cells.forEach(x => x.classList.remove('sel')); c.classList.add('sel'); sel = parseInt(c.dataset.i, 10) || 0;
+            ov.querySelector('.go').textContent = 'ENVIAR ' + String(d.tiers[sel].name).toUpperCase() + ' · ' + brl(d.tiers[sel].price);
+        }));
+        ov.querySelector('.go').textContent = 'ENVIAR ' + String(d.tiers[sel].name).toUpperCase() + ' · ' + brl(d.tiers[sel].price);
+        ov.querySelector('.go').addEventListener('click', () => {
+            const t = d.tiers[sel];
+            track('gift_click', { chat_id: m.chat_id, gift: t.key, price: t.price, src: opts.src || null });
+            close();
+            window.MV_buy(t.checkout_url, 'gift_' + m.chat_id);
+        });
+        track('gift_open', { chat_id: m.chat_id, src: opts.src || null });
+        return true;
+    }
+
+    // Fim da chamada PAGA: estrelas → (4–5) presentes
+    async function rate(productId, call) {
+        sendEnded(productId, null);
+        const d = await load('product_id=' + encodeURIComponent(productId));
+        if (!d || !d.success || d.rating === false) return;
+        const m = d.model || { name: (call && call.model_name || '').split(' ')[0], avatar_url: call && call.model_photo };
+        const nome = m.name || 'ela';
+        const star = '<svg viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6L2.5 9.4l6.6-.8z"/></svg>';
+        let html = head(m, 'Como foi a chamada com a ' + nome + '?', 'Sua nota ajuda ela a caprichar ainda mais')
+            + '<div class="stars">';
+        for (let i = 1; i <= 5; i++) html += '<button data-v="' + i + '" aria-label="' + i + ' estrelas">' + star + '</button>';
+        html += '</div><button class="skip">Agora não</button>';
+        const ov = sheet(html);
+        ov.querySelector('.skip').addEventListener('click', close);
+        ov.querySelectorAll('.stars button').forEach(b => b.addEventListener('click', () => {
+            const v = parseInt(b.dataset.v, 10);
+            ov.querySelectorAll('.stars button').forEach(x => x.classList.toggle('on', parseInt(x.dataset.v, 10) <= v));
+            sendEnded(productId, v);
+            track('call_rating', { product_id: productId, rating: v });
+            setTimeout(() => {
+                if (v >= 4 && d.model && d.tiers && d.tiers.length) { open({ data: d, src: 'rating' }); return; }
+                const sh = ov.querySelector('.sh');
+                if (sh) sh.innerHTML = '<div class="grab"></div>' + head(m, 'Obrigado pela nota!', v >= 4 ? 'Ela vai adorar saber 😍' : 'Vamos caprichar mais na próxima 💋');
+                setTimeout(close, 1800);
+            }, 450);
+        }));
+    }
+    return { open, rate, close };
+})();
+
 // ═══════════════ HELPERS GLOBAIS DE COMPRA ═══════════════
 // MV_stampUtm: carimba a ORIGEM da venda (utm_content=chat_7 etc.) no link do
 // checkout — a Kirvano devolve no webhook e o painel sabe qual chat vendeu.
@@ -21110,7 +21261,7 @@ window.MV_stampUtm = function (url, src) {
         // Desconto/grupo: o carimbo É o que diz qual grupo/produto liberar
         // (link universal). Se o link já tiver utm_content do dono, TROCA
         // (senão a venda chegava sem grupo e o cliente pagava sem receber).
-        const must = /^(group_|desc_)/.test(String(src));
+        const must = /^(group_|desc_|gift_)/.test(String(src));
         if (/[?&]utm_content=/.test(url)) {
             if (!must) return url;
             url = url.replace(/([?&])utm_content=[^&#]*/, '$1utm_content=' + encodeURIComponent(src));
@@ -22484,6 +22635,7 @@ document.addEventListener('keydown', function(e) {
                         window.VideoCall.open(data.video_call, {
                             skipSeenGuard: true,
                             autoAnswer: true,
+                            paidProductId: productId, // fim → estrelas/presente (MVGift)
                             onClose: function() {
                                 // acabou a chamada → volta pra Minhas Compras com o
                                 // card já marcado como usada.
