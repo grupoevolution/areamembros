@@ -11439,6 +11439,7 @@ window.ChatApp = (function() {
                         window.VideoCall.open(CUR.chat.video_call, {
                             skipSeenGuard: true,
                             onClose: callDone,
+                            giftChatId: CUR.id,
                             gateAnswer: gated ? function () { try { openChatPaywall(); } catch (_) {} }
                                 : premGate ? function () { try { openCallUpgrade(); } catch (_) {} }
                                 : null,
@@ -12069,7 +12070,7 @@ window.ChatApp = (function() {
             onAnswer: function () {
                 if (isVip) {
                     closeCallScreen();
-                    try { window.VideoCall.open(chat.video_call, { skipSeenGuard: true, onClose: callDone }); watchCallEnd(); } catch (_) {}
+                    try { window.VideoCall.open(chat.video_call, { skipSeenGuard: true, onClose: callDone, giftChatId: CUR && CUR.id }); watchCallEnd(); } catch (_) {}
                 } else {
                     CUR.callSeen = true;
                     try { api('/api/user/chats/' + CUR.id + '/call-seen'); } catch (_) {}
@@ -20476,6 +20477,10 @@ body.is-logged #pwaLandingBanner, body.pwa-installed #pwaLandingBanner { display
             if (currentOpts && currentOpts.paidProductId && window.MVGift) {
                 const pid = currentOpts.paidProductId, c = currentCall;
                 setTimeout(() => MVGift.rate(pid, c), 1700);
+            } else if (currentOpts && currentOpts.giftChatId && window.MVGift) {
+                // chamada que a MODELO faz no chat (atendeu e assistiu)
+                const cid = currentOpts.giftChatId, c = currentCall;
+                setTimeout(() => MVGift.rate(null, c, cid), 1700);
             }
         } catch (_) {}
         // Fase J1: dispara cleanup IMEDIATO. Antes o cleanup completo só rolava
@@ -21241,9 +21246,9 @@ window.MVGift = (function () {
     }
 
     // Fim da chamada PAGA: estrelas → (4–5) presentes
-    async function rate(productId, call) {
-        sendEnded(productId, null);
-        const d = await load('product_id=' + encodeURIComponent(productId));
+    async function rate(productId, call, chatId) {
+        if (productId) sendEnded(productId, null);
+        const d = await load(chatId ? 'chat_id=' + chatId : 'product_id=' + encodeURIComponent(productId));
         if (!d || !d.success || d.rating === false) return;
         const m = d.model || { name: (call && call.model_name || '').split(' ')[0], avatar_url: call && call.model_photo };
         const nome = m.name || 'ela';
@@ -21257,8 +21262,8 @@ window.MVGift = (function () {
         ov.querySelectorAll('.stars button').forEach(b => b.addEventListener('click', () => {
             const v = parseInt(b.dataset.v, 10);
             ov.querySelectorAll('.stars button').forEach(x => x.classList.toggle('on', parseInt(x.dataset.v, 10) <= v));
-            sendEnded(productId, v);
-            track('call_rating', { product_id: productId, rating: v });
+            if (productId) sendEnded(productId, v);
+            track('call_rating', { product_id: productId || null, chat_id: chatId || null, rating: v });
             setTimeout(() => {
                 if (v >= 4 && d.model && d.tiers && d.tiers.length) { open({ data: d, src: 'rating' }); return; }
                 const sh = ov.querySelector('.sh');

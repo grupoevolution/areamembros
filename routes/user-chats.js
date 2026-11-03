@@ -3024,6 +3024,7 @@ const TRIG_DEFAULTS = {
     rating: { enabled: true },
     gifts: {
         enabled: false,
+        exclude_chat_ids: [],   // conversas cuja chamada NÃO mostra estrelas/presentes (ex.: funil)
         tiers: [
             { key: 'rosa', name: 'Rosa', price: 9.9, checkout_url: '' },
             { key: 'coracao', name: 'Coração', price: 29.9, checkout_url: '' },
@@ -3303,6 +3304,9 @@ router.get('/gifts', optionalUser, async (req, res) => {
         })) : [];
         let model = null;
         let cid = parseInt(req.query.chat_id, 10);
+        if (cid && (cfg.gifts.exclude_chat_ids || []).map(Number).includes(cid)) {
+            return res.json({ success: true, tiers: [], rating: false, model: null });
+        }
         if (!cid && req.query.product_id) cid = await trigModelChatFor(req.query.product_id, cfg);
         if (cid) {
             const { rows } = await db.query(`SELECT id, name, avatar_url FROM chats WHERE id = $1`, [cid]);
