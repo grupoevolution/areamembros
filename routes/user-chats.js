@@ -2996,7 +2996,7 @@ async function postDueStatusSchedules() {
 const TRIG_DEFAULTS = {
     notif_chat_ids: [],
     pix_model: {
-        enabled: false, delay_min: 8, cta: 'VER MEU PIX 💗',
+        enabled: false, delay_min: 5, cta: 'VER MEU PIX 💗',
         texts: [
             'oi {nome}… vi que você gerou o Pix e não finalizou 🥺 tô aqui te esperando',
             '{nome}, me arrumei todinha pra você e nada… o Pix tá pronto, é só pagar 😘',
@@ -3019,7 +3019,8 @@ const TRIG_DEFAULTS = {
             'gostei de você {nome}… sério. me manda um presentinho que eu te dou atenção especial 💋 [presente]',
         ],
     },
-    free_call: { enabled: false, delay_min: 3, chat_ids: [] },
+    // depois da chamada grátis, OUTRA modelo oferece a chamada DELA (offer_*)
+    free_call: { enabled: false, delay_min: 3, chat_ids: [], offer_chat_ids: [], offer_delay_min: 30 },
     rating: { enabled: true },
     gifts: {
         enabled: false,
@@ -3028,7 +3029,8 @@ const TRIG_DEFAULTS = {
             { key: 'coracao', name: 'Coração', price: 29.9, checkout_url: '' },
             { key: 'champanhe', name: 'Champanhe', price: 59.9, checkout_url: '' },
             { key: 'diamante', name: 'Diamante', price: 119.9, checkout_url: '' },
-            { key: 'coroa', name: 'Coroa', price: 249.9, checkout_url: '' },
+            { key: 'joias', name: 'Joias', price: 249.9, checkout_url: '' },
+            { key: 'conquista', name: 'Conquiste o coração dela', price: 499.9, checkout_url: '', special: true },
         ],
         thanks: [
             'AMOOOR 😍 recebi seu presente!! você é muito especial, sério',
@@ -3113,7 +3115,24 @@ async function trigModelChatFor(productId, cfg) {
             `SELECT invite_chat_ids FROM groups WHERE product_id = $1 AND active = true LIMIT 1`, [pid]);
         const ids = g[0] && Array.isArray(g[0].invite_chat_ids) ? g[0].invite_chat_ids.map(Number).filter(Boolean) : [];
         if (ids.length) return ids[0];
-    } catch (_) {}
+        // CHAMADA NOVA sem conversa (dono cadastrou depois): cria a conversa da
+        // modelo sozinha (nome + foto da chamada) e grava no mapa do painel
+        const { rows: [p] } = await db.query(
+            `SELECT id, name, call_photo_url, banner_url FROM products WHERE id = $1 AND product_type = 'video_call'`, [pid]);
+        const av = p && (p.call_photo_url || p.banner_url);
+        if (p && av) {
+            const { rows: [c] } = await db.query(
+                `INSERT INTO chats (name, avatar_url, section, status_label, show_online, access, reply_mode, allow_photo, display_order, active, listed, in_rotation, greeting_enabled)
+                 VALUES ($1, $2, 'Minhas conversas', 'online', true, 'free', 'vip', false, 0, true, false, false, false) RETURNING id`,
+                [String(p.name || 'Ela').trim().slice(0, 80), av]);
+            await db.query(
+                `UPDATE gamification_config SET value = jsonb_set(value, '{pos_call,map}', COALESCE(value->'pos_call'->'map', '{}'::jsonb) || jsonb_build_object($1::text, $2::int), true)
+                  WHERE key = 'chat_triggers'`, [String(pid), c.id]);
+            _trigCache = { at: 0, val: null };
+            logger.info('[gatilhos] conversa criada pra chamada ' + pid + ' → chat ' + c.id);
+            return c.id;
+        }
+    } catch (err) { logger.warn('[gatilhos] modelo do produto ' + productId + ': ' + err.message); }
     return null;
 }
 
@@ -3139,8 +3158,14 @@ async function onCallEnded(email, productId, rating) {
     if (cfg.free_call.enabled && (cfg.free_call.chat_ids || []).length) {
         const { rows: [c] } = await db.query(`SELECT COUNT(*)::int AS n FROM chat_trigger_jobs WHERE email = $1 AND kind = 'call_end'`, [e]);
         if (c.n === 1) { // 1ª chamada paga da vida: presente de outra modelo
+            const d1 = Math.round((parseFloat(cfg.free_call.delay_min) || 3) * 60);
             for (const cid of cfg.free_call.chat_ids) {
-                if (await trigScheduleOpen(e, parseInt(cid, 10), Math.round((parseFloat(cfg.free_call.delay_min) || 3) * 60))) break;
+                if (await trigScheduleOpen(e, parseInt(cid, 10), d1)) break;
+            }
+            // depois: outra modelo oferece a chamada DELA (nunca a de outra)
+            const d2 = d1 + Math.round((parseFloat(cfg.free_call.offer_delay_min) || 30) * 60);
+            for (const cid of (cfg.free_call.offer_chat_ids || [])) {
+                if (await trigScheduleOpen(e, parseInt(cid, 10), d2)) break;
             }
         }
     }
@@ -3200,12 +3225,12 @@ async function processChatTriggers() {
                 WHERE id IN (
                     SELECT p.id FROM pix_pending_notices p
                      WHERE p.model_notified_at IS NULL AND p.pix_code IS NOT NULL AND p.customer_email IS NOT NULL
-                       AND p.created_at < NOW() - make_interval(mins => $1)
+                       AND p.created_at < NOW() - make_interval(secs => $1 * 60 + (p.id % 121))
                        AND p.created_at > NOW() - INTERVAL '90 minutes'
                        AND NOT EXISTS (SELECT 1 FROM processed_sales ps WHERE ps.gateway = p.gateway AND ps.sale_id = p.sale_id)
                        AND NOT EXISTS (SELECT 1 FROM user_access ua WHERE ua.gateway = p.gateway AND ua.sale_id = p.sale_id)
                      LIMIT 30
-                ) RETURNING customer_email, product_id, created_at`, [Math.max(1, parseFloat(cfg.pix_model.delay_min) || 8)]));
+                ) RETURNING customer_email, product_id, created_at`, [Math.max(1, parseFloat(cfg.pix_model.delay_min) || 5)]));
         } catch (err) { logger.warn('[gatilhos] pix: ' + err.message); }
         let supportId = null;
         if (pix.length) {
@@ -3274,6 +3299,7 @@ router.get('/gifts', optionalUser, async (req, res) => {
         const cfg = await triggersConfig();
         const tiers = cfg.gifts.enabled ? (cfg.gifts.tiers || []).filter(t => t && t.checkout_url).map(t => ({
             key: String(t.key || ''), name: String(t.name || ''), price: Number(t.price) || 0, checkout_url: String(t.checkout_url),
+            special: t.special === true || String(t.key || '') === 'conquista',
         })) : [];
         let model = null;
         let cid = parseInt(req.query.chat_id, 10);

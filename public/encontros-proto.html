@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Encontros — protótipo de teste</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════════
+   PROTÓTIPO DO ENCONTROS — página SEPARADA, não encosta no app.
+   Tudo aqui é simulado no próprio navegador (nada vai pro servidor).
+   Ajustes de teste no botão ⚙ (canto superior direito).
+   ═══════════════════════════════════════════════════════════════════════ */
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#0b0b0f;color:#fff;font-family:'DM Sans',system-ui,sans-serif;overflow:hidden}
+button{font-family:inherit;cursor:pointer}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;max-width:480px;margin:0 auto;background:#0b0b0f}
+#app>.top{position:absolute;top:0;left:0;right:0;z-index:7;background:linear-gradient(180deg,rgba(0,0,0,.85),rgba(0,0,0,0));text-shadow:0 1px 4px rgba(0,0,0,.8);padding-top:env(safe-area-inset-top,0px);height:calc(56px + env(safe-area-inset-top,0px))}
+#sLikes,#sCompras,#sOther{padding-top:calc(56px + env(safe-area-inset-top,0px))}
+.top{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;flex-shrink:0}
+.logo{font-weight:800;font-size:18px;letter-spacing:.5px}.logo b{color:#e50914}
+.online{display:flex;align-items:center;gap:6px;font-size:12px;color:#9a9aa8}
+.dot{width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block}
+.gear{background:none;border:1px solid #2c2c38;color:#9a9aa8;border-radius:10px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;margin-left:8px}
+.screen{display:none;flex:1;min-height:0;flex-direction:column;position:relative}.screen.on{display:flex}
+
+/* ─ cards ─ */
+.stage{flex:1;position:relative;display:flex;align-items:center;justify-content:center;min-height:0}
+.card{position:absolute;inset:0;width:100%;height:100%;border-radius:0;overflow:hidden;background:#2a2a35;display:flex;flex-direction:column;justify-content:flex-end;padding:18px 18px 122px;user-select:none;touch-action:none;will-change:transform}
+.card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.card .shade{position:absolute;left:0;right:0;bottom:0;height:55%;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.85))}
+.card .st{position:relative;display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.55);border-radius:999px;padding:5px 10px;font-size:12px;width:max-content}
+.card .nm{position:relative;font-size:34px;font-weight:800;margin-top:8px;text-shadow:0 2px 8px rgba(0,0,0,.6)}.card .nm span{font-weight:500;font-size:24px;color:#d6d6de}
+.card .row{position:relative;display:flex;align-items:center;justify-content:space-between;margin-top:4px}
+.card .dist{font-size:13px;color:#d6d6de;display:flex;align-items:center;gap:5px}
+.card .tag{background:#e50914;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700}
+.stamp{position:absolute;top:calc(90px + env(safe-area-inset-top,0px));border:5px solid;border-radius:14px;padding:8px 18px;font-size:40px;font-weight:800;letter-spacing:2px;opacity:0;transition:opacity .1s;text-shadow:0 2px 10px rgba(0,0,0,.6);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.stamp.like{left:22px;color:#fff;border-color:#22c55e;background:rgba(34,197,94,.85);transform:rotate(-14deg)}
+.stamp.nope{right:22px;color:#fff;border-color:#f05252;background:rgba(240,82,82,.85);transform:rotate(14deg)}
+.back1{opacity:1}.back2{display:none}
+/* tutorial: mão arrastando + setas, some no 1º toque */
+.tut{position:absolute;inset:0;z-index:8;pointer-events:none;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.45)}
+.tut .hand{width:70px;height:70px;margin-top:60px;border-radius:50%;background:rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:tuthand 2.6s ease-in-out infinite}
+@keyframes tuthand{0%{transform:translateX(0) rotate(0)}30%{transform:translateX(110px) rotate(12deg)}50%{transform:translateX(0) rotate(0)}80%{transform:translateX(-110px) rotate(-12deg)}100%{transform:translateX(0) rotate(0)}}
+.tut .lr{position:absolute;top:36%;transform:translateY(-50%);font-size:16px;font-weight:800;padding:8px 12px;border-radius:12px}
+.tut .lr.r{right:14px;color:#22c55e;background:rgba(34,197,94,.15);border:2px solid #22c55e;animation:tutr 2.6s ease-in-out infinite}
+.tut .lr.l{left:14px;color:#f05252;background:rgba(240,82,82,.15);border:2px solid #f05252;animation:tutl 2.6s ease-in-out infinite}
+@keyframes tutr{0%,55%,100%{opacity:.5}25%{opacity:1;transform:translateY(-50%) scale(1.1)}}
+@keyframes tutl{0%,45%,100%{opacity:.5}80%{opacity:1;transform:translateY(-50%) scale(1.1)}}
+.tut .txt{position:absolute;top:calc(84px + env(safe-area-inset-top,0px));left:20px;right:20px;text-align:center;font-size:15px;font-weight:700;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.8);line-height:1.5}
+.tut .txt b{color:#ffd75e}
+.hint{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-size:15px;font-weight:700;color:#d6d6de}
+.actions{position:absolute;left:0;right:0;bottom:16px;z-index:6;display:flex;align-items:center;justify-content:center;gap:22px}
+.act{border-radius:50%;display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.18);background:rgba(10,10,14,.7);backdrop-filter:blur(6px);position:relative;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.act.msg{width:48px;height:48px;background:#25D366;border:0;box-shadow:0 8px 24px rgba(37,211,102,.45)}
+.act.undo{width:54px;height:54px}.act.nope{width:64px;height:64px}.act.like{width:74px;height:74px;background:#e50914;border:0;box-shadow:0 10px 28px rgba(229,9,20,.5)}
+.act:active{transform:scale(.92)}
+.badge{position:absolute;top:-6px;right:-10px;background:#f5c542;color:#2a1c00;font-size:8.5px;font-weight:800;border-radius:999px;padding:2px 6px}
+.empty{text-align:center;color:#9a9aa8;padding:30px;font-size:15px;line-height:1.5}
+
+/* ─ rodapé ─ */
+.nav{height:84px;border-top:1px solid #1c1c24;display:flex;align-items:flex-end;justify-content:space-around;padding:0 6px 18px;flex-shrink:0;font-size:9.5px;font-weight:700;letter-spacing:.6px;color:#7a7a88;text-transform:uppercase}
+.nav>div{display:flex;flex-direction:column;align-items:center;gap:5px;width:64px}
+.nav .center{width:72px;color:#fff;transform:translateY(-6px)}
+.nav .center .c{width:46px;height:46px;border-radius:50%;background:#e50914;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(229,9,20,.5);position:relative}
+.nav .mc{width:74px;height:54px;border-radius:14px;border:2px solid #e50914;background:rgba(229,9,20,.14);color:#fff;box-shadow:0 0 0 3px rgba(229,9,20,.18),0 6px 18px rgba(229,9,20,.35);transform:translateY(-4px);justify-content:center;gap:4px}
+.nav .mc span{text-align:center;line-height:1.05;font-size:8.5px}
+.pill{position:absolute;top:-2px;right:-2px;background:#22c55e;color:#06220f;font-size:10px;font-weight:800;border-radius:999px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+
+/* ─ folhas (bottom sheets) e popups ─ */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:flex-end;justify-content:center;z-index:50}
+.ov.on{display:flex}
+.sheet{width:100%;max-width:480px;background:#14141a;border-radius:28px 28px 0 0;padding:14px 22px 28px;display:flex;flex-direction:column;gap:14px;max-height:92vh;overflow:auto}
+.grab{width:44px;height:4px;border-radius:2px;background:#3a3a46;align-self:center}
+.h1{font-size:24px;font-weight:800;line-height:1.15}.sub{font-size:14px;color:#9a9aa8;margin-top:6px;line-height:1.4}
+.lbl{display:block;font-size:11px;font-weight:700;letter-spacing:.5px;color:#9a9aa8;text-transform:uppercase;margin-bottom:5px}
+.inp{width:100%;background:#1d1d26;border:1px solid #2c2c38;border-radius:12px;padding:12px 14px;color:#fff;font-size:15px;font-family:inherit}
+.btn{width:100%;background:#e50914;color:#fff;border:0;border-radius:14px;padding:16px;font-size:16px;font-weight:800;letter-spacing:.3px}
+.btn.green{background:#22c55e;color:#06220f}
+.ghost{background:none;border:0;color:#9a9aa8;text-decoration:underline;font-size:13px;text-align:center}
+.photo{width:84px;height:84px;border-radius:50%;background:#1d1d26;border:2px dashed #e50914;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#d6d6de;font-size:10.5px;font-weight:700;flex-shrink:0;overflow:hidden}
+.photo img{width:100%;height:100%;object-fit:cover}
+.plan{border:2px solid #2c2c38;border-radius:16px;padding:14px;background:#1d1d26;position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.plan.sel{border-color:#f5c542;background:#1b1a14}
+.plan .tt{font-size:16px;font-weight:800}.plan .dd{font-size:12px;color:#9a9aa8;margin-top:3px}.plan .pr{font-size:22px;font-weight:800;white-space:nowrap}
+.plan .most{position:absolute;top:-11px;left:14px;background:#f5c542;color:#2a1c00;font-size:10px;font-weight:800;border-radius:999px;padding:3px 9px;letter-spacing:.5px}
+
+/* ─ curtidas ─ */
+.likes{padding:6px 18px 18px;overflow:auto}
+.likes .hd{display:flex;align-items:center;justify-content:space-between;margin:6px 0 12px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.lk{position:relative;height:210px;border-radius:18px;overflow:hidden;background:#2a2a35;display:flex;flex-direction:column;justify-content:flex-end;padding:12px}
+.lk img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.lk.blur img{filter:blur(14px) brightness(.7);transform:scale(1.1)}
+.lk .shade{position:absolute;left:0;right:0;bottom:0;height:60%;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.8))}
+.lk .lock{position:absolute;top:12px;left:12px;display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.6);border-radius:999px;padding:4px 9px;font-size:11px}
+.lk .nm{position:relative;font-size:18px;font-weight:800}.lk .nm span{font-weight:500;font-size:15px;color:#d6d6de}
+.lk .d{position:relative;font-size:12px;color:#d6d6de}
+.see{height:210px;border-radius:18px;border:2px dashed #e50914;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:14px;background:none;color:#fff}
+
+/* ─ toast de curtida ─ */
+.toast{position:fixed;left:12px;right:12px;top:12px;max-width:456px;margin:0 auto;background:#1d1d26;border:1px solid #2c2c38;border-radius:18px;padding:12px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 14px 40px rgba(0,0,0,.6);transform:translateY(-140%);transition:transform .35s;z-index:60;cursor:pointer}
+.toast.on{transform:translateY(0)}
+.toast .av{width:46px;height:46px;border-radius:50%;overflow:hidden;flex-shrink:0;position:relative}
+.toast .av img{width:100%;height:100%;object-fit:cover;filter:blur(6px) brightness(.7)}
+.toast .av svg{position:absolute;left:14px;top:14px}
+
+/* ─ trava de curtidas ─ */
+.lockbox{text-align:center;padding:26px 22px}
+.lockbox .big{font-size:44px;font-weight:800;color:#fff;margin:4px 0;letter-spacing:1px;font-variant-numeric:tabular-nums}
+/* intro */
+.intro{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:calc(60px + env(safe-area-inset-top,0px)) 22px 16px;z-index:5;background:#0b0b0f}
+.intro .fan{position:relative;width:100%;height:min(46vh,380px);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.intro .fc{position:absolute;width:min(58vw,220px);height:min(34vh,300px);border-radius:20px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.6);display:flex;flex-direction:column;justify-content:flex-end;padding:14px}
+.intro .fc img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.intro .fc .shade{position:absolute;left:0;right:0;bottom:0;height:60%;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.8))}
+.intro .fc .nm{position:relative;font-size:22px;font-weight:800}.intro .fc .nm span{font-weight:500;font-size:17px;color:#d6d6de}
+.intro .fc .d{position:relative;font-size:12px;color:#d6d6de;display:flex;align-items:center;gap:5px}
+.intro .fc.l{transform:rotate(-12deg) translateX(-62%) translateY(14px);animation:fl 4s ease-in-out infinite}
+.intro .fc.r{transform:rotate(12deg) translateX(62%) translateY(14px);animation:fr 4s ease-in-out infinite}
+.intro .fc.m{animation:fm 4s ease-in-out infinite;z-index:2}
+@keyframes fm{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes fl{0%,100%{transform:rotate(-12deg) translateX(-62%) translateY(14px)}50%{transform:rotate(-14deg) translateX(-64%) translateY(4px)}}
+@keyframes fr{0%,100%{transform:rotate(12deg) translateX(62%) translateY(14px)}50%{transform:rotate(14deg) translateX(64%) translateY(4px)}}
+.intro .cta{position:relative;width:100%;max-width:360px;text-align:center}
+.intro .cta .h{font-size:24px;font-weight:800;line-height:1.1}
+.intro .cta .s{font-size:13.5px;color:#9a9aa8;margin:8px 0 0;line-height:1.4}
+.intro .cta .faces{display:flex;justify-content:center;margin-bottom:10px}
+.intro .go{width:100%;max-width:360px}
+.intro .cta .faces img{width:30px;height:30px;border-radius:50%;object-fit:cover;border:2px solid #0b0b0f;margin-left:-8px}
+.pulse{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(229,9,20,.6);transform:scale(1)}50%{box-shadow:0 0 0 16px rgba(229,9,20,0);transform:scale(1.03)}}
+/* faixa de idade dupla */
+.range{position:relative;height:34px}
+.range .track{position:absolute;left:0;right:0;top:15px;height:6px;border-radius:3px;background:#2c2c38}
+.range .fill{position:absolute;top:15px;height:6px;border-radius:3px;background:#e50914}
+.range input{position:absolute;left:0;right:0;top:0;width:100%;height:34px;margin:0;-webkit-appearance:none;appearance:none;background:none;pointer-events:none}
+.range input::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid #e50914;pointer-events:auto;cursor:pointer}
+.range input::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid #e50914;pointer-events:auto;cursor:pointer}
+
+/* ─ chat simulado ─ */
+.chat{display:flex;flex-direction:column;flex:1;min-height:0;background:#e9e2db;color:#111}
+.chat .bar{height:56px;display:flex;align-items:center;gap:10px;padding:0 12px;background:#0b0b0f;color:#fff}
+.chat .bar img{width:36px;height:36px;border-radius:50%;object-fit:cover}
+.msgs{flex:1;overflow:auto;padding:14px 12px;display:flex;flex-direction:column;gap:8px}
+.m{max-width:78%;padding:9px 12px;border-radius:14px;font-size:14.5px;line-height:1.35;background:#fff}
+.m.me{align-self:flex-end;background:#dcf8c6}
+.m.sys{align-self:center;background:#ffe9a8;color:#5a4300;font-size:12px;border-radius:999px;padding:5px 12px}
+.inbar{display:flex;gap:8px;padding:10px 12px;background:#f3eee9}
+.inbar input{flex:1;border:0;border-radius:999px;padding:12px 14px;font-size:15px;font-family:inherit}
+.inbar button{width:44px;height:44px;border-radius:50%;border:0;background:#e50914;color:#fff}
+.match{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;z-index:70;text-align:center;padding:24px}
+.match.on{display:flex}
+.match .ph{display:flex;align-items:center;gap:-10px}
+.match img{width:110px;height:110px;border-radius:50%;object-fit:cover;border:4px solid #e50914}
+.match .me{width:110px;height:110px;border-radius:50%;background:#2a2a35;border:4px solid #22c55e;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;margin-left:-14px}
+
+/* ─ painel de teste ─ */
+.cfg{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:80;padding:16px}
+.cfg.on{display:flex}
+.cfg .box{width:100%;max-width:420px;background:#14141a;border:1px solid #2c2c38;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:10px;font-size:13px}
+.cfg label{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#d6d6de}
+.cfg input{width:110px;background:#1d1d26;border:1px solid #2c2c38;border-radius:8px;padding:7px 9px;color:#fff;font-family:inherit}
+.cfg .row2{display:flex;gap:8px}
+.cfg .row2 button{flex:1;border-radius:10px;padding:10px;border:1px solid #2c2c38;background:#1d1d26;color:#fff;font-weight:700;font-size:12px}
+.note{font-size:11px;color:#7a7a88;line-height:1.4}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top">
+    <div class="logo"><b>M</b> VIP</div>
+    <div class="online" style="position:absolute;left:50%;transform:translateX(-50%);font-size:13px;font-weight:700;color:#fff;background:rgba(0,0,0,.45);border-radius:999px;padding:6px 12px;white-space:nowrap;top:calc(12px + env(safe-area-inset-top,0px))"><span class="dot" style="width:9px;height:9px"></span><b id="onlineN">38</b>&nbsp;online perto de você</div>
+    <div style="display:flex;align-items:center">
+      <button class="gear" aria-label="Ajustes de teste" onclick="Cfg.open()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </div>
+  </div>
+
+  <!-- TELA: deslizar (também é a de início: "toque pra começar") -->
+  <div class="screen on" id="sDeck">
+    <div class="stage" id="stage"></div>
+    <div class="tut" id="tut" style="display:none">
+      <div class="lr l">← PASSO</div><div class="lr r">CURTI →</div>
+      <div class="hand"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#0b0b0f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V5a2 2 0 1 1 4 0v6"/><path d="M12 11V8a2 2 0 1 1 4 0v3"/><path d="M16 11v-1a2 2 0 1 1 4 0v5a6 6 0 0 1-6 6h-2a6 6 0 0 1-5-2.7L4 14a2 2 0 0 1 3.3-2.3L8 13"/></svg></div>
+      <div class="txt">Arraste pra <b>direita</b> pra curtir, pra <b>esquerda</b> pra passar<br>ou toque no <b>coração</b></div>
+    </div>
+    <div class="intro" id="intro" onclick="Deck.start()">
+      <div class="cta">
+        <div class="faces" id="faces"></div>
+        <div class="h">Elas estão perto de você agora</div>
+        <div class="s"><b style="color:#fff" id="introN">42</b> mulheres online na sua região querem conversar. Curte quem você gostar — se ela curtir de volta, dá match.</div>
+      </div>
+      <div class="fan" id="fan"></div>
+      <button class="btn pulse go" onclick="Deck.start()">TOQUE PRA COMEÇAR</button>
+    </div>
+    <div class="actions" id="actions">
+      <button class="act undo" aria-label="Voltar (Premium)" onclick="Deck.undo()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f5c542" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg><span class="badge">PREMIUM</span></button>
+      <button class="act nope" aria-label="Passar" onclick="Deck.swipe(-1)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f05252" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <button class="act like" aria-label="Curtir" onclick="Deck.swipe(1)"><svg width="34" height="34" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7.5-4.8-9.5-9.3C1 8 3.2 4.5 6.6 4.5c2 0 3.6 1.1 4.4 2.4.8-1.3 2.4-2.4 4.4-2.4 3.4 0 5.6 3.5 4.1 7.2C19.5 16.2 12 21 12 21z"/></svg></button>
+      <button class="act msg" aria-label="Mandar mensagem (VIP)" onclick="Deck.message()"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fff"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.1.6 2.8.5a2.4 2.4 0 0 0 1.6-1.1c.2-.6.2-1 .1-1.1l-.4-.3z"/></svg><span class="badge" style="background:#25D366;color:#06220f;right:auto;left:50%;transform:translateX(-50%);top:-15px;white-space:nowrap;font-size:8.5px;padding:3px 7px">ENVIAR MENSAGEM</span></button>
+    </div>
+  </div>
+
+  <!-- TELA: quem curtiu você -->
+  <div class="screen" id="sLikes">
+    <div class="likes">
+      <div class="hd"><div style="font-size:16px;font-weight:800">Quem curtiu você</div><div id="likesNew" style="background:#e50914;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:800">0 novas</div></div>
+      <div class="grid" id="likesGrid"></div>
+    </div>
+  </div>
+
+  <!-- TELA: conversa simulada -->
+  <div class="screen" id="sChat">
+    <div class="chat">
+      <div class="bar"><button class="ghost" style="color:#fff;text-decoration:none;font-size:22px;padding:0 6px" onclick="Chat.back()">‹</button><img id="chAv" alt=""><div><div id="chNm" style="font-weight:800"></div><div style="font-size:11px;color:#22c55e">online</div></div></div>
+      <div class="msgs" id="msgs"></div>
+      <div class="inbar"><input id="chIn" placeholder="Mensagem" onkeydown="if(event.key==='Enter')Chat.send()"><button onclick="Chat.send()" aria-label="Enviar">➤</button></div>
+    </div>
+  </div>
+
+  <!-- TELA: minhas compras (como é hoje) + PERFIL em cima -->
+  <div class="screen" id="sCompras">
+    <div style="padding:6px 16px 16px;overflow:auto">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:6px 0 12px"><div style="font-size:20px;font-weight:800">Minhas Compras</div><div id="planBadge" style="background:#1d1d26;border:1px solid #2c2c38;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:800;color:#9a9aa8">FREE</div></div>
+
+      <!-- NOVO: linha FINA do perfil (toque abre o Perfil completo) -->
+      <div onclick="Perfil.open()" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:14px;background:#14141a;border:1px solid #2c2c38;cursor:pointer">
+        <div class="photo" style="width:40px;height:40px;border:2px solid #e50914" id="profAv"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9a9aa8" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px"><div style="font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" id="profNm">Seu apelido</div><span id="profTier" style="font-size:9.5px;font-weight:800;letter-spacing:.5px;color:#9a9aa8;border:1px solid #2c2c38;border-radius:999px;padding:2px 7px">FREE</span></div>
+          <div style="font-size:11.5px;color:#9a9aa8;margin-top:2px;display:flex;align-items:center;gap:6px"><svg width="11" height="11" viewBox="0 0 24 24" fill="#e50914"><path d="M12 21s-7.5-4.8-9.5-9.3C1 8 3.2 4.5 6.6 4.5c2 0 3.6 1.1 4.4 2.4.8-1.3 2.4-2.4 4.4-2.4 3.4 0 5.6 3.5 4.1 7.2C19.5 16.2 12 21 12 21z"/></svg><span id="profLikes">0 curtidas</span><span>·</span><span id="profMatches">0 matches</span></div>
+        </div>
+        <button id="profUp" onclick="event.stopPropagation();Premium.open('compras')" style="background:none;border:1px solid #e50914;color:#ff4d57;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800;white-space:nowrap">Upgrade</button>
+        <div style="color:#7a7a88;font-size:20px">›</div>
+      </div>
+
+      <!-- IGUAL HOJE: roleta -->
+      <div style="margin-top:12px;background:#2a1c00;border:1px solid #f5c542;border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+        <div style="width:40px;height:40px;border-radius:50%;background:#f5c542;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a3204" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.2"/><path d="M12 3v6M12 15v6M3 12h6M15 12h6"/></svg></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:800;color:#ffd75e">ROLETA VIP</div><div style="font-size:12px;color:#f2e2b0">Gire e ganhe até R$ 1.000 no Pix</div></div>
+        <div style="color:#ffd75e;font-size:22px;font-weight:800">›</div>
+      </div>
+
+      <!-- IGUAL HOJE: acessos ativos -->
+      <div style="margin:18px 0 8px;display:flex;align-items:center;justify-content:space-between"><div style="font-size:14px;font-weight:800">Seus acessos ativos</div><div style="font-size:11px;color:#9a9aa8"><b style="color:#fff" id="acervoN">1</b> conteúdo liberado</div></div>
+      <div style="display:flex;flex-direction:column;gap:10px" id="acervo">
+        <div style="background:#14141a;border:1px solid #2c2c38;border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px"><div style="width:48px;height:48px;border-radius:12px;background:#2a2a35;flex-shrink:0"></div><div style="flex:1"><div style="font-size:14px;font-weight:800">Chamada com a Amanda</div><div style="font-size:12px;color:#9a9aa8;margin-top:2px">prêmio da roleta · pronta pra usar</div></div><div style="color:#7a7a88;font-size:22px">›</div></div>
+      </div>
+
+      <!-- IGUAL HOJE: brindes -->
+      <div style="margin:18px 0 8px;display:flex;align-items:center;justify-content:space-between"><div style="font-size:14px;font-weight:800">Seus brindes</div><div style="font-size:11px;color:#9a9aa8">0</div></div>
+      <div class="note">(no app real: lista de brindes e presentes, igual hoje)</div>
+      <div style="margin:18px 0 6px;display:flex;justify-content:center;gap:18px;font-size:12px;color:#7a7a88"><a href="#" style="color:#7a7a88">ajuda</a><a href="#" style="color:#7a7a88">sair</a></div>
+    </div>
+  </div>
+
+  <!-- TELA: placeholder das outras abas -->
+  <div class="screen" id="sOther"><div class="empty" id="otherTxt">Aba do app real. Aqui só o Encontros é simulado.</div></div>
+
+  <div class="nav">
+    <div onclick="Nav.go('other','Início')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9v9a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z"/></svg>Início</div>
+    <div onclick="Nav.go('other','Conversas')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-5A8 8 0 1 1 21 12z"/></svg>Conversas</div>
+    <div class="center" onclick="Nav.go('deck')"><div class="c"><svg width="26" height="26" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7.5-4.8-9.5-9.3C1 8 3.2 4.5 6.6 4.5c2 0 3.6 1.1 4.4 2.4.8-1.3 2.4-2.4 4.4-2.4 3.4 0 5.6 3.5 4.1 7.2C19.5 16.2 12 21 12 21z"/></svg><span class="pill" id="navPill" style="display:none">0</span></div>Encontros</div>
+    <div onclick="Nav.go('other','Vídeos')"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>Vídeos</div>
+    <div class="mc" onclick="Nav.go('compras')"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff4d57" stroke-width="2.4"><path d="M6 2l1 4h10l1-4M4 6h16l-1.5 14h-13z"/></svg><span>MINHAS<br>COMPRAS</span></div>
+  </div>
+</div>
+
+<!-- toast "fulana curtiu você" -->
+<div class="toast" id="toast" onclick="Likes.openFromToast()">
+  <div class="av"><img id="toastImg" alt=""><svg width="18" height="18" viewBox="0 0 24 24" fill="#e50914"><path d="M12 21s-7.5-4.8-9.5-9.3C1 8 3.2 4.5 6.6 4.5c2 0 3.6 1.1 4.4 2.4.8-1.3 2.4-2.4 4.4-2.4 3.4 0 5.6 3.5 4.1 7.2C19.5 16.2 12 21 12 21z"/></svg></div>
+  <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:800" id="toastT"></div><div style="font-size:12.5px;color:#9a9aa8;margin-top:2px" id="toastS"></div></div>
+  <div style="font-size:11px;color:#6a6a78">agora</div>
+</div>
+
+<!-- folha: completar perfil -->
+<div class="ov" id="ovProfile"><div class="sheet">
+  <div class="grab"></div>
+  <div style="display:flex;align-items:center;gap:10px;background:#1d1d26;border-radius:12px;padding:10px 12px"><img id="pfHint" style="width:36px;height:36px;border-radius:50%;object-fit:cover" alt=""><div style="font-size:13px;color:#d6d6de;line-height:1.35"><b style="color:#fff" id="pfHintT">Joice e mais 2</b> querem saber quem é você</div></div>
+  <div><div class="h1">Monta seu perfil pra elas te verem</div><div class="sub">Leva 10 segundos. Quem tem perfil recebe curtida de volta.</div></div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <label class="photo" for="pfFile" id="pfPhoto"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>sua foto</label>
+    <input type="file" id="pfFile" accept="image/*" style="display:none" onchange="Profile.photo(this)">
+    <div style="flex:1;display:flex;flex-direction:column;gap:10px">
+      <div><label class="lbl" for="pfName">Seu nome ou apelido</label><input class="inp" id="pfName" placeholder="Pode ser só o apelido"></div>
+      <div><label class="lbl" for="pfAge">Idade</label><input class="inp" id="pfAge" placeholder="28" inputmode="numeric" style="width:110px"></div>
+    </div>
+  </div>
+  <div id="pfEmailWrap" style="display:none"><label class="lbl" for="pfEmail">Seu e-mail</label><input class="inp" id="pfEmail" placeholder="pra avisar quando alguém te curtir"></div>
+  <div>
+    <div style="display:flex;justify-content:space-between;font-size:13px;color:#d6d6de;margin-bottom:8px"><span>Quero ver mulheres de</span><b><span id="ageMinL">18</span> a <span id="ageMaxL">45</span> anos</b></div>
+    <div class="range"><div class="track"></div><div class="fill" id="ageFill"></div><input type="range" id="ageMin" min="18" max="60" value="18" oninput="Profile.range(this)"><input type="range" id="ageMax" min="18" max="60" value="45" oninput="Profile.range(this)"></div>
+  </div>
+  <button class="btn" onclick="Profile.save()">ENTRAR NO JOGO</button>
+  <button class="ghost" onclick="Profile.skip()">pular por agora</button>
+</div></div>
+
+<!-- folha: PERFIL completo (igual à aba Perfil de hoje + dados do Encontros) -->
+<div class="ov" id="ovPerfil"><div class="sheet" style="padding:0 0 24px;gap:0">
+  <div style="position:relative;height:230px;border-radius:28px 28px 0 0;overflow:hidden;background:#2a1a12">
+    <div id="pfBg" style="position:absolute;inset:-20px;background:#3a2418 center/cover;filter:blur(28px) brightness(.6)"></div>
+    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.2),rgba(20,20,26,1))"></div>
+    <div style="position:absolute;top:12px;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 16px"><div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#d6d6de">PERFIL</div><button class="ghost" style="color:#fff;text-decoration:none;background:rgba(255,255,255,.12);border-radius:999px;padding:6px 12px" onclick="Perfil.close()">fechar</button></div>
+    <div style="position:absolute;left:0;right:0;bottom:14px;display:flex;flex-direction:column;align-items:center;gap:8px">
+      <div style="position:relative"><div class="photo" style="width:96px;height:96px;border:3px solid #e50914;background:#1d1d26" id="pfBigAv"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#9a9aa8" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></div><button onclick="Profile.open(true)" aria-label="Editar" style="position:absolute;right:-2px;bottom:-2px;width:30px;height:30px;border-radius:50%;background:#fff;border:0;font-size:18px;font-weight:800;color:#000">+</button></div>
+      <div style="font-size:24px;font-weight:800;letter-spacing:.5px;text-transform:uppercase" id="pfBigNm">SEU APELIDO</div>
+      <div style="font-size:12px;color:#d6d6de" id="pfBigSub"></div>
+    </div>
+  </div>
+  <div style="padding:14px 18px 0;display:flex;flex-direction:column;gap:12px">
+    <!-- Encontros -->
+    <div style="background:#1d1d26;border:1px solid #2c2c38;border-radius:16px;padding:12px 14px;display:flex;align-items:center;gap:12px">
+      <div style="width:38px;height:38px;border-radius:50%;background:#e50914;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M12 21s-7.5-4.8-9.5-9.3C1 8 3.2 4.5 6.6 4.5c2 0 3.6 1.1 4.4 2.4.8-1.3 2.4-2.4 4.4-2.4 3.4 0 5.6 3.5 4.1 7.2C19.5 16.2 12 21 12 21z"/></svg></div>
+      <div style="flex:1"><div style="font-size:13.5px;font-weight:800" id="pfEncT">Encontros</div><div style="font-size:12px;color:#9a9aa8" id="pfEncS">0 curtidas · 0 matches · vendo de 18 a 45 anos</div></div>
+      <button class="ghost" style="color:#ff4d57;text-decoration:none;font-weight:800" onclick="Profile.open(true)">editar</button>
+    </div>
+    <!-- SEU NÍVEL (igual hoje) -->
+    <div id="pfNivel" style="background:#121218;border:1px solid #2c2c38;border-radius:20px;padding:22px 18px;text-align:center"></div>
+    <!-- Instalar (igual hoje) -->
+    <div style="background:linear-gradient(90deg,#e50914,#ff4d57);border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M6 11l6 6 6-6M4 21h16"/></svg></div><div><div style="font-size:14px;font-weight:800">Instalar o app no celular</div><div style="font-size:12px;color:#ffd0d0">Acesso com 1 toque · nunca mais perca o login</div></div></div>
+    <button class="ghost" style="border:1px solid #2c2c38;border-radius:14px;padding:14px;text-decoration:none;color:#d6d6de;font-weight:700;font-size:14px">⇥ Sair da conta</button>
+  </div>
+</div></div>
+
+<!-- folha: premium -->
+<div class="ov" id="ovPremium"><div class="sheet">
+  <div class="grab"></div>
+  <div style="display:flex;justify-content:center;margin-top:4px" id="pmAvs"></div>
+  <div style="text-align:center"><div class="h1" id="pmTitle">3 mulheres curtiram você</div><div class="sub" id="pmSub">Elas estão online agora. Libera pra ver quem são e responder na conversa.</div></div>
+  <div style="display:flex;flex-direction:column;gap:10px" id="pmPlans"></div>
+  <button class="btn" id="pmGo" onclick="Premium.buy()">VER QUEM CURTIU</button>
+  <div style="display:flex;align-items:center;justify-content:center;gap:14px;font-size:11.5px;color:#7a7a88"><span>Pix na hora</span><span>·</span><span>acesso imediato</span><span>·</span><span>sem renovação</span></div>
+  <button class="ghost" onclick="Premium.close()">agora não</button>
+</div></div>
+
+<!-- folha: trava de curtidas -->
+<div class="ov" id="ovLock"><div class="sheet lockbox">
+  <div class="grab"></div>
+  <div style="font-size:11px;font-weight:800;letter-spacing:.6px;color:#ffd75e">ELAS ESTÃO OLHANDO SEU PERFIL 👀</div>
+  <div class="h1">Suas curtidas voltam em</div>
+  <div class="big" id="lockLeft">3:00:00</div>
+  <div class="sub">Enquanto isso, as meninas que você curtiu estão decidindo. Com o Premium você não espera: curte sem limite e vê quem já te curtiu.</div>
+  <button class="btn" style="margin-top:8px" onclick="Lock.close();Premium.open('lock')">CURTIR SEM LIMITE AGORA</button>
+  <button class="ghost" onclick="Lock.close()">esperar</button>
+</div></div>
+
+<!-- tela de match -->
+<div class="match" id="match">
+  <div style="font-size:12px;font-weight:800;letter-spacing:1px;color:#22c55e">DEU MATCH</div>
+  <div style="font-size:30px;font-weight:800;line-height:1.1" id="matchT">Joice também curtiu você</div>
+  <div class="ph"><img id="matchImg" alt=""><div class="me" id="matchMe">?</div></div>
+  <div class="sub" style="max-width:300px">Ela está online. Manda a primeira mensagem antes que ela saia.</div>
+  <button class="btn green" style="max-width:320px" onclick="Chat.open(Match.cur)">MANDAR MENSAGEM</button>
+  <button class="ghost" onclick="Match.close()">depois</button>
+</div>
+
+<!-- painel de teste -->
+<div class="cfg" id="cfg"><div class="box">
+  <div style="font-size:15px;font-weight:800">Ajustes de teste</div>
+  <div class="note">Tudo aqui é simulado no navegador. Em produção esses valores ficam no painel.</div>
+  <label>Curtidas grátis antes de travar <input type="number" id="cLikes" value="25"></label>
+  <label>Espera da 1ª trava (min) <input type="number" id="cLock1" value="180"></label>
+  <label>Cada trava seguinte multiplica por <input type="number" id="cLockX" value="2" step="0.5"></label>
+  <label>Pedir perfil depois de N cards <input type="number" id="cProfile" value="3"></label>
+  <label>1ª curtida de volta em (seg) <input type="number" id="cLike1" value="20"></label>
+  <label>Próximas curtidas a cada (seg) <input type="number" id="cLikeN" value="45"></label>
+  <label>% das curtidas que viram match (sem plano) <input type="number" id="cMatch" value="30"></label>
+  <label>Mensagens grátis no match <input type="number" id="cFree" value="2"></label>
+  <label>Lead já logado (tem e-mail) <input type="checkbox" id="cLogged" checked style="width:auto"></label>
+  <div class="row2"><button onclick="Cfg.save()">Aplicar</button><button onclick="Cfg.premium()">Virar Premium (simular compra)</button></div>
+  <div class="row2"><button onclick="Cfg.reset()">Zerar tudo (lead novo)</button><button onclick="Cfg.close()">Fechar</button></div>
+</div></div>
+
+<script>
+// ═══════════════════ DADOS SIMULADOS ═══════════════════
+// No app real cada perfil é um CHAT (foto única = a do chat), com idade,
+// etiqueta e distância sorteada num raio, tudo pelo painel.
+var MODELS = [
+  { id: 1,  name: 'Joice',   age: 28, tag: 'sozinha hoje 🙈', img: 'https://i.pravatar.cc/600?img=47' },
+  { id: 2,  name: 'Giovana', age: 24, tag: 'quer conversar',  img: 'https://i.pravatar.cc/600?img=44' },
+  { id: 3,  name: 'Lari',    age: 31, tag: 'online agora',    img: 'https://i.pravatar.cc/600?img=49' },
+  { id: 4,  name: 'Duda',    age: 22, tag: 'nova por aqui',   img: 'https://i.pravatar.cc/600?img=45' },
+  { id: 5,  name: 'Rafaela', age: 35, tag: 'casada 🤫',       img: 'https://i.pravatar.cc/600?img=43' },
+  { id: 6,  name: 'Bruna',   age: 27, tag: 'sozinha hoje 🙈', img: 'https://i.pravatar.cc/600?img=41' },
+  { id: 7,  name: 'Camila',  age: 30, tag: 'quer conversar',  img: 'https://i.pravatar.cc/600?img=38' },
+  { id: 8,  name: 'Ana',     age: 25, tag: 'online agora',    img: 'https://i.pravatar.cc/600?img=36' },
+  { id: 9,  name: 'Mel',     age: 23, tag: 'nova por aqui',   img: 'https://i.pravatar.cc/600?img=32' },
+  { id: 10, name: 'Vivi',    age: 33, tag: 'sozinha hoje 🙈', img: 'https://i.pravatar.cc/600?img=29' },
+  { id: 11, name: 'Nat',     age: 26, tag: 'quer conversar',  img: 'https://i.pravatar.cc/600?img=26' },
+  { id: 12, name: 'Paty',    age: 29, tag: 'online agora',    img: 'https://i.pravatar.cc/600?img=25' },
+  { id: 13, name: 'Lu',      age: 21, tag: 'nova por aqui',   img: 'https://i.pravatar.cc/600?img=24' },
+  { id: 14, name: 'Isa',     age: 32, tag: 'casada 🤫',       img: 'https://i.pravatar.cc/600?img=21' },
+  { id: 15, name: 'Carol',   age: 27, tag: 'sozinha hoje 🙈', img: 'https://i.pravatar.cc/600?img=20' },
+  { id: 16, name: 'Bia',     age: 24, tag: 'quer conversar',  img: 'https://i.pravatar.cc/600?img=16' },
+  { id: 17, name: 'Thais',   age: 30, tag: 'online agora',    img: 'https://i.pravatar.cc/600?img=10' },
+  { id: 18, name: 'Fê',      age: 28, tag: 'nova por aqui',   img: 'https://i.pravatar.cc/600?img=9'  },
+  { id: 19, name: 'Jéssica', age: 34, tag: 'casada 🤫',       img: 'https://i.pravatar.cc/600?img=5'  },
+  { id: 20, name: 'Marina',  age: 26, tag: 'sozinha hoje 🙈', img: 'https://i.pravatar.cc/600?img=1'  },
+  { id: 21, name: 'Lívia',   age: 23, tag: 'quer conversar',  img: 'https://i.pravatar.cc/600?img=31' },
+  { id: 22, name: 'Nina',    age: 29, tag: 'online agora',    img: 'https://i.pravatar.cc/600?img=27' },
+  { id: 23, name: 'Sol',     age: 25, tag: 'nova por aqui',   img: 'https://i.pravatar.cc/600?img=23' },
+  { id: 24, name: 'Dani',    age: 31, tag: 'sozinha hoje 🙈', img: 'https://i.pravatar.cc/600?img=19' },
+  { id: 25, name: 'Yas',     age: 22, tag: 'quer conversar',  img: 'https://i.pravatar.cc/600?img=15' },
+  { id: 26, name: 'Clara',   age: 27, tag: 'online agora',    img: 'https://i.pravatar.cc/600?img=12' },
+  { id: 27, name: 'Aline',   age: 33, tag: 'casada 🤫',       img: 'https://i.pravatar.cc/600?img=11' },
+  { id: 28, name: 'Kelly',   age: 24, tag: 'nova por aqui',   img: 'https://i.pravatar.cc/600?img=7'  },
+  { id: 29, name: 'Rê',      age: 30, tag: 'sozinha hoje 🙈', img: 'https://i.pravatar.cc/600?img=3'  },
+  { id: 30, name: 'Tati',    age: 26, tag: 'quer conversar',  img: 'https://i.pravatar.cc/600?img=35' },
+];
+MODELS.forEach(function (m, i) { m.dist = (1 + ((i * 7) % 14)) + ' km'; });
+
+// ═══════════════════ ESTADO (fica no navegador) ═══════════════════
+var KEY = 'enc_proto_v1';
+var DEF = { likes: 25, lock1: 180, lockX: 2, profileAfter: 3, like1: 8, likeN: 25, matchPct: 30, free: 2, logged: true };
+var S = load();
+function load() {
+  try { var s = JSON.parse(localStorage.getItem(KEY)); if (s && s.cfg) return s; } catch (_) {}
+  return fresh();
+}
+function fresh() {
+  return { cfg: Object.assign({}, DEF), started: false, seen: [], liked: [], likedAt: {}, undone: null, swipes: 0,
+    likesUsed: 0, lockUntil: 0, lockCount: 0, profile: null, profileAsked: false,
+    received: [], receivedSeen: 0, premium: false, vip: false, matches: [], chats: {}, pendingLikeBack: [] };
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (_) {} }
+function $(id) { return document.getElementById(id); }
+function byId(id) { return MODELS.filter(function (m) { return m.id === id; })[0]; }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+function fmtLeft(ms) { var s = Math.max(0, Math.floor(ms / 1000)); var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60; return (h ? h + ':' : '') + (m < 10 && h ? '0' : '') + m + ':' + (x < 10 ? '0' : '') + x; }
+
+// ═══════════════════ NAVEGAÇÃO ═══════════════════
+var Nav = {
+  go: function (which, label) {
+    ['sDeck', 'sLikes', 'sChat', 'sCompras', 'sOther'].forEach(function (id) { $(id).classList.remove('on'); });
+    if (which === 'deck') { $('sDeck').classList.add('on'); Deck.render(); }
+    else if (which === 'likes') { $('sLikes').classList.add('on'); Likes.render(); }
+    else if (which === 'chat') { $('sChat').classList.add('on'); }
+    else if (which === 'compras') { $('sCompras').classList.add('on'); Profile.paint(); }
+    else { $('sOther').classList.add('on'); $('otherTxt').textContent = (label || 'Aba') + ' — é a aba do app real. Aqui só o Encontros é simulado.'; }
+    Likes.pill();
+  }
+};
+
+// ═══════════════════ DECK (cards) ═══════════════════
+var Deck = (function () {
+  var drag = null;
+  function queue() { return MODELS.filter(function (m) { return S.seen.indexOf(m.id) === -1; }); }
+  function render() {
+    var st = $('stage'); st.innerHTML = '';
+    var q = queue();
+    $('actions').style.visibility = S.started && q.length ? 'visible' : 'hidden';
+    // INÍCIO: leque de 3 cards animados + botão. Some depois do toque.
+    var intro = $('intro');
+    intro.style.display = S.started ? 'none' : '';
+    if (!S.started) {
+      var top3 = q.slice(0, 3);
+      $('fan').innerHTML = ['l', 'm', 'r'].map(function (pos, i) {
+        var m = top3[(i + 1) % top3.length] || top3[0]; if (!m) return '';
+        return '<div class="fc ' + pos + '"><img src="' + m.img + '" alt=""><div class="shade"></div><div class="nm">' + esc(m.name) + ' <span>' + m.age + '</span></div><div class="d"><span class="dot"></span>a ' + m.dist + ' de você</div></div>';
+      }).join('');
+      $('faces').innerHTML = q.slice(3, 9).map(function (m) { return '<img src="' + m.img + '" alt="">'; }).join('');
+      $('introN').textContent = $('onlineN').textContent;
+      return;
+    }
+    if (!q.length) { st.innerHTML = '<div class="empty">Você já viu todas as mulheres perto de você por hoje.<br><br>Novas aparecem amanhã — e as que curtiram você estão em <b>Quem curtiu</b>.</div>'; return; }
+    var show = q.slice(0, 3).reverse();
+    show.forEach(function (m, i) {
+      var depth = show.length - 1 - i; // 0 = topo
+      var el = document.createElement('div');
+      el.className = 'card' + (depth === 1 ? ' back1' : depth === 2 ? ' back2' : '');
+      el.innerHTML = '<img src="' + m.img + '" alt="">'
+        + '<div class="shade"></div>'
+        + '<div class="stamp like">CURTI</div><div class="stamp nope">PASSO</div>'
+        + '<div class="st"><span class="dot"></span>online agora</div>'
+        + '<div class="nm">' + esc(m.name) + ' <span>' + m.age + '</span></div>'
+        + '<div class="row"><div class="dist"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e50914" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>a ' + m.dist + ' de você</div><div class="tag">' + esc(m.tag) + '</div></div>';
+      if (depth === 0) { el.id = 'topCard'; bind(el, m); }
+      st.appendChild(el);
+    });
+  }
+  function start() { S.started = true; save(); render(); Tut.show(); }
+  // Mensagem DIRETA pra quem está no card: recurso VIP/Premium. Sem plano → oferta.
+  function message() {
+    var q = queue(); if (!q.length || !S.started) return;
+    var m = q[0];
+    if (!S.vip && !S.premium) { Premium.open('msg', m); return; }
+    S.seen.push(m.id); S.liked.push(m.id); S.matches.push(m.id); save(); render();
+    Chat.open(m.id);
+  }
+  function bind(el, m) {
+    var sx = 0, sy = 0, dx = 0, dy = 0, moving = false;
+    el.addEventListener('pointerdown', function (e) { if (!S.started) return; moving = true; sx = e.clientX; sy = e.clientY; el.setPointerCapture(e.pointerId); el.style.transition = 'none'; });
+    el.addEventListener('pointermove', function (e) {
+      if (!moving) return; dx = e.clientX - sx; dy = e.clientY - sy;
+      el.style.transform = 'translate(' + dx + 'px,' + dy + 'px) rotate(' + (dx / 18) + 'deg)';
+      el.querySelector('.stamp.like').style.opacity = Math.min(1, Math.max(0, dx / 45));
+      el.querySelector('.stamp.nope').style.opacity = Math.min(1, Math.max(0, -dx / 45));
+    });
+    function up() {
+      if (!moving) return; moving = false;
+      if (Math.abs(dx) > 100) { swipe(dx > 0 ? 1 : -1, el); }
+      else { el.style.transition = 'transform .25s'; el.style.transform = ''; el.querySelector('.stamp.like').style.opacity = 0; el.querySelector('.stamp.nope').style.opacity = 0; }
+      dx = dy = 0;
+    }
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  }
+  function swipe(dir, el) {
+    var q = queue(); if (!q.length || !S.started) return;
+    var m = q[0];
+    if (dir > 0 && !canLike()) { Lock.open(); if (el) { el.style.transition = 'transform .25s'; el.style.transform = ''; } return; }
+    el = el || $('topCard');
+    if (el) {
+      el.style.transition = 'transform .35s ease-in';
+      el.style.transform = 'translate(' + (dir * 600) + 'px,' + (-40) + 'px) rotate(' + (dir * 25) + 'deg)';
+      el.querySelector('.stamp.' + (dir > 0 ? 'like' : 'nope')).style.opacity = 1;
+    }
+    setTimeout(function () {
+      S.seen.push(m.id); S.undone = m.id; S.swipes++;
+      if (dir > 0) { S.liked.push(m.id); S.likedAt[m.id] = Date.now(); S.likesUsed++; LikeBack.schedule(m.id); }
+      save(); render(); afterSwipe();
+    }, 300);
+  }
+  function canLike() {
+    if (S.premium || S.vip) return true;
+    if (S.lockUntil && Date.now() < S.lockUntil) return false;
+    if (S.lockUntil && Date.now() >= S.lockUntil) { S.lockUntil = 0; S.likesUsed = 0; save(); }
+    if (S.likesUsed >= S.cfg.likes) {
+      var mins = S.cfg.lock1 * Math.pow(S.cfg.lockX, S.lockCount);
+      S.lockUntil = Date.now() + mins * 60000; S.lockCount++; save(); return false;
+    }
+    return true;
+  }
+  function afterSwipe() {
+    if (!S.profile && !S.profileAsked && S.swipes >= S.cfg.profileAfter) { S.profileAsked = true; save(); setTimeout(function () { Profile.open(false); }, 350); }
+  }
+  function undo() {
+    if (!S.premium) { Premium.open('undo'); return; }
+    if (!S.undone) return;
+    var id = S.undone; S.seen = S.seen.filter(function (x) { return x !== id; });
+    var li = S.liked.indexOf(id); if (li >= 0) { S.liked.splice(li, 1); S.likesUsed = Math.max(0, S.likesUsed - 1); }
+    S.undone = null; save(); render();
+  }
+  return { render: render, swipe: swipe, undo: undo, queue: queue, start: start, message: message };
+})();
+
+var Tut = {
+  show: function () {
+    var seen = false; try { seen = localStorage.getItem('enc_tut') === '1'; } catch (_) {}
+    if (seen) return;
+    var t = $('tut'); t.style.display = '';
+    var hide = function () { t.style.display = 'none'; try { localStorage.setItem('enc_tut', '1'); } catch (_) {} document.removeEventListener('pointerdown', hide, true); };
+    setTimeout(function () { document.addEventListener('pointerdown', hide, true); }, 600);
+    setTimeout(hide, 9000);
+  }
+};
+
+// ═══════════════════ CURTIDAS DE VOLTA (chegam no tempo) ═══════════════════
+var LikeBack = (function () {
+  function schedule(id) {
+    var n = S.received.length + S.pendingLikeBack.length;
+    var delay = (n === 0 ? S.cfg.like1 : S.cfg.likeN * (1 + Math.random() * 0.6)) * 1000;
+    S.pendingLikeBack.push({ id: id, at: Date.now() + delay });
+    save();
+  }
+  function tick() {
+    var now = Date.now(), fired = false;
+    S.pendingLikeBack = S.pendingLikeBack.filter(function (p) {
+      if (p.at > now) return true;
+      if (S.received.indexOf(p.id) === -1) { S.received.push(p.id); fired = p.id; }
+      return false;
+    });
+    if (fired !== false) {
+      save();
+      var m = byId(fired);
+      var isMatch = S.premium || (Math.random() * 100 < S.cfg.matchPct);
+      if (isMatch && S.matches.indexOf(fired) === -1) { S.matches.push(fired); save(); }
+      Toast.show(m, isMatch);
+      Likes.pill();
+    }
+  }
+  setInterval(tick, 1000);
+  return { schedule: schedule };
+})();
+
+var Toast = {
+  t: null,
+  show: function (m, isMatch) {
+    $('toastImg').src = m.img;
+    $('toastT').textContent = m.name + (isMatch ? ' deu match com você 💚' : ' curtiu você');
+    $('toastS').textContent = 'a ' + m.dist + ' · ' + (isMatch ? 'toque pra conversar' : 'quer conversar agora');
+    Toast.cur = m; Toast.isMatch = isMatch;
+    $('toast').classList.add('on');
+    clearTimeout(Toast.t); Toast.t = setTimeout(function () { $('toast').classList.remove('on'); }, 6000);
+  }
+};
+
+// ═══════════════════ QUEM CURTIU ═══════════════════
+var Likes = {
+  pill: function () {
+    var n = S.received.length - S.receivedSeen; var p = $('navPill');
+    p.style.display = n > 0 ? 'flex' : 'none'; p.textContent = n;
+    $('profLikes').textContent = S.received.length + ' curtida' + (S.received.length === 1 ? '' : 's');
+  },
+  openFromToast: function () {
+    $('toast').classList.remove('on');
+    var m = Toast.cur;
+    if (S.matches.indexOf(m.id) >= 0) { Match.show(m); return; }
+    Nav.go('likes');
+  },
+  render: function () {
+    S.receivedSeen = S.received.length; save(); Likes.pill();
+    var g = $('likesGrid'); var list = S.received.slice().reverse();
+    $('likesNew').textContent = list.length + (list.length === 1 ? ' nova' : ' novas');
+    if (!list.length) { g.innerHTML = '<div class="empty" style="grid-column:1/-1">Ninguém curtiu você ainda.<br>Continue curtindo — elas respondem no tempo delas.</div>'; return; }
+    var unlocked = S.premium;
+    g.innerHTML = list.map(function (id) {
+      var m = byId(id); var isMatch = S.matches.indexOf(id) >= 0;
+      var open = unlocked || isMatch;
+      return '<div class="lk' + (open ? '' : ' blur') + '" onclick="' + (open ? 'Chat.open(' + id + ')' : 'Premium.open(\'likes\')') + '">'
+        + '<img src="' + m.img + '" alt=""><div class="shade"></div>'
+        + (open ? (isMatch ? '<div class="lock" style="background:#22c55e;color:#06220f;font-weight:800">MATCH</div>' : '') : '<div class="lock"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Premium</div>')
+        + '<div class="nm">' + esc(m.name) + ' <span>' + m.age + '</span></div><div class="d">a ' + m.dist + ' de você</div></div>';
+    }).join('') + (unlocked ? '' : '<button class="see" onclick="Premium.open(\'likes\')"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#e50914" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg><div style="font-size:14px;font-weight:800;line-height:1.25">Ver quem curtiu você</div><div style="font-size:11.5px;color:#9a9aa8">e responder agora</div></button>');
+  }
+};
+
+// ═══════════════════ PERFIL ═══════════════════
+var Profile = {
+  img: null,
+  open: function (edit) {
+    var liked = S.liked.slice(-3).map(byId).filter(Boolean);
+    $('pfHint').src = (liked[0] || MODELS[0]).img;
+    $('pfHintT').textContent = liked.length ? (liked[liked.length - 1].name + (liked.length > 1 ? ' e mais ' + (liked.length - 1) : '')) : 'As meninas';
+    $('pfEmailWrap').style.display = S.cfg.logged ? 'none' : '';
+    if (S.profile) { $('pfName').value = S.profile.name; $('pfAge').value = S.profile.age; $('ageMin').value = S.profile.min; $('ageMax').value = S.profile.max; if (S.profile.img) { Profile.img = S.profile.img; $('pfPhoto').innerHTML = '<img src="' + S.profile.img + '" alt="">'; } }
+    Profile.range();
+    $('ovProfile').classList.add('on');
+  },
+  photo: function (inp) {
+    var f = inp.files && inp.files[0]; if (!f) return;
+    var r = new FileReader(); r.onload = function () { Profile.img = r.result; $('pfPhoto').innerHTML = '<img src="' + r.result + '" alt="">'; }; r.readAsDataURL(f);
+  },
+  range: function (src) {
+    var mn = $('ageMin'), mx = $('ageMax');
+    var a = parseInt(mn.value, 10), b = parseInt(mx.value, 10);
+    // as bolinhas não se cruzam: a que está sendo arrastada empurra a outra
+    if (a > b - 1) { if (src === mn) { b = Math.min(60, a + 1); mx.value = b; } else { a = Math.max(18, b - 1); mn.value = a; } }
+    $('ageMinL').textContent = a; $('ageMaxL').textContent = b;
+    var lo = (a - 18) / 42 * 100, hi = (b - 18) / 42 * 100;
+    $('ageFill').style.left = lo + '%'; $('ageFill').style.width = (hi - lo) + '%';
+  },
+  save: function () {
+    var name = ($('pfName').value || '').trim(); var age = parseInt($('pfAge').value, 10);
+    if (!name) { $('pfName').focus(); $('pfName').style.borderColor = '#e50914'; return; }
+    if (!age || age < 18) { $('pfAge').focus(); $('pfAge').style.borderColor = '#e50914'; return; }
+    S.profile = { name: name, age: age, img: Profile.img, min: parseInt($('ageMinL').textContent, 10), max: parseInt($('ageMaxL').textContent, 10) };
+    save(); $('ovProfile').classList.remove('on'); Profile.paint(); Likes.pill();
+  },
+  skip: function () { $('ovProfile').classList.remove('on'); },
+  paint: function () {
+    if (S.profile) {
+      $('profNm').textContent = S.profile.name + ', ' + S.profile.age;
+      if (S.profile.img) $('profAv').innerHTML = '<img src="' + S.profile.img + '" alt="">';
+    } else { $('profNm').textContent = 'Seu apelido'; }
+    var tier = S.premium ? 'PREMIUM' : S.vip ? 'VIP' : 'FREE';
+    var pt = $('profTier'); if (pt) { pt.textContent = tier; pt.style.color = S.premium ? '#ffd75e' : S.vip ? '#fff' : '#9a9aa8'; pt.style.borderColor = S.premium ? '#f5c542' : '#2c2c38'; }
+    var up = $('profUp'); if (up) { up.style.display = S.premium ? 'none' : ''; up.textContent = S.vip ? 'Premium' : 'Upgrade'; }
+    var pm = $('profMatches'); if (pm) pm.textContent = S.matches.length + (S.matches.length === 1 ? ' match' : ' matches');
+    var big = $('pfBigNm'); if (big) big.textContent = S.profile ? S.profile.name : 'Seu apelido';
+    var bs = $('pfBigSub'); if (bs) bs.textContent = S.profile ? (S.profile.age + ' anos · membro ' + tier.toLowerCase()) : 'toque no + pra colocar sua foto';
+    var ba = $('pfBigAv'); if (ba && S.profile && S.profile.img) ba.innerHTML = '<img src="' + S.profile.img + '" alt="">';
+    var bg = $('pfBg'); if (bg && S.profile && S.profile.img) bg.style.backgroundImage = 'url(' + S.profile.img + ')';
+    var es = $('pfEncS'); if (es) es.textContent = S.received.length + ' curtidas · ' + S.matches.length + ' matches · vendo de ' + (S.profile ? S.profile.min + ' a ' + S.profile.max : '18 a 45') + ' anos';
+    $('planBadge').textContent = S.premium ? '💎 PREMIUM' : S.vip ? '⭐ VIP' : 'FREE';
+    $('planBadge').style.color = S.premium ? '#ffd75e' : S.vip ? '#d6d6de' : '#9a9aa8';
+    $('matchMe').textContent = S.profile ? S.profile.name.slice(0, 1).toUpperCase() : '?';
+  }
+};
+
+// ═══════════════════ PERFIL (folha completa) ═══════════════════
+var Perfil = {
+  open: function () {
+    Profile.paint();
+    var n = $('pfNivel');
+    var lvl = S.premium ? 2 : S.vip ? 1 : 0;
+    var bars = [0, 1, 2].map(function (i) { return '<i style="display:inline-block;width:52px;height:5px;border-radius:3px;margin:0 3px;background:' + (i <= lvl ? '#fff' : '#3a3a46') + '"></i>'; }).join('');
+    var txt = lvl === 2 ? 'Tudo liberado: conversa com todas, vê quem curtiu você, manda mensagem direta, vídeos e lives.'
+            : lvl === 1 ? 'Você conversa com todas. Falta: ver quem curtiu você e mensagem direta no Encontros.'
+            : 'Você está vendo só a superfície. Quem é <b style="color:#ff4d57">VIP</b> conversa com todas, abre o que tá borrado e entra nos grupos.';
+    n.innerHTML = '<div style="width:64px;height:64px;border-radius:50%;background:#1d1d26;border:1px solid #2c2c38;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:26px">' + (lvl === 2 ? '💎' : lvl === 1 ? '⭐' : '🔒') + '</div>'
+      + '<div style="font-size:11px;letter-spacing:3px;color:#9a9aa8">— SEU NÍVEL —</div>'
+      + '<div style="margin-top:8px;font-size:13px;letter-spacing:2px;color:#9a9aa8">MEMBRO <b style="font-size:30px;letter-spacing:0;color:#fff">' + (lvl === 2 ? 'PREMIUM' : lvl === 1 ? 'VIP' : 'FREE') + '</b></div>'
+      + '<div style="font-size:14px;color:#9a9aa8;line-height:1.5;margin:12px 0 14px">' + txt + '</div>'
+      + '<div>' + bars + '</div><div style="font-size:11px;color:#9a9aa8;margin:6px 0 16px">' + (lvl + 1) + '/3</div>'
+      + (lvl < 2 ? '<button class="btn" onclick="Perfil.close();Premium.open(\'compras\')">' + (lvl === 1 ? 'SUBIR PRA PREMIUM 💎 ›<div style="font-size:12px;font-weight:600;margin-top:2px">pague só a diferença</div>' : 'DESBLOQUEAR TUDO 🔥 ›<div style="font-size:12px;font-weight:600;margin-top:2px">a partir de R$ 24,90 · liberação na hora</div>') + '</button>' : '');
+    $('ovPerfil').classList.add('on');
+  },
+  close: function () { $('ovPerfil').classList.remove('on'); }
+};
+
+// ═══════════════════ PREMIUM ═══════════════════
+var Premium = {
+  sel: 0, from: null,
+  open: function (from, model) {
+    Premium.from = from; Premium.sel = 0; Premium.model = model || null;
+    var n = S.received.length;
+    var avs = S.received.slice(-3).map(byId);
+    $('pmAvs').innerHTML = '<div style="display:flex">' + avs.map(function (m, i) { return '<img src="' + m.img + '" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:3px solid #14141a;filter:blur(1.5px);' + (i ? 'margin-left:-18px' : '') + '" alt="">'; }).join('') + '</div>';
+    if (from === 'undo') { $('pmTitle').textContent = 'Voltar o card é Premium'; $('pmSub').textContent = 'Deixou passar alguém? Premium volta quantas vezes quiser — e vê quem curtiu você.'; }
+    else if (from === 'msg') { $('pmTitle').textContent = 'Falar direto com a ' + (model ? model.name : 'ela') + ' é VIP'; $('pmSub').textContent = 'Pula a espera do match: manda mensagem agora pra quem você quiser. Ela responde na hora.'; }
+    else if (from === 'lock') { $('pmTitle').textContent = 'Curtidas ilimitadas'; $('pmSub').textContent = 'Sem espera, sem limite. E você vê quem já curtiu você.'; }
+    else if (from === 'chat') { $('pmTitle').textContent = 'Ela respondeu. Continua?'; $('pmSub').textContent = 'Sem plano você só manda ' + S.cfg.free + ' mensagens. Libera e conversa à vontade com todas.'; }
+    else { $('pmTitle').textContent = n === 1 ? '1 mulher curtiu você' : (n || 3) + ' mulheres curtiram você'; $('pmSub').textContent = 'Elas estão online agora. Libera pra ver quem são e responder na conversa.'; }
+    var plans = [
+      { k: 'premium', t: 'PREMIUM', d: 'Vê quem curtiu · responde todas · vídeos e lives', p: 'R$ 49,90', most: true },
+      { k: 'vip', t: 'VIP', d: 'Conversa com as modelos · não vê quem curtiu', p: 'R$ 24,90' },
+    ];
+    $('pmPlans').innerHTML = plans.map(function (p, i) {
+      return '<div class="plan' + (i === 0 ? ' sel' : '') + '" data-i="' + i + '" onclick="Premium.pick(' + i + ')">' + (p.most ? '<div class="most">MAIS ESCOLHIDO</div>' : '')
+        + '<div><div class="tt" style="color:' + (p.most ? '#ffd75e' : '#fff') + '">' + p.t + '</div><div class="dd">' + p.d + '</div></div><div class="pr">' + p.p + '</div></div>';
+    }).join('');
+    $('pmGo').textContent = from === 'msg' ? 'MANDAR MENSAGEM AGORA' : from === 'lock' ? 'LIBERAR AGORA' : from === 'chat' ? 'LIBERAR A CONVERSA' : from === 'undo' ? 'QUERO VOLTAR' : 'VER QUEM CURTIU';
+    $('ovPremium').classList.add('on');
+  },
+  pick: function (i) { Premium.sel = i; Array.prototype.forEach.call($('pmPlans').children, function (c, j) { c.classList.toggle('sel', j === i); }); },
+  buy: function () {
+    // No app real: vai pro checkout com carimbo "encontros_<origem>". Aqui, simula a compra na hora.
+    if (Premium.sel === 0) S.premium = true; else S.vip = true;
+    save(); Premium.close(); Profile.paint(); Likes.pill();
+    if (Premium.from === 'likes' || Premium.from === 'toast') Nav.go('likes');
+    if (Premium.from === 'chat' && Chat.cur) Chat.open(Chat.cur);
+    if (Premium.from === 'msg') { Deck.message(); return; }
+    alert('(simulação) Compra aprovada: ' + (S.premium ? 'PREMIUM' : 'VIP') + '. No app real isso vem do webhook da Kirvano.');
+  },
+  close: function () { $('ovPremium').classList.remove('on'); }
+};
+
+// ═══════════════════ TRAVA DE CURTIDAS ═══════════════════
+var Lock = {
+  t: null,
+  open: function () {
+    function paint() { $('lockLeft').textContent = fmtLeft(S.lockUntil - Date.now()); if (Date.now() >= S.lockUntil) { Lock.close(); } }
+    paint(); clearInterval(Lock.t); Lock.t = setInterval(paint, 1000);
+    $('ovLock').classList.add('on');
+  },
+  close: function () { clearInterval(Lock.t); $('ovLock').classList.remove('on'); }
+};
+
+// ═══════════════════ MATCH + CHAT SIMULADO ═══════════════════
+var Match = {
+  cur: null,
+  show: function (m) { Match.cur = m.id; $('matchT').textContent = m.name + ' também curtiu você'; $('matchImg').src = m.img; Profile.paint(); $('match').classList.add('on'); },
+  close: function () { $('match').classList.remove('on'); }
+};
+var Chat = {
+  cur: null,
+  open: function (id) {
+    Match.close(); Chat.cur = id; var m = byId(id);
+    $('chAv').src = m.img; $('chNm').textContent = m.name;
+    if (!S.chats[id]) { S.chats[id] = { msgs: [{ who: 'her', t: 'oii 😏 vi que você me curtiu… de onde você é?' }], mine: 0 }; save(); }
+    Nav.go('chat'); Chat.paint();
+  },
+  paint: function () {
+    var c = S.chats[Chat.cur]; var box = $('msgs');
+    box.innerHTML = c.msgs.map(function (x) { return '<div class="m ' + (x.who === 'me' ? 'me' : x.who === 'sys' ? 'sys' : '') + '">' + esc(x.t) + '</div>'; }).join('');
+    box.scrollTop = box.scrollHeight;
+  },
+  send: function () {
+    var inp = $('chIn'); var t = (inp.value || '').trim(); if (!t) return;
+    var c = S.chats[Chat.cur];
+    if (!S.premium && !S.vip && c.mine >= S.cfg.free) {
+      c.msgs.push({ who: 'sys', t: 'Só assinantes continuam a conversa 🔒' }); save(); Chat.paint(); inp.value = '';
+      setTimeout(function () { Premium.open('chat'); }, 600); return;
+    }
+    c.msgs.push({ who: 'me', t: t }); c.mine++; save(); Chat.paint(); inp.value = '';
+    var m = byId(Chat.cur);
+    var replies = ['kkkk gostei de você', 'hmm… me conta mais 😏', 'tô sozinha em casa agora', 'manda uma foto sua?', 'você parece diferente dos outros daqui'];
+    setTimeout(function () {
+      c.msgs.push({ who: 'her', t: replies[c.mine % replies.length] });
+      if (!S.premium && !S.vip && c.mine >= S.cfg.free) c.msgs.push({ who: 'sys', t: 'Ela quer continuar… libera o acesso pra responder 🔒' });
+      save(); if (Chat.cur === m.id) Chat.paint();
+    }, 1400 + Math.random() * 1200);
+  },
+  back: function () { Nav.go('likes'); }
+};
+
+// ═══════════════════ PAINEL DE TESTE ═══════════════════
+var Cfg = {
+  open: function () {
+    var c = S.cfg; $('cLikes').value = c.likes; $('cLock1').value = c.lock1; $('cLockX').value = c.lockX; $('cProfile').value = c.profileAfter;
+    $('cLike1').value = c.like1; $('cLikeN').value = c.likeN; $('cMatch').value = c.matchPct; $('cFree').value = c.free; $('cLogged').checked = !!c.logged;
+    $('cfg').classList.add('on');
+  },
+  save: function () {
+    S.cfg = { likes: +$('cLikes').value || 25, lock1: +$('cLock1').value || 180, lockX: +$('cLockX').value || 2, profileAfter: +$('cProfile').value || 3,
+      like1: +$('cLike1').value || 20, likeN: +$('cLikeN').value || 45, matchPct: +$('cMatch').value || 30, free: +$('cFree').value || 2, logged: $('cLogged').checked };
+    save(); Cfg.close();
+  },
+  premium: function () { S.premium = true; save(); Profile.paint(); Likes.pill(); Cfg.close(); Deck.render(); },
+  reset: function () { S = fresh(); S.cfg = Object.assign({}, DEF); save(); location.reload(); },
+  close: function () { $('cfg').classList.remove('on'); }
+};
+
+// online "vivo"
+setInterval(function () { $('onlineN').textContent = 30 + Math.floor(Math.random() * 15); }, 9000);
+
+Profile.paint(); Deck.render(); Likes.pill();
+</script>
+</body>
+</html>

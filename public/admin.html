@@ -6029,7 +6029,7 @@ a { color: inherit; text-decoration: none; }
                         <label style="display:flex; align-items:center; gap:6px; font-size:12.5px;"><input type="checkbox" id="tgRateOn"> Estrelas no fim da chamada paga</label>
                         <label style="display:flex; align-items:center; gap:6px; font-size:12.5px;"><input type="checkbox" id="tgGiftOn"> Presentes ligados</label>
                     </div>
-                    <div class="form-help">Presentes: 1 por linha <code>chave | nome | preço | link do checkout</code>. Chaves com desenho pronto: rosa, coracao, champanhe, diamante, coroa. Sem link = não aparece. 4–5 estrelas abrem os presentes.</div>
+                    <div class="form-help">Presentes: 1 por linha <code>chave | nome | preço | link do checkout</code>. Chaves com desenho pronto: rosa, coracao, champanhe, diamante, joias, conquista (o brilhante, aparece grande em destaque). Sem link = não aparece. 4–5 estrelas abrem os presentes.</div>
                     <textarea class="form-control" id="tgGiftTiers" rows="5"></textarea>
                     <div class="form-help" style="margin-top:6px;">Agradecimento da modelo quando ele manda o presente:</div>
                     <textarea class="form-control" id="tgGiftThanks" rows="3"></textarea>
@@ -17635,7 +17635,7 @@ window.saveCallPremium = saveCallPremium;
 
 
 // ─── Gatilhos de conversa (02/11) ───────────────────────────────────────────
-const TG_DEFAULT_TIERS = 'rosa | Rosa | 9,90 | \ncoracao | Coração | 29,90 | \nchampanhe | Champanhe | 59,90 | \ndiamante | Diamante | 119,90 | \ncoroa | Coroa | 249,90 | ';
+const TG_DEFAULT_TIERS = 'rosa | Rosa | 9,90 | \ncoracao | Coração | 29,90 | \nchampanhe | Champanhe | 59,90 | \ndiamante | Diamante | 119,90 | \njoias | Joias | 249,90 | \nconquista | Conquiste o coração dela | 499,90 | ';
 async function loadTriggersCard() {
     const $ = (id) => document.getElementById(id);
     if (!$('tgNotif')) return;

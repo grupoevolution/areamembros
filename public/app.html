@@ -21119,6 +21119,8 @@ window.MVGift = (function () {
         coracao: '<svg viewBox="0 0 64 64"><defs><linearGradient id="gH" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6b9a"/><stop offset="1" stop-color="#e0103f"/></linearGradient></defs><path d="M32 55S8 41 8 24c0-8 6-14 13-14 5 0 9 3 11 7 2-4 6-7 11-7 7 0 13 6 13 14 0 17-24 31-24 31z" fill="url(#gH)"/><path d="M19 19c-3 1-5 4-5 7" stroke="#fff" stroke-opacity=".6" stroke-width="3" stroke-linecap="round" fill="none"/></svg>',
         champanhe: '<svg viewBox="0 0 64 64"><defs><linearGradient id="gC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9a8"/><stop offset="1" stop-color="#e0a92a"/></linearGradient></defs><path d="M20 8h10l-1 14c0 5-3 8-4 8s-4-3-4-8z" fill="url(#gC)" stroke="#fff6" /><path d="M25 30v20M19 52h12" stroke="#f3d27a" stroke-width="3" stroke-linecap="round"/><path d="M34 8h10l-1 14c0 5-3 8-4 8s-4-3-4-8z" fill="url(#gC)" stroke="#fff6" transform="rotate(14 39 30)"/><path d="M41 30l-3 19M34 51l10 2" stroke="#f3d27a" stroke-width="3" stroke-linecap="round"/><circle cx="32" cy="6" r="2" fill="#ffe9a8"/><circle cx="27" cy="3" r="1.4" fill="#ffe9a8"/><circle cx="37" cy="3" r="1.4" fill="#ffe9a8"/></svg>',
         diamante: '<svg viewBox="0 0 64 64"><defs><linearGradient id="gD" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9ef0ff"/><stop offset="1" stop-color="#3b7bff"/></linearGradient></defs><path d="M16 22l8-10h16l8 10-16 30z" fill="url(#gD)"/><path d="M16 22h32M24 12l8 10 8-10M32 22v30M24 22l8 30 8-30" stroke="#fff" stroke-opacity=".55" stroke-width="1.6" fill="none"/></svg>',
+        joias: '<svg viewBox="0 0 64 64"><defs><linearGradient id="gJ" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset="1" stop-color="#d9a21b"/></linearGradient><linearGradient id="gJ2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd1e8"/><stop offset="1" stop-color="#ff3b8b"/></linearGradient></defs><path d="M12 12c2 16 10 26 20 26s18-10 20-26" stroke="url(#gJ)" stroke-width="3" fill="none" stroke-linecap="round"/><g fill="url(#gJ)"><circle cx="15" cy="21" r="2"/><circle cx="20" cy="28" r="2"/><circle cx="26" cy="33" r="2"/><circle cx="38" cy="33" r="2"/><circle cx="44" cy="28" r="2"/><circle cx="49" cy="21" r="2"/></g><path d="M32 38l7 8-7 12-7-12z" fill="url(#gJ2)"/><path d="M25 46h14M32 38v20" stroke="#fff" stroke-opacity=".5" stroke-width="1.2"/></svg>',
+        conquista: '<svg viewBox="0 0 64 64"><defs><radialGradient id="gQ" cx=".4" cy=".35" r=".75"><stop offset="0" stop-color="#ffb3cf"/><stop offset=".55" stop-color="#ff2d6f"/><stop offset="1" stop-color="#a1003a"/></radialGradient><linearGradient id="gQ2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff2b0"/><stop offset="1" stop-color="#e2a312"/></linearGradient></defs><path d="M32 58S6 43 6 24c0-9 7-15 14-15 6 0 10 3 12 8 2-5 6-8 12-8 7 0 14 6 14 15 0 19-26 34-26 34z" fill="url(#gQ)" stroke="url(#gQ2)" stroke-width="2.5"/><path d="M18 19c-3 2-5 5-5 9" stroke="#fff" stroke-opacity=".7" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M50 4l1.6 4.4L56 10l-4.4 1.6L50 16l-1.6-4.4L44 10l4.4-1.6zM9 44l1 2.6 2.6 1-2.6 1L9 51l-1-2.4-2.6-1 2.6-1z" fill="#fff6c9"/></svg>',
         coroa: '<svg viewBox="0 0 64 64"><defs><linearGradient id="gK" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset="1" stop-color="#d48a0a"/></linearGradient></defs><path d="M10 22l11 9 11-17 11 17 11-9-5 26H15z" fill="url(#gK)"/><rect x="15" y="48" width="34" height="6" rx="2" fill="#c27a06"/><circle cx="10" cy="21" r="3" fill="#ffe27a"/><circle cx="32" cy="12" r="3.4" fill="#ff5c8a"/><circle cx="54" cy="21" r="3" fill="#ffe27a"/><circle cx="32" cy="38" r="3" fill="#7fe3ff"/></svg>',
     };
     const GIFT_SVG_DEFAULT = GIFT_SVG.coracao;
@@ -21152,6 +21154,16 @@ window.MVGift = (function () {
             + '#mvGiftOv .g .p{font-size:12px;color:#ffc531;font-weight:800;margin-top:2px}'
             + '#mvGiftOv .go{width:100%;margin-top:14px;padding:15px;border:0;border-radius:14px;font-size:15px;font-weight:800;color:#fff;background:linear-gradient(135deg,#ff3b6b,#d6094a);box-shadow:0 6px 22px rgba(255,59,107,.35);letter-spacing:.3px}'
             + '#mvGiftOv .go:disabled{opacity:.45}'
+            + '#mvGiftOv .gx{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;margin-top:10px;padding:12px 14px;border-radius:18px;cursor:pointer;background:linear-gradient(135deg,#3a0718,#5c0a2a 45%,#3b1405);border:1.5px solid #f5c542;box-shadow:0 0 0 1px rgba(255,59,107,.35),0 0 22px rgba(255,59,107,.45),inset 0 0 18px rgba(245,197,66,.18);animation:mvgxPulse 2.2s ease-in-out infinite}'
+            + '#mvGiftOv .gx::after{content:"";position:absolute;top:-50%;left:-60%;width:40%;height:200%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:rotate(18deg);animation:mvgxShine 2.6s ease-in-out infinite}'
+            + '#mvGiftOv .gx svg{width:58px;height:58px;flex-shrink:0;filter:drop-shadow(0 0 10px rgba(255,59,107,.8));animation:mvgxBeat 1.3s ease-in-out infinite}'
+            + '#mvGiftOv .gx .n{font-size:15px;font-weight:900;color:#ffe08a;letter-spacing:.2px}'
+            + '#mvGiftOv .gx .s{font-size:11.5px;color:rgba(255,255,255,.72);margin-top:2px}'
+            + '#mvGiftOv .gx .p{margin-left:auto;font-size:15px;font-weight:900;color:#fff;white-space:nowrap}'
+            + '#mvGiftOv .gx.sel{border-color:#fff;box-shadow:0 0 0 2px #ff3b6b,0 0 30px rgba(255,59,107,.7)}'
+            + '@keyframes mvgxShine{0%{left:-60%}60%,100%{left:130%}}'
+            + '@keyframes mvgxPulse{0%,100%{box-shadow:0 0 0 1px rgba(255,59,107,.35),0 0 16px rgba(255,59,107,.35)}50%{box-shadow:0 0 0 1px rgba(255,59,107,.6),0 0 30px rgba(255,59,107,.65)}}'
+            + '@keyframes mvgxBeat{0%,100%{transform:scale(1)}15%{transform:scale(1.12)}30%{transform:scale(1)}}'
             + '#mvGiftOv .note{font-size:11.5px;color:rgba(255,255,255,.45);text-align:center;margin-top:8px}';
         document.head.appendChild(st);
     }
@@ -21197,19 +21209,27 @@ window.MVGift = (function () {
         const nome = m.name || 'ela';
         let html = head(m, 'Surpreenda a ' + nome, 'Mande um presente — ela vai saber que foi você 💝')
             + '<div class="grid">';
+        // presente ESPECIAL (Conquiste o coração dela): cartão largo brilhando, abaixo da grade
+        let spec = '';
         d.tiers.forEach((t, i) => {
+            if (t.special) {
+                spec += '<div class="gx" data-i="' + i + '">' + (GIFT_SVG[t.key] || GIFT_SVG.conquista)
+                    + '<div><div class="n">' + esc(t.name) + '</div><div class="s">O presente mais especial — ela nunca vai esquecer</div></div>'
+                    + '<div class="p">' + brl(t.price) + '</div></div>';
+                return;
+            }
             html += '<div class="g' + (i === 1 ? ' sel' : '') + '" data-i="' + i + '">' + (GIFT_SVG[t.key] || GIFT_SVG_DEFAULT)
                 + '<div class="n">' + esc(t.name) + '</div><div class="p">' + brl(t.price) + '</div></div>';
         });
-        html += '</div><button class="go">ENVIAR PRESENTE</button><div class="note">Pagamento único · ela recebe na hora</div>';
+        html += '</div>' + spec + '<button class="go">ENVIAR PRESENTE</button><div class="note">Pagamento único · ela recebe na hora</div>';
         const ov = sheet(html);
         let sel = Math.min(1, d.tiers.length - 1);
-        const cells = ov.querySelectorAll('.g');
+        const cells = ov.querySelectorAll('.g, .gx');
         cells.forEach(c => c.addEventListener('click', () => {
             cells.forEach(x => x.classList.remove('sel')); c.classList.add('sel'); sel = parseInt(c.dataset.i, 10) || 0;
-            ov.querySelector('.go').textContent = 'ENVIAR ' + String(d.tiers[sel].name).toUpperCase() + ' · ' + brl(d.tiers[sel].price);
+            ov.querySelector('.go').textContent = (d.tiers[sel].special ? 'CONQUISTAR ELA' : 'ENVIAR ' + String(d.tiers[sel].name).toUpperCase()) + ' · ' + brl(d.tiers[sel].price);
         }));
-        ov.querySelector('.go').textContent = 'ENVIAR ' + String(d.tiers[sel].name).toUpperCase() + ' · ' + brl(d.tiers[sel].price);
+        ov.querySelector('.go').textContent = (d.tiers[sel].special ? 'CONQUISTAR ELA' : 'ENVIAR ' + String(d.tiers[sel].name).toUpperCase()) + ' · ' + brl(d.tiers[sel].price);
         ov.querySelector('.go').addEventListener('click', () => {
             const t = d.tiers[sel];
             track('gift_click', { chat_id: m.chat_id, gift: t.key, price: t.price, src: opts.src || null });
