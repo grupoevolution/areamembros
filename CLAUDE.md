@@ -604,6 +604,14 @@ Lead entra em no máx. 3 grupos (cap no código, routes/user-groups.js).
   Rafaela ("acho que te conheço… qual bairro?") + fim do tempo grátis 368 Tati. Nasce DESLIGADO e a
   migração liga no 1º boot após o deploy (junto com a config dos gatilhos, 1x só).
 
+**03/11 (tarde) — ajustes do dono:** presentes = Rosa 9,90 · Coração 29,90 · Champanhe 59,90 · Diamante
+119,90 · JOIAS 249,90 (no lugar da Coroa) · "Conquiste o coração dela" 499,90 (cartão largo brilhando,
+chave `conquista`). Dono vai criar os 6 links na Kirvano. Pix → modelo entre 5–7 min. Renildes (65) NÃO
+oferece mais a chamada de outra: só "adorei te ver"; 30 min depois a JESSICA (378) oferece a chamada dela
+(produto 23) — regra: cada modelo só vende a PRÓPRIA chamada. Chamada nova cadastrada no painel ganha a
+conversa da modelo sozinha (nome+foto da chamada) no 1º Pix/fim de chamada. Revisão dos roteiros:
+`docs/ROTEIROS-PARA-REVISAR.html`. Grupo "Loucos por Pés" fica como está (dono).
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
