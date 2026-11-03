@@ -20086,10 +20086,12 @@ body.is-logged #pwaLandingBanner, body.pwa-installed #pwaLandingBanner { display
 .vcall-ctrl-circle.hangup { background:#FF3B30; width:70px; height:70px; box-shadow:0 6px 24px rgba(255,59,48,.45); }
 .vcall-ctrl-label { font-size:11px; color:rgba(255,255,255,.65); font-weight:500; }
 .vcall-ended-wrap { display:flex; flex-direction:column; align-items:center; justify-content:center; flex:1; padding:32px 28px; text-align:center; }
-.vcall-ended-photo { width:90px; height:90px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,.12); margin-bottom:18px; }
+.vcall-ended-photo { width:150px; height:150px; border-radius:50%; object-fit:cover; border:3px solid rgba(255,255,255,.14); margin-bottom:24px; box-shadow:0 12px 40px rgba(0,0,0,.6); }
 .vcall-ended-ph { width:90px; height:90px; border-radius:50%; background:linear-gradient(135deg,#3a1a2e,#5a2a4e); border:2px solid rgba(255,255,255,.12); display:flex; align-items:center; justify-content:center; font-size:38px; margin:0 auto 18px; }
-.vcall-ended-label { font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,.28); margin-bottom:8px; }
-.vcall-ended-name { font-size:24px; font-weight:800; color:#fff; margin-bottom:4px; }
+.vcall-ended-label { font-size:13px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:rgba(255,255,255,.4); margin-bottom:10px; }
+.vcall-ended-name { font-size:30px; font-weight:800; color:#fff; margin-bottom:6px; }
+/* 03/11 (dono): sem "Quer mais tempo com ela?" — só foto, nome e duração */
+.vcall-ended-icon, .vcall-ended-headline, .vcall-ended-sub, .vcall-ended-cta { display:none !important; }
 .vcall-ended-dur { font-size:13px; color:rgba(255,255,255,.35); margin-bottom:36px; }
 .vcall-ended-icon { font-size:42px; margin-bottom:12px; }
 .vcall-ended-headline { font-size:19px; font-weight:800; color:#fff; line-height:1.3; margin-bottom:10px; }
@@ -20517,10 +20519,10 @@ body.is-logged #pwaLandingBanner, body.pwa-installed #pwaLandingBanner { display
             return;
         }
 
-        // Sem CTA: comportamento antigo. Mostra "ended" 1.6s e fecha sozinho.
+        // Sem CTA: só "chamada encerrada" (foto, nome, duração) por 2,5s e fecha.
         if (actions) actions.style.display = 'none';
         show('ended');
-        setTimeout(closeOverlay, 1600);
+        setTimeout(closeOverlay, 2500);
     }
 
     // Executa a CTA configurada no admin pra essa chamada de remarketing.

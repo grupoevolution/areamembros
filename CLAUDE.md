@@ -628,6 +628,16 @@ Migração dá o passe a quem recebeu gatilho nas últimas 48h sem responder. Co
 `trig_kind`. (3) Renildes (65) virou access=FREE em produção (era VIP → lead sem VIP via a chamada grátis
 embaçada/travada); reply_mode vip. REGRA: toda conversa usada por gatilho pra lead sem VIP tem de ser free.
 
+**03/11 (madrugada) — 2ª rodada de testes do dono:** (1) tela "chamada encerrada" = só foto grande + nome +
+duração, fecha em 2,5s (sem "Quer mais tempo com ela?"; CTA configurada no painel da chamada ainda mostra os
+2 botões). (2) PRESENTES viraram produtos OCULTOS em produção (ids 51–56, `catalog_hidden`, `extra_data.kind=
+'gift'`, oferta = código do link Kirvano) → entram na pizza como "Presentes 🎁" e no carrinho abandonado do
+suporte com texto próprio (`chat_triggers.gift_abandon_text`) + botão `/?gift=<chatId>`; `checkout_intents.kind`
+='gift' (o Pix→modelo ignora intents de presente). Não aparecem em catálogo nem em Minhas Compras. (3) Frases
+pós-chamada com presente ficaram mais sutis (botão faz o convite). (4) GRUPINHO DA CIDADE: o popup de planos
+lê `product_plans` (não as ofertas) → criado o plano "ACESSO ÚNICO" R$24,90 (de 49,90) no produto 50, em
+produção. REGRA: produto de grupo precisa de PLANO cadastrado, não só a oferta.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);

@@ -69,6 +69,7 @@ const IDENT = `COALESCE(LOWER(customer_email), metadata->>'vid', metadata->>'vis
 // cai na categoria certa. Ordem importa (upgrade antes do plano de chat).
 // $EXPLORE_PID = produto de Vídeos/Lives (config do Explorar), injetado.
 const PIE_CASE = `CASE
+    WHEN ua.utm_content LIKE 'gift_%' OR p.extra_data->>'kind' = 'gift' THEN 'presentes'
     WHEN ua.utm_content LIKE 'enc_%' THEN 'encontros'
     WHEN LOWER(COALESCE(po.offer_name, '')) = 'upgrade premium'
          OR ua.utm_content = 'upgrade_offer' THEN 'upgrade'

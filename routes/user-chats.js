@@ -2612,7 +2612,9 @@ router.post('/checkout-intent', optionalUser, async (req, res) => {
         const url = String(req.body?.url || '').slice(0, 1000);
         const src = String(req.body?.src || '');
         const m = src.match(/^chat_(\d+)$/);
-        const chatId = m ? parseInt(m[1], 10) : null;
+        const gm = src.match(/^gift_(\d+)$/);
+        const chatId = m ? parseInt(m[1], 10) : (gm ? parseInt(gm[1], 10) : null);
+        const kind = gm ? 'gift' : null; // presente abandonado: cobrança própria
         // Já tem intent ABERTA recente sem cobrança enviada? Só atualiza (o
         // lead clicando 3x no botão não vira 3 cobranças).
         const { rows: open } = await db.query(
@@ -2626,14 +2628,15 @@ router.post('/checkout-intent', optionalUser, async (req, res) => {
             await db.query(
                 `UPDATE checkout_intents
                     SET chat_id = COALESCE($2, chat_id), checkout_url = COALESCE(NULLIF($3,''), checkout_url),
+                        kind = $4,
                         created_at = CASE WHEN abandon_sent_at IS NULL THEN NOW() ELSE created_at END
                   WHERE id = $1`,
-                [open[0].id, chatId, url]
+                [open[0].id, chatId, url, kind]
             );
         } else {
             await db.query(
-                `INSERT INTO checkout_intents (customer_email, chat_id, checkout_url) VALUES ($1, $2, $3)`,
-                [ident.email, chatId, url || null]
+                `INSERT INTO checkout_intents (customer_email, chat_id, checkout_url, kind) VALUES ($1, $2, $3, $4)`,
+                [ident.email, chatId, url || null, kind]
             );
         }
         return res.json({ success: true });
@@ -2706,13 +2709,21 @@ async function processAbandonedCheckouts() {
             const ctx = { email, city: sup.session.city || null, cityFallback: sup.chat.city_fallback };
             const gab = await getGabrielaConfig();
             if (gab.enabled && modelo) modelo = String(modelo).split(' ')[0];
-            const tpl = gab.enabled ? (modelo ? gab.abandon_text : gab.abandon_generic)
+            // PRESENTE abandonado (03/11): texto próprio + botão que reabre os
+            // presentes da modelo (não o checkout direto — ele escolhe de novo)
+            const isGift = it.kind === 'gift' && it.chat_id;
+            const tcfg = isGift ? await triggersConfig() : null;
+            const tpl = isGift ? (tcfg.gift_abandon_text || TRIG_DEFAULTS.gift_abandon_text)
+                : gab.enabled ? (modelo ? gab.abandon_text : gab.abandon_generic)
                 : (modelo ? cfg.abandon_template : cfg.abandon_generic_template);
-            const txt = capFirst(await fillVars(String(tpl).replace(/\{modelo\}/gi, modelo || ''), ctx));
+            const txt = capFirst(await fillVars(String(tpl).replace(/\{modelo\}/gi, modelo || 'ela'), ctx));
             // gab:'abandon' → some da conversa quando ele paga
             const meta = gab.enabled ? { typing_ms: 0, gab: 'abandon' } : { typing_ms: 0 };
             const first = await insertMsg(sup.session.id, 'bot', 'text', txt, null, meta, null);
-            if (it.checkout_url) {
+            if (isGift) {
+                await insertMsg(sup.session.id, 'bot', 'cta', '🎁 MANDAR O PRESENTE', null,
+                    { ...meta, link_url: '/?gift=' + it.chat_id, cta_color: '#d4a017' }, null);
+            } else if (it.checkout_url) {
                 await insertMsg(sup.session.id, 'bot', 'cta',
                     String((gab.enabled ? gab.abandon_cta : cfg.abandon_cta_label) || 'CONTINUAR DE ONDE PAREI 🔥').slice(0, 60), null,
                     { ...meta, link_url: String(it.checkout_url), cta_color: '#e50914' }, null);
@@ -3060,9 +3071,9 @@ const TRIG_DEFAULTS = {
             'vi que você ficou quietinho só me olhando né 😏 adorei',
             'oi {nome}! só passando pra saber se você curtiu… quando quiser a gente marca outra 🔥',
             'eu faço assim mesmo, só me mostrando pra você 😈 me conta o que achou',
-            'nossa, adorei fazer chamada com você… acha que eu mereço um presentinho? 🥺 [presente]',
-            'ficou com vontade de mais? 😏 se quiser me mimar eu deixo [presente]',
-            'gostei de você {nome}… sério. me manda um presentinho que eu te dou atenção especial 💋 [presente]',
+            'nossa, adorei fazer chamada com você {nome}… já tô com saudade kkk 🙈 [presente]',
+            'ficou com vontade de mais? 😏 eu também… quem sabe a gente repete em breve [presente]',
+            'gostei de você {nome}… sério. fica por aqui que hoje eu tô carinhosa 💋 [presente]',
         ],
     },
     // depois da chamada grátis, OUTRA modelo oferece a chamada DELA (offer_*)
@@ -3070,6 +3081,7 @@ const TRIG_DEFAULTS = {
     // quantas respostas o lead SEM VIP pode mandar depois de uma mensagem de
     // gatilho + o que a modelo responde (1ª e 2ª resposta; [presente] = botão)
     free_replies: 2,
+    gift_abandon_text: 'vi que você quase mandou um presentinho pra {modelo} 🎁 faltou pouco… ela vai amar saber que foi você. Quer terminar?',
     replies: {
         pos: [
             'que bom que você gostou 😍 fiquei com vontade de fazer de novo… se quiser me mimar com um presentinho eu capricho ainda mais na próxima 🎁 [presente]',
@@ -3349,6 +3361,7 @@ async function processChatTriggers() {
                 const { rows: it } = await db.query(
                     `SELECT ci.chat_id FROM checkout_intents ci JOIN chats c ON c.id = ci.chat_id
                       WHERE LOWER(ci.customer_email) = $1 AND ci.chat_id IS NOT NULL AND c.is_support = false
+                        AND COALESCE(ci.kind, '') <> 'gift'
                         AND ci.created_at > $2::timestamptz - INTERVAL '3 hours'
                       ORDER BY ci.id DESC LIMIT 1`, [e, p.created_at]);
                 const chatId = it[0] ? it[0].chat_id : await trigModelChatFor(p.product_id, cfg);
