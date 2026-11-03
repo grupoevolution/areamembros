@@ -62,5 +62,11 @@ module.exports = {
   vonce: ['pra quem me conquistou no papo 🙈','conversou bem? ganhou isso 😏','só pra quem sabe conversar 🔥'],
   saud: [['chegou alguém pra conversar? adoro gente de papo 😊'],['bem vindo! aqui a conversa vem antes... mas vem tudo depois 😏']] },
 
+'GRUPINHO DA CIDADE': { id: 14, femOnly: false,
+  apres: ['oi gente 🙈 {nome}, {idade}, moro aqui em {cidade} mesmo… alguém daqui?','{nome}, {idade} anos, de {cidade} 📍 cansei de conhecer gente longe','sou a {nome}, {idade}, nascida e criada em {cidade} kkk quem mais?','oii {nome}, {idade}… achei esse grupo da cidade e vim ver quem conheço 👀','{nome}, {idade}, de {cidade}… será que a gente já se esbarrou por aí? 😏'],
+  caps: ['hoje aqui em {cidade} tá um calor né 🥵','dando uma volta pela cidade 📍','quem é de {cidade} reconhece esse lugar? 👀','sábado em {cidade} e eu assim 😏','de {cidade} pra quem é daqui 🔥'],
+  vonce: ['só pra quem é de {cidade} 🙈','se você mora aqui perto, corre 📍','presentinho pros da cidade 🔥'],
+  saud: [['gente chegou alguém de {cidade} 😍📍'],['oi vizinho de cidade, qual bairro? 👀']] },
+
 'GRUPO VIP': { id: 2, skip: true },
 };

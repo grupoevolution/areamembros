@@ -574,6 +574,36 @@ Feito: lista de conversas sem pedidos repetidos (MV_chatsLight = 1 pedido leve c
 9. Quiz (depois da Stripe). Medição (fase 0) segue útil.
 Lead entra em no máx. 3 grupos (cap no código, routes/user-groups.js).
 
+**03/11 — FEITO (código pronto pra deploy + conteúdo já em produção):**
+- Rolagem do grupo estável (foto com espaço reservado 3:4; poll só desce se o lead está no fim).
+- GATILHOS (`chat_trigger_jobs`, config `gamification_config.chat_triggers`, painel Chats → "Gatilhos de
+  conversa"): Pix gerado e não pago há 8 min → a modelo da conversa onde ele clicou (checkout_intents;
+  senão mapa produto→conversa) manda frase variada + botão "VER MEU PIX" (suporte); some ao pagar.
+  Fim da chamada PAGA (`POST /api/user/calls/ended`) → ESTRELAS (MVGift.rate) → 4–5★ abre PRESENTES
+  (Rosa 9,90 · Coração 29,90 · Champanhe 59,90 · Diamante 119,90 · Coroa 249,90; SVG próprios; checkout
+  com carimbo `gift_<chatId>` → modelo agradece em ~40s). Modelo da chamada puxa papo 1 min depois
+  (8 frases, sem repetir pro mesmo lead; `[presente]` = botão de presente, só com presentes ligados).
+  1ª chamada paga da vida → 3 min depois a Renildes (65) faz chamada grátis + oferta da chamada da
+  Jessica (produto 23). Presentes DESLIGADOS até o dono criar os 5 produtos na Kirvano (links no painel).
+- Notificação da rotina "fulana te mandou mensagem" só com conversas FREE com saudação de verdade:
+  8 Carla, 10 Galega, 11 Karen, 13 Jessica, 15 Luiza, 17 Julia (eram VIP sem roteiro; agora: oi → ele
+  responde → foto → convite c/ botão: vídeos / Clube das Casadas / Encontros / Vizinhas / Grupo VIP;
+  depois disso reply_mode vip = paywall). Fora do rodízio (sempre online).
+- Conversa da MODELO de cada chamada à venda: ids 369–384 (listed=false, sem roteiro; recebem pós-chamada
+  e Pix). Mapa produto→conversa na config (45→366 Cinthia, 49→355 Leyla).
+- Sequência após comprar chamada (trigger_product_ids + delay inicial): Suzy 370 em +20h oferece a
+  chamada dela (47, R$32,90); Aninha 383 em +44h oferece a dela (17, R$19,90).
+- Recepção VIP (fila): VIP → 65 Renildes, 66 Deisy, 97 Rosana (+1–2h), 99 Olívia (+3–5h), 102 Lorrane
+  (+10–15h), 105 Débora e 98 Marta (+20–24h cada) — todas puxam pro PREMIUM (link upgrade R$30).
+  Premium (novo público "Só Premium") → 65, 66, 103 Lúcia (boas-vindas + vídeos), 101 Fabiana (Grupo VIP).
+- GRUPOS: recepção PRÓPRIA por grupo (antes todos tinham o mesmo esqueleto) — `docs/roteiro-vip/gerador/
+  entradas.js`, importada nos grupos 3–12. Membros variados (eram todos 248). Grupo 13 "Loucos por Pés"
+  está VAZIO (sem roteiro/mídia) — decisão do dono.
+- GRUPINHO DE {cidade} (grupo 14, fixado, produto 50 R$24,90, capa PUTARIA 24H): nome troca pela cidade
+  do lead (geo por IP; sem cidade = "da sua região"); roteiro do Vizinhas + recepção própria; convite 367
+  Rafaela ("acho que te conheço… qual bairro?") + fim do tempo grátis 368 Tati. Nasce DESLIGADO e a
+  migração liga no 1º boot após o deploy (junto com a config dos gatilhos, 1x só).
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);

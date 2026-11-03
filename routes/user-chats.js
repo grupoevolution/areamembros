@@ -3172,7 +3172,9 @@ async function _trigDeliver(email, chatId, texts, n, extra) {
     const chat = cr[0];
     const session = await findOrCreateSession(chatId, { email, visitor: null }, true);
     if (!session) return null;
-    let txt = trigVariant(texts, email, n);
+    // presentes desligados/sem link: frases que pedem presente ficam de fora
+    const pool = (extra && extra.giftOk) ? texts : (texts || []).filter(t => !/\[presente\]/i.test(String(t)));
+    let txt = trigVariant(pool, email, n);
     if (!txt) return null;
     const wantsGift = /\[presente\]/i.test(txt);
     txt = txt.replace(/\s*\[presente\]/gi, '').trim();
@@ -3243,7 +3245,7 @@ async function processChatTriggers() {
     for (const j of due) {
         try {
             const { rows: [c] } = await db.query(
-                `SELECT COUNT(*)::int AS n FROM chat_trigger_jobs WHERE email = $1 AND kind = $2 AND done_at IS NOT NULL AND id <> $3`, [j.email, j.kind, j.id]);
+                `SELECT COUNT(*)::int AS n FROM chat_trigger_jobs WHERE email = $1 AND kind = $2 AND id < $3`, [j.email, j.kind, j.id]);
             const r = j.kind === 'gift'
                 ? await _trigDeliver(j.email, j.chat_id, cfg.gifts.thanks, c.n, {})
                 : await _trigDeliver(j.email, j.chat_id, cfg.pos_call.texts, c.n, { giftOk });

@@ -103,6 +103,9 @@ const scenes = [
   ] },
 ];
 
+// recepção PRÓPRIA do grupo (entradas.js, 02/11) substitui o esqueleto comum
+try { const own = require('./entradas')[theme.id]; if (own && own.length) scenes.splice(0, scenes.length, ...own); } catch (_) {}
+
 const out = {
   folders: {
     'bom-dia': 'IAGO GRUPOS/GRUPO VIP/bom-dia',
