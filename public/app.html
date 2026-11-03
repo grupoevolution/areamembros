@@ -20474,10 +20474,12 @@ body.is-logged #pwaLandingBanner, body.pwa-installed #pwaLandingBanner { display
     function endCall() {
         // Chamada PAGA terminou → estrelas + presente + gatilhos (02/11)
         try {
-            if (currentOpts && currentOpts.paidProductId && window.MVGift) {
+            // só se o vídeo rodou de verdade (o seguro de 9s de tela preta também cai aqui)
+            const watched = sec >= 15;
+            if (watched && currentOpts && currentOpts.paidProductId && window.MVGift) {
                 const pid = currentOpts.paidProductId, c = currentCall;
                 setTimeout(() => MVGift.rate(pid, c), 1700);
-            } else if (currentOpts && currentOpts.giftChatId && window.MVGift) {
+            } else if (watched && currentOpts && currentOpts.giftChatId && window.MVGift) {
                 // chamada que a MODELO faz no chat (atendeu e assistiu)
                 const cid = currentOpts.giftChatId, c = currentCall;
                 setTimeout(() => MVGift.rate(null, c, cid), 1700);

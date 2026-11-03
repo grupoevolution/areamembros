@@ -1127,6 +1127,11 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
             session.current_flow = 'open';
             const steps = await loadSteps(chatId, 'open');
             if (steps.length > 0) fresh = await runScript(session, chat, steps, 0, ident);
+        } else if (!session.awaiting && !perm.locked && (session._regreet = await regreetIfNotifChat(session, chat, history, ident))) {
+            // conversa da NOTIFICAÇÃO reaberta depois de 24h parada: a modelo
+            // manda 1 frase nova e espera ele responder (auditoria 03/11 — antes
+            // o lead tocava em "te mandou mensagem" e via só a conversa velha)
+            fresh = [session._regreet];
         } else if (session.awaiting === 'delay' && session.resume_at && new Date(session.resume_at) <= new Date()
                    && !(await chatOfflineNow(chatId))) {
             // Delay venceu e o cliente abriu: retoma — MAS reivindica atomicamente
@@ -2979,6 +2984,40 @@ async function postDueStatusSchedules() {
 }
 
 
+// Conversa da notificação ("fulana te mandou mensagem") reaberta por quem JÁ
+// conversou com ela: se o roteiro acabou e a última mensagem tem +24h, insere
+// 1 frase nova (sem repetir pro mesmo lead) e re-arma o roteiro no primeiro
+// wait_input — ele responde e recebe de novo foto + convite. Só nas conversas
+// de notif_chat_ids; 1 consulta extra. Devolve a mensagem nova (ou null).
+const REGREET_TEXTS = [
+    'oi sumido 😏 lembrei de você agora',
+    'ei… tava com saudade de conversar com você 🙈',
+    'oii, tá por aí? 👀',
+    '{saudacao} 😘 pensei em você hoje',
+    'psiu 🙈 apareceu de novo né',
+    'oi amor, cadê você? 🥺',
+];
+async function regreetIfNotifChat(session, chat, history, ident) {
+    try {
+        const cfg = await triggersConfig();
+        if (!cfg.notif_chat_ids.includes(chat.id)) return null;
+        const last = history[history.length - 1];
+        if (!last || !last.created_at || Date.now() - new Date(last.created_at).getTime() < 24 * 3600000) return null;
+        const steps = await loadSteps(chat.id, 'open');
+        const wi = steps.findIndex(s => s.type === 'wait_input');
+        if (wi < 0) return null;
+        const n = history.filter(m => m.meta && m.meta.trig === 'regreet').length;
+        const key = ident.email || ident.visitor || '';
+        const txt = capFirst(await fillVars(trigVariant(REGREET_TEXTS, key, n), { ...ident, city: session.city || ident.city, cityFallback: chat.city_fallback }));
+        const msg = await insertMsg(session.id, 'bot', 'text', txt, null, { typing_ms: 1500, trig: 'regreet' }, null);
+        await db.query(
+            `UPDATE chat_sessions SET current_flow = 'open', current_order = $2, awaiting = 'input', paywalled_at = NULL, updated_at = NOW() WHERE id = $1`,
+            [session.id, wi]);
+        session.current_flow = 'open'; session.current_order = wi; session.awaiting = 'input'; session.paywalled_at = null;
+        return msg;
+    } catch (err) { logger.warn('[regreet] ' + err.message); return null; }
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // GATILHOS DE CONVERSA (02/11) — "a modelo certa chama no momento certo"
 // Config: gamification_config.chat_triggers (painel → Growth → Gatilhos).
@@ -3117,22 +3156,29 @@ async function trigModelChatFor(productId, cfg) {
         const ids = g[0] && Array.isArray(g[0].invite_chat_ids) ? g[0].invite_chat_ids.map(Number).filter(Boolean) : [];
         if (ids.length) return ids[0];
         // CHAMADA NOVA sem conversa (dono cadastrou depois): cria a conversa da
-        // modelo sozinha (nome + foto da chamada) e grava no mapa do painel
-        const { rows: [p] } = await db.query(
-            `SELECT id, name, call_photo_url, banner_url FROM products WHERE id = $1 AND product_type = 'video_call'`, [pid]);
-        const av = p && (p.call_photo_url || p.banner_url);
-        if (p && av) {
-            const { rows: [c] } = await db.query(
+        // modelo sozinha (nome + foto da chamada) e grava no mapa do painel.
+        // TRAVA por produto (auditoria 03/11): 6 fins de chamada no mesmo
+        // segundo criavam 6 conversas — agora o 2º espera o 1º e reusa.
+        return await db.transaction(async (client) => {
+            await client.query(`SELECT pg_advisory_xact_lock(884400, $1)`, [pid]);
+            const { rows: [cfgRow] } = await client.query(`SELECT value FROM gamification_config WHERE key = 'chat_triggers'`);
+            const again = parseInt(((((cfgRow || {}).value || {}).pos_call || {}).map || {})[String(pid)], 10);
+            if (again) return again; // outro pedido criou enquanto esperávamos a trava
+            const { rows: [p] } = await client.query(
+                `SELECT id, name, call_photo_url, banner_url FROM products WHERE id = $1 AND product_type = 'video_call'`, [pid]);
+            const av = p && (p.call_photo_url || p.banner_url);
+            if (!p || !av) return null;
+            const { rows: [c] } = await client.query(
                 `INSERT INTO chats (name, avatar_url, section, status_label, show_online, access, reply_mode, allow_photo, display_order, active, listed, in_rotation, greeting_enabled)
                  VALUES ($1, $2, 'Minhas conversas', 'online', true, 'free', 'vip', false, 0, true, false, false, false) RETURNING id`,
                 [String(p.name || 'Ela').trim().slice(0, 80), av]);
-            await db.query(
+            await client.query(
                 `UPDATE gamification_config SET value = jsonb_set(value, '{pos_call,map}', COALESCE(value->'pos_call'->'map', '{}'::jsonb) || jsonb_build_object($1::text, $2::int), true)
                   WHERE key = 'chat_triggers'`, [String(pid), c.id]);
             _trigCache = { at: 0, val: null };
             logger.info('[gatilhos] conversa criada pra chamada ' + pid + ' → chat ' + c.id);
             return c.id;
-        }
+        });
     } catch (err) { logger.warn('[gatilhos] modelo do produto ' + productId + ': ' + err.message); }
     return null;
 }

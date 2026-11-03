@@ -612,6 +612,14 @@ oferece mais a chamada de outra: só "adorei te ver"; 30 min depois a JESSICA (3
 conversa da modelo sozinha (nome+foto da chamada) no 1º Pix/fim de chamada. Revisão dos roteiros:
 `docs/ROTEIROS-PARA-REVISAR.html`. Grupo "Loucos por Pés" fica como está (dono).
 
+**03/11 — AUDITORIA (Fable) + correções:** relatório em `docs/RELATORIO-AUDITORIA-FABLE.md`. Corrigido:
+(M1) trava `pg_advisory_xact_lock` na criação automática da conversa de chamada nova (6 fins simultâneos
+criavam 6 conversas → agora 1); (M2) conversa de `notif_chat_ids` reaberta com roteiro acabado e última
+msg +24h → modelo manda 1 frase nova (`REGREET_TEXTS`, sem repetir, meta `trig:'regreet'`) e re-arma no
+1º wait_input (`regreetIfNotifChat` no `/open`); (B1) estrelas/presentes só se o vídeo rodou ≥15s;
+(B2) índice parcial `idx_pix_notices_recent`. Sabido/aceito: recepção VIP soma as janelas (Marta chega em
+~2–3 dias); `POST /calls/ended` aceita qualquer product_id (dano = 1 chamada grátis).
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
