@@ -8583,6 +8583,11 @@ body:not(.enc-on) #libProf { display: none !important; }
 .ga-teaser { position: relative; width: 232px; max-width: 100%; min-height: 150px; border-radius: 12px; overflow: hidden; cursor: pointer; background: linear-gradient(135deg,#241f26,#141014); }
 .ga-teaser img.tz-img { width: 100%; display: block; filter: blur(14px); transform: scale(1.18); }
 .ga-teaser img.tz-thumb { width: 100%; display: block; }
+/* Rolagem do grupo (02/11): foto sem tamanho reservado nascia com altura 0 e
+   "crescia" ao carregar, empurrando a conversa enquanto o lead rolava. Agora o
+   espaço já nasce reservado (retrato 3:4, como as fotos das meninas). */
+#gaBody img.photo, #gaBody video.photo { width: 230px; max-width: 100%; aspect-ratio: 3 / 4; object-fit: cover; background: #d8d2c8; }
+#gaBody .ga-teaser img.tz-img, #gaBody .ga-teaser img.tz-thumb { aspect-ratio: 3 / 4; object-fit: cover; background: #d8d2c8; }
 .ga-teaser .tz-ov { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center;
     justify-content: center; gap: 5px; background: rgba(0,0,0,.38); color: #fff; text-align: center; padding: 12px; }
 .ga-teaser .tz-ov .lk { font-size: 26px; line-height: 1; }
@@ -12907,6 +12912,12 @@ window.GroupApp = (function () {
         const body = document.getElementById('gaBody');
         if (body) requestAnimationFrame(() => { body.scrollTop = body.scrollHeight; });
     }
+    // Mensagem nova chegando (poll a cada 2,5s): só desce se o lead JÁ está no
+    // fim. Antes puxava pro fim mesmo com ele rolando pra cima vendo as fotos.
+    function nearBottom() {
+        const body = document.getElementById('gaBody');
+        return !body || (body.scrollHeight - body.scrollTop - body.clientHeight) < 220;
+    }
 
     function monthlyLabel(unlock) {
         try {
@@ -13210,6 +13221,7 @@ window.GroupApp = (function () {
                 if (data.access === 'locked' && CUR.access !== 'locked') lockUI(true);
                 const list = data.messages || [];
                 if (list.length) {
+                    const stick = nearBottom(); // medir ANTES de inserir
                     const note = document.getElementById('gaLockNote');
                     if (note) note.remove(); // re-apenda no fim depois das novas
                     // try/catch POR mensagem: uma msg malformada não pode
@@ -13222,7 +13234,7 @@ window.GroupApp = (function () {
                         }
                     }
                     if (CUR.access === 'locked') lockUI(false);
-                    scrollBottom();
+                    if (stick) scrollBottom();
                 }
             } catch (_) {}
         }, 2500);
