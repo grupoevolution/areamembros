@@ -557,6 +557,23 @@ CONVERSA — não codar sem o dono pedir.
 últimos 10 min; ver em GET /api/admin/push/ops). Próximo alarme → ler o raio-x antes de agir.
 Feito: lista de conversas sem pedidos repetidos (MV_chatsLight = 1 pedido leve compartilhado, 8s; loadList não duplica; foco+visibilidade+pageshow viram 1). Proposto: rotina da noite 20:30→19:30.
 
+**02/11 — NOVA ORDEM DE PRIORIDADES (áudio do dono; ROI 3 vários dias seguidos):**
+1. Notificação "fulana te mandou mensagem" → abre o chat DELA, chat free, com a mensagem dela já lá
+   pra ele responder (hoje a rotina sorteia modelo online/listada por aparelho, sem mensagem real).
+2. Upgrade VIP→Premium: de ~2 chats pra 5+, conversa incentivando o Premium (chamada etc.).
+3. GRUPOS (~30–50% das vendas): bug da rolagem com imagens; análise de quais vendem; roteiros
+   menos repetitivos (entrada/reações parecidas entre grupos); otimizar rotina/mídia.
+4. Grupo novo FIXADO "Grupinho de {cidade}" (geo por IP), produto do dono ~R$24,90, chat de saudação
+   ("chegou gente daqui… acho que te conheço… qual bairro?") + 1–2 chats de recuperação.
+5. Recompra: comprou chamada → outras modelos chamam oferecendo chamada (algumas c/ amostra grátis).
+   Pix gerado e não pago → além do suporte, a PRÓPRIA modelo/pessoa do produto chama ("me arrumei
+   toda e você não veio") — chamada, conteúdo, grupo, VIP.
+6. Experiência do PREMIUM (melhor lead): 3–4 modelos chamam, chamada grátis etc.
+7. Rotina de 10 dias por produto comprado (grupo→VIP…; 1–2 modelos/dia, chats só de aquecer).
+8. STRIPE: botão no painel dividindo % do tráfego Kirvano×Stripe (ex.: 30%), webhook, pixel FB.
+9. Quiz (depois da Stripe). Medição (fase 0) segue útil.
+Lead entra em no máx. 3 grupos (cap no código, routes/user-groups.js).
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
