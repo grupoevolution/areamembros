@@ -3080,6 +3080,7 @@ const TRIG_DEFAULTS = {
     free_call: { enabled: false, delay_min: 3, chat_ids: [], offer_chat_ids: [], offer_delay_min: 30 },
     // quantas respostas o lead SEM VIP pode mandar depois de uma mensagem de
     // gatilho + o que a modelo responde (1ª e 2ª resposta; [presente] = botão)
+    free_end: { enabled: true, delay_min: 3, text: 'vi que você fez uma chamada agora 😍 gostou? se quiser conhecer nossas outras modelos, tem várias te esperando aqui 👇', cta: 'VER CHAMADAS DE VÍDEO' },
     free_replies: 2,
     gift_abandon_text: 'vi que você quase mandou um presentinho pra {modelo} 🎁 faltou pouco… ela vai amar saber que foi você. Quer terminar?',
     replies: {
@@ -3129,7 +3130,7 @@ async function triggersConfig() {
     const cfg = {
         notif_chat_ids: Array.isArray(v.notif_chat_ids) ? v.notif_chat_ids.map(Number).filter(Boolean) : [],
         pix_model: merge('pix_model'), pos_call: merge('pos_call'), free_call: merge('free_call'),
-        rating: merge('rating'), gifts: merge('gifts'),
+        rating: merge('rating'), gifts: merge('gifts'), free_end: merge('free_end'),
     };
     for (const k of ['pix_model', 'pos_call']) {
         if (!Array.isArray(cfg[k].texts) || !cfg[k].texts.filter(Boolean).length) cfg[k].texts = TRIG_DEFAULTS[k].texts;
@@ -3233,6 +3234,16 @@ async function onCallEnded(email, productId, rating) {
     const cfg = await triggersConfig();
     const day = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
     const r = parseInt(rating, 10);
+    // Chamada GRÁTIS (roleta/quiz) não dispara modelo nenhuma (decisão do dono
+    // 03/11): só o suporte convida pras outras chamadas, 1x por dia, e nem isso
+    // se ele acabou de abandonar um presente (aí vale a cobrança do presente).
+    const { rows: [acc] } = await db.query(
+        `SELECT COALESCE(bool_or(granted_by = 'webhook' OR granted_by = 'bonus' OR metadata->>'premium_extra' = 'true'), false) AS paid
+           FROM user_access WHERE LOWER(email) = $1 AND product_id = $2`, [e, pid]);
+    if (!acc.paid) {
+        await trigJob(e, 'free_end', day, null, Math.round((parseFloat(cfg.free_end.delay_min) || 3) * 60));
+        return { ok: true, free: true };
+    }
     const fresh = await trigJob(e, 'call_end', pid + ':' + day, null, 0, r >= 1 && r <= 5 ? r : null);
     if (!fresh) {
         // 2º aviso do mesmo dia: só atualiza a nota (veio depois das estrelas)
@@ -3248,7 +3259,9 @@ async function onCallEnded(email, productId, rating) {
         const { rows: [c] } = await db.query(`SELECT COUNT(*)::int AS n FROM chat_trigger_jobs WHERE email = $1 AND kind = 'call_end'`, [e]);
         if (c.n === 1) { // 1ª chamada paga da vida: presente de outra modelo
             const d1 = Math.round((parseFloat(cfg.free_call.delay_min) || 3) * 60);
+            const own = await trigModelChatFor(pid, cfg); // comprou a dela: não repete o mesmo vídeo de graça
             for (const cid of cfg.free_call.chat_ids) {
+                if (parseInt(cid, 10) === own) continue;
                 if (await trigScheduleOpen(e, parseInt(cid, 10), d1)) break;
             }
             // depois: outra modelo oferece a chamada DELA (nunca a de outra)
@@ -3383,12 +3396,26 @@ async function processChatTriggers() {
         ({ rows: due } = await db.query(`
             UPDATE chat_trigger_jobs SET done_at = NOW()
              WHERE id IN (SELECT id FROM chat_trigger_jobs WHERE done_at IS NULL AND run_at <= NOW()
-                           AND kind IN ('pos', 'gift') ORDER BY run_at LIMIT 30 FOR UPDATE SKIP LOCKED)
+                           AND kind IN ('pos', 'gift', 'free_end') ORDER BY run_at LIMIT 30 FOR UPDATE SKIP LOCKED)
             RETURNING *`));
     } catch (err) { logger.warn('[gatilhos] jobs: ' + err.message); }
     const giftOk = cfg.gifts.enabled && (cfg.gifts.tiers || []).some(t => t && t.checkout_url);
     for (const j of due) {
         try {
+            if (j.kind === 'free_end') {
+                if (!cfg.free_end.enabled) continue;
+                const { rows: g } = await db.query(
+                    `SELECT 1 FROM checkout_intents WHERE LOWER(customer_email) = $1 AND kind = 'gift' AND created_at > NOW() - INTERVAL '30 minutes' LIMIT 1`, [j.email]);
+                if (g.length) continue;
+                const sup = await _supportSessionFor(j.email);
+                if (!sup) continue;
+                const ctx = { email: j.email, city: sup.session.city || null, cityFallback: sup.chat.city_fallback };
+                const m1 = await insertMsg(sup.session.id, 'bot', 'text', capFirst(await fillVars(cfg.free_end.text, ctx)), null, { typing_ms: 0 }, null);
+                await insertMsg(sup.session.id, 'bot', 'cta', String(cfg.free_end.cta).slice(0, 60), null, { typing_ms: 0, link_url: '/?go=chamadas', cta_color: '#e50914' }, null);
+                await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [sup.session.id]);
+                out.push({ chat: sup.chat, messages: [m1], email: j.email });
+                continue;
+            }
             const { rows: [c] } = await db.query(
                 `SELECT COUNT(*)::int AS n FROM chat_trigger_jobs WHERE email = $1 AND kind = $2 AND id < $3`, [j.email, j.kind, j.id]);
             const r = j.kind === 'gift'

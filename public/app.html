@@ -13666,6 +13666,7 @@ function mvNavigate(url) {
     try {
         if (/[?&]go=lives/.test(String(url))) { if (typeof openExploreTab === 'function') openExploreTab('lives'); return; }
         if (/[?&](videos=|go=videos)/.test(String(url))) { if (typeof openExploreTab === 'function') openExploreTab(); return; }
+        if (/[?&]go=chamadas/.test(String(url)) && typeof switchScreen === 'function') { switchScreen('calls'); return; }
         const mgf = String(url).match(/[?&]gift=(\d+)/);
         if (mgf && window.MVGift) { MVGift.open({ chatId: parseInt(mgf[1], 10), src: 'link' }); return; }
         const mc = String(url).match(/[?&]chat=(\d+)/);
