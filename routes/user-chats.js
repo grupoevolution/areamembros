@@ -1109,6 +1109,7 @@ router.post('/chats/:id/open', optionalUser, async (req, res) => {
         await ensureSessionGeo(session, req);
         ident.city = session.city;
         ident.cityFallback = chat.city_fallback;
+        applyTrigPass(perm, session);
 
         // Comprou o VIP depois de bater no paywall? Limpa a marca AQUI (em
         // qualquer estado da sessão, não só no legado awaiting='paywall') —
@@ -1342,6 +1343,7 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
         await ensureSessionGeo(session, req);
         ident.city = session.city;
         ident.cityFallback = chat.city_fallback;
+        applyTrigPass(perm, session);
         const steps = await loadSteps(chatId, session.current_flow || 'open');
 
         const choice = req.body?.choice;
@@ -1441,6 +1443,11 @@ router.post('/chats/:id/advance', optionalUser, async (req, res) => {
             // devolve vip_required + unlock: o app mostra a bolha "não entregue"
             // e reabre o popup de assinar.
             const paywalled = (session.awaiting === 'paywall' || session.paywalled_at) && !perm.is_vip;
+            // PASSE DE RESPOSTAS (gatilho): consome 1 e a modelo responde
+            if (perm.free_replies > 0 && !perm.is_vip) {
+                newMsgs.push(...await trigPassReply(session, chat, ident, text));
+                return res.json({ success: true, messages: newMsgs.map(publicMsg), awaiting: session.awaiting, free_replies: session.free_replies });
+            }
             if (paywalled || !perm.can_reply) {
                 return res.status(403).json({
                     success: false, error: 'vip_required',
@@ -3060,6 +3067,24 @@ const TRIG_DEFAULTS = {
     },
     // depois da chamada grátis, OUTRA modelo oferece a chamada DELA (offer_*)
     free_call: { enabled: false, delay_min: 3, chat_ids: [], offer_chat_ids: [], offer_delay_min: 30 },
+    // quantas respostas o lead SEM VIP pode mandar depois de uma mensagem de
+    // gatilho + o que a modelo responde (1ª e 2ª resposta; [presente] = botão)
+    free_replies: 2,
+    replies: {
+        pos: [
+            'que bom que você gostou 😍 fiquei com vontade de fazer de novo… se quiser me mimar com um presentinho eu capricho ainda mais na próxima 🎁 [presente]',
+            'kkk adoro conversar com você 💋 quando quiser outra chamada é só me chamar… e quem me manda presente ganha surpresa 😏 [presente]',
+            'você é um amor 🥰 vou ficar pensando em você hoje',
+        ],
+        pix: [
+            'então corre lá amor, é só pagar o Pix que eu te espero do jeitinho que você gosta 💗',
+            'tô aqui te esperando viu 🥺 não demora',
+        ],
+        gift: [
+            'sério, você fez meu dia 🥹 quer que eu te ligue mais tarde? 😏',
+            'adorei demais 😍 fica por aqui que hoje eu te dou atenção especial 💋',
+        ],
+    },
     rating: { enabled: true },
     gifts: {
         enabled: false,
@@ -3096,6 +3121,11 @@ async function triggersConfig() {
     };
     for (const k of ['pix_model', 'pos_call']) {
         if (!Array.isArray(cfg[k].texts) || !cfg[k].texts.filter(Boolean).length) cfg[k].texts = TRIG_DEFAULTS[k].texts;
+    }
+    cfg.free_replies = Math.max(0, Math.min(10, parseInt(v.free_replies, 10) || TRIG_DEFAULTS.free_replies));
+    cfg.replies = { ...TRIG_DEFAULTS.replies, ...(v.replies || {}) };
+    for (const k of Object.keys(TRIG_DEFAULTS.replies)) {
+        if (!Array.isArray(cfg.replies[k]) || !cfg.replies[k].filter(Boolean).length) cfg.replies[k] = TRIG_DEFAULTS.replies[k];
     }
     if (!Array.isArray(cfg.gifts.thanks) || !cfg.gifts.thanks.filter(Boolean).length) cfg.gifts.thanks = TRIG_DEFAULTS.gifts.thanks;
     if (!Array.isArray(cfg.gifts.tiers)) cfg.gifts.tiers = TRIG_DEFAULTS.gifts.tiers;
@@ -3255,8 +3285,38 @@ async function _trigDeliver(email, chatId, texts, n, extra) {
     const msgs = [await insertMsg(session.id, 'bot', 'text', capFirst(await fillVars(txt, ctx)), null, meta, null)];
     if (extra && extra.cta) msgs.push(await insertMsg(session.id, 'bot', 'cta', extra.cta.label, null, { ...meta, link_url: extra.cta.url, cta_color: extra.cta.color || '#e50914' }, null));
     if (wantsGift && extra && extra.giftOk) msgs.push(await insertMsg(session.id, 'bot', 'cta', '🎁 MANDAR UM PRESENTE', null, { ...meta, link_url: '/?gift=' + chatId, cta_color: '#d4a017' }, null));
-    await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, updated_at = NOW() WHERE id = $1`, [session.id]);
+    // libera N respostas do lead sem VIP (a modelo responde do banco `replies`)
+    const cfgFR = await triggersConfig();
+    await db.query(`UPDATE chat_sessions SET last_seen_at = NULL, free_replies = $2, trig_kind = $3, updated_at = NOW() WHERE id = $1`,
+        [session.id, cfgFR.free_replies, String(extra && extra.kind || 'pos').slice(0, 20)]);
     return { chat, messages: msgs, email };
+}
+
+// PASSE DE RESPOSTAS: enquanto a sessão tiver saldo, o lead sem VIP pode
+// digitar (como o match do Encontros). Aplicado no /open e no /advance.
+function applyTrigPass(perm, session) {
+    const left = parseInt(session && session.free_replies, 10) || 0;
+    if (left > 0 && !perm.is_vip) { perm.locked = false; perm.can_reply = true; perm.free_replies = left; }
+    return perm;
+}
+// Lead usou 1 resposta do passe → a modelo responde (1ª/2ª frase do banco do gatilho)
+async function trigPassReply(session, chat, ident, text) {
+    const cfg = await triggersConfig();
+    const out = [await insertMsg(session.id, 'user', 'text', text, null, null, null)];
+    const { rows: [r] } = await db.query(
+        `UPDATE chat_sessions SET free_replies = GREATEST(0, free_replies - 1), updated_at = NOW() WHERE id = $1 RETURNING free_replies`, [session.id]);
+    session.free_replies = r ? r.free_replies : 0;
+    const bank = cfg.replies[session.trig_kind] || cfg.replies.pos;
+    const used = cfg.free_replies - session.free_replies - 1; // 0 na 1ª resposta, 1 na 2ª…
+    let txt = String(bank[Math.min(Math.max(0, used), bank.length - 1)] || '');
+    const wantsGift = /\[presente\]/i.test(txt);
+    txt = txt.replace(/\s*\[presente\]/gi, '').trim();
+    if (!txt) return out;
+    const ctx = { ...ident, city: session.city || ident.city, cityFallback: chat.city_fallback };
+    out.push(await insertMsg(session.id, 'bot', 'text', capFirst(await fillVars(txt, ctx)), null, { typing_ms: 2500, trig: 'reply' }, null));
+    const giftOk = cfg.gifts.enabled && (cfg.gifts.tiers || []).some(t => t && t.checkout_url) && !(cfg.gifts.exclude_chat_ids || []).map(Number).includes(chat.id);
+    if (wantsGift && giftOk) out.push(await insertMsg(session.id, 'bot', 'cta', '🎁 MANDAR UM PRESENTE', null, { typing_ms: 0, link_url: '/?gift=' + chat.id, cta_color: '#d4a017' }, null));
+    return out;
 }
 
 // Worker (~15s): Pix sem pagar → modelo; jobs vencidos (pós-chamada, presente)
@@ -3297,7 +3357,7 @@ async function processChatTriggers() {
                 await trigJob(e, 'pix', String(p.created_at.getTime ? p.created_at.getTime() : p.created_at), chatId, 0);
                 await db.query(`UPDATE chat_trigger_jobs SET done_at = NOW() WHERE email = $1 AND kind = 'pix' AND done_at IS NULL`, [e]);
                 const r = await _trigDeliver(e, chatId, cfg.pix_model.texts, c.n, {
-                    meta: { trig: 'pix' },
+                    kind: 'pix', meta: { trig: 'pix' },
                     cta: supportId ? { label: String(cfg.pix_model.cta || 'VER MEU PIX 💗').slice(0, 60), url: '/?chat=' + supportId } : null,
                 });
                 if (r) out.push(r);
@@ -3319,8 +3379,8 @@ async function processChatTriggers() {
             const { rows: [c] } = await db.query(
                 `SELECT COUNT(*)::int AS n FROM chat_trigger_jobs WHERE email = $1 AND kind = $2 AND id < $3`, [j.email, j.kind, j.id]);
             const r = j.kind === 'gift'
-                ? await _trigDeliver(j.email, j.chat_id, cfg.gifts.thanks, c.n, {})
-                : await _trigDeliver(j.email, j.chat_id, cfg.pos_call.texts, c.n, { giftOk });
+                ? await _trigDeliver(j.email, j.chat_id, cfg.gifts.thanks, c.n, { kind: 'gift' })
+                : await _trigDeliver(j.email, j.chat_id, cfg.pos_call.texts, c.n, { kind: 'pos', giftOk });
             if (r) out.push(r);
         } catch (err) { logger.warn('[gatilhos] job ' + j.id + ': ' + err.message); }
     }

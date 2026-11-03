@@ -620,6 +620,14 @@ msg +24h → modelo manda 1 frase nova (`REGREET_TEXTS`, sem repetir, meta `trig
 (B2) índice parcial `idx_pix_notices_recent`. Sabido/aceito: recepção VIP soma as janelas (Marta chega em
 ~2–3 dias); `POST /calls/ended` aceita qualquer product_id (dano = 1 chamada grátis).
 
+**03/11 (pós-deploy) — testes do dono:** (1) estrelas agora no CENTRO da tela (`#mvGiftOv.center`);
+(2) PASSE DE RESPOSTAS: toda mensagem de gatilho (pós-chamada/Pix/presente) libera `free_replies` (padrão 2,
+config `chat_triggers.free_replies`) pro lead sem VIP — `applyTrigPass` no /open e /advance; a modelo responde
+do banco `chat_triggers.replies.{pos,pix,gift}` (1ª/2ª frase; `[presente]` = botão), na 3ª cai no paywall.
+Migração dá o passe a quem recebeu gatilho nas últimas 48h sem responder. Colunas `chat_sessions.free_replies`,
+`trig_kind`. (3) Renildes (65) virou access=FREE em produção (era VIP → lead sem VIP via a chamada grátis
+embaçada/travada); reply_mode vip. REGRA: toda conversa usada por gatilho pra lead sem VIP tem de ser free.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
