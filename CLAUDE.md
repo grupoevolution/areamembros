@@ -641,6 +641,8 @@ produção. REGRA: produto de grupo precisa de PLANO cadastrado, não só a ofer
 **03/11 (noite) — Bella no lugar da Renildes:** chat 385, chamada de amostra 7, produto 57 (R$19,90). Aparece na recepção VIP/Premium e depois da 1ª chamada PAGA (pula se comprou a própria Bella). Chamada da ROLETA não dispara modelo: só o suporte (`free_end`, botão /?go=chamadas), 1x/dia, e não se abandonou presente. Renildes (65) fora de uso.
 GRUPOS 3–6, 8–12, 14 reimportados (525→588 blocos; legendas/apresentações novas misturadas às antigas; diálogos por tema; mais mídia no pico). Conteúdo só em produção. Voltar atrás: `group-build.js` regenera o roteiro antigo (seed fixo) e importa com replace. Grupo 7: textos trocados pra mulher adulta (tirado "aninhos", "recém no +18", "me ensina") — NÃO voltar. `entradas.js`[7] e `themes.js` ainda têm os textos antigos: não reimportar o 7 deles. Grupos VIP(2), Free(1), Pés(13) não mexidos. Rotina de 10 dias: proposta em `docs/ROTINA-10-DIAS.md`.
 
+**04/11 — planos de grupo (produção):** criado plano "ACESSO ÚNICO" nos produtos 28, 29, 30, 31, 33 (R$9,90) e 32 (R$14,90), preço = o do link da Kirvano. Painel ainda mostra 14,90 nos produtos 31 e 33 (Kirvano cobra 9,90). Checkout mostra +R$0,99 no resumo (9,90→10,89) e nome "Grupo VIP" em todos: dono conferir. SUSPEITA a confirmar: lead novo do funil leva 401 no /me antes da sessão anônima existir, e a sequência (Cleia etc.) só dispara depois do e-mail.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
