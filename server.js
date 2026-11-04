@@ -163,7 +163,11 @@ app.use(cookieParser(process.env.SESSION_SECRET));
 
 // Parse de JSON (com limite de tamanho pra evitar abuse)
 // 4mb: o import da agenda dos grupos pode trazer a semana inteira num arquivo
-app.use(express.json({ limit: '4mb' }));
+app.use(express.json({
+    limit: '4mb',
+    // A assinatura da Stripe é calculada sobre o corpo original, byte a byte.
+    verify: (req, _res, buf) => { if (req.originalUrl.startsWith('/webhook/stripe')) req.rawBody = buf; },
+}));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 
@@ -297,6 +301,11 @@ app.use('/api/admin/engagement', require('./routes/admin-engagement'));
 app.use('/api/admin/chats', require('./routes/admin-chats'));
 app.use('/api/admin/groups', require('./routes/admin-groups'));
 app.use('/api/admin/explore', require('./routes/admin-explore'));
+// Pares Kirvano→Stripe que o app pode usar (vazio = tudo na Kirvano). Sem login.
+app.get('/api/user/gateway-links', async (_req, res) => {
+    try { res.json({ links: await require('./lib/gateway-split').publicLinks() }); }
+    catch (_) { res.json({ links: [] }); }
+});
 app.use('/api/user', require('./routes/user-chats'));
 app.use('/api/user', require('./routes/user-groups'));
 app.use('/api/user', require('./routes/user'));

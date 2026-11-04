@@ -643,6 +643,12 @@ GRUPOS 3–6, 8–12, 14 reimportados (525→588 blocos; legendas/apresentaçõe
 
 **04/11 — planos de grupo (produção):** criado plano "ACESSO ÚNICO" nos produtos 28, 29, 30, 31, 33 (R$9,90) e 32 (R$14,90), preço = o do link da Kirvano. Painel ainda mostra 14,90 nos produtos 31 e 33 (Kirvano cobra 9,90). Checkout mostra +R$0,99 no resumo (9,90→10,89) e nome "Grupo VIP" em todos: dono conferir. SUSPEITA a confirmar: lead novo do funil leva 401 no /me antes da sessão anônima existir, e a sequência (Cleia etc.) só dispara depois do e-mail.
 
+**04/11 (noite) — pronto pra deploy (testado local), NADA ativo na Stripe:**
+- BUG funil: lead novo não recebia a sequência (Cleia etc.) antes do e-mail; agora dispara ao criar a sessão anônima.
+- STRIPE (`lib/gateway-split.js`, `lib/gateways/stripe.js`, `POST /webhook/stripe`, painel Gateways → "Stripe: divisão de vendas"): pares link Kirvano → Payment Link + `plink_`; modo Tudo Kirvano (padrão, app recebe lista vazia) / Dividir (10–100% por link, sorteio fixo por lead) / Tudo Stripe. Venda libera o produto da oferta Kirvano do par (`lookup_gateway`). Pix gerado sem pagar é ignorado (sem aviso de Pix pendente). FALTA: pixel/UTM além do `client_reference_id`, teste com Stripe real. ⚠️ Stripe PROÍBE conteúdo adulto: dono decide antes de qualquer venda real.
+- Produção (feito): chats da notificação 8,10,11,13,15,17 reescritos (sem "lembrei/saudade", ver-uma-vez sem rosto da pasta GRUPO VIP/sexy, convite com sentido; 10,13,17 mandam a capa do grupo antes do botão). Preço 9,90 nos produtos 31 e 33.
+- Bella: decidido manter (só após compra paga); dono monta os vídeos de chamada e depois eu vinculo. Pendente: rotina de 10 dias, resto do percurso do lead (e-mail de teste do dono).
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);

@@ -21347,7 +21347,42 @@ window.MV_intent = function (url, src) {
 // MV_withEmail: checkout da Kirvano já abre com o e-mail do lead preenchido
 // (parâmetro customer.email — testado 28/10; os outros nomes a Kirvano ignora).
 // Só o e-mail do PRÓPRIO lead identificado; não mexe em link de outro gateway.
+// Segunda plataforma (Stripe): o painel cadastra pares link Kirvano → link Stripe.
+// Lista vazia ou falha ao carregar = Kirvano, como sempre. O mesmo lead cai sempre
+// na mesma plataforma pra cada produto (sorteio fixo por visitante + link).
+window.MV_gwLinks = [];
+(function loadGwLinks() {
+    fetch('/api/user/gateway-links', { credentials: 'include' }).then(r => r.json())
+        .then(d => { if (d && Array.isArray(d.links)) window.MV_gwLinks = d.links; }).catch(() => {});
+})();
+window.MV_gwRoute = function (url, email) {
+    const links = window.MV_gwLinks;
+    if (!links || !links.length) return null;
+    const m = String(url).match(/^https?:\/\/pay\.kirvano\.com\/([0-9a-f-]{36})/i);
+    if (!m) return null;
+    const link = links.find(l => l.k === m[1].toLowerCase());
+    if (!link) return null;
+    let vid = '';
+    try { vid = localStorage.getItem('mv_chat_visitor') || ''; } catch (_) {}
+    const seed = (vid || window.VID || email || '') + '|' + link.k;
+    let h = 2166136261;
+    for (let i = 0; i < seed.length; i++) { h ^= seed.charCodeAt(i); h = Math.imul(h, 16777619); }
+    h ^= h >>> 13; h = Math.imul(h, 1540483477); h ^= h >>> 15;
+    if ((h >>> 0) % 100 >= link.p) return null;
+    const qs = [];
+    if (email && email.indexOf('@') > 0 && !/@preview\.local$/i.test(email)) qs.push('prefilled_email=' + encodeURIComponent(email));
+    const utm = (String(url).match(/[?&]utm_content=([^&#]*)/) || [])[1];
+    if (utm) {
+        const ref = decodeURIComponent(utm).replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 120);
+        if (ref) qs.push('client_reference_id=' + encodeURIComponent(ref));
+    }
+    return link.s + (qs.length ? (link.s.indexOf('?') === -1 ? '?' : '&') + qs.join('&') : '');
+};
 window.MV_withEmail = function (url, email) {
+    try {
+        const viaStripe = window.MV_gwRoute(url, String(email || window.currentUserEmail || '').trim());
+        if (viaStripe) return viaStripe;
+    } catch (_) {}
     try {
         email = String(email || window.currentUserEmail || (window.AppState && AppState.user && AppState.user.email) || '').trim();
         if (!email || email.indexOf('@') < 1 || !/^https?:\/\/pay\.kirvano\.com\//i.test(url || '')) return url;
@@ -21459,6 +21494,9 @@ window.MV_BOOT_PROMISE = (function bootFunnel() {
             window.MV_ANONYMOUS = true;
             window.userIsLogged = true;
             document.body && document.body.classList.add('is-logged', 'funnel-mode');
+            // Lead novo: o /me do boot responde 401 antes desta sessão existir e não
+            // dispara a sequência do funil. Repetir é seguro (não reagenda etapas).
+            try { if (typeof window.tryTriggerCallAfterLogin === 'function') window.tryTriggerCallAfterLogin(); } catch (_) {}
             return true;
         }
         return false;

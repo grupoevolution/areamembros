@@ -35,6 +35,7 @@ const { processSale, saleItemFailures } = require('../lib/sales-processor');
 
 const kirvanoAdapter = require('../lib/gateways/kirvano');
 const perfectpayAdapter = require('../lib/gateways/perfectpay');
+const stripeAdapter = require('../lib/gateways/stripe');
 
 // Eventos que DERRUBAM acesso de cliente — só processam com assinatura válida.
 const DESTRUCTIVE_EVENTS = ['refunded', 'chargeback', 'canceled'];
@@ -291,5 +292,43 @@ router.post('/perfectpay', webhookLimiter, async (req, res) => {
     }
 });
 
+
+// =============================================================================
+// WEBHOOK STRIPE
+// =============================================================================
+// Diferente da Kirvano: assinatura inválida NUNCA processa (a Stripe reenvia).
+
+router.post('/stripe', webhookLimiter, async (req, res) => {
+    const signatureValid = await stripeAdapter.validateStripeSignature(req);
+    const logId = await logWebhookReceived({ gateway: 'stripe', req, signatureValid });
+    if (!signatureValid) {
+        logger.warn(`Webhook Stripe com assinatura inválida. IP: ${getIp(req)}`);
+        await logWebhookProcessed(logId, { processed: false, error: 'Assinatura inválida' });
+        return res.status(400).json({ success: false, error: 'invalid_signature' });
+    }
+    try {
+        const normalized = await stripeAdapter.normalizeStripeEvent(req.body);
+        if (!normalized.valid) {
+            if (!normalized.ignored) logger.warn(`Webhook Stripe inválido: ${normalized.reason}`);
+            await logWebhookProcessed(logId, { processed: !!normalized.ignored, error: normalized.ignored ? null : normalized.reason });
+            return res.status(200).json({ success: true, message: 'Ignorado', reason: normalized.reason });
+        }
+        const summary = await processSale(normalized.data);
+        const failure = itemFailureError(summary);
+        if (failure) {
+            logger.error(`Webhook Stripe com falha de entrega: ${failure}`);
+            await logWebhookProcessed(logId, { processed: false, error: failure, summary });
+            return res.status(500).json({ success: false, error: 'Falha entregando a venda — reenviar' });
+        }
+        const orphan = orphanSaleError(summary);
+        if (orphan) logger.warn(`Webhook Stripe com venda órfã: ${orphan}`);
+        await logWebhookProcessed(logId, { processed: !orphan, error: orphan, summary });
+        return res.status(200).json({ success: true, summary });
+    } catch (err) {
+        logger.error('Erro processando webhook Stripe:', err);
+        await logWebhookProcessed(logId, { processed: false, error: err.message });
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
 
 module.exports = router;

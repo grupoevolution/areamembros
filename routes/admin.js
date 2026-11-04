@@ -385,6 +385,40 @@ router.post('/settings/gateways/secret', requireAdmin, async (req, res) => {
     }
 });
 
+// Stripe: chave do webhook + pares de link + divisão de vendas
+router.get('/settings/stripe', requireAdmin, async (req, res) => {
+    try {
+        const split = require('../lib/gateway-split');
+        const { getSecret } = require('../lib/gateway-secrets');
+        return res.json({ success: true, config: await split.getConfig(), secret_set: !!(await getSecret('stripe')) });
+    } catch (err) {
+        logger.error('Erro lendo config Stripe:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
+router.put('/settings/stripe', requireAdmin, async (req, res) => {
+    try {
+        const { saveConfig } = require('../lib/gateway-split');
+        const { invalidateCache } = require('../lib/gateway-secrets');
+        const secret = String((req.body || {}).secret || '').trim();
+        if (secret) {
+            if (!/^whsec_/.test(secret)) return res.status(400).json({ success: false, error: 'A chave do webhook começa com whsec_' });
+            await db.query(
+                `INSERT INTO system_settings (key, value, description, updated_by, updated_at)
+                 VALUES ('stripe_webhook_secret', $1::jsonb, 'Chave do webhook da Stripe', $2, NOW())
+                 ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_by = EXCLUDED.updated_by, updated_at = NOW()`,
+                [JSON.stringify(secret), req.admin?.username || 'admin']);
+            invalidateCache();
+        }
+        const config = await saveConfig(req.body.config, req.admin?.username);
+        return res.json({ success: true, config });
+    } catch (err) {
+        logger.error('Erro salvando config Stripe:', err);
+        return res.status(500).json({ success: false, error: 'Erro interno' });
+    }
+});
+
 // Define gateway ativo (qual aparece no botão "Comprar" do app)
 router.post('/settings/gateways/active', requireAdmin, async (req, res) => {
     try {

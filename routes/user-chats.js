@@ -3008,12 +3008,12 @@ async function postDueStatusSchedules() {
 // wait_input — ele responde e recebe de novo foto + convite. Só nas conversas
 // de notif_chat_ids; 1 consulta extra. Devolve a mensagem nova (ou null).
 const REGREET_TEXTS = [
-    'oi sumido 😏 lembrei de você agora',
-    'ei… tava com saudade de conversar com você 🙈',
-    'oii, tá por aí? 👀',
-    '{saudacao} 😘 pensei em você hoje',
-    'psiu 🙈 apareceu de novo né',
-    'oi amor, cadê você? 🥺',
+    'oi, vi que você tá online 👀',
+    'ei, tá por aí? 🙈',
+    'oii, tá fazendo o que de bom?',
+    '{saudacao} 😘 tudo bem?',
+    'psiu 🙈 tá acordado?',
+    'oi bebê, tá ocupado?',
 ];
 async function regreetIfNotifChat(session, chat, history, ident) {
     try {
