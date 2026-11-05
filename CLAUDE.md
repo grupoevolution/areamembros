@@ -649,6 +649,14 @@ GRUPOS 3–6, 8–12, 14 reimportados (525→588 blocos; legendas/apresentaçõe
 - Produção (feito): chats da notificação 8,10,11,13,15,17 reescritos (sem "lembrei/saudade", ver-uma-vez sem rosto da pasta GRUPO VIP/sexy, convite com sentido; 10,13,17 mandam a capa do grupo antes do botão). Preço 9,90 nos produtos 31 e 33.
 - Bella: decidido manter (só após compra paga); dono monta os vídeos de chamada e depois eu vinculo. Pendente: rotina de 10 dias, resto do percurso do lead (e-mail de teste do dono).
 
+**04/11 (noite) — alarmes do dia (15:02, 20:40, 22:24) + pronto pra deploy, testado local (banco lotado de propósito):**
+3 alarmes curtos (3–8 min), 0 erros, 90% dos pedidos abaixo de 0,8s: NÃO explicam a queda de vendas (15h–19h: 9 vendas × 19 no dia anterior, app normal). 20:40 = notificação das 20:30; 15:02 e 22:24 sem causa provada.
+- Rotina de notificação espalhada em 60 min (`SPREAD_MIN`, era 12; decisão do dono: não mudar horário, só distribuir). Deploy no meio do envio perde o resto daquele horário: evitar deploy até 1h depois de 09:30, 14:30, 20:30 e 23:30.
+- RAIO-X: `ops_minutes` (1 linha/min, 14 dias: pedidos, resposta, fila, notificações, carga da VPS, rotas, painel, e `db_running` = o que o banco rodava quando a fila passou de 5). Gravado por conexão própria (`db.probeQuery`), senão se perde justo no minuto ruim. Migração dá SELECT à conexão de leitura do Argos.
+- ARGOS (radar-trafego): tela "Saúde do app" (menu Análises; no celular, botão na aba Alertas): cada alarme com causa provável + vendas × app hora a hora + teste de fora (`app_probe`). `GET /api/apphealth?day=`. O relatório diário recebe `app_health`.
+- Sabido: conexão do banco que espera mais de 5s na fila dá erro (`connectionTimeoutMillis`), é o "não carrega" do lead se a fila durar. Hoje não aconteceu (0 erros).
+- Meta do dono (nov): ROI ≥ 2 no mês escalando pra R$80–90 mil de investimento, ~R$5 mil/dia de lucro; sobe R$150/dia e segura cada campanha 3 dias.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);

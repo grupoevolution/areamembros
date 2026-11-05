@@ -135,11 +135,26 @@ async function reportQuery(text, params = []) {
 }
 
 
+// Conexão própria do alarme de lentidão: quando a fila principal lota é justamente
+// quando ele precisa perguntar ao banco o que está rodando. 1 conexão, 3s no máximo.
+const probePool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 1,
+    idleTimeoutMillis: 60000,
+    connectionTimeoutMillis: 2000,
+    statement_timeout: 3000,
+});
+probePool.on('error', (err) => {
+    logger.warn('Erro no pool do alarme: ' + err.message);
+});
+function probeQuery(text, params = []) { return probePool.query(text, params); }
+
 /**
  * Fecha o pool de conexões (usado no shutdown graceful).
  */
 async function close() {
     await reportPool.end().catch(() => {});
+    await probePool.end().catch(() => {});
     await pool.end();
     logger.info('Pool do Postgres fechado');
 }
@@ -148,6 +163,7 @@ async function close() {
 module.exports = {
     query,
     reportQuery,
+    probeQuery,
     transaction,
     close,
     pool, // exportado pra casos específicos
