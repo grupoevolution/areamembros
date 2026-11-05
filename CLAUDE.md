@@ -657,6 +657,10 @@ GRUPOS 3–6, 8–12, 14 reimportados (525→588 blocos; legendas/apresentaçõe
 - Sabido: conexão do banco que espera mais de 5s na fila dá erro (`connectionTimeoutMillis`), é o "não carrega" do lead se a fila durar. Hoje não aconteceu (0 erros).
 - Meta do dono (nov): ROI ≥ 2 no mês escalando pra R$80–90 mil de investimento, ~R$5 mil/dia de lucro; sobe R$150/dia e segura cada campanha 3 dias.
 
+**05/11 — alarme 10:33 + pronto pra deploy (testado local):** alarme de 3 min, 0 erros, p90 máx 0,9s. Raio-x: banco com 0–2 consultas ativas enquanto 18–28 esperavam (consulta pesada NÃO é a causa); carga da VPS de ~3 para 7,1 entre 10:30 e 10:35; fora de hora de leitura completa do Argos. Teste de fora ~0,4–0,5s nas horas com envio da rotina contra ~0,05s nas outras, mesmo com mais acesso. Causa exata não provada.
+- Rotina de notificação: lotes de 7 por segundo (eram 40 a cada ~5s), mesmo total em 60 min; lote lento é compensado nos seguintes.
+- Raio-x: `ops_minutes` ganhou `app_cpu` (100 = 1 núcleo do app), `host_cpu` (% da máquina), `pool_total`/`pool_idle` (conexões no pior momento da fila). Aparece no histórico e nos alarmes de `GET /api/admin/push/ops`; a tela do Argos ainda não mostra. host_cpu alto com app_cpu baixo = peso veio de fora do app (a VPS é dividida com o sócio).
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
