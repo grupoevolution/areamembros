@@ -661,6 +661,8 @@ GRUPOS 3–6, 8–12, 14 reimportados (525→588 blocos; legendas/apresentaçõe
 - Rotina de notificação: lotes de 7 por segundo (eram 40 a cada ~5s), mesmo total em 60 min; lote lento é compensado nos seguintes.
 - Raio-x: `ops_minutes` ganhou `app_cpu` (100 = 1 núcleo do app), `host_cpu` (% da máquina), `pool_total`/`pool_idle` (conexões no pior momento da fila). Aparece no histórico e nos alarmes de `GET /api/admin/push/ops`; a tela do Argos ainda não mostra. host_cpu alto com app_cpu baixo = peso veio de fora do app (a VPS é dividida com o sócio).
 
+**12/11 — DECIDIDO (a fazer, não codado): trava de reembolso.** 1º reembolso = tira só aquele produto (como hoje). 2º reembolso do mesmo cliente (contar por e-mail + CPF da Kirvano + aparelho) = bloqueio total (perde tudo, app mostra "Acesso suspenso, fale com o suporte"). Contestação no cartão conta igual a reembolso (decisão do dono). Reembolso de chamada até ~1h após a compra = etiqueta "reembolso rápido" numa lista do painel, SEM bloquear. Só conta compra paga (Pix vencido/recusado não). Painel: listas "Em observação" e "Bloqueados" + desbloquear + liga/desliga. Compra nova de bloqueado: não libera e avisa o dono.
+
 **Fila combinada:** ajustes da área de membros (dono vai listar); rotina de
 STATUS (7–8 modelos/dia); criar chats por padrão; IA no chat via API barata
 (Central IA em ~/Downloads/central-ia já pronta, falta deploy + integração);
