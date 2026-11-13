@@ -14013,6 +14013,20 @@ if (enterBtn) {
     });
 }
 
+// Trava de reembolso: conta bloqueada vê só esta tela (nada do app por baixo).
+window.MV_showBlocked = function () {
+    try { hideBootSplash(); } catch (_) {}
+    if (document.getElementById('mvBlocked')) return;
+    const d = document.createElement('div');
+    d.id = 'mvBlocked';
+    d.setAttribute('data-mv-own-flow', '1');
+    d.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#0b0709;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;font-family:inherit';
+    d.innerHTML = '<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#ff3b6b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>'
+        + '<div style="font-size:20px;font-weight:800;margin:16px 0 8px">Acesso suspenso</div>'
+        + '<div style="font-size:14.5px;color:rgba(255,255,255,.7);max-width:300px;line-height:1.45">Sua conta foi suspensa por pedidos de reembolso. Fale com o suporte para entender.</div>';
+    document.body.appendChild(d);
+};
+
 // ================== AUTO-LOGIN SE JÁ TEM COOKIE ==================
 // ─── BOOT SPLASH HELPERS ─────────────────────────────────────────────────────
 // Remove o splash preto inicial. Idempotente: pode ser chamado N vezes.
@@ -14058,6 +14072,7 @@ async function checkExistingSession() {
         if (res.ok) {
             const data = await res.json();
             if (data.success && data.user?.email) {
+                if (data.user.blocked) { window.MV_showBlocked(); return true; }
                 // Já tá logado: pula login
                 window.currentUserEmail = data.user.email;
                 window.currentUserProductsCount = data.user.activeAccessCount || 0;

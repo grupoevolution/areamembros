@@ -4269,7 +4269,7 @@ a { color: inherit; text-decoration: none; }
                             <!-- Página de obrigado (após pagamento aprovado) -->
                             <div style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;margin:18px 0 8px;">Página de obrigado (depois do pagamento)</div>
                             <div class="form-help" style="margin-bottom:10px;background:rgba(0,0,0,0.3);padding:10px 12px;border-radius:8px;border-left:3px solid var(--brand);">
-                                ⚠️ <strong>Configurar na Kirvano/PerfectPay:</strong> nas configurações da oferta, defina a <em>URL de redirecionamento após pagamento</em> como:<br>
+                                ⚠️ <strong>Configurar na Kirvano:</strong> nas configurações da oferta, defina a <em>URL de redirecionamento após pagamento</em> como:<br>
                                 <code style="font-size:11px;color:var(--brand-light);word-break:break-all;">https://m.membrosvips.com/?paid=<span id="paidTokenHint">PRODUCT_ID</span></code><br>
                                 <span style="font-size:11px;">(troque <code>PRODUCT_ID</code> pelo ID do produto — você vê no Admin > Produtos)</span>
                             </div>
@@ -4374,7 +4374,7 @@ a { color: inherit; text-decoration: none; }
                         <div class="form-card">
                             <div class="form-card-head">
                                 <div class="form-card-title">Links do produto</div>
-                                <div class="form-card-sub">Os 2 links (Kirvano + PerfectPay). Cada um pode ser de um tipo diferente — checkout, página de vendas, typebot.</div>
+                                <div class="form-card-sub">O link da Kirvano. Cada um pode ser de um tipo diferente — checkout, página de vendas, typebot.</div>
                             </div>
 
                             <!-- Kirvano card -->
@@ -4419,8 +4419,8 @@ a { color: inherit; text-decoration: none; }
                                 </div>
                             </div>
 
-                            <!-- PerfectPay card -->
-                            <div class="link-card">
+                            <!-- PerfectPay card (escondido: a 2ª plataforma agora é a Stripe, em Gateways) -->
+                            <div class="link-card" style="display:none;">
                                 <div class="link-card-head">
                                     <div class="link-card-brand">
                                         <span class="link-card-brand-dot"></span>
@@ -4480,7 +4480,7 @@ a { color: inherit; text-decoration: none; }
                             </div>
                         </label>
                         <div id="pPublishWarning" style="margin-top:10px;padding:8px 10px;background:rgba(255,193,7,0.1);border:1px solid rgba(255,193,7,0.3);border-radius:6px;font-size:12px;color:#ffaa33;display:none;">
-                            Não é possível publicar sem ao menos 1 gateway (Kirvano ou PerfectPay) configurado.
+                            Não é possível publicar sem o link da Kirvano configurado.
                         </div>
                         <label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:12px;">
                             <input type="checkbox" id="pIsGroupPass" style="width:18px;height:18px;cursor:pointer;flex-shrink:0;">
@@ -4697,7 +4697,7 @@ a { color: inherit; text-decoration: none; }
                     <select class="form-select" id="salesFilterGateway" style="max-width:160px;" onchange="loadSales()">
                         <option value="">Todos gateways</option>
                         <option value="kirvano">Kirvano</option>
-                        <option value="perfectpay">PerfectPay</option>
+                        <option value="stripe">Stripe</option>
                     </select>
                     <select class="form-select" id="salesFilterStatus" style="max-width:160px;" onchange="loadSales()">
                         <option value="">Todos status</option>
@@ -4861,7 +4861,7 @@ a { color: inherit; text-decoration: none; }
                 <div class="page-header">
                     <div>
                         <h1 class="page-title">Gateways de Pagamento</h1>
-                        <p class="page-subtitle">Configure os secrets dos webhooks de Kirvano e PerfectPay.</p>
+                        <p class="page-subtitle">Kirvano (principal) e Stripe (divisão de vendas por produto).</p>
                     </div>
                     <div class="page-actions">
                         <button class="btn-secondary" onclick="loadGatewaysSettings()">
@@ -4892,8 +4892,19 @@ a { color: inherit; text-decoration: none; }
                     <span id="stMsg" style="margin-left:10px;font-size:13px;"></span>
                 </div>
 
-                <!-- Active gateway switcher -->
+                <!-- Trava de reembolso -->
                 <div class="form-card" style="padding:20px;margin-bottom:18px;">
+                    <div class="form-card-head" style="margin-bottom:12px;">
+                        <div class="form-card-title">Trava de reembolso</div>
+                        <div class="form-card-sub">1º reembolso tira só aquele produto. No 2º (mesmo e-mail ou CPF) o cliente perde tudo e o app mostra "Acesso suspenso". Desligada, só registra.</div>
+                    </div>
+                    <div id="rgCfg" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;"></div>
+                    <div style="display:flex;gap:8px;margin-bottom:14px;"><input class="form-input" id="rgEmail" placeholder="E-mail para bloquear na mão"><button class="btn-secondary" onclick="RefundGuard.blockOne()">Bloquear</button></div>
+                    <div id="rgLists" style="font-size:13px;"></div>
+                </div>
+
+                <!-- Active gateway switcher (escondido: a escolha agora é no cartão da Stripe acima) -->
+                <div class="form-card" style="padding:20px;margin-bottom:18px;display:none;">
                     <div class="form-card-head" style="margin-bottom:14px;">
                         <div class="form-card-title">Gateway ativo (botoes "Comprar" do app)</div>
                         <div class="form-card-sub">Define qual link de checkout aparece pro cliente. Trocar afeta TODOS os produtos imediatamente.</div>
@@ -4944,8 +4955,8 @@ a { color: inherit; text-decoration: none; }
                     </div>
                 </div>
 
-                <!-- PerfectPay config -->
-                <div class="form-card" style="padding:20px;">
+                <!-- PerfectPay config (escondido) -->
+                <div class="form-card" style="padding:20px;display:none;">
                     <div class="form-card-head" style="margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start;">
                         <div>
                             <div class="form-card-title">PerfectPay - Webhook Secret</div>
@@ -5344,7 +5355,7 @@ a { color: inherit; text-decoration: none; }
                     <select class="form-select" id="webhooksFilterGateway" style="max-width:160px;" onchange="loadWebhookLogs()">
                         <option value="">Todos gateways</option>
                         <option value="kirvano">Kirvano</option>
-                        <option value="perfectpay">PerfectPay</option>
+                        <option value="stripe">Stripe</option>
                     </select>
                     <select class="form-select" id="webhooksFilterProcessed" style="max-width:160px;" onchange="loadWebhookLogs()">
                         <option value="">Todos status</option>
@@ -20197,6 +20208,49 @@ document.addEventListener('click', e => {
     if (e.target.closest && e.target.closest('[data-screen="gateways"],[onclick*="gateways"]')) setTimeout(() => window.StripeSplit.load(), 100);
 });
 document.addEventListener('DOMContentLoaded', () => { if (document.getElementById('stMode')) window.StripeSplit.load().catch(() => {}); });
+</script>
+
+<script>
+window.RefundGuard = (function () {
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const dt = v => v ? new Date(v).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    const api = (u, m, b) => fetch(u, { method: m || 'GET', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: b ? JSON.stringify(b) : undefined }).then(r => r.json());
+    const row = cells => '<tr>' + cells.map(c => '<td style="padding:6px 8px;border-bottom:1px solid var(--border);">' + c + '</td>').join('') + '</tr>';
+    const table = (title, head, rows, empty) => '<div style="font-weight:700;margin:14px 0 6px;">' + title + '</div>'
+        + (rows.length ? '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;"><tr>' + head.map(h => '<th style="text-align:left;padding:6px 8px;color:var(--text-muted);font-weight:600;">' + h + '</th>').join('') + '</tr>' + rows.join('') + '</table></div>'
+            : '<div style="color:var(--text-muted);">' + empty + '</div>');
+    async function load() {
+        const d = await api('/api/admin/refund-guard');
+        if (!d.success) return;
+        const c = d.config;
+        document.getElementById('rgCfg').innerHTML =
+            '<button class="' + (c.enabled ? 'btn-primary' : 'btn-secondary') + '" onclick="RefundGuard.toggle(' + !c.enabled + ')">' + (c.enabled ? 'Ligada' : 'Desligada') + '</button>'
+            + '<span style="font-size:13px;color:var(--text-muted);">Bloqueia no ' + c.threshold + 'º reembolso · "rápido" = chamada reembolsada até ' + c.quick_minutes + ' min</span>';
+        const blocked = d.blocked.map(b => row([esc(b.email), esc(b.reason), dt(b.blocked_at), '<button class="btn-secondary" onclick="RefundGuard.unblock(\'' + esc(b.email) + '\')">Desbloquear</button>']));
+        const watch = d.watch.map(w => row([esc(w.email), String(w.refunds), w.quick ? '<span class="badge" style="background:rgba(255,170,0,.15);color:#ffb020;">' + w.quick + ' rápido</span>' : '', dt(w.last_at)]));
+        const buys = d.purchases.map(p => row([esc(p.email), p.amount ? 'R$ ' + Number(p.amount).toFixed(2).replace('.', ',') : '', esc(p.gateway) + ' ' + esc(p.sale_id), dt(p.created_at)]));
+        document.getElementById('rgLists').innerHTML =
+            table('Bloqueados', ['E-mail', 'Motivo', 'Quando', ''], blocked, 'Ninguém bloqueado.')
+            + table('Em observação (pediram reembolso)', ['E-mail', 'Reembolsos', '', 'Último'], watch, 'Nenhum reembolso registrado ainda.')
+            + table('Compras de bloqueados (devolver o dinheiro)', ['E-mail', 'Valor', 'Venda', 'Quando'], buys, 'Nenhuma.');
+    }
+    return {
+        load,
+        async toggle(on) { await api('/api/admin/refund-guard', 'PUT', { enabled: on }); load(); },
+        async unblock(email) { if (!confirm('Desbloquear ' + email + '? Os acessos que a trava tirou voltam.')) return; await api('/api/admin/refund-guard/unblock', 'POST', { email }); load(); },
+        async blockOne() {
+            const email = document.getElementById('rgEmail').value.trim();
+            if (!email || !confirm('Bloquear ' + email + '? Ele perde todos os acessos.')) return;
+            const r = await api('/api/admin/refund-guard/block', 'POST', { email });
+            if (!r.success) { alert(r.error || 'Erro'); return; }
+            document.getElementById('rgEmail').value = ''; load();
+        },
+    };
+})();
+document.addEventListener('click', e => {
+    if (e.target.closest && e.target.closest('[data-screen="gateways"]')) setTimeout(() => window.RefundGuard.load(), 100);
+});
+document.addEventListener('DOMContentLoaded', () => { if (document.getElementById('rgCfg')) window.RefundGuard.load().catch(() => {}); });
 </script>
 
 </body>

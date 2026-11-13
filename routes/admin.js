@@ -385,6 +385,29 @@ router.post('/settings/gateways/secret', requireAdmin, async (req, res) => {
     }
 });
 
+// Trava de reembolso: listas, liga/desliga, desbloquear
+router.get('/refund-guard', requireAdmin, async (req, res) => {
+    try { return res.json({ success: true, ...(await require('../lib/refund-guard').overview()) }); }
+    catch (err) { logger.error('refund-guard:', err); return res.status(500).json({ success: false, error: 'Erro interno' }); }
+});
+router.put('/refund-guard', requireAdmin, async (req, res) => {
+    try { return res.json({ success: true, config: await require('../lib/refund-guard').saveConfig(req.body || {}, req.admin?.username) }); }
+    catch (err) { logger.error('refund-guard save:', err); return res.status(500).json({ success: false, error: 'Erro interno' }); }
+});
+router.post('/refund-guard/unblock', requireAdmin, async (req, res) => {
+    try { return res.json({ success: true, ...(await require('../lib/refund-guard').unblock((req.body || {}).email, req.admin?.username)) }); }
+    catch (err) { logger.error('refund-guard unblock:', err); return res.status(500).json({ success: false, error: 'Erro interno' }); }
+});
+router.post('/refund-guard/block', requireAdmin, async (req, res) => {
+    try {
+        const email = String((req.body || {}).email || '').toLowerCase().trim();
+        if (!email.includes('@')) return res.status(400).json({ success: false, error: 'E-mail inválido' });
+        const { rows: [c] } = await db.query(`SELECT document FROM customers WHERE LOWER(email) = $1`, [email]);
+        await require('../lib/refund-guard').block(email, c && c.document, 'Bloqueado pelo painel', req.admin?.username || 'admin');
+        return res.json({ success: true });
+    } catch (err) { logger.error('refund-guard block:', err); return res.status(500).json({ success: false, error: 'Erro interno' }); }
+});
+
 // Stripe: chave do webhook + pares de link + divisão de vendas
 router.get('/settings/stripe', requireAdmin, async (req, res) => {
     try {

@@ -385,6 +385,7 @@ router.get('/me', requireUser, async (req, res) => {
                 totalPurchases: data.total_purchases,
                 totalSpent: parseFloat(data.total_spent || 0),
                 activeAccessCount: data.active_access_count,
+                blocked: await require('../lib/refund-guard').isBlocked(data.email).catch(() => false),
             },
         });
     } catch (err) {
